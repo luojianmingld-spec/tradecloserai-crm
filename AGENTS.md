@@ -53,6 +53,8 @@
 - `POST /api/translation/translate` - 翻译文本
 - `POST /api/translation/translate-outgoing` - 翻译发送消息
 - `POST /api/translation/detect-language` - 检测语言
+- `POST /api/ai/generate-reply` - AI生成回复话术（参数：accountId, jid, style）
+- `POST /api/ai/summarize-need` - AI客户需求总结（参数：accountId, jid）
 
 ## Socket.io 事件
 - `whatsapp:request_qr` - 请求二维码
@@ -75,6 +77,13 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 - **缓存**: 内存缓存 + 数据库 TranslationCache 表，相同内容不重复调用
 - **API Key**: 存储在 Settings 表，留空使用系统默认配置
 - **自动翻译**: 收到消息自动翻译为目标语言，发送时可选自动翻译
+
+## AI回复与需求总结
+- **AI回复** (services/ai-reply.js): 基于最近20条消息生成2-3个回复选项，支持3种风格（formal/friendly/concise）
+- **需求总结** (services/ai-summarize.js): 基于最近30条消息生成结构化客户需求分析
+- **总结维度**: 意向产品、需求规模、价格敏感度、交付要求、核心关注点、客户风格、下一步行动、意向度评分(1-10)
+- **共用引擎**: 与翻译功能共用豆包/DeepSeek引擎和API Key配置
+- **前端Tab**: 右侧面板4个Tab（客户/翻译/AI回复/需求总结）
 
 ## 代码风格
 - 后端使用 ESM (`"type": "module"`)

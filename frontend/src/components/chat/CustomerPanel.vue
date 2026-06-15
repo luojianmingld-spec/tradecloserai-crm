@@ -23,6 +23,13 @@
       >
         AI回复
       </div>
+      <div
+        class="panel-tab"
+        :class="{ active: activeTab === 'summary' }"
+        @click="activeTab = 'summary'"
+      >
+        需求总结
+      </div>
     </div>
 
     <!-- Customer Info Tab -->
@@ -386,12 +393,116 @@
         </div>
       </div>
     </div>
+
+    <!-- Need Summary Tab -->
+    <div v-show="activeTab === 'summary'" class="tab-content">
+      <!-- Generate Button -->
+      <div class="panel-section">
+        <div class="section-title">客户需求分析</div>
+        <el-button
+          type="primary"
+          size="small"
+          :loading="chatStore.summarizeLoading"
+          :disabled="!jid"
+          class="generate-btn"
+          @click="handleSummarize"
+        >
+          <el-icon v-if="!chatStore.summarizeLoading"><Document /></el-icon>
+          {{ chatStore.summarizeLoading ? '分析中...' : '生成需求总结' }}
+        </el-button>
+        <p class="summary-hint">基于最近30条消息自动分析客户需求</p>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="chatStore.summarizeLoading" class="ai-loading">
+        <el-icon class="is-loading" :size="20"><Loading /></el-icon>
+        <span>AI 正在分析对话并生成需求总结...</span>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="!chatStore.needSummary" class="ai-empty">
+        <p>点击「生成需求总结」获取AI分析</p>
+        <p class="ai-empty-hint">自动提炼客户意向产品、需求规模、关注点等</p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div v-else class="summary-content">
+        <!-- Intention Score Card -->
+        <div class="panel-section score-section">
+          <div class="score-card">
+            <div class="score-ring" :class="scoreClass">
+              <span class="score-number">{{ chatStore.needSummary.intentionScore }}</span>
+            </div>
+            <div class="score-info">
+              <span class="score-label">意向度评分</span>
+              <span class="score-desc">{{ scoreLabel }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products -->
+        <div class="panel-section">
+          <div class="section-title">意向产品/服务</div>
+          <p class="summary-text">{{ chatStore.needSummary.products || '暂无明确信息' }}</p>
+        </div>
+
+        <!-- Quantity -->
+        <div class="panel-section">
+          <div class="section-title">需求规模</div>
+          <p class="summary-text">{{ chatStore.needSummary.quantity || '暂无明确信息' }}</p>
+        </div>
+
+        <!-- Price Sensitivity -->
+        <div class="panel-section">
+          <div class="section-title">价格预算/敏感度</div>
+          <p class="summary-text">{{ chatStore.needSummary.priceSensitivity || '暂无明确信息' }}</p>
+        </div>
+
+        <!-- Delivery Requirements -->
+        <div class="panel-section">
+          <div class="section-title">交付时间要求</div>
+          <p class="summary-text">{{ chatStore.needSummary.deliveryRequirements || '暂无明确信息' }}</p>
+        </div>
+
+        <!-- Key Concerns -->
+        <div class="panel-section">
+          <div class="section-title">核心关注点/痛点</div>
+          <p class="summary-text">{{ chatStore.needSummary.keyConcerns || '暂无明确信息' }}</p>
+        </div>
+
+        <!-- Customer Style -->
+        <div class="panel-section">
+          <div class="section-title">客户性格/沟通风格</div>
+          <p class="summary-text">{{ chatStore.needSummary.customerStyle || '暂无明确信息' }}</p>
+        </div>
+
+        <!-- Next Actions -->
+        <div class="panel-section">
+          <div class="section-title">下一步行动建议</div>
+          <div class="next-actions">
+            <p class="summary-text action-text">{{ chatStore.needSummary.nextActions || '暂无建议' }}</p>
+          </div>
+        </div>
+
+        <!-- Regenerate -->
+        <div class="panel-section regenerate-section">
+          <el-button
+            size="small"
+            :loading="chatStore.summarizeLoading"
+            @click="handleSummarize"
+          >
+            <el-icon><Refresh /></el-icon>
+            重新生成
+          </el-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed, onMounted } from 'vue';
-import { ChatDotRound, MagicStick, Document, Loading, Promotion } from '@element-plus/icons-vue';
+import { ChatDotRound, MagicStick, Document, Loading, Promotion, Refresh } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import api from '../../utils/api.js';
 import { useChatStore } from '../../stores/chat.js';
@@ -530,6 +641,37 @@ function handleInsertReply(text) {
   chatStore.insertToInput(text);
   ElMessage.success('已插入到输入框');
 }
+
+async function handleSummarize() {
+  if (!props.accountId || !props.jid) {
+    ElMessage.warning('请先选择会话');
+    return;
+  }
+  try {
+    await chatStore.generateNeedSummary(props.accountId, props.jid);
+    if (!chatStore.needSummary) {
+      ElMessage.info('暂无消息记录，无法生成需求总结');
+    }
+  } catch (err) {
+    ElMessage.error('生成需求总结失败');
+  }
+}
+
+const scoreClass = computed(() => {
+  const score = chatStore.needSummary?.intentionScore || 0;
+  if (score >= 8) return 'score-high';
+  if (score >= 5) return 'score-medium';
+  return 'score-low';
+});
+
+const scoreLabel = computed(() => {
+  const score = chatStore.needSummary?.intentionScore || 0;
+  if (score >= 9) return '极高意向';
+  if (score >= 7) return '高意向';
+  if (score >= 5) return '中等意向';
+  if (score >= 3) return '低意向';
+  return '暂无意向';
+});
 
 function getInitial(name) {
   if (!name) return '?';
@@ -1073,5 +1215,120 @@ function getInitial(name) {
 
 .reply-footer .el-button:hover {
   background: rgba(0, 168, 132, 0.1);
+}
+
+/* Need Summary Tab Styles */
+.summary-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 8px 0 0;
+  text-align: center;
+}
+
+.score-section {
+  padding: 16px;
+}
+
+.score-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.score-ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 3px solid;
+  position: relative;
+}
+
+.score-ring.score-high {
+  border-color: #00a884;
+  background: rgba(0, 168, 132, 0.1);
+}
+
+.score-ring.score-medium {
+  border-color: #e6a23c;
+  background: rgba(230, 162, 60, 0.1);
+}
+
+.score-ring.score-low {
+  border-color: #ea4335;
+  background: rgba(234, 67, 53, 0.1);
+}
+
+.score-number {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.score-ring.score-high .score-number {
+  color: #00a884;
+}
+
+.score-ring.score-medium .score-number {
+  color: #e6a23c;
+}
+
+.score-ring.score-low .score-number {
+  color: #ea4335;
+}
+
+.score-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.score-label {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.score-desc {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.summary-content .panel-section {
+  padding: 12px 16px;
+}
+
+.summary-text {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.action-text {
+  background: var(--input-bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+}
+
+.regenerate-section {
+  text-align: center;
+  border-bottom: none;
+}
+
+.regenerate-section .el-button {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  background: var(--input-bg);
+}
+
+.regenerate-section .el-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 </style>
