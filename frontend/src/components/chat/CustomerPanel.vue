@@ -16,6 +16,13 @@
       >
         翻译
       </div>
+      <div
+        class="panel-tab"
+        :class="{ active: activeTab === 'ai' }"
+        @click="activeTab = 'ai'"
+      >
+        AI回复
+      </div>
     </div>
 
     <!-- Customer Info Tab -->
@@ -269,12 +276,122 @@
         </div>
       </div>
     </div>
+
+    <!-- AI Reply Tab -->
+    <div v-show="activeTab === 'ai'" class="tab-content">
+      <!-- Reply Style -->
+      <div class="panel-section">
+        <div class="section-title">回复风格</div>
+        <el-select
+          v-model="replyStyle"
+          size="small"
+          style="width: 100%"
+        >
+          <el-option label="正式商务" value="formal">
+            <div class="style-option">
+              <span class="style-icon">💼</span>
+              <div class="style-info">
+                <span class="style-name">正式商务</span>
+                <span class="style-desc">专业严谨，体现公司实力</span>
+              </div>
+            </div>
+          </el-option>
+          <el-option label="友好亲切" value="friendly">
+            <div class="style-option">
+              <span class="style-icon">🤝</span>
+              <div class="style-info">
+                <span class="style-name">友好亲切</span>
+                <span class="style-desc">热情自然，增强亲和力</span>
+              </div>
+            </div>
+          </el-option>
+          <el-option label="简洁高效" value="concise">
+            <div class="style-option">
+              <span class="style-icon">⚡</span>
+              <div class="style-info">
+                <span class="style-name">简洁高效</span>
+                <span class="style-desc">简短有力，直击要点</span>
+              </div>
+            </div>
+          </el-option>
+        </el-select>
+        <el-button
+          type="primary"
+          size="small"
+          :loading="chatStore.aiGenerating"
+          :disabled="!jid"
+          class="generate-btn"
+          @click="handleGenerateReply"
+        >
+          <el-icon v-if="!chatStore.aiGenerating"><MagicStick /></el-icon>
+          {{ chatStore.aiGenerating ? '生成中...' : '生成回复' }}
+        </el-button>
+      </div>
+
+      <!-- Reply Options -->
+      <div class="panel-section">
+        <div class="section-title">回复选项</div>
+        <div v-if="chatStore.aiGenerating" class="ai-loading">
+          <el-icon class="is-loading" :size="20"><Loading /></el-icon>
+          <span>AI 正在分析对话并生成回复...</span>
+        </div>
+        <div v-else-if="chatStore.aiReplies.length === 0" class="ai-empty">
+          <p>点击「生成回复」获取AI建议</p>
+          <p class="ai-empty-hint">基于最近20条消息上下文生成</p>
+        </div>
+        <div v-else class="reply-list">
+          <div
+            v-for="(reply, index) in chatStore.aiReplies"
+            :key="reply.id"
+            class="reply-item"
+          >
+            <div class="reply-header">
+              <span class="reply-index">{{ index + 1 }}</span>
+              <div class="reply-actions">
+                <el-tooltip content="好" placement="top">
+                  <el-button
+                    text
+                    size="small"
+                    :class="{ 'feedback-active': reply.feedback === 'good' }"
+                    @click="reply.feedback = reply.feedback === 'good' ? null : 'good'"
+                  >
+                    👍
+                  </el-button>
+                </el-tooltip>
+                <el-tooltip content="不好" placement="top">
+                  <el-button
+                    text
+                    size="small"
+                    :class="{ 'feedback-active': reply.feedback === 'bad' }"
+                    @click="reply.feedback = reply.feedback === 'bad' ? null : 'bad'"
+                  >
+                    👎
+                  </el-button>
+                </el-tooltip>
+              </div>
+            </div>
+            <p class="reply-text">{{ reply.text }}</p>
+            <div class="reply-footer">
+              <el-button
+                type="primary"
+                size="small"
+                text
+                @click="handleInsertReply(reply.text)"
+              >
+                <el-icon><Promotion /></el-icon>
+                插入到输入框
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, watch, computed, onMounted } from 'vue';
-import { ChatDotRound, MagicStick, Document } from '@element-plus/icons-vue';
+import { ChatDotRound, MagicStick, Document, Loading, Promotion } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import api from '../../utils/api.js';
 import { useChatStore } from '../../stores/chat.js';
@@ -309,6 +426,7 @@ const settings = reactive({
 const testText = ref('');
 const testing = ref(false);
 const testResult = ref(null);
+const replyStyle = ref('formal');
 
 const messageCount = computed(() => 0);
 const daysSinceContact = computed(() => {
@@ -391,6 +509,26 @@ async function testTranslation() {
   } finally {
     testing.value = false;
   }
+}
+
+async function handleGenerateReply() {
+  if (!props.accountId || !props.jid) {
+    ElMessage.warning('请先选择会话');
+    return;
+  }
+  try {
+    await chatStore.generateAIReply(props.accountId, props.jid, replyStyle.value);
+    if (chatStore.aiReplies.length === 0) {
+      ElMessage.info('暂无回复建议，请先与客户对话');
+    }
+  } catch (err) {
+    ElMessage.error('生成回复失败');
+  }
+}
+
+function handleInsertReply(text) {
+  chatStore.insertToInput(text);
+  ElMessage.success('已插入到输入框');
 }
 
 function getInitial(name) {
@@ -786,5 +924,154 @@ function getInitial(name) {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* AI Reply Tab Styles */
+.generate-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.generate-btn:hover {
+  background: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+
+.style-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.style-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.style-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.style-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.style-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.ai-loading .el-icon {
+  color: var(--accent);
+}
+
+.ai-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+}
+
+.ai-empty p {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.ai-empty-hint {
+  font-size: 11px !important;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.reply-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reply-item {
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: border-color 0.15s;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.reply-item:hover {
+  border-color: var(--accent);
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.reply-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 168, 132, 0.15);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.reply-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.reply-actions .el-button {
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.reply-actions .el-button.feedback-active {
+  color: var(--accent);
+  background: rgba(0, 168, 132, 0.1);
+}
+
+.reply-text {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reply-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reply-footer .el-button {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.reply-footer .el-button:hover {
+  background: rgba(0, 168, 132, 0.1);
 }
 </style>

@@ -30,6 +30,11 @@ export const useChatStore = defineStore('chat', () => {
   });
   const autoTranslateOutgoing = ref(true);
 
+  // AI Reply
+  const aiReplies = ref([]);
+  const aiGenerating = ref(false);
+  const insertText = ref('');
+
   // Computed
   const activeAccount = computed(() =>
     accounts.value.find(a => a.id === activeAccountId.value)
@@ -182,6 +187,41 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // AI Reply actions
+  async function generateAIReply(accountId, jid, style = 'formal') {
+    if (!accountId || !jid) return;
+    aiGenerating.value = true;
+    aiReplies.value = [];
+    try {
+      const { data } = await api.post('/ai/generate-reply', {
+        accountId,
+        jid,
+        style,
+      });
+      if (data.replies) {
+        aiReplies.value = data.replies.map((text, index) => ({
+          id: index,
+          text,
+          feedback: null, // 'good' or 'bad'
+        }));
+      } else if (data.error) {
+        console.error('AI reply error:', data.error);
+      }
+    } catch (err) {
+      console.error('Failed to generate AI reply:', err);
+    } finally {
+      aiGenerating.value = false;
+    }
+  }
+
+  function insertToInput(text) {
+    insertText.value = text;
+  }
+
+  function clearInsertText() {
+    insertText.value = '';
+  }
+
   // Socket event handlers
   function handleQRCode(data) {
     qrCode.value = data;
@@ -277,6 +317,9 @@ export const useChatStore = defineStore('chat', () => {
     connectionStatus,
     translationSettings,
     autoTranslateOutgoing,
+    aiReplies,
+    aiGenerating,
+    insertText,
     activeAccount,
     activeConversation,
     currentMessages,
@@ -292,6 +335,9 @@ export const useChatStore = defineStore('chat', () => {
     fetchTranslationSettings,
     updateTranslationSettings,
     translateMessage,
+    generateAIReply,
+    insertToInput,
+    clearInsertText,
     handleQRCode,
     handleStatus,
     handleNewMessage,
