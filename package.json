@@ -1,0 +1,13 @@
+{
+  "name": "whatsapp-crm",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n be,fe -c blue,green \"cd backend && PORT=3001 node src/server.js\" \"cd frontend && npx vite --port ${DEPLOY_RUN_PORT} --host 0.0.0.0\"",
+    "build": "cd backend && pnpm install && npx prisma generate && cd ../frontend && pnpm install && pnpm build",
+    "start": "cd backend && NODE_ENV=production node src/server.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

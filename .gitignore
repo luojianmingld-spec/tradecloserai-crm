@@ -55,6 +55,12 @@ logs/
 
 # 视频文件
 *.mp4
+
+# WhatsApp CRM
+backend/prisma/crm.db
+backend/prisma/crm.db-journal
+backend/src/sessions/
+frontend/dist/
 *.avi
 *.mov
 *.wmv
