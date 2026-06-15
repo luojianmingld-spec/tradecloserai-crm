@@ -193,6 +193,20 @@ watch(
   }
 );
 
+// Watch for AI reply insertions
+watch(
+  () => chatStore.insertText,
+  (text) => {
+    if (text) {
+      inputText.value = text;
+      chatStore.clearInsertText();
+      nextTick(() => {
+        inputRef.value?.focus();
+      });
+    }
+  }
+);
+
 function scrollToBottom() {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
