@@ -26,7 +26,19 @@ const PORT = process.env.PORT || 3001;
 const DEPLOY_PORT = process.env.DEPLOY_RUN_PORT || 5000;
 const isProduction = process.env.NODE_ENV === 'production';
 
-// CORS
+// ─── Global error handlers (prevent process crash) ───
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack);
+  // Don't exit — keep the process alive
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[ERROR] Unhandled Promise Rejection:', reason);
+  // Don't exit — keep the process alive
+});
+
+// ─── CORS ───
 app.use(cors({
   origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
   credentials: true,
@@ -34,7 +46,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// API Routes
+// ─── API Routes ───
 app.use('/api/auth', authRoutes);
 app.use('/api/accounts', authMiddleware, accountRoutes);
 app.use('/api/contacts', authMiddleware, contactRoutes);
@@ -48,7 +60,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve frontend in production
+// ─── Serve frontend in production ───
 if (isProduction) {
   const frontendPath = path.join(__dirname, '../../frontend/dist');
   app.use(express.static(frontendPath));
@@ -57,7 +69,24 @@ if (isProduction) {
       res.sendFile(path.join(frontendPath, 'index.html'));
     }
   });
-  // In production, listen on DEPLOY_RUN_PORT
+}
+
+// ─── Socket.io setup (BEFORE listen) ───
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+app.set('io', io);
+app.set('prisma', prisma);
+
+setupSocketHandlers(io, prisma);
+
+// ─── Start server ───
+if (isProduction) {
   const serverPort = DEPLOY_PORT;
   httpServer.listen(serverPort, '0.0.0.0', () => {
     console.log(`[Production] Server running on port ${serverPort}`);
@@ -68,34 +97,35 @@ if (isProduction) {
   });
 }
 
-// Socket.io setup
-const io = new SocketIOServer(httpServer, {
-  cors: {
-    origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-});
-
-// Make io and prisma accessible
-app.set('io', io);
-app.set('prisma', prisma);
-
-setupSocketHandlers(io, prisma);
-
-// Seed default user if not exists
+// ─── Seed default user ───
 async function seedDefaultUser() {
-  const bcrypt = await import('bcryptjs');
-  const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
-  if (!existing) {
-    const hash = await bcrypt.default.hash('admin123', 10);
-    await prisma.user.create({
-      data: { username: 'admin', password: hash, name: 'Admin', role: 'admin' },
-    });
-    console.log('[Seed] Default user created: admin / admin123');
+  try {
+    const bcrypt = await import('bcryptjs');
+    const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
+    if (!existing) {
+      const hash = await bcrypt.default.hash('admin123', 10);
+      await prisma.user.create({
+        data: { username: 'admin', password: hash, name: 'Admin', role: 'admin' },
+      });
+      console.log('[Seed] Default user created: admin / admin123');
+    }
+  } catch (err) {
+    console.error('[Seed] Error creating default user:', err.message);
   }
 }
 
-seedDefaultUser().catch(console.error);
+seedDefaultUser();
+
+// ─── Graceful shutdown ───
+async function gracefulShutdown(signal) {
+  console.log(`\n[${signal}] Shutting down gracefully...`);
+  io.close();
+  httpServer.close();
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { app, io, prisma };
