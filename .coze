@@ -3,7 +3,7 @@ requires = ["nodejs-24"]
 
 [dev]
 build = ["sh", "-c", "pnpm install --filter=backend --filter=frontend && cd backend && npx prisma generate"]
-run = ["sh", "-c", "concurrently -n be,fe -c blue,green \"cd backend && PORT=3001 node src/server.js\" \"cd frontend && npx vite --port ${DEPLOY_RUN_PORT} --host 0.0.0.0\""]
+run = ["bash", "/workspace/projects/start-dev.sh"]
 
 [deploy]
 build = ["sh", "-c", "cd backend && pnpm install && npx prisma generate && npx prisma db push && cd ../frontend && pnpm install && pnpm build"]
