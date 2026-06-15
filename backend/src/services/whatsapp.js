@@ -269,7 +269,16 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
   });
   if (existingMsg) return;
 
-  // Save message
+  // Auto-translate incoming message
+  let translationResult = null;
+  try {
+    const { autoTranslateMessage } = await import('./translation.js');
+    translationResult = await autoTranslateMessage(content || '', userId);
+  } catch (err) {
+    console.error('[WhatsApp] Auto-translation error:', err);
+  }
+
+  // Save message (with translation if available)
   const timestamp = new Date(
     Math.floor((msg.messageTimestamp || Date.now() / 1000) * 1000)
   );
@@ -283,6 +292,8 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
       content: content || '',
       messageType,
       timestamp,
+      translation: translationResult?.translated || null,
+      sourceLang: translationResult?.sourceLang || null,
     },
   });
 

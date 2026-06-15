@@ -4,6 +4,11 @@ import {
   disconnectAccount,
   getUserConnections,
 } from '../services/whatsapp.js';
+import {
+  autoTranslateMessage,
+  translateOutgoing,
+  getTranslationSettings,
+} from '../services/translation.js';
 
 export function setupSocketHandlers(io, prisma) {
   io.on('connection', (socket) => {
@@ -26,7 +31,6 @@ export function setupSocketHandlers(io, prisma) {
       try {
         const { accountId } = data;
 
-        // Verify account belongs to user
         const account = await prisma.whatsAppAccount.findFirst({
           where: { id: accountId, userId },
         });
@@ -42,16 +46,15 @@ export function setupSocketHandlers(io, prisma) {
       }
     });
 
-    // Send message
+    // Send message (with optional auto-translation)
     socket.on('whatsapp:send_message', async (data) => {
       try {
-        const { accountId, jid, text } = data;
+        const { accountId, jid, text, autoTranslate } = data;
         if (!accountId || !jid || !text) {
           socket.emit('whatsapp:error', { message: 'Missing required fields' });
           return;
         }
 
-        // Verify account belongs to user
         const account = await prisma.whatsAppAccount.findFirst({
           where: { id: accountId, userId },
         });
@@ -60,8 +63,48 @@ export function setupSocketHandlers(io, prisma) {
           return;
         }
 
-        const savedMessage = await sendMessage(accountId, userId, jid, text, io);
-        socket.emit('whatsapp:message_sent', { message: savedMessage });
+        // Determine final text to send
+        let finalText = text;
+        let translation = null;
+
+        if (autoTranslate) {
+          // Get contact's language
+          const contact = await prisma.contact.findUnique({
+            where: { accountId_jid: { accountId, jid } },
+          });
+          const contactLang = contact?.language || null;
+
+          const result = await translateOutgoing(text, contactLang, userId);
+          if (result.translated && result.translated !== text) {
+            finalText = result.translated;
+            translation = {
+              original: text,
+              translated: result.translated,
+              sourceLang: result.sourceLang,
+              targetLang: result.targetLang,
+            };
+          }
+        }
+
+        const savedMessage = await sendMessage(accountId, userId, jid, finalText, io);
+
+        // If we translated, also store original text info
+        if (translation) {
+          await prisma.message.update({
+            where: { id: savedMessage.id },
+            data: {
+              translation: text, // Store original Chinese text as translation field
+              sourceLang: translation.sourceLang,
+            },
+          });
+          savedMessage.translation = text;
+          savedMessage.sourceLang = translation.sourceLang;
+        }
+
+        socket.emit('whatsapp:message_sent', {
+          message: savedMessage,
+          translation,
+        });
       } catch (err) {
         console.error('[Socket] Send message error:', err);
         socket.emit('whatsapp:error', { message: 'Failed to send message' });
@@ -147,7 +190,6 @@ export function setupSocketHandlers(io, prisma) {
           data: { unreadCount: 0 },
         });
 
-        // Also send read receipt via WhatsApp
         const conn = getUserConnections(userId).find(c => c.accountId === accountId);
         if (conn) {
           const { getConnection } = await import('../services/whatsapp.js');
@@ -181,6 +223,59 @@ export function setupSocketHandlers(io, prisma) {
         });
       } catch (err) {
         console.error('[Socket] Get status error:', err);
+      }
+    });
+
+    // ---- Translation Events ----
+
+    // Translate a message on demand
+    socket.on('translation:translate', async (data) => {
+      try {
+        const { text, sourceLang, targetLang, engine } = data;
+
+        const { translateText, detectLanguage } = await import('../services/translation.js');
+        const settings = await getTranslationSettings(userId);
+        const effectiveEngine = engine || settings.translationEngine || 'doubao';
+
+        let effectiveSource = sourceLang || 'auto';
+        if (effectiveSource === 'auto') {
+          effectiveSource = await detectLanguage(text, effectiveEngine);
+        }
+
+        const result = await translateText(
+          text,
+          effectiveSource,
+          targetLang || 'zh',
+          effectiveEngine,
+          userId
+        );
+
+        socket.emit('translation:result', result);
+      } catch (err) {
+        console.error('[Socket] Translation error:', err);
+        socket.emit('whatsapp:error', { message: 'Translation failed' });
+      }
+    });
+
+    // Get translation settings
+    socket.on('translation:get_settings', async () => {
+      try {
+        const settings = await getTranslationSettings(userId);
+        socket.emit('translation:settings', settings);
+      } catch (err) {
+        console.error('[Socket] Get translation settings error:', err);
+      }
+    });
+
+    // Update translation settings
+    socket.on('translation:update_settings', async (data) => {
+      try {
+        const { updateSettings } = await import('../services/translation.js');
+        await updateSettings(userId, data);
+        const settings = await getTranslationSettings(userId);
+        socket.emit('translation:settings', settings);
+      } catch (err) {
+        console.error('[Socket] Update translation settings error:', err);
       }
     });
 

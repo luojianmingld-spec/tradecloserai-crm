@@ -15,6 +15,7 @@ model User {
   role      String   @default("user")
   createdAt DateTime @default(now())
   accounts  WhatsAppAccount[]
+  settings  Setting[]
 }
 
 model WhatsAppAccount {
@@ -55,6 +56,30 @@ model Contact {
   @@unique([accountId, jid])
 }
 
+model Setting {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+}
+
+model TranslationCache {
+  id           Int      @id @default(autoincrement())
+  sourceText   String
+  sourceLang   String
+  targetLang   String
+  engine       String
+  translated   String
+  createdAt    DateTime @default(now())
+
+  @@unique([sourceText, sourceLang, targetLang, engine])
+}
+
 model Message {
   id          Int      @id @default(autoincrement())
   accountId   Int
@@ -64,6 +89,8 @@ model Message {
   jid         String
   fromMe      Boolean
   content     String
+  translation String?
+  sourceLang  String?
   messageType String   @default("text")
   mediaUrl    String?
   mediaKey    String?

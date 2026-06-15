@@ -20,6 +20,16 @@ export const useChatStore = defineStore('chat', () => {
   const qrCode = ref(null);
   const connectionStatus = ref({});
 
+  // Translation
+  const translationSettings = ref({
+    translationEnabled: true,
+    translationEngine: 'doubao',
+    targetLanguage: 'zh',
+    doubaoApiKey: '',
+    deepseekApiKey: '',
+  });
+  const autoTranslateOutgoing = ref(true);
+
   // Computed
   const activeAccount = computed(() =>
     accounts.value.find(a => a.id === activeAccountId.value)
@@ -105,7 +115,12 @@ export const useChatStore = defineStore('chat', () => {
 
   function sendMessage(accountId, jid, text) {
     const socket = useSocket();
-    socket.emit('whatsapp:send_message', { accountId, jid, text });
+    socket.emit('whatsapp:send_message', {
+      accountId,
+      jid,
+      text,
+      autoTranslate: autoTranslateOutgoing.value && translationSettings.value.translationEnabled,
+    });
   }
 
   function setActiveConversation(jid) {
@@ -120,6 +135,50 @@ export const useChatStore = defineStore('chat', () => {
       // Clear unread count locally
       const conv = conversations.value.find(c => c.jid === jid);
       if (conv) conv.unreadCount = 0;
+    }
+  }
+
+  // Translation actions
+  async function fetchTranslationSettings() {
+    try {
+      const { data } = await api.get('/settings');
+      // data is a flat object like { translationEnabled: 'true', translationEngine: 'doubao', ... }
+      translationSettings.value = {
+        translationEnabled: data.translationEnabled !== 'false',
+        translationEngine: data.translationEngine || 'doubao',
+        targetLanguage: data.targetLanguage || data.translationTargetLang || 'zh',
+        doubaoApiKey: data.doubaoApiKey || '',
+        deepseekApiKey: data.deepseekApiKey || '',
+      };
+    } catch (err) {
+      console.error('Failed to fetch translation settings:', err);
+    }
+  }
+
+  async function updateTranslationSettings(settings) {
+    try {
+      const entries = Object.entries(settings).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
+      await api.put('/settings', { settings: entries });
+      translationSettings.value = { ...translationSettings.value, ...settings };
+    } catch (err) {
+      console.error('Failed to update translation settings:', err);
+    }
+  }
+
+  async function translateMessage(text, sourceLang, targetLang) {
+    try {
+      const { data } = await api.post('/translation/translate', {
+        text,
+        sourceLang: sourceLang || 'auto',
+        targetLang: targetLang || 'zh',
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to translate message:', err);
+      return null;
     }
   }
 
@@ -173,7 +232,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function handleMessageSent(data) {
-    const { message } = data;
+    const { message, translation } = data;
     if (!message) return;
 
     if (!messages.value[message.jid]) {
@@ -185,12 +244,16 @@ export const useChatStore = defineStore('chat', () => {
     );
     if (!exists) {
       messages.value[message.jid].push(message);
+    } else if (translation) {
+      // Update existing message with translation data
+      exists.translation = message.translation;
+      exists.sourceLang = message.sourceLang;
     }
 
     // Update conversation
     const conv = conversations.value.find(c => c.jid === message.jid);
     if (conv) {
-      conv.lastMessage = message.content?.substring(0, 100);
+      conv.lastMessage = (translation?.original || message.content)?.substring(0, 100);
       conv.lastMessageAt = message.timestamp;
     }
   }
@@ -212,6 +275,8 @@ export const useChatStore = defineStore('chat', () => {
     loadingMessages,
     qrCode,
     connectionStatus,
+    translationSettings,
+    autoTranslateOutgoing,
     activeAccount,
     activeConversation,
     currentMessages,
@@ -224,6 +289,9 @@ export const useChatStore = defineStore('chat', () => {
     requestQRCode,
     sendMessage,
     setActiveConversation,
+    fetchTranslationSettings,
+    updateTranslationSettings,
+    translateMessage,
     handleQRCode,
     handleStatus,
     handleNewMessage,
