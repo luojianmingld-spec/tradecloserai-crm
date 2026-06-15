@@ -35,6 +35,10 @@ export const useChatStore = defineStore('chat', () => {
   const aiGenerating = ref(false);
   const insertText = ref('');
 
+  // AI Summarize
+  const needSummary = ref(null);
+  const summarizeLoading = ref(false);
+
   // Computed
   const activeAccount = computed(() =>
     accounts.value.find(a => a.id === activeAccountId.value)
@@ -130,6 +134,9 @@ export const useChatStore = defineStore('chat', () => {
 
   function setActiveConversation(jid) {
     activeJid.value = jid;
+    // Clear AI state when switching conversation
+    aiReplies.value = [];
+    needSummary.value = null;
     if (jid) {
       // Mark as read
       const socket = useSocket();
@@ -220,6 +227,32 @@ export const useChatStore = defineStore('chat', () => {
 
   function clearInsertText() {
     insertText.value = '';
+  }
+
+  // AI Summarize actions
+  async function generateNeedSummary(accountId, jid) {
+    if (!accountId || !jid) return;
+    summarizeLoading.value = true;
+    needSummary.value = null;
+    try {
+      const { data } = await api.post('/ai/summarize-need', {
+        accountId,
+        jid,
+      });
+      if (data.summary) {
+        needSummary.value = data.summary;
+      } else if (data.error) {
+        console.error('AI summarize error:', data.error);
+      }
+    } catch (err) {
+      console.error('Failed to generate need summary:', err);
+    } finally {
+      summarizeLoading.value = false;
+    }
+  }
+
+  function clearNeedSummary() {
+    needSummary.value = null;
   }
 
   // Socket event handlers
@@ -320,6 +353,8 @@ export const useChatStore = defineStore('chat', () => {
     aiReplies,
     aiGenerating,
     insertText,
+    needSummary,
+    summarizeLoading,
     activeAccount,
     activeConversation,
     currentMessages,
@@ -338,6 +373,8 @@ export const useChatStore = defineStore('chat', () => {
     generateAIReply,
     insertToInput,
     clearInsertText,
+    generateNeedSummary,
+    clearNeedSummary,
     handleQRCode,
     handleStatus,
     handleNewMessage,
