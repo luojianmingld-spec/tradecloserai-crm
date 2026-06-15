@@ -23,8 +23,10 @@ const app = express();
 const httpServer = createServer(app);
 
 const PORT = process.env.PORT || 3001;
-const DEPLOY_PORT = process.env.DEPLOY_RUN_PORT || 5000;
 const isProduction = process.env.NODE_ENV === 'production';
+// Production: MUST read from DEPLOY_RUN_PORT (injected by sandbox)
+// Dev: use PORT (3001) for backend, Vite uses DEPLOY_RUN_PORT for frontend
+const LISTEN_PORT = isProduction ? (parseInt(process.env.DEPLOY_RUN_PORT, 10) || 5000) : PORT;
 
 // ─── Global error handlers (prevent process crash) ───
 process.on('uncaughtException', (err) => {
@@ -64,7 +66,8 @@ app.get('/api/health', (req, res) => {
 if (isProduction) {
   const frontendPath = path.join(__dirname, '../../frontend/dist');
   app.use(express.static(frontendPath));
-  app.get('*', (req, res) => {
+  // Express 5 requires named parameter instead of bare '*'
+  app.get('{*path}', (req, res) => {
     if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
       res.sendFile(path.join(frontendPath, 'index.html'));
     }
@@ -86,16 +89,9 @@ app.set('prisma', prisma);
 setupSocketHandlers(io, prisma);
 
 // ─── Start server ───
-if (isProduction) {
-  const serverPort = DEPLOY_PORT;
-  httpServer.listen(serverPort, '0.0.0.0', () => {
-    console.log(`[Production] Server running on port ${serverPort}`);
-  });
-} else {
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Dev] Backend server running on port ${PORT}`);
-  });
-}
+httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
+  console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
+});
 
 // ─── Seed default user ───
 async function seedDefaultUser() {

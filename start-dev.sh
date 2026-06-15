@@ -2,7 +2,7 @@
 # Dev startup script - launches backend and frontend reliably
 # No dependency on concurrently
 
-PROJECT_DIR="/workspace/projects"
+PROJECT_DIR="${COZE_WORKSPACE_PATH:-/workspace/projects}"
 
 echo "[start-dev] Starting WhatsApp CRM dev environment..."
 
@@ -36,9 +36,9 @@ for i in $(seq 1 10); do
   sleep 1
 done
 
-echo "[start-dev] Both services running. Waiting for processes..."
+echo "[start-dev] Both services running. Monitoring processes..."
 
-# Monitor both processes - if either dies, log it but keep going
+# Monitor both processes - if either dies, restart it
 while true; do
   if ! kill -0 $BACKEND_PID 2>/dev/null; then
     echo "[start-dev] WARNING: Backend process died! Restarting..."
