@@ -31,7 +31,40 @@
         >
           <div class="message-bubble" :class="{ outgoing: msg.fromMe, incoming: !msg.fromMe }">
             <div class="message-content">
-              <span class="msg-text">{{ msg.content }}</span>
+              <!-- Outgoing: show sent text, translation shows original -->
+              <template v-if="msg.fromMe && msg.translation">
+                <span class="msg-text">{{ msg.content }}</span>
+                <div class="msg-translation">
+                  <span class="translation-label">原文：</span>
+                  <span>{{ msg.translation }}</span>
+                </div>
+              </template>
+              <!-- Incoming with translation -->
+              <template v-else-if="!msg.fromMe && msg.translation">
+                <span class="msg-text">{{ msg.content }}</span>
+                <div class="msg-translation">
+                  <span class="translation-label">翻译：</span>
+                  <span>{{ msg.translation }}</span>
+                  <span v-if="msg.sourceLang" class="translation-lang">{{ getLangName(msg.sourceLang) }}</span>
+                </div>
+              </template>
+              <!-- No translation available - show translate button for incoming -->
+              <template v-else-if="!msg.fromMe && chatStore.translationSettings.translationEnabled && msg.messageType === 'text'">
+                <span class="msg-text">{{ msg.content }}</span>
+                <div v-if="translatingMsgs[msg.id]" class="msg-translation translating">
+                  <span class="translation-label">翻译中...</span>
+                </div>
+                <div v-else class="msg-translate-btn" @click="handleTranslateMsg(msg)">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px">
+                    <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                  </svg>
+                  翻译
+                </div>
+              </template>
+              <!-- Fallback: just text -->
+              <template v-else>
+                <span class="msg-text">{{ msg.content }}</span>
+              </template>
             </div>
             <div class="message-meta">
               <span class="msg-time">{{ formatMessageTime(msg.timestamp) }}</span>
@@ -66,27 +99,53 @@
           v-model="inputText"
           type="textarea"
           :autosize="{ minRows: 1, maxRows: 5 }"
-          placeholder="输入消息..."
+          :placeholder="inputPlaceholder"
           resize="none"
           @keydown.enter.exact.prevent="handleSend"
         />
       </div>
-      <el-button
-        type="primary"
-        :icon="Promotion"
-        circle
-        :disabled="!inputText.trim()"
-        @click="handleSend"
-      />
+      <div class="input-actions">
+        <el-tooltip :content="autoTranslate ? '自动翻译已开启' : '自动翻译已关闭'" placement="top">
+          <el-button
+            :type="autoTranslate ? 'primary' : 'default'"
+            circle
+            size="small"
+            @click="autoTranslate = !autoTranslate"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+            </svg>
+          </el-button>
+        </el-tooltip>
+        <el-button
+          type="primary"
+          :icon="Promotion"
+          circle
+          :disabled="!inputText.trim()"
+          @click="handleSend"
+        />
+      </div>
+    </div>
+
+    <!-- Translation Preview -->
+    <div v-if="translationPreview" class="translation-preview">
+      <div class="preview-header">
+        <span>翻译预览</span>
+        <el-button text size="small" @click="translationPreview = null">
+          <el-icon><Close /></el-icon>
+        </el-button>
+      </div>
+      <div class="preview-content">{{ translationPreview }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue';
-import { Search, Promotion, ChatDotRound } from '@element-plus/icons-vue';
-// Note: Paperclip icon - using a workaround since element-plus may not have it
-const Paperclip = ChatDotRound; // Placeholder
+import { ref, computed, watch, nextTick, reactive } from 'vue';
+import { Search, Promotion, ChatDotRound, Close } from '@element-plus/icons-vue';
+import { useChatStore } from '../../stores/chat.js';
+
+const Paperclip = ChatDotRound;
 
 const props = defineProps({
   accountId: { type: Number, required: true },
@@ -96,10 +155,24 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['send']);
+const chatStore = useChatStore();
 
 const inputText = ref('');
 const messagesContainer = ref(null);
 const inputRef = ref(null);
+const autoTranslate = computed({
+  get: () => chatStore.autoTranslateOutgoing,
+  set: (val) => { chatStore.autoTranslateOutgoing = val; },
+});
+const translationPreview = ref(null);
+const translatingMsgs = reactive({});
+
+const inputPlaceholder = computed(() => {
+  if (autoTranslate.value && chatStore.translationSettings.translationEnabled) {
+    return '输入中文，自动翻译后发送...';
+  }
+  return '输入消息...';
+});
 
 // Auto-scroll to bottom on new messages
 watch(
@@ -116,6 +189,7 @@ watch(
   async () => {
     await nextTick();
     scrollToBottom();
+    translationPreview.value = null;
   }
 );
 
@@ -125,11 +199,28 @@ function scrollToBottom() {
   }
 }
 
-function handleSend() {
+async function handleSend() {
   const text = inputText.value.trim();
   if (!text) return;
   emit('send', text);
   inputText.value = '';
+  translationPreview.value = null;
+}
+
+async function handleTranslateMsg(msg) {
+  if (translatingMsgs[msg.id]) return;
+  translatingMsgs[msg.id] = true;
+  try {
+    const result = await chatStore.translateMessage(msg.content, msg.sourceLang || 'auto');
+    if (result?.translated) {
+      msg.translation = result.translated;
+      msg.sourceLang = result.sourceLang || msg.sourceLang;
+    }
+  } catch (err) {
+    console.error('Translation failed:', err);
+  } finally {
+    translatingMsgs[msg.id] = false;
+  }
 }
 
 function onScroll() {
@@ -146,6 +237,18 @@ function formatMessageTime(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
+
+const languageNames = {
+  en: '英语', zh: '中文', ja: '日语', ko: '韩语', es: '西班牙语',
+  fr: '法语', de: '德语', pt: '葡萄牙语', ru: '俄语', ar: '阿拉伯语',
+  hi: '印地语', it: '意大利语', th: '泰语', vi: '越南语', id: '印尼语',
+  ms: '马来语', tr: '土耳其语', nl: '荷兰语', pl: '波兰语',
+};
+
+function getLangName(code) {
+  if (!code) return '';
+  return languageNames[code] || code;
+}
 </script>
 
 <style scoped>
@@ -153,6 +256,7 @@ function formatMessageTime(timestamp) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
 }
 
 /* Header */
@@ -253,6 +357,57 @@ function formatMessageTime(timestamp) {
   white-space: pre-wrap;
 }
 
+/* Translation styles */
+.msg-translation {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.msg-translation.translating {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.translation-label {
+  color: var(--accent-color);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.translation-lang {
+  background: rgba(0, 168, 132, 0.15);
+  color: var(--accent-color);
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.msg-translate-btn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 2px 8px;
+  background: rgba(0, 168, 132, 0.1);
+  color: var(--accent-color);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.msg-translate-btn:hover {
+  background: rgba(0, 168, 132, 0.2);
+}
+
 .message-meta {
   display: flex;
   align-items: center;
@@ -320,5 +475,48 @@ function formatMessageTime(timestamp) {
 
 :deep(.el-textarea__inner:focus) {
   box-shadow: none;
+}
+
+.input-actions {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 6px;
+  align-items: flex-end;
+}
+
+/* Translation preview */
+.translation-preview {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel-header-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  max-width: 400px;
+  width: 90%;
+  z-index: 10;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.preview-content {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>

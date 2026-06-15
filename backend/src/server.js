@@ -10,6 +10,8 @@ import authRoutes from './routes/auth.js';
 import accountRoutes from './routes/accounts.js';
 import contactRoutes from './routes/contacts.js';
 import messageRoutes from './routes/messages.js';
+import settingsRoutes from './routes/settings.js';
+import translationRoutes from './routes/translation.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +38,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/accounts', authMiddleware, accountRoutes);
 app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/messages', authMiddleware, messageRoutes);
+app.use('/api/settings', authMiddleware, settingsRoutes);
+app.use('/api/translation', authMiddleware, translationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

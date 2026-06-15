@@ -18,8 +18,9 @@
 │   └── src/
 │       ├── server.js        # 入口：Express + Socket.io + 生产静态服务
 │       ├── middleware/auth.js # JWT 认证中间件
-│       ├── routes/          # REST API 路由 (auth, accounts, contacts, messages)
+│       ├── routes/          # REST API 路由 (auth, accounts, contacts, messages, settings, translation)
 │       ├── services/whatsapp.js  # Baileys WhatsApp 连接管理
+│       ├── services/translation.js # 翻译服务（豆包/DeepSeek + 缓存 + 语言检测）
 │       └── socket/handlers.js    # Socket.io 事件处理
 ├── frontend/
 │   └── src/
@@ -47,18 +48,33 @@
 - `PUT /api/contacts/:id` - 更新联系人
 - `GET /api/messages` - 消息列表
 - `GET /api/messages/conversations` - 会话列表
+- `GET /api/settings` - 获取翻译设置
+- `PUT /api/settings` - 更新翻译设置
+- `POST /api/translation/translate` - 翻译文本
+- `POST /api/translation/translate-outgoing` - 翻译发送消息
+- `POST /api/translation/detect-language` - 检测语言
 
 ## Socket.io 事件
 - `whatsapp:request_qr` - 请求二维码
 - `whatsapp:qr` - 接收二维码
 - `whatsapp:status` - 连接状态更新
-- `whatsapp:send_message` - 发送消息
-- `whatsapp:message` - 收到新消息
-- `whatsapp:message_sent` - 消息发送确认
+- `whatsapp:send_message` - 发送消息（支持 autoTranslate 参数）
+- `whatsapp:message` - 收到新消息（含 translation 字段）
+- `whatsapp:message_sent` - 消息发送确认（含 translation 信息）
 - `whatsapp:mark_read` - 标记已读
+- `translation:translate` - 实时翻译
+- `translation:get_settings` - 获取翻译设置
+- `translation:update_settings` - 更新翻译设置
 
 ## 数据库
-SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppAccount, Contact, Message, Conversation。
+SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppAccount, Contact, Message, Conversation, Setting, TranslationCache。
+
+## 翻译系统
+- **引擎**: 豆包 (doubao-seed-2-0-lite) 和 DeepSeek (deepseek-v3-2)
+- **语言检测**: 先用字符模式快速检测，不确定时调用 LLM
+- **缓存**: 内存缓存 + 数据库 TranslationCache 表，相同内容不重复调用
+- **API Key**: 存储在 Settings 表，留空使用系统默认配置
+- **自动翻译**: 收到消息自动翻译为目标语言，发送时可选自动翻译
 
 ## 代码风格
 - 后端使用 ESM (`"type": "module"`)
