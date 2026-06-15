@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./crm.db"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  accounts  WhatsAppAccount[]
+}
+
+model WhatsAppAccount {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone        String?
+  name         String?
+  pushName     String?
+  status       String   @default("disconnected")
+  sessionDir   String   @unique
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime?
+  contacts     Contact[]
+  conversations Conversation[]
+  messages     Message[]
+}
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  accountId   Int
+  account     WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  jid         String
+  name        String?
+  phone       String?
+  pushName    String?
+  avatarUrl   String?
+  tags        String?
+  notes       String?
+  country     String?
+  language    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  messages    Message[]
+  conversation Conversation?
+
+  @@unique([accountId, jid])
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  accountId   Int
+  account     WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId   Int
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jid         String
+  fromMe      Boolean
+  content     String
+  messageType String   @default("text")
+  mediaUrl    String?
+  mediaKey    String?
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Conversation {
+  id            Int      @id @default(autoincrement())
+  accountId    Int
+  account      WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId    Int      @unique
+  contact      Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jid          String
+  lastMessage  String?
+  lastMessageAt DateTime?
+  unreadCount  Int      @default(0)
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([accountId, jid])
+}
