@@ -28,11 +28,16 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Dev: use PORT (3001) for backend, Vite uses DEPLOY_RUN_PORT for frontend
 const LISTEN_PORT = isProduction ? (parseInt(process.env.DEPLOY_RUN_PORT, 10) || 5000) : PORT;
 
-// ─── Global error handlers (prevent process crash) ───
+// ─── Global error handlers ───
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message);
   console.error(err.stack);
-  // Don't exit — keep the process alive
+  // EADDRINUSE is fatal — the server cannot function without the port
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
+    process.exit(1);
+  }
+  // For other errors, keep the process alive
 });
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -89,6 +94,14 @@ app.set('prisma', prisma);
 setupSocketHandlers(io, prisma);
 
 // ─── Start server ───
+httpServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
+    process.exit(1);
+  }
+  console.error('[FATAL] Server error:', err);
+});
+
 httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
   console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
 });
@@ -123,5 +136,3 @@ async function gracefulShutdown(signal) {
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-export { app, io, prisma };
