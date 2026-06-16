@@ -21,7 +21,12 @@
 │       ├── routes/          # REST API 路由 (auth, accounts, contacts, messages, settings, translation)
 │       ├── services/whatsapp.js  # Baileys WhatsApp 连接管理
 │       ├── services/translation.js # 翻译服务（豆包/DeepSeek + 缓存 + 语言检测）
+│       ├── services/ai-reply.js   # AI回复话术生成
+│       ├── services/ai-summarize.js # AI客户需求总结
 │       └── socket/handlers.js    # Socket.io 事件处理
+│   └── vendor/
+│       ├── libsignal/           # 本地 vendored libsignal（避免 GitHub 超时）
+│       └── eslint-config-dummy/ # 空替代包（Baileys 误将 eslint-config 放入 dependencies）
 ├── frontend/
 │   └── src/
 │       ├── main.js / App.vue
@@ -33,11 +38,11 @@
 ```
 
 ## 构建和运行命令
-- **安装依赖**: `cd backend && pnpm install && cd ../frontend && pnpm install && cd .. && pnpm install`
+- **部署构建**: `bash build.sh`（安装前后端依赖 + Prisma + 前端构建）
+- **部署启动**: `bash start.sh`（生产模式，从 DEPLOY_RUN_PORT 读端口）
+- **开发模式**: `bash start-dev.sh`（后端3001 + 前端Vite DEPLOY_RUN_PORT）
 - **Prisma 生成**: `cd backend && npx prisma generate && npx prisma db push`
-- **开发模式**: 后端端口3001 + 前端Vite端口由 DEPLOY_RUN_PORT 决定
-- **生产构建**: `cd frontend && pnpm build` → 后端在 DEPLOY_RUN_PORT 提供服务
-- **启动**: `cd backend && NODE_ENV=production node src/server.js`
+- **手动安装**: `cd backend && pnpm install && cd ../frontend && pnpm install`
 
 ## API 端点
 - `POST /api/auth/login` - 登录
@@ -95,3 +100,8 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 - WhatsApp 认证数据存储在 `backend/sessions/` 目录
 - Socket.io 房间机制：每个用户加入 `user_{userId}` 房间
 - 默认管理员账号：admin / admin123（首次启动自动创建）
+- **GitHub 依赖已 vendor 化**: libsignal 和 eslint-config 使用本地 vendor 目录 + pnpm overrides，部署容器无需访问 GitHub
+- **Prisma 版本锁定**: 6.8.2（7.x schema 不兼容）
+- **Express 5 通配路由**: 使用 `{*path}` 语法而非 `*`
+- **生产模式前端路径**: server.js 使用 `process.cwd()` + `../frontend/dist` 定位（需从 backend/ 目录启动）
+- **构建脚本**: build.sh/start.sh 使用 `SCRIPT_DIR` 定位项目根，支持任意工作目录执行
