@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { setupSocketHandlers } from './socket/handlers.js';
@@ -69,7 +70,13 @@ app.get('/api/health', (req, res) => {
 
 // ─── Serve frontend in production ───
 if (isProduction) {
-  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  // Resolve frontend dist path robustly:
+  // When started via start.sh, cwd is backend/ → ../frontend/dist
+  // Fallback: __dirname (backend/src/) → ../../frontend/dist
+  const cwdFrontendPath = path.join(process.cwd(), '../frontend/dist');
+  const fallbackFrontendPath = path.join(__dirname, '../../frontend/dist');
+  const frontendPath = fs.existsSync(cwdFrontendPath) ? cwdFrontendPath : fallbackFrontendPath;
+  console.log(`[Production] Serving frontend from: ${frontendPath}`);
   app.use(express.static(frontendPath));
   // Express 5 requires named parameter instead of bare '*'
   app.get('{*path}', (req, res) => {
