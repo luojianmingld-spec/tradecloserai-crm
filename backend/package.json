@@ -19,20 +19,9 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",
-    "pino": "^9.6.0",
-    "qrcode": "^1.5.4",
     "socket.io": "^4.8.1"
-  },
-  "optionalDependencies": {
-    "@whiskeysockets/baileys": "^6.7.8",
-    "libsignal": "file:./vendor/libsignal"
   },
   "devDependencies": {
     "prisma": "6.8.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "@whiskeysockets/eslint-config": "file:./vendor/eslint-config-dummy"
-    }
   }
 }
