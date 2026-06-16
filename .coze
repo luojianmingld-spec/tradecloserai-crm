@@ -3,7 +3,7 @@ requires = ["nodejs-24"]
 
 [dev]
 build = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && bash build.sh"]
-run = ["sh", "-c", "bash ${COZE_WORKSPACE_PATH:-/workspace/projects}/start-dev.sh"]
+run = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && bash start-dev.sh"]
 
 [deploy]
 build = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && bash build.sh"]
