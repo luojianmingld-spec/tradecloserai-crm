@@ -76,14 +76,24 @@ if (isProduction) {
   const cwdFrontendPath = path.join(process.cwd(), '../frontend/dist');
   const fallbackFrontendPath = path.join(__dirname, '../../frontend/dist');
   const frontendPath = fs.existsSync(cwdFrontendPath) ? cwdFrontendPath : fallbackFrontendPath;
-  console.log(`[Production] Serving frontend from: ${frontendPath}`);
-  app.use(express.static(frontendPath));
-  // Express 5 requires named parameter instead of bare '*'
-  app.get('{*path}', (req, res) => {
-    if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
-      res.sendFile(path.join(frontendPath, 'index.html'));
-    }
-  });
+  const hasDist = fs.existsSync(path.join(frontendPath, 'index.html'));
+  console.log(`[Production] Serving frontend from: ${frontendPath} (dist exists: ${hasDist})`);
+
+  if (hasDist) {
+    app.use(express.static(frontendPath));
+    // Express 5 requires named parameter instead of bare '*'
+    app.get('{*path}', (req, res) => {
+      if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+        res.sendFile(path.join(frontendPath, 'index.html'));
+      }
+    });
+  } else {
+    // No frontend dist - still serve API, return status page for root
+    console.warn('[Production] WARNING: frontend dist not found, serving API-only mode');
+    app.get('/', (req, res) => {
+      res.json({ status: 'ok', mode: 'api-only', message: 'Frontend not built' });
+    });
+  }
 }
 
 // ─── Socket.io setup (BEFORE listen) ───
