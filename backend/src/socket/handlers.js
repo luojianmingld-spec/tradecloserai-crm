@@ -1,14 +1,40 @@
 import {
-  getOrCreateConnection,
-  sendMessage,
-  disconnectAccount,
-  getUserConnections,
-} from '../services/whatsapp.js';
-import {
   autoTranslateMessage,
   translateOutgoing,
   getTranslationSettings,
 } from '../services/translation.js';
+
+// ─── WhatsApp 模块：动态加载 + 降级 ───
+// Baileys 可能在部署环境中安装失败（GitHub 依赖超时）
+// 此时 WhatsApp 功能不可用，但其他功能（翻译、AI、客户管理）仍能正常工作
+
+let whatsappModule = null;
+let whatsappLoadAttempted = false;
+
+async function loadWhatsApp() {
+  if (whatsappModule) return whatsappModule;
+  if (whatsappLoadAttempted) return null;
+  whatsappLoadAttempted = true;
+  try {
+    whatsappModule = await import('../services/whatsapp.js');
+    console.log('[Socket] WhatsApp module loaded successfully');
+    return whatsappModule;
+  } catch (err) {
+    console.warn('[Socket] WhatsApp module unavailable:', err.message);
+    console.warn('[Socket] WhatsApp features will be disabled. Core CRM features still work.');
+    return null;
+  }
+}
+
+// 在启动时尝试加载，但不阻塞
+loadWhatsApp();
+
+function whatsappUnavailable(socket) {
+  socket.emit('whatsapp:error', {
+    message: 'WhatsApp 功能暂不可用，请检查 Baileys 库是否正确安装',
+    code: 'WHATSAPP_UNAVAILABLE',
+  });
+}
 
 export function setupSocketHandlers(io, prisma) {
   io.on('connection', (socket) => {
@@ -29,8 +55,10 @@ export function setupSocketHandlers(io, prisma) {
     // Request QR code for an account
     socket.on('whatsapp:request_qr', async (data) => {
       try {
-        const { accountId } = data;
+        const wa = await loadWhatsApp();
+        if (!wa) { whatsappUnavailable(socket); return; }
 
+        const { accountId } = data;
         const account = await prisma.whatsAppAccount.findFirst({
           where: { id: accountId, userId },
         });
@@ -39,7 +67,7 @@ export function setupSocketHandlers(io, prisma) {
           return;
         }
 
-        await getOrCreateConnection(accountId, userId, io);
+        await wa.getOrCreateConnection(accountId, userId, io);
       } catch (err) {
         console.error('[Socket] QR request error:', err);
         socket.emit('whatsapp:error', { message: 'Failed to generate QR code' });
@@ -49,6 +77,9 @@ export function setupSocketHandlers(io, prisma) {
     // Send message (with optional auto-translation)
     socket.on('whatsapp:send_message', async (data) => {
       try {
+        const wa = await loadWhatsApp();
+        if (!wa) { whatsappUnavailable(socket); return; }
+
         const { accountId, jid, text, autoTranslate } = data;
         if (!accountId || !jid || !text) {
           socket.emit('whatsapp:error', { message: 'Missing required fields' });
@@ -68,7 +99,6 @@ export function setupSocketHandlers(io, prisma) {
         let translation = null;
 
         if (autoTranslate) {
-          // Get contact's language
           const contact = await prisma.contact.findUnique({
             where: { accountId_jid: { accountId, jid } },
           });
@@ -86,14 +116,13 @@ export function setupSocketHandlers(io, prisma) {
           }
         }
 
-        const savedMessage = await sendMessage(accountId, userId, jid, finalText, io);
+        const savedMessage = await wa.sendMessage(accountId, userId, jid, finalText, io);
 
-        // If we translated, also store original text info
         if (translation) {
           await prisma.message.update({
             where: { id: savedMessage.id },
             data: {
-              translation: text, // Store original Chinese text as translation field
+              translation: text,
               sourceLang: translation.sourceLang,
             },
           });
@@ -114,8 +143,11 @@ export function setupSocketHandlers(io, prisma) {
     // Disconnect WhatsApp account
     socket.on('whatsapp:disconnect', async (data) => {
       try {
+        const wa = await loadWhatsApp();
+        if (!wa) { whatsappUnavailable(socket); return; }
+
         const { accountId } = data;
-        await disconnectAccount(accountId, userId);
+        await wa.disconnectAccount(accountId, userId);
         socket.emit('whatsapp:status', { accountId, status: 'disconnected' });
       } catch (err) {
         console.error('[Socket] Disconnect error:', err);
@@ -178,6 +210,7 @@ export function setupSocketHandlers(io, prisma) {
     // Mark conversation as read
     socket.on('whatsapp:mark_read', async (data) => {
       try {
+        const wa = await loadWhatsApp();
         const { accountId, jid } = data;
 
         const account = await prisma.whatsAppAccount.findFirst({
@@ -190,12 +223,13 @@ export function setupSocketHandlers(io, prisma) {
           data: { unreadCount: 0 },
         });
 
-        const conn = getUserConnections(userId).find(c => c.accountId === accountId);
-        if (conn) {
-          const { getConnection } = await import('../services/whatsapp.js');
-          const connection = getConnection(accountId);
-          if (connection?.sock) {
-            await connection.sock.readMessages([{ remoteJid: jid, id: '' }]);
+        if (wa) {
+          const conn = wa.getUserConnections(userId).find(c => c.accountId === accountId);
+          if (conn) {
+            const connection = wa.getConnection(accountId);
+            if (connection?.sock) {
+              await connection.sock.readMessages([{ remoteJid: jid, id: '' }]);
+            }
           }
         }
       } catch (err) {

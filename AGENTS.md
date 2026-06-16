@@ -97,6 +97,8 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 
 ## 关键注意事项
 - Baileys 是 ESM-only 库，后端必须使用 ESM
+- **Baileys 为可选依赖**: 移至 `optionalDependencies`，安装失败时 WhatsApp 功能降级但核心 CRM 可用
+- **WhatsApp 动态加载**: `whatsapp.js` 和 `handlers.js` 通过动态 `import()` 加载 Baileys，启动时不会因 Baileys 缺失而崩溃
 - WhatsApp 认证数据存储在 `backend/sessions/` 目录
 - Socket.io 房间机制：每个用户加入 `user_{userId}` 房间
 - 默认管理员账号：admin / admin123（首次启动自动创建）
@@ -104,4 +106,5 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 - **Prisma 版本锁定**: 6.8.2（7.x schema 不兼容）
 - **Express 5 通配路由**: 使用 `{*path}` 语法而非 `*`
 - **生产模式前端路径**: server.js 使用 `process.cwd()` + `../frontend/dist` 定位（需从 backend/ 目录启动）
-- **构建脚本**: build.sh/start.sh 使用 `SCRIPT_DIR` 定位项目根，支持任意工作目录执行
+- **构建脚本**: build.sh/start.sh 使用 `COZE_WORKSPACE_PATH` + `SCRIPT_DIR` 双重定位，支持任意工作目录执行
+- **.coze 配置**: dev/deploy 均使用 `sh -c` 确保 `${COZE_WORKSPACE_PATH}` 变量正确展开
