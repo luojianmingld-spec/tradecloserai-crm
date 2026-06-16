@@ -19,6 +19,7 @@
     "coze-coding-dev-sdk": "^0.7.24",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "libsignal": "file:./vendor/libsignal",
     "multer": "^1.4.5-lts.2",
     "pino": "^9.6.0",
     "qrcode": "^1.5.4",
@@ -26,5 +27,11 @@
   },
   "devDependencies": {
     "prisma": "6.8.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "@whiskeysockets/eslint-config": "file:./vendor/eslint-config-dummy",
+      "libsignal": "file:./vendor/libsignal"
+    }
   }
 }
