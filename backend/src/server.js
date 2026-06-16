@@ -81,11 +81,15 @@ if (isProduction) {
 
   if (hasDist) {
     app.use(express.static(frontendPath));
-    // Express 5 requires named parameter instead of bare '*'
-    app.get('{*path}', (req, res) => {
-      if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
-        res.sendFile(path.join(frontendPath, 'index.html'));
+    // Express 5 SPA fallback: catch-all for non-API, non-static GET requests
+    // Must call res.send() or next() for ALL matched routes, otherwise request hangs
+    app.get('{*path}', (req, res, next) => {
+      // Skip API and Socket.io paths - let them 404 naturally
+      if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+        return next();
       }
+      // For all other paths, serve the SPA index.html
+      res.sendFile(path.join(frontendPath, 'index.html'));
     });
   } else {
     // No frontend dist - still serve API, return status page for root
