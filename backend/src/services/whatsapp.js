@@ -1,9 +1,6 @@
-import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-} from '@whiskeysockets/baileys';
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WhatsApp 服务 — 动态加载 Baileys，安装失败时降级
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 import pino from 'pino';
 import QRCode from 'qrcode';
 import { PrismaClient } from '@prisma/client';
@@ -14,6 +11,25 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const prisma = new PrismaClient();
+
+// ─── Baileys 动态加载 ───
+let baileysModule = null;
+let baileysLoadError = null;
+
+async function loadBaileys() {
+  if (baileysModule) return baileysModule;
+  if (baileysLoadError) throw baileysLoadError;
+  try {
+    baileysModule = await import('@whiskeysockets/baileys');
+    console.log('[WhatsApp] Baileys library loaded successfully');
+    return baileysModule;
+  } catch (err) {
+    baileysLoadError = err;
+    console.warn('[WhatsApp] Baileys library not available:', err.message);
+    console.warn('[WhatsApp] WhatsApp features will be disabled');
+    throw err;
+  }
+}
 
 const logger = pino({
   level: 'silent', // Suppress Baileys verbose logs
@@ -26,6 +42,8 @@ const activeConnections = new Map();
  * Get or create a WhatsApp connection for an account
  */
 export async function getOrCreateConnection(accountId, userId, io) {
+  const { useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, default: makeWASocket } = await loadBaileys();
+
   if (activeConnections.has(accountId)) {
     return activeConnections.get(accountId);
   }
@@ -36,6 +54,8 @@ export async function getOrCreateConnection(accountId, userId, io) {
  * Create a new WhatsApp connection
  */
 async function createConnection(accountId, userId, io) {
+  const { useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, DisconnectReason, default: makeWASocket } = await loadBaileys();
+
   // Get account from DB
   const account = await prisma.whatsAppAccount.findFirst({
     where: { id: accountId, userId },
@@ -94,12 +114,10 @@ async function createConnection(accountId, userId, io) {
           margin: 2,
           color: { dark: '#000000', light: '#ffffff' },
         });
-        // Emit QR code to the user's room
         io.to(`user_${userId}`).emit('whatsapp:qr', {
           accountId,
           qr: qrDataUrl,
         });
-        // Update account status
         await prisma.whatsAppAccount.update({
           where: { id: accountId },
           data: { status: 'connecting' },
@@ -118,7 +136,6 @@ async function createConnection(accountId, userId, io) {
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       if (statusCode === DisconnectReason.loggedOut) {
-        // Clean up - user logged out from phone
         console.log(`[WhatsApp] Account ${accountId} logged out`);
         activeConnections.delete(accountId);
         await prisma.whatsAppAccount.update({
@@ -140,7 +157,6 @@ async function createConnection(accountId, userId, io) {
           accountId,
           status: 'reconnecting',
         });
-        // Reconnect after delay
         setTimeout(() => {
           if (activeConnections.has(accountId)) {
             activeConnections.delete(accountId);
@@ -153,7 +169,6 @@ async function createConnection(accountId, userId, io) {
     if (connection === 'open') {
       console.log(`[WhatsApp] Account ${accountId} connected`);
 
-      // Get account info
       try {
         const meId = sock.user?.id;
         const meName = sock.user?.name || '';
@@ -174,7 +189,6 @@ async function createConnection(accountId, userId, io) {
           info: { phone: meId?.split('@')[0], name: meName },
         });
 
-        // Load existing chats
         await loadChats(accountId, sock, io, userId);
       } catch (err) {
         console.error('[WhatsApp] Error updating account info:', err);
@@ -209,9 +223,6 @@ async function createConnection(accountId, userId, io) {
  */
 async function loadChats(accountId, sock, io, userId) {
   try {
-    // Baileys doesn't have a direct "get chats" method like the old version
-    // Chats are synced via history sync events
-    // We'll emit a notification that connection is ready
     io.to(`user_${userId}`).emit('whatsapp:chats_loaded', { accountId });
   } catch (err) {
     console.error('[WhatsApp] Error loading chats:', err);
@@ -222,21 +233,18 @@ async function loadChats(accountId, sock, io, userId) {
  * Handle an incoming WhatsApp message
  */
 async function handleIncomingMessage(accountId, userId, msg, io) {
-  // Skip status messages and protocol messages
   if (msg.key.remoteJid === 'status@broadcast') return;
-  if (msg.key.fromMe) return; // We handle sent messages differently
+  if (msg.key.fromMe) return;
   if (!msg.message) return;
 
   const jid = msg.key.remoteJid;
   const pushName = msg.pushName || '';
 
-  // Extract message content
   const content = extractMessageContent(msg.message);
   if (!content && !msg.message.imageMessage && !msg.message.documentMessage) return;
 
   const messageType = getMessageType(msg.message);
 
-  // Ensure contact exists
   let contact = await prisma.contact.findUnique({
     where: { accountId_jid: { accountId, jid } },
   });
@@ -258,7 +266,6 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
     });
   }
 
-  // Check for duplicate message
   const existingMsg = await prisma.message.findFirst({
     where: {
       accountId,
@@ -269,7 +276,6 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
   });
   if (existingMsg) return;
 
-  // Auto-translate incoming message
   let translationResult = null;
   try {
     const { autoTranslateMessage } = await import('./translation.js');
@@ -278,7 +284,6 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
     console.error('[WhatsApp] Auto-translation error:', err);
   }
 
-  // Save message (with translation if available)
   const timestamp = new Date(
     Math.floor((msg.messageTimestamp || Date.now() / 1000) * 1000)
   );
@@ -297,7 +302,6 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
     },
   });
 
-  // Update or create conversation
   await prisma.conversation.upsert({
     where: { accountId_jid: { accountId, jid } },
     create: {
@@ -315,7 +319,6 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
     },
   });
 
-  // Emit to user
   io.to(`user_${userId}`).emit('whatsapp:message', {
     accountId,
     message: savedMessage,
@@ -327,6 +330,8 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
  * Send a text message via WhatsApp
  */
 export async function sendMessage(accountId, userId, jid, text, io) {
+  await loadBaileys(); // Ensure Baileys is loaded
+
   const conn = activeConnections.get(accountId);
   if (!conn || !conn.sock) {
     throw new Error('WhatsApp not connected');
@@ -334,7 +339,6 @@ export async function sendMessage(accountId, userId, jid, text, io) {
 
   const sent = await conn.sock.sendMessage(jid, { text });
 
-  // Ensure contact exists
   let contact = await prisma.contact.findUnique({
     where: { accountId_jid: { accountId, jid } },
   });
@@ -350,7 +354,6 @@ export async function sendMessage(accountId, userId, jid, text, io) {
     });
   }
 
-  // Save sent message
   const timestamp = new Date();
   const savedMessage = await prisma.message.create({
     data: {
@@ -364,7 +367,6 @@ export async function sendMessage(accountId, userId, jid, text, io) {
     },
   });
 
-  // Update conversation
   await prisma.conversation.upsert({
     where: { accountId_jid: { accountId, jid } },
     create: {
@@ -388,6 +390,8 @@ export async function sendMessage(accountId, userId, jid, text, io) {
  * Disconnect a WhatsApp account
  */
 export async function disconnectAccount(accountId, userId) {
+  await loadBaileys(); // Ensure Baileys is loaded
+
   const conn = activeConnections.get(accountId);
   if (conn) {
     await conn.sock.logout();

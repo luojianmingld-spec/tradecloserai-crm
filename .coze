@@ -2,9 +2,9 @@
 requires = ["nodejs-24"]
 
 [dev]
-build = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && pnpm install --filter=backend --filter=frontend && cd backend && npx prisma generate"]
+build = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && bash build.sh"]
 run = ["sh", "-c", "bash ${COZE_WORKSPACE_PATH:-/workspace/projects}/start-dev.sh"]
 
 [deploy]
-build = ["bash", "build.sh"]
-run = ["bash", "start.sh"]
+build = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && bash build.sh"]
+run = ["sh", "-c", "cd ${COZE_WORKSPACE_PATH:-/workspace/projects} && bash start.sh"]
