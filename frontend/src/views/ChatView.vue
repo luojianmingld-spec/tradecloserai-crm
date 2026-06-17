@@ -37,6 +37,13 @@
             clearable
             size="small"
           />
+          <el-button
+            :icon="Setting"
+            circle
+            size="small"
+            class="settings-trigger"
+            @click="$router.push('/settings')"
+          />
         </div>
       </div>
 
@@ -119,6 +126,8 @@
         :contact="chatStore.activeConversation?.contact"
         :account-id="chatStore.activeAccountId"
         :jid="chatStore.activeJid"
+        @ai-reply="handleAIReply"
+        @summarize="handleAISummarize"
       />
       <div v-else class="no-customer">
         <p>选择会话查看客户信息</p>
@@ -160,7 +169,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { Plus, Search, Loading } from '@element-plus/icons-vue';
+import { Plus, Search, Loading, Setting } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { useChatStore } from '../stores/chat.js';
 import { initSocket } from '../utils/socket.js';
@@ -243,6 +252,24 @@ function selectConversation(conv) {
 function onSendMessage(text) {
   if (!chatStore.activeAccountId || !chatStore.activeJid) return;
   chatStore.sendMessage(chatStore.activeAccountId, chatStore.activeJid, text);
+}
+
+async function handleAIReply() {
+  if (!chatStore.activeAccountId || !chatStore.activeJid) return;
+  try {
+    await chatStore.generateAIReply(chatStore.activeAccountId, chatStore.activeJid, 'formal');
+  } catch (err) {
+    console.error('AI reply failed:', err);
+  }
+}
+
+async function handleAISummarize() {
+  if (!chatStore.activeAccountId || !chatStore.activeJid) return;
+  try {
+    await chatStore.summarizeNeed(chatStore.activeAccountId, chatStore.activeJid);
+  } catch (err) {
+    console.error('AI summarize failed:', err);
+  }
 }
 
 function getInitial(name) {
@@ -362,6 +389,21 @@ function formatTime(dateStr) {
 
 .search-bar {
   width: 100%;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-trigger {
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.06) !important;
+  border: none !important;
+  color: var(--text-secondary, #8696a0) !important;
+}
+
+.settings-trigger:hover {
+  color: var(--color-primary, #00a884) !important;
+  background: rgba(0,168,132,0.1) !important;
 }
 
 :deep(.el-input__wrapper) {
