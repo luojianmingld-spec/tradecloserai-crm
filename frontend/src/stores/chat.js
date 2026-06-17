@@ -150,17 +150,18 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // Translation actions
+  // Settings actions (unified: translation + AI)
   async function fetchTranslationSettings() {
     try {
       const { data } = await api.get('/settings');
-      // data is a flat object like { translationEnabled: 'true', translationEngine: 'doubao', ... }
       translationSettings.value = {
         translationEnabled: data.translationEnabled !== 'false',
         translationEngine: data.translationEngine || 'doubao',
         targetLanguage: data.targetLanguage || data.translationTargetLang || 'zh',
         doubaoApiKey: data.doubaoApiKey || '',
         deepseekApiKey: data.deepseekApiKey || '',
+        aiModel: data.aiModel || 'doubao-seed-2-0-pro-260215',
+        aiApiEndpoint: data.aiApiEndpoint || '',
       };
     } catch (err) {
       console.error('Failed to fetch translation settings:', err);
@@ -182,15 +183,25 @@ export const useChatStore = defineStore('chat', () => {
 
   async function translateMessage(text, sourceLang, targetLang) {
     try {
-      const { data } = await api.post('/translation/translate', {
+      const { data } = await api.post('/ai/translate', {
         text,
         sourceLang: sourceLang || 'auto',
         targetLang: targetLang || 'zh',
       });
       return data;
     } catch (err) {
-      console.error('Failed to translate message:', err);
-      return null;
+      // Fallback to old translation endpoint
+      try {
+        const { data } = await api.post('/translation/translate', {
+          text,
+          sourceLang: sourceLang || 'auto',
+          targetLang: targetLang || 'zh',
+        });
+        return data;
+      } catch (err2) {
+        console.error('Failed to translate message:', err2);
+        return null;
+      }
     }
   }
 
@@ -200,7 +211,7 @@ export const useChatStore = defineStore('chat', () => {
     aiGenerating.value = true;
     aiReplies.value = [];
     try {
-      const { data } = await api.post('/ai/generate-reply', {
+      const { data } = await api.post('/ai/reply', {
         accountId,
         jid,
         style,
@@ -235,7 +246,7 @@ export const useChatStore = defineStore('chat', () => {
     summarizeLoading.value = true;
     needSummary.value = null;
     try {
-      const { data } = await api.post('/ai/summarize-need', {
+      const { data } = await api.post('/ai/summarize', {
         accountId,
         jid,
       });

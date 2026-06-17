@@ -92,6 +92,27 @@
         <el-tooltip content="附件" placement="top">
           <el-button :icon="Paperclip" text circle size="small" />
         </el-tooltip>
+        <el-tooltip content="AI翻译" placement="top">
+          <el-button text circle size="small" @click="handleAITranslate" :loading="aiTranslating">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+            </svg>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="AI话术" placement="top">
+          <el-button text circle size="small" @click="handleAIReply" :loading="aiGeneratingLocal">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+            </svg>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="需求总结" placement="top">
+          <el-button text circle size="small" @click="handleAISummarize" :loading="aiSummarizingLocal">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+            </svg>
+          </el-button>
+        </el-tooltip>
       </div>
       <div class="input-wrapper">
         <el-input
@@ -262,6 +283,51 @@ const languageNames = {
 function getLangName(code) {
   if (!code) return '';
   return languageNames[code] || code;
+}
+
+// AI feature handlers
+const aiTranslating = ref(false);
+const aiGeneratingLocal = ref(false);
+const aiSummarizingLocal = ref(false);
+
+async function handleAITranslate() {
+  const text = inputText.value.trim();
+  if (!text) return;
+  aiTranslating.value = true;
+  try {
+    const result = await chatStore.translateMessage(text, 'auto');
+    if (result?.translated) {
+      inputText.value = result.translated;
+    }
+  } catch (err) {
+    console.error('AI translate failed:', err);
+  } finally {
+    aiTranslating.value = false;
+  }
+}
+
+async function handleAIReply() {
+  if (!props.accountId || !props.jid) return;
+  aiGeneratingLocal.value = true;
+  try {
+    await chatStore.generateAIReply(props.accountId, props.jid, 'formal');
+  } catch (err) {
+    console.error('AI reply failed:', err);
+  } finally {
+    aiGeneratingLocal.value = false;
+  }
+}
+
+async function handleAISummarize() {
+  if (!props.accountId || !props.jid) return;
+  aiSummarizingLocal.value = true;
+  try {
+    await chatStore.summarizeNeed(props.accountId, props.jid);
+  } catch (err) {
+    console.error('AI summarize failed:', err);
+  } finally {
+    aiSummarizingLocal.value = false;
+  }
 }
 </script>
 
