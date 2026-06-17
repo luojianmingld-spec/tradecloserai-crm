@@ -23,6 +23,28 @@ const prisma = new PrismaClient();
 const app = express();
 const httpServer = createServer(app);
 
+// Ensure database tables exist before starting
+async function ensureDatabase() {
+  try {
+    // Quick check: can we query the User table?
+    await prisma.user.count();
+    console.log('[DB] Database connected, tables exist');
+  } catch (err) {
+    console.error('[DB] Database check failed, running prisma db push...');
+    try {
+      const { execSync } = await import('child_process');
+      execSync('npx prisma db push --accept-data-loss', {
+        stdio: 'inherit',
+        cwd: process.cwd()
+      });
+      console.log('[DB] prisma db push completed');
+    } catch (pushErr) {
+      console.error('[DB] prisma db push failed:', pushErr.message);
+      // Continue anyway - the tables might already exist
+    }
+  }
+}
+
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 // Production: MUST read from DEPLOY_RUN_PORT (injected by sandbox)
@@ -123,17 +145,40 @@ httpServer.on('error', (err) => {
   console.error('[FATAL] Server error:', err);
 });
 
-httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
-  console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
+// ─── Initialize and start ───
+async function startServer() {
+  await ensureDatabase();
+  await seedDefaultUser();
+
+  httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
+    console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
+  });
+}
+
+startServer().catch(err => {
+  console.error('[FATAL] Failed to start server:', err);
+  process.exit(1);
 });
 
 // ─── Seed default user ───
 async function seedDefaultUser() {
   try {
-    const bcrypt = await import('bcryptjs');
+    // First ensure DB schema is pushed
+    try {
+      await prisma.$queryRaw`SELECT name FROM sqlite_master WHERE type='table' LIMIT 1`;
+    } catch {
+      console.log('[Seed] Database not ready, running db push...');
+      const { execSync } = await import('child_process');
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit', cwd: process.cwd() });
+    }
+
+    const bcrypt = (await import('bcryptjs')).default || (await import('bcryptjs'));
+    const hashFunc = bcrypt.hash || bcrypt.default?.hash;
+    if (!hashFunc) throw new Error('bcrypt.hash not available');
+
     const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
     if (!existing) {
-      const hash = await bcrypt.default.hash('admin123', 10);
+      const hash = await hashFunc('admin123', 10);
       await prisma.user.create({
         data: { username: 'admin', password: hash, name: 'Admin', role: 'admin' },
       });
@@ -141,10 +186,10 @@ async function seedDefaultUser() {
     }
   } catch (err) {
     console.error('[Seed] Error creating default user:', err.message);
+    console.error('[Seed] Stack:', err.stack);
   }
 }
 
-seedDefaultUser();
 
 // ─── Graceful shutdown ───
 async function gracefulShutdown(signal) {
