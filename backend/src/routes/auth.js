@@ -13,7 +13,15 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const user = await prisma.user.findUnique({ where: { username } });
+    // Check if User table exists first
+    let user;
+    try {
+      user = await prisma.user.findUnique({ where: { username } });
+    } catch (dbErr) {
+      console.error('[Auth] Database query error:', dbErr.message);
+      return res.status(500).json({ error: 'Database error, please try again later' });
+    }
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -30,7 +38,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (err) {
     console.error('[Auth] Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'Login failed', detail: err.message });
   }
 });
 
@@ -40,8 +48,19 @@ router.post('/register', async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
 
-    const existing = await prisma.user.findUnique({ where: { username } });
+    // Check if User table exists
+    let existing;
+    try {
+      existing = await prisma.user.findUnique({ where: { username } });
+    } catch (dbErr) {
+      console.error('[Auth] Database query error:', dbErr.message);
+      return res.status(500).json({ error: 'Database error, please try again later' });
+    }
+
     if (existing) {
       return res.status(409).json({ error: 'Username already exists' });
     }
@@ -58,7 +77,7 @@ router.post('/register', async (req, res) => {
     });
   } catch (err) {
     console.error('[Auth] Register error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+    res.status(500).json({ error: 'Registration failed', detail: err.message });
   }
 });
 
