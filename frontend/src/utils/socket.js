@@ -56,10 +56,14 @@ export function initSocket() {
 
   socket.on('whatsapp:error', (data) => {
     console.error('[WhatsApp Error]', data.message);
+    // Import ElMessage dynamically to avoid circular deps
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(data.message || 'WhatsApp 错误');
+    });
   });
 
   socket.on('whatsapp:chats_loaded', (data) => {
-    chatStore.fetchConversations(data.accountId);
+    chatStore.fetchConversations();
   });
 
   socket.on('whatsapp:presence', (data) => {

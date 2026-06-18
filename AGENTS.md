@@ -18,9 +18,12 @@
 │   └── src/
 │       ├── server.js        # 入口：Express + Socket.io + 生产静态服务
 │       ├── middleware/auth.js # JWT 认证中间件
-│       ├── routes/          # REST API 路由 (auth, accounts, contacts, messages, settings, translation)
-│       ├── services/whatsapp.js  # Baileys WhatsApp 连接管理
+│       ├── routes/          # REST API 路由 (auth, accounts, contacts, messages, settings, translation, whatsapp, customers, ai)
+│       ├── services/whatsapp-provider.js  # WhatsApp Provider 抽象层 (Baileys)
+│       ├── services/ai.service.js # 统一 AI 服务（翻译/话术/总结，使用 coze-coding-dev-sdk）
 │       ├── services/translation.js # 翻译服务（豆包/DeepSeek + 缓存 + 语言检测）
+│       ├── services/ai-reply.js   # AI回复话术生成
+│       ├── services/ai-summarize.js # AI客户需求总结
 │       ├── services/ai-reply.js   # AI回复话术生成
 │       ├── services/ai-summarize.js # AI客户需求总结
 │       └── socket/handlers.js    # Socket.io 事件处理
@@ -33,7 +36,7 @@
 │       ├── router/          # Vue Router (login, chat)
 │       ├── stores/          # Pinia (auth, chat)
 │       ├── utils/           # api.js (axios), socket.js (socket.io-client)
-│       ├── views/           # LoginView, ChatView
+│       ├── views/           # LoginView, ChatView, SettingsView, CustomersView
 │       └── components/chat/ # ChatWindow, CustomerPanel
 ```
 
@@ -53,13 +56,27 @@
 - `PUT /api/contacts/:id` - 更新联系人
 - `GET /api/messages` - 消息列表
 - `GET /api/messages/conversations` - 会话列表
-- `GET /api/settings` - 获取翻译设置
-- `PUT /api/settings` - 更新翻译设置
+- `GET /api/settings` - 获取设置
+- `PUT /api/settings` - 更新设置
 - `POST /api/translation/translate` - 翻译文本
 - `POST /api/translation/translate-outgoing` - 翻译发送消息
 - `POST /api/translation/detect-language` - 检测语言
-- `POST /api/ai/generate-reply` - AI生成回复话术（参数：accountId, jid, style）
-- `POST /api/ai/summarize-need` - AI客户需求总结（参数：accountId, jid）
+- `POST /api/ai/translate` - AI翻译（使用 coze-coding-dev-sdk）
+- `POST /api/ai/reply` - AI生成回复话术（参数：messages/style 或 accountId/jid/style）
+- `POST /api/ai/summarize` - AI客户需求总结（参数：messages 或 accountId/jid）
+- `POST /api/whatsapp/qr` - 生成WhatsApp二维码
+- `POST /api/whatsapp/send` - 发送WhatsApp消息
+- `GET /api/whatsapp/status` - 获取连接状态
+- `POST /api/whatsapp/disconnect` - 断开连接
+- `GET /api/whatsapp/connections` - 获取所有连接
+- `GET /api/whatsapp/messages` - 获取聊天消息
+- `GET /api/whatsapp/conversations` - 获取会话列表
+- `GET /api/customers` - 客户列表（支持search/tag/status筛选）
+- `GET /api/customers/:id` - 客户详情
+- `POST /api/customers` - 创建客户
+- `PUT /api/customers/:id` - 更新客户
+- `DELETE /api/customers/:id` - 删除客户
+- `GET /api/customers/by-phone/:phone` - 按手机号查找客户
 
 ## Socket.io 事件
 - `whatsapp:request_qr` - 请求二维码
@@ -74,7 +91,7 @@
 - `translation:update_settings` - 更新翻译设置
 
 ## 数据库
-SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppAccount, Contact, Message, Conversation, Setting, TranslationCache。
+SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppAccount, Contact, Message, Conversation, Setting, TranslationCache, WAConnection, WAMessage, Customer。
 
 ## 翻译系统
 - **引擎**: 豆包 (doubao-seed-2-0-lite) 和 DeepSeek (deepseek-v3-2)
@@ -83,12 +100,19 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 - **API Key**: 存储在 Settings 表，留空使用系统默认配置
 - **自动翻译**: 收到消息自动翻译为目标语言，发送时可选自动翻译
 
-## AI回复与需求总结
-- **AI回复** (services/ai-reply.js): 基于最近20条消息生成2-3个回复选项，支持3种风格（formal/friendly/concise）
-- **需求总结** (services/ai-summarize.js): 基于最近30条消息生成结构化客户需求分析
-- **总结维度**: 意向产品、需求规模、价格敏感度、交付要求、核心关注点、客户风格、下一步行动、意向度评分(1-10)
-- **共用引擎**: 与翻译功能共用豆包/DeepSeek引擎和API Key配置
+## AI服务 (ai.service.js)
+- **统一AI服务**: 使用 coze-coding-dev-sdk，支持5个模型(doubao-pro/lite/mini, deepseek, kimi)
+- **AI翻译** (/api/ai/translate): 支持多语言互译
+- **AI回复** (/api/ai/reply): 基于消息历史生成2-3个回复选项，支持3种风格（formal/friendly/concise）
+- **需求总结** (/api/ai/summarize): 生成结构化客户需求分析（意向产品、规模、价格敏感度、交付要求等）
 - **前端Tab**: 右侧面板4个Tab（客户/翻译/AI回复/需求总结）
+
+## WhatsApp Provider (whatsapp-provider.js)
+- **BaileysProvider**: 抽象层，封装 Baileys 连接管理
+- **动态import**: ESM-only Baileys 通过 `_loadBaileys()` 动态加载
+- **QR码**: connect() 触发连接，QR通过 EventEmitter 异步推送 → server.js 桥接到 Socket.io
+- **消息收发**: sendMessage() / 事件转发 (message/message_sent)
+- **事件桥接**: server.js 监听 provider events (qr/connected/disconnected/message) 并 emit 到 Socket.io room
 
 ## 代码风格
 - 后端使用 ESM (`"type": "module"`)
@@ -108,3 +132,12 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 - **生产模式前端路径**: server.js 使用 `process.cwd()` + `../frontend/dist` 定位（需从 backend/ 目录启动）
 - **构建脚本**: build.sh/start.sh 使用 `COZE_WORKSPACE_PATH` + `SCRIPT_DIR` 双重定位，支持任意工作目录执行
 - **.coze 配置**: dev/deploy 均使用 `sh -c` 确保 `${COZE_WORKSPACE_PATH}` 变量正确展开
+
+## 客户管理模块
+- **数据模型**: Customer (name/phone/email/company/country/tags/notes/source/intentLevel/status/assignedTo)
+- **CRUD API**: /api/customers — 支持 search/tag/status 筛选
+- **前端页面**: /customers — CustomersView.vue (表格+统计+新增/编辑弹窗)
+- **意向度**: 1-10 评分，前端以进度条可视化
+- **状态枚举**: potential/active/vip/inactive/lost
+- **标签系统**: JSON 数组存储，逗号分隔输入
+- **WhatsApp 自动建档**: handlers.js 收到新消息时自动查找/创建 Customer 记录
