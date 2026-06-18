@@ -56,6 +56,8 @@ export function initSocket() {
 
   socket.on('whatsapp:error', (data) => {
     console.error('[WhatsApp Error]', data.message);
+    // Update store state
+    chatStore.handleWAError(data);
     // Import ElMessage dynamically to avoid circular deps
     import('element-plus').then(({ ElMessage }) => {
       ElMessage.error(data.message || 'WhatsApp 错误');

@@ -91,6 +91,23 @@ class BaileysProvider extends EventEmitter {
   }
 
   /**
+   * 判断是否为网络不可达错误（sandbox 等受限环境）
+   */
+  _isNetworkError(lastDisconnect) {
+    const err = lastDisconnect?.error;
+    if (!err) return false;
+    // ETIMEDOUT, ENOTFOUND, ECONNREFUSED, EAI_AGAIN 等
+    const code = err.data?.code || err.code;
+    if (code && ['ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH'].includes(code)) {
+      return true;
+    }
+    // statusCode 408 = Request Time-out
+    const statusCode = err.output?.statusCode;
+    if (statusCode === 408) return true;
+    return false;
+  }
+
+  /**
    * 连接 WhatsApp — 生成 QR 码供前端扫码
    * @param {string} sessionId
    * @returns {Promise<{status: string, qr?: string}>}
@@ -107,16 +124,28 @@ class BaileysProvider extends EventEmitter {
       return { status: 'connected', phone: this.phones.get(sessionId) };
     }
 
+    // 正在连接中（防止重复连接）
+    if (this.statuses.get(sessionId) === 'connecting') {
+      return { status: 'connecting', sessionId };
+    }
+
     const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } = baileys;
 
     this.statuses.set(sessionId, 'connecting');
     this.emit('status', sessionId, 'connecting');
 
-    // 获取最新版本号
+    // 重置重连计数
+    this._retryCount = this._retryCount || new Map();
+    const retries = this._retryCount.get(sessionId) || 0;
+
+    // 获取最新版本号（加超时保护）
     let version;
     try {
-      const { version: v } = await fetchLatestBaileysVersion();
-      version = v;
+      const result = await Promise.race([
+        fetchLatestBaileysVersion(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('version fetch timeout')), 10000)),
+      ]);
+      version = result.version;
     } catch {
       version = [2, 3000, 1025]; // fallback
     }
@@ -129,28 +158,71 @@ class BaileysProvider extends EventEmitter {
       printQRInTerminal: false,
       logger: this._pino?.({ level: 'warn' }) || undefined,
       defaultQueryTimeoutMs: 60000,
-      connectTimeoutMs: 30000,
+      connectTimeoutMs: 20000,
     });
 
     // 保存凭据更新
     sock.ev.on('creds.update', saveCreds);
+
+    // QR 超时定时器：如果 30 秒内没有收到 QR，通知前端
+    let qrTimeout = setTimeout(() => {
+      if (this.statuses.get(sessionId) === 'connecting') {
+        console.warn(`[WA] QR timeout for ${sessionId} — WhatsApp servers may be unreachable`);
+        this.statuses.set(sessionId, 'error');
+        this.emit('status', sessionId, 'error');
+        this.emit('error', sessionId, {
+          message: '无法连接到 WhatsApp 服务器。可能是网络限制或防火墙阻止了连接。请检查网络环境后重试。',
+          code: 'QR_TIMEOUT',
+        });
+        // 尝试关闭 socket
+        try { sock.end(new Error('QR timeout')); } catch { /* ignore */ }
+        this.sockets.delete(sessionId);
+      }
+    }, 30000);
 
     // QR 码事件
     sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
+        // 清除 QR 超时
+        clearTimeout(qrTimeout);
+        qrTimeout = null;
+
         // 生成 QR 码 Data URL
-        const QRCode = (await import('qrcode')).default;
-        const qrDataUrl = await QRCode.toDataURL(qr, { width: 256 });
-        this.statuses.set(sessionId, 'waiting_qr');
-        this.emit('status', sessionId, 'waiting_qr');
-        this.emit('qr', sessionId, qrDataUrl);
+        try {
+          const QRCode = (await import('qrcode')).default;
+          const qrDataUrl = await QRCode.toDataURL(qr, { width: 256 });
+          this.statuses.set(sessionId, 'waiting_qr');
+          this.emit('status', sessionId, 'waiting_qr');
+          this.emit('qr', sessionId, qrDataUrl);
+        } catch (err) {
+          console.error('[WA] QR generation failed:', err.message);
+          this.emit('error', sessionId, { message: '二维码生成失败: ' + err.message, code: 'QR_GEN_ERROR' });
+        }
       }
 
       if (connection === 'close') {
+        // 清除 QR 超时
+        if (qrTimeout) { clearTimeout(qrTimeout); qrTimeout = null; }
+
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const reason = lastDisconnect?.error?.message || 'Unknown';
+
+        // 网络不可达 — 不重试，直接报错
+        if (this._isNetworkError(lastDisconnect)) {
+          console.error(`[WA] Network unreachable for ${sessionId}: ${reason}`);
+          this.sockets.delete(sessionId);
+          this.statuses.set(sessionId, 'error');
+          this.emit('status', sessionId, 'error');
+          this.emit('error', sessionId, {
+            message: '无法连接到 WhatsApp 服务器。当前网络环境可能无法访问 WhatsApp，请检查网络或联系管理员。',
+            code: 'NETWORK_UNREACHABLE',
+            detail: reason,
+          });
+          await this._updateDBStatus(sessionId, 'error');
+          return;
+        }
 
         if (statusCode === DisconnectReason.loggedOut) {
           // 被登出 — 清理
@@ -159,26 +231,40 @@ class BaileysProvider extends EventEmitter {
           this.phones.delete(sessionId);
           this.emit('status', sessionId, 'disconnected');
           this.emit('disconnected', sessionId, 'logged_out');
-
-          // 更新数据库
           await this._updateDBStatus(sessionId, 'disconnected');
-        } else {
-          // 其他原因断开 — 尝试重连
+        } else if (retries < 3) {
+          // 有限重连（最多 3 次）
+          this._retryCount.set(sessionId, retries + 1);
           this.statuses.set(sessionId, 'reconnecting');
           this.emit('status', sessionId, 'reconnecting');
-          setTimeout(() => this.connect(sessionId), 3000);
+          setTimeout(() => this.connect(sessionId), 5000);
+        } else {
+          // 超过最大重试次数 — 报错
+          this._retryCount.set(sessionId, 0);
+          this.sockets.delete(sessionId);
+          this.statuses.set(sessionId, 'error');
+          this.emit('status', sessionId, 'error');
+          this.emit('error', sessionId, {
+            message: '连接 WhatsApp 失败，已重试 3 次仍无法连接。请稍后重试或检查网络。',
+            code: 'MAX_RETRIES',
+            detail: reason,
+          });
+          await this._updateDBStatus(sessionId, 'error');
         }
       }
 
       if (connection === 'open') {
+        // 清除 QR 超时
+        if (qrTimeout) { clearTimeout(qrTimeout); qrTimeout = null; }
+        // 重置重连计数
+        this._retryCount?.set(sessionId, 0);
+
         const phone = sock.user?.id?.split(':')[0] || 'unknown';
         this.sockets.set(sessionId, sock);
         this.statuses.set(sessionId, 'connected');
         this.phones.set(sessionId, phone);
         this.emit('status', sessionId, 'connected');
         this.emit('connected', sessionId, phone);
-
-        // 更新数据库
         await this._updateDBStatus(sessionId, 'connected', phone);
       }
     });

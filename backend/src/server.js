@@ -163,6 +163,11 @@ waProvider.on('status', (sessionId, status) => {
   const userId = sessionId.replace('user_', '');
   io.to(`user_${userId}`).emit('whatsapp:status', { sessionId, status });
 });
+waProvider.on('error', (sessionId, errorData) => {
+  const userId = sessionId.replace('user_', '');
+  io.to(`user_${userId}`).emit('whatsapp:error', { sessionId, ...errorData });
+  console.log(`[WA] Error for ${sessionId}: ${errorData.code} — ${errorData.message}`);
+});
 waProvider.on('message', (sessionId, messageData) => {
   const userId = sessionId.replace('user_', '');
   // Extract contact JID (the other party, not "me")

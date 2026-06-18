@@ -20,6 +20,12 @@
               <template v-else-if="chatStore.connectionStatus === 'reconnecting'">
                 重连中...
               </template>
+              <template v-else-if="chatStore.connectionStatus === 'error'">
+                连接失败
+              </template>
+              <template v-else-if="chatStore.connectionStatus === 'unavailable'">
+                不可用
+              </template>
               <template v-else>
                 未连接
               </template>
@@ -209,6 +215,13 @@
           </svg>
           <p class="connected-text">WhatsApp已连接</p>
           <p class="connected-phone">{{ chatStore.connectedPhone }}</p>
+        </div>
+        <div v-else-if="chatStore.connectionStatus === 'error' || chatStore.waError" class="qr-error">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="#ea4335">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          <p class="error-text">{{ chatStore.waError || '连接失败' }}</p>
+          <el-button type="primary" @click="chatStore.requestQR()">重试</el-button>
         </div>
         <div v-else class="qr-error">
           <p>获取二维码失败，请重试</p>
@@ -419,6 +432,19 @@ function formatTime(dateStr) {
 .status-dot.reconnecting {
   background: #f59e0b;
   animation: pulse 1.5s infinite;
+}
+
+.status-dot.error,
+.status-dot.unavailable {
+  background: var(--danger, #ea4335);
+}
+
+.error-text {
+  color: #ea4335;
+  font-size: 13px;
+  margin: 12px 0;
+  text-align: center;
+  line-height: 1.5;
 }
 
 .status-dot.disconnected {
