@@ -27,6 +27,9 @@ router.post('/qr', async (req, res) => {
     const sessionId = `user_${userId}`;
 
     const result = await whatsappProvider.connect(sessionId);
+    if (result.status === 'unavailable') {
+      return res.status(503).json({ error: result.message, status: 'unavailable' });
+    }
     res.json({ ...result, sessionId });
   } catch (err) {
     console.error('[WA QR Error]', err.message);
