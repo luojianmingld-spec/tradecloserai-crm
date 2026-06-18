@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-layout" :class="{ 'mobile-show-chat': showMobileChat }">
+  <div class="chat-layout" :class="{ 'mobile-show-chat': showMobileChat, 'mobile-show-customer': showMobileChat && mobilePanel === 'customer' }">
     <!-- Left Panel: Connection Status + Conversation List -->
     <div class="left-panel">
       <div class="panel-header">
@@ -189,6 +189,31 @@
       </div>
     </div>
 
+    <!-- Mobile Bottom Tab Navigation -->
+    <div v-if="showMobileChat" class="mobile-bottom-tabs">
+      <button
+        class="mobile-tab"
+        :class="{ active: mobilePanel === 'chat' }"
+        @click="mobilePanel = 'chat'"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>聊天</span>
+      </button>
+      <button
+        class="mobile-tab"
+        :class="{ active: mobilePanel === 'customer' }"
+        @click="mobilePanel = 'customer'"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>客户</span>
+      </button>
+    </div>
+
     <!-- QR Code Dialog -->
     <el-dialog
       v-model="showQRDialog"
@@ -252,6 +277,7 @@ const chatStore = useChatStore();
 const searchQuery = ref('');
 const showQRDialog = ref(false);
 const showMobileChat = ref(false);
+const mobilePanel = ref('chat'); // 'chat' | 'customer' — mobile panel switch
 
 const qrDialogWidth = computed(() => {
   if (typeof window !== 'undefined' && window.innerWidth < 480) return '90%';
@@ -776,42 +802,88 @@ function formatTime(dateStr) {
   display: none;
 }
 
+/* Mobile bottom tabs - hidden on desktop */
+.mobile-bottom-tabs {
+  display: none;
+}
+
 /* ========== Mobile Responsive ========== */
 @media (max-width: 768px) {
   .chat-layout {
-    display: block;
-    position: relative;
-    overflow: hidden;
+    display: block !important;
+    position: relative !important;
+    overflow: hidden !important;
   }
 
   .left-panel,
   .center-panel,
   .right-panel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    max-width: 100%;
-    border-right: none;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border-right: none !important;
   }
 
   /* Default: show conversation list, hide chat + customer panel */
   .center-panel,
   .right-panel {
-    display: none;
+    display: none !important;
   }
 
   /* When a conversation is selected, show chat, hide list */
   .chat-layout.mobile-show-chat .left-panel {
-    display: none;
+    display: none !important;
   }
   .chat-layout.mobile-show-chat .center-panel {
-    display: flex;
+    display: flex !important;
   }
   .chat-layout.mobile-show-chat .right-panel {
-    display: none;
+    display: none !important;
+  }
+
+  /* When customer tab is active on mobile, show right panel instead of center */
+  .chat-layout.mobile-show-chat.mobile-show-customer .center-panel {
+    display: none !important;
+  }
+  .chat-layout.mobile-show-chat.mobile-show-customer .right-panel {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Mobile bottom tab navigation */
+  .mobile-bottom-tabs {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 200 !important;
+    background: #111b21 !important;
+    border-top: 1px solid var(--border-color) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  }
+  .mobile-tab {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    padding: 8px 4px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  .mobile-tab.active {
+    color: var(--accent) !important;
   }
 
   /* Mobile back button */

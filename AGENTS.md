@@ -133,6 +133,18 @@ SQLite (backend/prisma/crm.db)，使用 Prisma 管理。模型：User, WhatsAppA
 - **构建脚本**: build.sh/start.sh 使用 `COZE_WORKSPACE_PATH` + `SCRIPT_DIR` 双重定位，支持任意工作目录执行
 - **.coze 配置**: dev/deploy 均使用 `sh -c` 确保 `${COZE_WORKSPACE_PATH}` 变量正确展开
 
+## 移动端响应式设计
+- **断点**: `@media (max-width: 768px)` 为主断点，`@media (max-width: 380px)` 为小屏微调
+- **双重保险**: 移动端样式同时在组件 `<style scoped>` 和 `global.css`（非 scoped）中定义，确保优先级
+- **`!important` 策略**: 关键布局属性（display/position/width/min-width）在 media query 中使用 `!important`，防止桌面端样式覆盖
+- **min-width 重置**: `.left-panel` 桌面端有 `min-width: 360px`，media query 中必须 `min-width: 0 !important` 重置
+- **ChatView 移动端布局**: 三栏 → 单栏切换，通过 `showMobileChat` + `mobilePanel` 状态控制
+  - `mobile-show-chat` class: 显示聊天面板，隐藏联系人列表
+  - `mobile-show-customer` class: 显示客户面板，隐藏聊天面板
+  - 底部 Tab 导航（`.mobile-bottom-tabs`）: 聊天/客户两个 Tab 切换
+- **CustomersView 移动端布局**: 表格 → 卡片切换，`.table-container` 隐藏，`.cards-container` 显示
+- **viewport meta**: `index.html` 中包含 `<meta name="viewport" content="width=device-width, initial-scale=1.0">`
+
 ## 客户管理模块
 - **数据模型**: Customer (name/phone/email/company/country/tags/notes/source/intentLevel/status/assignedTo)
 - **CRUD API**: /api/customers — 支持 search/tag/status 筛选
