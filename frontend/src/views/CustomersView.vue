@@ -871,25 +871,25 @@ onMounted(() => {
 
   /* Stats */
   .stats-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
   }
   .stat-card {
-    padding: 10px 12px;
+    padding: 10px 12px !important;
   }
   .stat-value {
-    font-size: 20px;
+    font-size: 20px !important;
   }
   .stat-label {
-    font-size: 11px;
+    font-size: 11px !important;
   }
 
   /* Hide table, show cards */
   .table-container {
-    display: none;
+    display: none !important;
   }
   .cards-container {
-    display: block;
+    display: block !important;
   }
 
   /* Dialog */

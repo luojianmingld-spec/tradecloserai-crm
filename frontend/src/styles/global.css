@@ -118,6 +118,57 @@ html, body, #app {
     width: 3px;
     height: 3px;
   }
+
+  /* Global layout overrides for mobile - non-scoped, high priority */
+  .chat-layout {
+    display: block !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .chat-layout .left-panel,
+  .chat-layout .center-panel,
+  .chat-layout .right-panel {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border-right: none !important;
+  }
+  .chat-layout .center-panel,
+  .chat-layout .right-panel {
+    display: none !important;
+  }
+  .chat-layout.mobile-show-chat .left-panel {
+    display: none !important;
+  }
+  .chat-layout.mobile-show-chat .center-panel {
+    display: flex !important;
+  }
+  .chat-layout.mobile-show-chat .right-panel {
+    display: none !important;
+  }
+  .chat-layout.mobile-show-chat.mobile-show-customer .center-panel {
+    display: none !important;
+  }
+  .chat-layout.mobile-show-chat.mobile-show-customer .right-panel {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* CustomersView mobile overrides - non-scoped */
+  .customers-page .table-container {
+    display: none !important;
+  }
+  .customers-page .cards-container {
+    display: block !important;
+  }
+  .customers-page .stats-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }
 
 @media (max-width: 380px) {
