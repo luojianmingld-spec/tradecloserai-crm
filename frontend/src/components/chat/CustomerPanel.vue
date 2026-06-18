@@ -1343,4 +1343,39 @@ function getInitial(name) {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+/* ========== Mobile Responsive ========== */
+@media (max-width: 768px) {
+  .customer-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .panel-tabs {
+    flex-wrap: wrap;
+  }
+  .panel-tab {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    padding: 10px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .panel-content {
+    padding: 12px;
+  }
+
+  .panel-content input,
+  .panel-content textarea,
+  .panel-content select {
+    font-size: 16px;
+  }
+
+  .panel-content .el-button {
+    min-height: 40px;
+  }
+}
 </style>

@@ -411,4 +411,45 @@ async function testTranslate() {
 .save-msg.error {
   color: #ea4335;
 }
+
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 0;
+  }
+
+  .settings-header h1 {
+    font-size: 16px;
+  }
+
+  .settings-body {
+    padding: 12px;
+    max-width: 100%;
+  }
+
+  .settings-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .settings-section h2 {
+    font-size: 14px;
+  }
+
+  .form-select,
+  .form-input {
+    font-size: 14px;
+    min-height: 44px;
+  }
+
+  .toggle-switch {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .save-btn {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+  }
+}
 </style>

@@ -93,3 +93,35 @@ html, body, #app {
 .slide-in {
   animation: slideIn 0.2s ease-out;
 }
+
+/* ========== Mobile Responsive Global ========== */
+@media (max-width: 768px) {
+  html, body, #app {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  /* Ensure minimum touch target size */
+  .el-button--small {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Element Plus dialog full-width on mobile */
+  .el-dialog {
+    margin: 0 auto !important;
+    max-width: 95vw !important;
+  }
+
+  /* Scrollbar hide on mobile */
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}
+
+@media (max-width: 380px) {
+  html, body {
+    font-size: 13px;
+  }
+}

@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-layout">
+  <div class="chat-layout" :class="{ 'mobile-show-chat': showMobileChat }">
     <!-- Left Panel: Connection Status + Conversation List -->
     <div class="left-panel">
       <div class="panel-header">
@@ -153,6 +153,9 @@
           :connected="chatStore.isConnected"
           @send="onSendMessage"
         />
+        <button class="mobile-back-btn" @click="showMobileChat = false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
       </template>
       <template v-else>
         <div class="no-chat-selected">
@@ -190,7 +193,7 @@
     <el-dialog
       v-model="showQRDialog"
       title="连接WhatsApp"
-      width="420px"
+      :width="qrDialogWidth"
       :close-on-click-modal="false"
       class="dark-dialog"
       @open="handleQROpen"
@@ -248,6 +251,12 @@ const chatStore = useChatStore();
 
 const searchQuery = ref('');
 const showQRDialog = ref(false);
+const showMobileChat = ref(false);
+
+const qrDialogWidth = computed(() => {
+  if (typeof window !== 'undefined' && window.innerWidth < 480) return '90%';
+  return '420px';
+});
 
 const filteredConversations = computed(() => {
   const convs = chatStore.sortedConversations;
@@ -314,6 +323,7 @@ async function handleDisconnect() {
 
 function selectConversation(conv) {
   chatStore.setActiveConversation(conv.jid);
+  showMobileChat.value = true;
 }
 
 function onSendMessage(text) {
@@ -759,5 +769,122 @@ function formatTime(dateStr) {
 :deep(.el-button--primary:hover) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+}
+
+/* ========== Mobile Back Button ========== */
+.mobile-back-btn {
+  display: none;
+}
+
+/* ========== Mobile Responsive ========== */
+@media (max-width: 768px) {
+  .chat-layout {
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .left-panel,
+  .center-panel,
+  .right-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+  }
+
+  /* Default: show conversation list, hide chat + customer panel */
+  .center-panel,
+  .right-panel {
+    display: none;
+  }
+
+  /* When a conversation is selected, show chat, hide list */
+  .chat-layout.mobile-show-chat .left-panel {
+    display: none;
+  }
+  .chat-layout.mobile-show-chat .center-panel {
+    display: flex;
+  }
+  .chat-layout.mobile-show-chat .right-panel {
+    display: none;
+  }
+
+  /* Mobile back button */
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-back-btn:active {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  /* Panel header adjustments */
+  .panel-header {
+    padding: 0 12px;
+  }
+  .connection-bar {
+    padding: 8px 0;
+    gap: 8px;
+  }
+  .connection-info {
+    font-size: 13px;
+  }
+  .header-actions .el-button {
+    padding: 6px 8px;
+  }
+  .header-actions .el-button .el-icon {
+    font-size: 16px;
+  }
+
+  /* Search bar */
+  .search-bar {
+    padding: 0 12px 8px;
+  }
+
+  /* Conversation list */
+  .conversation-list {
+    height: calc(100% - 110px);
+  }
+  .conversation-item {
+    padding: 10px 12px;
+  }
+  .conv-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+  .conv-name {
+    font-size: 14px;
+  }
+  .conv-last-msg {
+    font-size: 12px;
+  }
+
+  /* QR dialog */
+  .qr-image {
+    width: 200px !important;
+    height: 200px !important;
+  }
+  .qr-hint {
+    font-size: 13px;
+  }
 }
 </style>

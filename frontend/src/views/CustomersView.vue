@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <!-- Customer Table -->
+    <!-- Customer Table (Desktop) -->
     <div class="table-container">
       <table class="customer-table">
         <thead>
@@ -106,6 +106,40 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Customer Cards (Mobile) -->
+    <div class="cards-container">
+      <div v-if="loading" class="empty-cell">加载中...</div>
+      <div v-else-if="customers.length === 0" class="empty-cell">暂无客户数据</div>
+      <div v-for="c in customers" :key="c.id" class="customer-card" @click="selectCustomer(c)">
+        <div class="card-top">
+          <div class="card-avatar">{{ (c.name || '?')[0] }}</div>
+          <div class="card-info">
+            <div class="card-name">{{ c.name }}</div>
+            <div class="card-phone">{{ c.phone || '-' }}</div>
+          </div>
+          <span class="status-badge" :class="'status-' + c.status">{{ statusLabel(c.status) }}</span>
+        </div>
+        <div class="card-meta">
+          <span v-if="c.company" class="meta-item">{{ c.company }}</span>
+          <span v-if="c.country" class="meta-item">{{ c.country }}</span>
+        </div>
+        <div class="card-bottom">
+          <div class="intent-bar">
+            <div class="intent-fill" :style="{ width: (c.intentLevel || 5) * 10 + '%' }" :class="intentClass(c.intentLevel)"></div>
+            <span class="intent-num">{{ c.intentLevel || 5 }}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-icon" @click.stop="editCustomer(c)" title="编辑">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon btn-danger" @click.stop="deleteCustomer(c)" title="删除">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Add/Edit Dialog -->
@@ -707,5 +741,197 @@ onMounted(() => {
 }
 .form-group textarea {
   resize: vertical;
+}
+
+/* ========== Mobile Card Layout ========== */
+.cards-container {
+  display: none;
+}
+
+.customer-card {
+  background: #111b21;
+  border: 1px solid #2a3942;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.customer-card:active {
+  background: #202c33;
+}
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: #005c4b;
+  color: #e9edef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+.card-info {
+  flex: 1;
+  min-width: 0;
+}
+.card-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e9edef;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-phone {
+  font-size: 12px;
+  color: #8696a0;
+  margin-top: 2px;
+}
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 50px;
+}
+.meta-item {
+  font-size: 12px;
+  color: #8696a0;
+  background: rgba(255,255,255,0.04);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 50px;
+  margin-top: 8px;
+}
+.card-actions {
+  display: flex;
+  gap: 6px;
+}
+.card-actions .btn-icon {
+  width: 36px;
+  height: 36px;
+}
+
+/* ========== Mobile Responsive ========== */
+@media (max-width: 768px) {
+  .customers-page {
+    padding: 0 12px 20px;
+  }
+
+  /* Header */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 0;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-left h1 {
+    font-size: 18px;
+  }
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .search-box {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-box input {
+    font-size: 16px;
+    padding: 8px 10px 8px 32px;
+  }
+  .filter-select {
+    font-size: 14px;
+    min-width: 0;
+    flex: 1;
+  }
+  .btn-primary {
+    font-size: 14px;
+    padding: 8px 14px;
+    min-height: 40px;
+  }
+
+  /* Stats */
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .stat-card {
+    padding: 10px 12px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .stat-label {
+    font-size: 11px;
+  }
+
+  /* Hide table, show cards */
+  .table-container {
+    display: none;
+  }
+  .cards-container {
+    display: block;
+  }
+
+  /* Dialog */
+  .dialog-box {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+  .dialog-body {
+    padding: 16px 12px;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+  .dialog-footer {
+    padding: 12px;
+  }
+  .dialog-footer .btn-primary,
+  .dialog-footer .btn-secondary {
+    min-height: 44px;
+    font-size: 15px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 380px) {
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .header-actions {
+    flex-direction: column;
+  }
+  .search-box {
+    width: 100%;
+  }
 }
 </style>
