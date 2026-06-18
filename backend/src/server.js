@@ -217,6 +217,14 @@ async function startServer() {
   await ensureDatabase();
   await seedDefaultUser();
 
+  // Ensure sessions directory exists for WhatsApp provider
+  const path = await import('path');
+  const fs = await import('fs');
+  const sessionsDir = path.join(process.cwd(), 'sessions');
+  if (!fs.existsSync(sessionsDir)) {
+    fs.mkdirSync(sessionsDir, { recursive: true });
+  }
+
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
     console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
   });

@@ -81,8 +81,13 @@ class BaileysProvider extends EventEmitter {
     const { useMultiFileAuthState } = baileys;
     const authDir = this._getAuthDir(sessionId);
 
-    // 确保目录存在
+    // 确保目录存在（recursive 确保父目录也被创建）
     const fs = await import('fs');
+    const pathMod = await import('path');
+    const parentDir = pathMod.dirname(authDir);
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true });
+    }
     if (!fs.existsSync(authDir)) {
       fs.mkdirSync(authDir, { recursive: true });
     }
