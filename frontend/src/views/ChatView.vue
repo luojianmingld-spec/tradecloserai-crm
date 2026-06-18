@@ -1,49 +1,95 @@
 <template>
   <div class="chat-layout">
-    <!-- Left Panel: Account Selector + Conversation List -->
+    <!-- Left Panel: Connection Status + Conversation List -->
     <div class="left-panel">
       <div class="panel-header">
-        <div class="account-selector">
-          <el-select
-            v-model="chatStore.activeAccountId"
-            placeholder="选择账号"
-            @change="onAccountChange"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="acc in chatStore.accounts"
-              :key="acc.id"
-              :label="acc.name || acc.phone || 'WhatsApp'"
-              :value="acc.id"
-            >
-              <div class="account-option">
-                <span class="account-status-dot" :class="acc.status"></span>
-                <span>{{ acc.name || acc.phone || 'WhatsApp' }}</span>
-              </div>
-            </el-option>
-          </el-select>
-          <el-button
-            :icon="Plus"
-            circle
-            size="small"
-            @click="showAddAccount = true"
-          />
+        <!-- Connection Status Bar -->
+        <div class="connection-bar">
+          <div class="connection-info">
+            <span class="status-dot" :class="chatStore.connectionStatus"></span>
+            <span class="connection-text">
+              <template v-if="chatStore.isConnected">
+                {{ chatStore.connectedPhone || '已连接' }}
+              </template>
+              <template v-else-if="chatStore.connectionStatus === 'connecting'">
+                连接中...
+              </template>
+              <template v-else-if="chatStore.connectionStatus === 'waiting_qr'">
+                等待扫码
+              </template>
+              <template v-else-if="chatStore.connectionStatus === 'reconnecting'">
+                重连中...
+              </template>
+              <template v-else>
+                未连接
+              </template>
+            </span>
+          </div>
+          <div class="connection-actions">
+            <el-tooltip v-if="!chatStore.isConnected" content="扫码连接" placement="bottom">
+              <el-button
+                type="primary"
+                circle
+                size="small"
+                @click="showQRDialog = true"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                  <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v4h-4v2h4v4h2v-4h4v-2h-4v-4z"/>
+                </svg>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip v-else content="断开连接" placement="bottom">
+              <el-button
+                circle
+                size="small"
+                @click="handleDisconnect"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.902 7.902 0 014 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1A7.902 7.902 0 0120 12c0 4.42-3.58 8-8 8z"/>
+                </svg>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="客户管理" placement="bottom">
+              <el-button
+                circle
+                size="small"
+                class="settings-trigger"
+                @click="$router.push('/customers')"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+              </el-button>
+            </el-tooltip>
+            <el-tooltip content="设置" placement="bottom">
+              <el-button
+                circle
+                size="small"
+                class="settings-trigger"
+                @click="$router.push('/settings')"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                  <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+              </el-button>
+            </el-tooltip>
+          </div>
         </div>
+
+        <!-- Search Bar -->
         <div class="search-bar">
           <el-input
             v-model="searchQuery"
             placeholder="搜索联系人..."
-            :prefix-icon="Search"
             clearable
             size="small"
-          />
-          <el-button
-            :icon="Setting"
-            circle
-            size="small"
-            class="settings-trigger"
-            @click="$router.push('/settings')"
-          />
+          >
+            <template #prefix>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color: var(--text-muted)">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+            </template>
+          </el-input>
         </div>
       </div>
 
@@ -57,13 +103,13 @@
         >
           <div class="conv-avatar">
             <span class="avatar-text">
-              {{ getInitial(conv.contact?.name || conv.jid) }}
+              {{ getInitial(conv.name || conv.phone || conv.jid) }}
             </span>
           </div>
           <div class="conv-info">
             <div class="conv-top">
-              <span class="conv-name">{{ conv.contact?.name || conv.jid.split('@')[0] }}</span>
-              <span class="conv-time">{{ formatTime(conv.lastMessageAt) }}</span>
+              <span class="conv-name">{{ conv.name || conv.phone || conv.jid.split('@')[0] }}</span>
+              <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
             </div>
             <div class="conv-bottom">
               <span class="conv-last-msg">{{ conv.lastMessage || '' }}</span>
@@ -74,10 +120,10 @@
           </div>
         </div>
 
-        <div v-if="chatStore.accounts.length === 0" class="empty-state">
-          <el-empty description="暂无WhatsApp账号" :image-size="80">
-            <el-button type="primary" @click="showAddAccount = true">
-              添加账号
+        <div v-if="!chatStore.isConnected" class="empty-state">
+          <el-empty description="请先连接WhatsApp账号" :image-size="80">
+            <el-button type="primary" @click="showQRDialog = true">
+              扫码连接
             </el-button>
           </el-empty>
         </div>
@@ -95,10 +141,10 @@
     <div class="center-panel">
       <template v-if="chatStore.activeJid">
         <ChatWindow
-          :account-id="chatStore.activeAccountId"
           :jid="chatStore.activeJid"
-          :contact="chatStore.activeConversation?.contact"
+          :contact="chatStore.activeConversation"
           :messages="chatStore.currentMessages"
+          :connected="chatStore.isConnected"
           @send="onSendMessage"
         />
       </template>
@@ -113,7 +159,8 @@
               />
             </svg>
             <h2>WhatsApp CRM</h2>
-            <p>选择一个会话开始聊天，或添加WhatsApp账号</p>
+            <p v-if="!chatStore.isConnected">请先扫码连接WhatsApp账号</p>
+            <p v-else>选择一个会话开始聊天</p>
           </div>
         </div>
       </template>
@@ -123,8 +170,7 @@
     <div class="right-panel">
       <CustomerPanel
         v-if="chatStore.activeJid"
-        :contact="chatStore.activeConversation?.contact"
-        :account-id="chatStore.activeAccountId"
+        :contact="chatStore.activeConversation"
         :jid="chatStore.activeJid"
         @ai-reply="handleAIReply"
         @summarize="handleAISummarize"
@@ -134,21 +180,22 @@
       </div>
     </div>
 
-    <!-- Add Account Dialog -->
+    <!-- QR Code Dialog -->
     <el-dialog
-      v-model="showAddAccount"
-      title="添加WhatsApp账号"
+      v-model="showQRDialog"
+      title="连接WhatsApp"
       width="420px"
       :close-on-click-modal="false"
       class="dark-dialog"
+      @open="handleQROpen"
+      @close="handleQRClose"
     >
-      <div class="add-account-form">
-        <el-input
-          v-model="newAccountName"
-          placeholder="账号名称（例如：公司主号）"
-          style="margin-bottom: 16px"
-        />
-        <div v-if="chatStore.qrCode" class="qr-section">
+      <div class="qr-dialog-content">
+        <div v-if="chatStore.connectionStatus === 'connecting'" class="qr-loading">
+          <el-icon class="is-loading" :size="32"><Loading /></el-icon>
+          <p>正在生成二维码...</p>
+        </div>
+        <div v-else-if="chatStore.qrCode" class="qr-section">
           <p class="qr-hint">请使用WhatsApp扫描以下二维码登录</p>
           <img :src="chatStore.qrCode.qr" alt="QR Code" class="qr-image" />
           <p class="qr-status">
@@ -156,12 +203,20 @@
             等待扫码...
           </p>
         </div>
+        <div v-else-if="chatStore.isConnected" class="qr-connected">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="#00a884">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <p class="connected-text">WhatsApp已连接</p>
+          <p class="connected-phone">{{ chatStore.connectedPhone }}</p>
+        </div>
+        <div v-else class="qr-error">
+          <p>获取二维码失败，请重试</p>
+          <el-button type="primary" @click="chatStore.requestQR()">重试</el-button>
+        </div>
       </div>
       <template #footer>
-        <el-button @click="showAddAccount = false">取消</el-button>
-        <el-button type="primary" @click="handleAddAccount">
-          创建并获取二维码
-        </el-button>
+        <el-button @click="showQRDialog = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
@@ -169,8 +224,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { Plus, Search, Loading, Setting } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
+import { Loading } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useChatStore } from '../stores/chat.js';
 import { initSocket } from '../utils/socket.js';
 import ChatWindow from '../components/chat/ChatWindow.vue';
@@ -179,8 +234,7 @@ import CustomerPanel from '../components/chat/CustomerPanel.vue';
 const chatStore = useChatStore();
 
 const searchQuery = ref('');
-const showAddAccount = ref(false);
-const newAccountName = ref('');
+const showQRDialog = ref(false);
 
 const filteredConversations = computed(() => {
   const convs = chatStore.sortedConversations;
@@ -188,85 +242,85 @@ const filteredConversations = computed(() => {
   const q = searchQuery.value.toLowerCase();
   return convs.filter(
     c =>
-      c.contact?.name?.toLowerCase().includes(q) ||
+      c.name?.toLowerCase().includes(q) ||
+      c.phone?.toLowerCase().includes(q) ||
       c.jid?.toLowerCase().includes(q) ||
       c.lastMessage?.toLowerCase().includes(q)
   );
 });
 
 onMounted(async () => {
-  await chatStore.fetchAccounts();
   initSocket();
 
-  // Auto-request QR for disconnected accounts
-  chatStore.accounts.forEach(acc => {
-    if (acc.status === 'disconnected' || acc.status === 'connecting') {
-      chatStore.requestQRCode(acc.id);
-    }
-    // Fetch conversations for connected accounts
-    if (acc.status === 'connected') {
-      chatStore.fetchConversations(acc.id);
-    }
-  });
+  // Check current connection status
+  const status = await chatStore.fetchConnectionStatus();
+
+  // If connected, fetch conversations
+  if (chatStore.isConnected) {
+    await chatStore.fetchConversations();
+  }
+
+  // Fetch translation settings
+  await chatStore.fetchTranslationSettings();
 });
 
+// Watch for connection status changes
 watch(
-  () => chatStore.activeAccountId,
-  (newId) => {
-    if (newId) {
-      chatStore.fetchConversations(newId);
-      chatStore.activeJid = null;
+  () => chatStore.connectionStatus,
+  (newStatus) => {
+    if (newStatus === 'connected') {
+      showQRDialog.value = false;
+      chatStore.fetchConversations();
     }
   }
 );
 
-function onAccountChange(accountId) {
-  chatStore.activeAccountId = accountId;
-  const account = chatStore.accounts.find(a => a.id === accountId);
-  if (account?.status === 'disconnected') {
-    chatStore.requestQRCode(accountId);
+function handleQROpen() {
+  if (!chatStore.isConnected) {
+    chatStore.requestQR();
   }
 }
 
-async function handleAddAccount() {
-  if (!newAccountName.value.trim()) {
-    newAccountName.value = `账号 ${chatStore.accounts.length + 1}`;
-  }
+function handleQRClose() {
+  // Don't disconnect - keep the connection attempt alive
+}
+
+async function handleDisconnect() {
   try {
-    const account = await chatStore.createAccount(newAccountName.value.trim());
-    showAddAccount.value = false;
-    newAccountName.value = '';
-    // Request QR code
-    chatStore.requestQRCode(account.id);
-    ElMessage.success('账号已创建，请扫描二维码登录');
-  } catch (err) {
-    ElMessage.error('创建账号失败');
+    await ElMessageBox.confirm(
+      '确定断开WhatsApp连接？断开后需要重新扫码登录。',
+      '断开连接',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    );
+    await chatStore.disconnectWhatsApp();
+    ElMessage.success('已断开连接');
+  } catch {
+    // User cancelled
   }
 }
 
 function selectConversation(conv) {
   chatStore.setActiveConversation(conv.jid);
-  chatStore.fetchMessages(chatStore.activeAccountId, conv.jid);
 }
 
 function onSendMessage(text) {
-  if (!chatStore.activeAccountId || !chatStore.activeJid) return;
-  chatStore.sendMessage(chatStore.activeAccountId, chatStore.activeJid, text);
+  if (!chatStore.activeJid || !chatStore.isConnected) return;
+  chatStore.sendMessage(chatStore.activeJid, text);
 }
 
 async function handleAIReply() {
-  if (!chatStore.activeAccountId || !chatStore.activeJid) return;
+  if (!chatStore.activeJid) return;
   try {
-    await chatStore.generateAIReply(chatStore.activeAccountId, chatStore.activeJid, 'formal');
+    await chatStore.generateAIReply(null, chatStore.activeJid, 'formal');
   } catch (err) {
     console.error('AI reply failed:', err);
   }
 }
 
 async function handleAISummarize() {
-  if (!chatStore.activeAccountId || !chatStore.activeJid) return;
+  if (!chatStore.activeJid) return;
   try {
-    await chatStore.summarizeNeed(chatStore.activeAccountId, chatStore.activeJid);
+    await chatStore.generateNeedSummary(null, chatStore.activeJid);
   } catch (err) {
     console.error('AI summarize failed:', err);
   }
@@ -331,41 +385,43 @@ function formatTime(dateStr) {
   border-bottom: 1px solid var(--border-color);
 }
 
-.account-selector {
+.connection-bar {
   display: flex;
-  gap: 8px;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 10px;
 }
 
-.account-option {
+.connection-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.account-status-dot {
+.status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--text-muted);
+  flex-shrink: 0;
 }
 
-.account-status-dot.connected {
+.status-dot.connected {
   background: var(--accent);
 }
 
-.account-status-dot.connecting {
+.status-dot.connecting,
+.status-dot.waiting_qr {
   background: #f59e0b;
   animation: pulse 1.5s infinite;
 }
 
-.account-status-dot.reconnecting {
+.status-dot.reconnecting {
   background: #f59e0b;
   animation: pulse 1.5s infinite;
 }
 
-.account-status-dot.disconnected {
+.status-dot.disconnected {
   background: var(--danger);
 }
 
@@ -374,36 +430,42 @@ function formatTime(dateStr) {
   50% { opacity: 0.4; }
 }
 
-:deep(.el-select) {
-  --el-select-border-color-hover: var(--accent);
+.connection-text {
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
-:deep(.el-select .el-input__wrapper) {
-  background: var(--input-bg);
-  border-color: var(--border-color);
-}
-
-:deep(.el-select .el-input__inner) {
-  color: var(--text-primary);
-}
-
-.search-bar {
-  width: 100%;
+.connection-actions {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 4px;
 }
 
-.settings-trigger {
-  flex-shrink: 0;
+.connection-actions :deep(.el-button) {
   background: rgba(255,255,255,0.06) !important;
   border: none !important;
   color: var(--text-secondary, #8696a0) !important;
 }
 
-.settings-trigger:hover {
-  color: var(--color-primary, #00a884) !important;
+.connection-actions :deep(.el-button:hover) {
+  color: var(--accent, #00a884) !important;
   background: rgba(0,168,132,0.1) !important;
+}
+
+.connection-actions :deep(.el-button--primary) {
+  background: var(--accent) !important;
+  color: white !important;
+}
+
+.connection-actions :deep(.el-button--primary:hover) {
+  background: var(--accent-hover) !important;
+}
+
+.settings-trigger {
+  flex-shrink: 0;
+}
+
+.search-bar {
+  width: 100%;
 }
 
 :deep(.el-input__wrapper) {
@@ -579,11 +641,6 @@ function formatTime(dateStr) {
 }
 
 /* Dialog styles */
-:deep(.dark-dialog .el-dialog) {
-  background: var(--sidebar-bg);
-  border: 1px solid var(--border-color);
-}
-
 :deep(.el-dialog) {
   background: #1a2731;
   border: 1px solid var(--border-color);
@@ -597,9 +654,26 @@ function formatTime(dateStr) {
   color: var(--text-secondary);
 }
 
+.qr-dialog-content {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-loading {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.qr-loading p {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
 .qr-section {
   text-align: center;
-  margin-top: 16px;
+  width: 100%;
 }
 
 .qr-hint {
@@ -623,6 +697,32 @@ function formatTime(dateStr) {
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.qr-connected {
+  text-align: center;
+}
+
+.connected-text {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 12px;
+}
+
+.connected-phone {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.qr-error {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.qr-error p {
+  margin-bottom: 12px;
 }
 
 :deep(.el-button--primary) {

@@ -5,17 +5,21 @@
       <div class="header-info">
         <div class="header-avatar">
           <span class="avatar-text">
-            {{ getInitial(contact?.name || jid) }}
+            {{ getInitial(contact?.name || contact?.phone || jid) }}
           </span>
         </div>
         <div class="header-details">
-          <h3>{{ contact?.name || jid.split('@')[0] }}</h3>
-          <span class="header-phone">{{ contact?.phone || '' }}</span>
+          <h3>{{ contact?.name || contact?.phone || jid.split('@')[0] }}</h3>
+          <span class="header-phone">{{ contact?.phone || jid.split('@')[0] }}</span>
         </div>
       </div>
       <div class="header-actions">
         <el-tooltip content="搜索消息" placement="bottom">
-          <el-button :icon="Search" text circle />
+          <el-button text circle>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+            </svg>
+          </el-button>
         </el-tooltip>
       </div>
     </div>
@@ -87,10 +91,18 @@
     <div class="input-area">
       <div class="input-toolbar">
         <el-tooltip content="表情" placement="top">
-          <el-button :icon="ChatDotRound" text circle size="small" />
+          <el-button text circle size="small">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+            </svg>
+          </el-button>
         </el-tooltip>
         <el-tooltip content="附件" placement="top">
-          <el-button :icon="Paperclip" text circle size="small" />
+          <el-button text circle size="small">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+            </svg>
+          </el-button>
         </el-tooltip>
         <el-tooltip content="AI翻译" placement="top">
           <el-button text circle size="small" @click="handleAITranslate" :loading="aiTranslating">
@@ -140,11 +152,14 @@
         </el-tooltip>
         <el-button
           type="primary"
-          :icon="Promotion"
           circle
-          :disabled="!inputText.trim()"
+          :disabled="!inputText.trim() || !connected"
           @click="handleSend"
-        />
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </el-button>
       </div>
     </div>
 
@@ -153,7 +168,9 @@
       <div class="preview-header">
         <span>翻译预览</span>
         <el-button text size="small" @click="translationPreview = null">
-          <el-icon><Close /></el-icon>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
         </el-button>
       </div>
       <div class="preview-content">{{ translationPreview }}</div>
@@ -163,16 +180,13 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, reactive } from 'vue';
-import { Search, Promotion, ChatDotRound, Close } from '@element-plus/icons-vue';
 import { useChatStore } from '../../stores/chat.js';
 
-const Paperclip = ChatDotRound;
-
 const props = defineProps({
-  accountId: { type: Number, required: true },
   jid: { type: String, required: true },
   contact: { type: Object, default: null },
   messages: { type: Array, default: () => [] },
+  connected: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['send']);
@@ -189,6 +203,7 @@ const translationPreview = ref(null);
 const translatingMsgs = reactive({});
 
 const inputPlaceholder = computed(() => {
+  if (!props.connected) return 'WhatsApp未连接...';
   if (autoTranslate.value && chatStore.translationSettings.translationEnabled) {
     return '输入中文，自动翻译后发送...';
   }
@@ -236,7 +251,7 @@ function scrollToBottom() {
 
 async function handleSend() {
   const text = inputText.value.trim();
-  if (!text) return;
+  if (!text || !props.connected) return;
   emit('send', text);
   inputText.value = '';
   translationPreview.value = null;
@@ -307,10 +322,10 @@ async function handleAITranslate() {
 }
 
 async function handleAIReply() {
-  if (!props.accountId || !props.jid) return;
+  if (!props.jid) return;
   aiGeneratingLocal.value = true;
   try {
-    await chatStore.generateAIReply(props.accountId, props.jid, 'formal');
+    await chatStore.generateAIReply(null, props.jid, 'formal');
   } catch (err) {
     console.error('AI reply failed:', err);
   } finally {
@@ -319,10 +334,10 @@ async function handleAIReply() {
 }
 
 async function handleAISummarize() {
-  if (!props.accountId || !props.jid) return;
+  if (!props.jid) return;
   aiSummarizingLocal.value = true;
   try {
-    await chatStore.summarizeNeed(props.accountId, props.jid);
+    await chatStore.generateNeedSummary(null, props.jid);
   } catch (err) {
     console.error('AI summarize failed:', err);
   } finally {
@@ -405,7 +420,7 @@ async function handleAISummarize() {
 .message-row {
   display: flex;
   margin-bottom: 4px;
-  animation: fadeIn 0.15s ease-out;
+  animation: fadeIn 0.2s ease;
 }
 
 .message-row.from-me {
@@ -414,10 +429,9 @@ async function handleAISummarize() {
 
 .message-bubble {
   max-width: 65%;
-  padding: 8px 12px 4px;
+  padding: 8px 12px;
   border-radius: 8px;
   position: relative;
-  word-wrap: break-word;
 }
 
 .message-bubble.incoming {
@@ -430,62 +444,61 @@ async function handleAISummarize() {
   border-top-right-radius: 0;
 }
 
-.msg-text {
+.message-content {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.4;
+  word-break: break-word;
+}
+
+.msg-text {
   white-space: pre-wrap;
 }
 
-/* Translation styles */
 .msg-translation {
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.4;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.msg-translation.translating {
-  color: var(--text-muted);
-  font-style: italic;
 }
 
 .translation-label {
-  color: var(--accent-color);
+  color: var(--accent);
   font-size: 11px;
-  flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .translation-lang {
-  background: rgba(0, 168, 132, 0.15);
-  color: var(--accent-color);
+  display: inline-block;
   font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(0, 168, 132, 0.15);
+  color: var(--accent);
+  margin-left: 6px;
 }
 
 .msg-translate-btn {
   display: inline-flex;
   align-items: center;
-  margin-top: 4px;
-  padding: 2px 8px;
-  background: rgba(0, 168, 132, 0.1);
-  color: var(--accent-color);
+  margin-top: 6px;
+  padding: 3px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent);
+  font-size: 12px;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .msg-translate-btn:hover {
-  background: rgba(0, 168, 132, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.translating {
+  color: var(--text-muted);
 }
 
 .message-meta {
@@ -497,87 +510,102 @@ async function handleAISummarize() {
 }
 
 .msg-time {
-  color: var(--text-muted);
   font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .msg-status {
-  color: #53bdeb;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .no-messages {
   text-align: center;
+  padding: 40px 0;
   color: var(--text-muted);
-  padding: 60px 0;
   font-size: 14px;
 }
 
-/* Input */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Input Area */
 .input-area {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 8px 16px;
   background: var(--chat-header-bg);
   border-top: 1px solid var(--border-color);
+  padding: 8px 16px;
 }
 
 .input-toolbar {
   display: flex;
   gap: 2px;
-  padding-bottom: 6px;
+  margin-bottom: 6px;
 }
 
 .input-toolbar :deep(.el-button) {
-  color: var(--text-secondary);
-}
-
-.input-wrapper {
-  flex: 1;
-}
-
-:deep(.el-textarea__inner) {
-  background: var(--input-bg);
-  border: none;
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  min-height: 40px;
-}
-
-:deep(.el-textarea__inner::placeholder) {
   color: var(--text-muted);
 }
 
-:deep(.el-textarea__inner:focus) {
-  box-shadow: none;
+.input-toolbar :deep(.el-button:hover) {
+  color: var(--text-secondary);
+}
+
+.input-wrapper :deep(.el-textarea__inner) {
+  background: var(--input-bg);
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  min-height: 36px !important;
+}
+
+.input-wrapper :deep(.el-textarea__inner::placeholder) {
+  color: var(--text-muted);
 }
 
 .input-actions {
   display: flex;
-  gap: 4px;
-  padding-bottom: 6px;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
 }
 
-/* Translation preview */
+.input-actions :deep(.el-button--small) {
+  width: 32px;
+  height: 32px;
+}
+
+.input-actions :deep(.el-button--default) {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: var(--text-muted);
+}
+
+.input-actions :deep(.el-button--primary) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.input-actions :deep(.el-button--primary:hover) {
+  background: var(--accent-hover);
+}
+
+/* Translation Preview */
 .translation-preview {
   position: absolute;
-  bottom: 70px;
+  bottom: 100px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--panel-header-bg);
+  background: var(--msg-outgoing);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 12px;
   max-width: 400px;
   width: 90%;
   z-index: 10;
-  animation: fadeIn 0.15s ease-out;
 }
 
 .preview-header {
@@ -585,18 +613,12 @@ async function handleAISummarize() {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 4px;
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--accent);
 }
 
 .preview-content {
-  font-size: 13px;
   color: var(--text-primary);
-  line-height: 1.4;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  font-size: 13px;
 }
 </style>

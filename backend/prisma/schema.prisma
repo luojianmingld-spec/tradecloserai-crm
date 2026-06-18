@@ -16,6 +16,9 @@ model User {
   createdAt DateTime @default(now())
   accounts  WhatsAppAccount[]
   settings  Setting[]
+  waConnection WAConnection[]
+  customers    Customer[]    @relation("CustomerOwner")
+  assignedCustomers Customer[] @relation("CustomerAssignee")
 }
 
 model WhatsAppAccount {
@@ -113,4 +116,55 @@ model Conversation {
   updatedAt    DateTime @updatedAt
 
   @@unique([accountId, jid])
+}
+
+model WAConnection {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String    @unique
+  phone           String?
+  status          String    @default("disconnected")
+  lastConnectedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  messages        WAMessage[]
+}
+
+model WAMessage {
+  id          Int      @id @default(autoincrement())
+  sessionId   String
+  connection  WAConnection @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  from        String
+  to          String
+  body        String
+  type        String   @default("text")
+  direction   String   @default("inbound")
+  timestamp   DateTime
+  read        Boolean  @default(false)
+  waMessageId String?
+  mediaUrl    String?
+  fileName    String?
+  createdAt   DateTime @default(now())
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation("CustomerOwner", fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String?
+  email         String?
+  company       String?
+  country       String?
+  tags          String?  @default("[]")
+  notes         String?
+  source        String?  @default("whatsapp")
+  intentLevel   Int      @default(5)
+  status        String   @default("potential")
+  assignedTo    Int?
+  assignee      User?    @relation("CustomerAssignee", fields: [assignedTo], references: [id])
+  lastContactAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

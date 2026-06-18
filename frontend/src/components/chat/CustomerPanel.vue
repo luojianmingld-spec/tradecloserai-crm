@@ -568,7 +568,19 @@ watch(
       editForm.name = contact.name || '';
       editForm.country = contact.country || '';
       editForm.language = contact.language || '';
-      editForm.tags = contact.tags ? contact.tags.split(',').filter(Boolean) : [];
+      // Handle tags as both array and string
+      if (Array.isArray(contact.tags)) {
+        editForm.tags = contact.tags;
+      } else if (contact.tags) {
+        try {
+          const parsed = JSON.parse(contact.tags);
+          editForm.tags = Array.isArray(parsed) ? parsed : contact.tags.split(',').filter(Boolean);
+        } catch {
+          editForm.tags = contact.tags.split(',').filter(Boolean);
+        }
+      } else {
+        editForm.tags = [];
+      }
       editForm.notes = contact.notes || '';
     }
   },
@@ -623,12 +635,12 @@ async function testTranslation() {
 }
 
 async function handleGenerateReply() {
-  if (!props.accountId || !props.jid) {
+  if (!props.jid) {
     ElMessage.warning('请先选择会话');
     return;
   }
   try {
-    await chatStore.generateAIReply(props.accountId, props.jid, replyStyle.value);
+    await chatStore.generateAIReply(null, props.jid, replyStyle.value);
     if (chatStore.aiReplies.length === 0) {
       ElMessage.info('暂无回复建议，请先与客户对话');
     }
@@ -643,12 +655,12 @@ function handleInsertReply(text) {
 }
 
 async function handleSummarize() {
-  if (!props.accountId || !props.jid) {
+  if (!props.jid) {
     ElMessage.warning('请先选择会话');
     return;
   }
   try {
-    await chatStore.generateNeedSummary(props.accountId, props.jid);
+    await chatStore.generateNeedSummary(null, props.jid);
     if (!chatStore.needSummary) {
       ElMessage.info('暂无消息记录，无法生成需求总结');
     }
