@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@prisma/client": "6.8.2",
-    "@whiskeysockets/baileys": "^6.7.18",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "coze-coding-dev-sdk": "^0.7.24",
@@ -24,5 +23,14 @@
     "prisma": "6.8.2",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1"
+  },
+  "optionalDependencies": {
+    "@whiskeysockets/baileys": "^6.7.18"
+  },
+  "pnpm": {
+    "overrides": {
+      "libsignal": "file:./vendor/libsignal",
+      "@whiskeysockets/eslint-config": "file:./vendor/eslint-config-dummy"
+    }
   }
 }

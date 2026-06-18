@@ -56,12 +56,18 @@ class BaileysProvider extends EventEmitter {
       const baileys = await import('@whiskeysockets/baileys');
       this._baileys = baileys;
       this._pino = (await import('pino')).default;
-      console.log('[WA] Baileys loaded successfully, version:', baileys.version);
+      console.log('[WA] Baileys loaded successfully');
       return baileys;
     } catch (err) {
-      console.error('[WA] Failed to load Baileys:', err.message);
-      throw new Error('WhatsApp library not available. Please install @whiskeysockets/baileys');
+      console.warn('[WA] Baileys not available:', err.message);
+      this._baileys = null;
+      return null;
     }
+  }
+
+  /** 检查 Baileys 是否可用 */
+  isAvailable() {
+    return this._baileys !== null;
   }
 
   /** 获取 session 认证数据目录 */
@@ -90,12 +96,17 @@ class BaileysProvider extends EventEmitter {
    * @returns {Promise<{status: string, qr?: string}>}
    */
   async connect(sessionId) {
+    // 尝试加载 Baileys
+    const baileys = await this._loadBaileys();
+    if (!baileys) {
+      return { status: 'unavailable', message: 'WhatsApp library not installed. Contact admin to enable WhatsApp integration.' };
+    }
+
     // 已连接则直接返回
     if (this.sockets.has(sessionId) && this.statuses.get(sessionId) === 'connected') {
       return { status: 'connected', phone: this.phones.get(sessionId) };
     }
 
-    const baileys = await this._loadBaileys();
     const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } = baileys;
 
     this.statuses.set(sessionId, 'connecting');
@@ -228,6 +239,11 @@ class BaileysProvider extends EventEmitter {
    * @returns {Promise<{success: boolean, messageId?: string}>}
    */
   async sendMessage(sessionId, to, message) {
+    // 检查 Baileys 是否可用
+    if (!this._baileys && !(await this._loadBaileys())) {
+      throw new Error('WhatsApp library not installed');
+    }
+
     const sock = this.sockets.get(sessionId);
     if (!sock || this.statuses.get(sessionId) !== 'connected') {
       throw new Error('WhatsApp not connected');
