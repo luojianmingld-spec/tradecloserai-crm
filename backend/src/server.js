@@ -218,11 +218,18 @@ async function startServer() {
   await seedDefaultUser();
 
   // Ensure sessions directory exists for WhatsApp provider
-  const path = await import('path');
-  const fs = await import('fs');
-  const sessionsDir = path.join(process.cwd(), 'sessions');
-  if (!fs.existsSync(sessionsDir)) {
-    fs.mkdirSync(sessionsDir, { recursive: true });
+  // Production fs is read-only — use /tmp (the only writable dir in prod)
+  const sessionsDir = isProduction
+    ? path.join('/tmp', 'wa-sessions')
+    : path.join(process.cwd(), 'sessions');
+  try {
+    if (!fs.existsSync(sessionsDir)) {
+      fs.mkdirSync(sessionsDir, { recursive: true });
+    }
+    console.log(`[Server] Sessions dir: ${sessionsDir}`);
+  } catch (err) {
+    console.warn(`[Server] Could not create sessions dir at ${sessionsDir}: ${err.message}`);
+    // Don't crash — WhatsApp feature will degrade gracefully
   }
 
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {

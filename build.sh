@@ -27,8 +27,8 @@ npx prisma generate 2>&1 || echo "[build] WARNING: prisma generate failed"
 echo "[build] Pushing database schema..."
 npx prisma db push 2>&1 || echo "[build] WARNING: prisma db push failed"
 
-# Create sessions directory for WhatsApp
-mkdir -p "$COZE_WORKSPACE_PATH/backend/sessions"
+# Create sessions directory for WhatsApp (may fail on read-only fs in prod, that's OK)
+mkdir -p "$COZE_WORKSPACE_PATH/backend/sessions" 2>/dev/null || echo "[build] WARNING: Could not create sessions dir (read-only fs?), will use /tmp at runtime"
 
 # ========== Frontend ==========
 echo "[build] Installing frontend dependencies..."
