@@ -218,4 +218,28 @@ h1 {
 :deep(.el-divider) {
   border-color: var(--border-color);
 }
+
+@media (max-width: 480px) {
+  .login-card {
+    width: calc(100vw - 32px);
+    padding: 32px 20px;
+    border-radius: 12px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .login-btn {
+    height: 48px;
+    font-size: 16px;
+  }
+
+  .switch-mode span {
+    padding: 8px 0;
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+  }
+}
 </style>

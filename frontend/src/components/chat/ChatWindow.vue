@@ -621,4 +621,59 @@ async function handleAISummarize() {
   color: var(--text-primary);
   font-size: 13px;
 }
+
+/* ========== Mobile Responsive ========== */
+@media (max-width: 768px) {
+  .chat-window {
+    height: 100vh;
+  }
+
+  .chat-header {
+    padding: 8px 12px 8px 48px;
+  }
+  .chat-header .contact-name {
+    font-size: 14px;
+  }
+  .chat-header .contact-phone {
+    font-size: 11px;
+  }
+
+  .messages-container {
+    padding: 8px;
+  }
+
+  .message-wrapper {
+    max-width: 85%;
+  }
+
+  .message-bubble {
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+
+  .message-translation {
+    font-size: 12px;
+  }
+
+  .input-area {
+    padding: 6px 8px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .input-actions :deep(.el-button--small) {
+    width: 36px;
+    height: 36px;
+  }
+
+  .message-input :deep(.el-textarea__inner) {
+    font-size: 16px;
+    min-height: 36px;
+  }
+
+  .translation-preview {
+    bottom: 70px;
+    max-width: 90%;
+  }
+}
 </style>
