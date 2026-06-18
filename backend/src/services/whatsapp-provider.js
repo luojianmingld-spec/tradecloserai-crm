@@ -70,9 +70,18 @@ class BaileysProvider extends EventEmitter {
     return this._baileys !== null;
   }
 
+  /** 检测当前是否为生产环境（只读 fs） */
+  _isProduction() {
+    return process.env.NODE_ENV === 'production';
+  }
+
   /** 获取 session 认证数据目录 */
   _getAuthDir(sessionId) {
-    return path.join(process.cwd(), 'sessions', sessionId);
+    // 生产环境 fs 只读，使用 /tmp（唯一可写目录）
+    const baseDir = this._isProduction()
+      ? path.join('/tmp', 'wa-sessions')
+      : path.join(process.cwd(), 'sessions');
+    return path.join(baseDir, sessionId);
   }
 
   /** 使用 baileys 的 useMultiFileAuthState 管理认证 */
@@ -85,11 +94,16 @@ class BaileysProvider extends EventEmitter {
     const fs = await import('fs');
     const pathMod = await import('path');
     const parentDir = pathMod.dirname(authDir);
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
-    }
-    if (!fs.existsSync(authDir)) {
-      fs.mkdirSync(authDir, { recursive: true });
+    try {
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+      if (!fs.existsSync(authDir)) {
+        fs.mkdirSync(authDir, { recursive: true });
+      }
+    } catch (err) {
+      console.warn(`[WA] Could not create auth dir ${authDir}: ${err.message}`);
+      // 继续 — useMultiFileAuthState 可能仍然部分工作，或在后续步骤中优雅失败
     }
 
     return await useMultiFileAuthState(authDir);
