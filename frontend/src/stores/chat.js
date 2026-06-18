@@ -9,6 +9,7 @@ export const useChatStore = defineStore('chat', () => {
   const sessionId = ref(null);
   const connectedPhone = ref(null);
   const qrCode = ref(null);
+  const waError = ref(null);
 
   // Conversations
   const conversations = ref([]);
@@ -79,6 +80,7 @@ export const useChatStore = defineStore('chat', () => {
     try {
       qrCode.value = null;
       connectionStatus.value = 'connecting';
+      waError.value = null;
       const { data } = await api.post('/whatsapp/qr');
       sessionId.value = data.sessionId;
       // QR comes asynchronously via Socket.io (whatsapp:qr event)
@@ -91,10 +93,16 @@ export const useChatStore = defineStore('chat', () => {
         connectedPhone.value = data.phone;
         qrCode.value = null;
       }
+      if (data.status === 'unavailable') {
+        connectionStatus.value = 'unavailable';
+        waError.value = data.message || 'WhatsApp 库未安装';
+      }
       return data;
     } catch (err) {
       console.error('Failed to request QR:', err);
       connectionStatus.value = 'disconnected';
+      const msg = err.response?.data?.error || err.message || '连接失败';
+      waError.value = msg;
       return null;
     }
   }
@@ -190,6 +198,13 @@ export const useChatStore = defineStore('chat', () => {
   function handleQRCode(data) {
     qrCode.value = data;
     connectionStatus.value = 'waiting_qr';
+    waError.value = null;
+  }
+
+  function handleWAError(data) {
+    connectionStatus.value = 'error';
+    qrCode.value = null;
+    waError.value = data.message || '未知错误';
   }
 
   function handleStatus(data) {
@@ -197,11 +212,15 @@ export const useChatStore = defineStore('chat', () => {
       connectionStatus.value = 'connected';
       connectedPhone.value = data.phone || null;
       qrCode.value = null;
+      waError.value = null;
       // Fetch conversations when connected
       fetchConversations();
     } else if (data.status === 'disconnected') {
       connectionStatus.value = 'disconnected';
       connectedPhone.value = null;
+    } else if (data.status === 'error') {
+      connectionStatus.value = 'error';
+      qrCode.value = null;
     } else if (data.status === 'connecting' || data.status === 'waiting_qr' || data.status === 'reconnecting') {
       connectionStatus.value = data.status;
     }
@@ -409,6 +428,7 @@ export const useChatStore = defineStore('chat', () => {
     sessionId,
     connectedPhone,
     qrCode,
+    waError,
     conversations,
     activeJid,
     messages,
@@ -441,6 +461,7 @@ export const useChatStore = defineStore('chat', () => {
     // Socket Handlers
     handleQRCode,
     handleStatus,
+    handleWAError,
     handleNewMessage,
     handleMessageSent,
     handleConversations,
