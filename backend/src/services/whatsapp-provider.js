@@ -131,7 +131,7 @@ class BaileysProvider extends EventEmitter {
    * @param {string} sessionId
    * @returns {Promise<{status: string, qr?: string}>}
    */
-  async connect(sessionId) {
+  async connect(sessionId, userId) {
     // 尝试加载 Baileys
     const baileys = await this._loadBaileys();
     if (!baileys) {
@@ -147,6 +147,10 @@ class BaileysProvider extends EventEmitter {
     if (this.statuses.get(sessionId) === 'connecting') {
       return { status: 'connecting', sessionId };
     }
+
+    // 保存 userId 供后续使用
+    this._userIdMap = this._userIdMap || new Map();
+    this._userIdMap.set(sessionId, userId);
 
     const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } = baileys;
 
@@ -256,7 +260,7 @@ class BaileysProvider extends EventEmitter {
           this._retryCount.set(sessionId, retries + 1);
           this.statuses.set(sessionId, 'reconnecting');
           this.emit('status', sessionId, 'reconnecting');
-          setTimeout(() => this.connect(sessionId), 5000);
+          setTimeout(() => this.connect(sessionId, this._userIdMap?.get(sessionId)), 5000);
         } else {
           // 超过最大重试次数 — 报错
           this._retryCount.set(sessionId, 0);
@@ -447,9 +451,14 @@ class BaileysProvider extends EventEmitter {
   /** 更新数据库中的连接状态 */
   async _updateDBStatus(sessionId, status, phone) {
     try {
+      const userId = this._userIdMap?.get(sessionId);
+      const createData = { sessionId, status, phone, lastConnectedAt: status === 'connected' ? new Date() : null };
+      if (userId) {
+        createData.user = { connect: { id: userId } };
+      }
       await prisma.wAConnection.upsert({
         where: { sessionId },
-        create: { sessionId, status, phone, lastConnectedAt: status === 'connected' ? new Date() : null },
+        create: createData,
         update: { status, ...(phone && { phone }), ...(status === 'connected' && { lastConnectedAt: new Date() }) },
       });
     } catch (err) {
