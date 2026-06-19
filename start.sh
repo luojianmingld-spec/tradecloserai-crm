@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+# NOTE: No set -e — we handle errors explicitly
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 部署启动脚本
@@ -31,11 +31,9 @@ if [ ! -d "$PROJECT_ROOT/backend/node_modules" ]; then
   exit 1
 fi
 
-# 确保数据库存在（如果 build 阶段的 db push 失败了，运行时也试一次）
-if [ -f "$PROJECT_ROOT/backend/prisma/schema.prisma" ]; then
-  cd "$PROJECT_ROOT/backend"
-  npx prisma db push 2>/dev/null || echo "[start] WARNING: prisma db push at runtime failed (may be okay)"
-fi
+# NOTE: Do NOT run prisma db push at runtime — production fs is read-only (EROFS).
+# Database is initialized during build.sh (prisma db push runs there).
+# server.js will create the DB on first connect if needed via ensureDatabase().
 
 export NODE_ENV=production
 export DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-5000}"
