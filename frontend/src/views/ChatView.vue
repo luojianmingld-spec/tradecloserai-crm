@@ -32,6 +32,17 @@
             </span>
           </div>
           <div class="connection-actions">
+            <el-tooltip content="Dashboard" placement="bottom">
+              <el-button
+                circle
+                size="small"
+                @click="$router.push('/dashboard')"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                  <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                </svg>
+              </el-button>
+            </el-tooltip>
             <el-tooltip v-if="!chatStore.isConnected" content="扫码连接" placement="bottom">
               <el-button
                 type="primary"
