@@ -869,12 +869,16 @@ onMounted(() => {
     min-height: 40px;
   }
 
-  /* Stats */
+  /* Stats - flex-wrap 2 per row */
   .stats-row {
-    grid-template-columns: repeat(2, 1fr) !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    grid-template-columns: none !important;
     gap: 8px !important;
   }
   .stat-card {
+    width: calc(50% - 4px) !important;
+    min-width: 0 !important;
     padding: 10px 12px !important;
   }
   .stat-value {
