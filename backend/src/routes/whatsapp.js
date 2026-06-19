@@ -26,7 +26,7 @@ router.post('/qr', async (req, res) => {
     const userId = req.userId;
     const sessionId = `user_${userId}`;
 
-    const result = await whatsappProvider.connect(sessionId);
+    const result = await whatsappProvider.connect(sessionId, userId);
     if (result.status === 'unavailable') {
       return res.status(503).json({ error: result.message, status: 'unavailable' });
     }
