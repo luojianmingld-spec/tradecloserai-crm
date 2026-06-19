@@ -234,6 +234,7 @@ async function startServer() {
 
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
     console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
+    console.log(`[Server] Build version: 2024-06-19-v2 | Sessions: ${SESSIONS_DIR}`);
   });
 }
 
