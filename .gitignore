@@ -13,3 +13,4 @@ __pycache__/
 
 # Preview files
 .preview
+.cozeproj/reduction
