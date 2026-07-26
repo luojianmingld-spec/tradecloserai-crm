@@ -1393,51 +1393,49 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
       });
       if (!tgAccounts.length) return res.json([]);
       const tgAccountIds = tgAccounts.map(a => a.id);
-      const sessions = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
-      const tgMsgs = await prisma.wAMessage.findMany({
-        where: { sessionId: { in: sessions } },
-        orderBy: { timestamp: "desc" },
-        take: 500,
+      // 直接从 Conversation 表获取所有 TG 会话
+      const convRecs = await prisma.conversation.findMany({
+        where: { accountId: { in: tgAccountIds }, platform: "telegram" },
+        orderBy: { lastMessageAt: "desc" },
       });
-      const cMap = new Map();
-      for (const m of tgMsgs) {
-        let jid = m.direction === "inbound" ? m.from : (m.to || null);
-        if (!jid || !jid.endsWith("@telegram")) continue;
-        const existing = cMap.get(jid);
-        if (!existing || new Date(m.timestamp) > new Date(existing.lastMsg.timestamp)) {
-          cMap.set(jid, {
-            jid, lastMsg: m,
-            unread: (existing?.unread || 0) + (m.direction === "inbound" && !m.read ? 1 : 0),
-          });
-        } else if (m.direction === "inbound" && !m.read) {
-          existing.unread++;
-        }
-      }
-      const jids = [...cMap.keys()];
-      const [convRecs, ctRecs] = jids.length ? await Promise.all([
-        prisma.conversation.findMany({ where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: jids } } }),
-        prisma.contact.findMany({ where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: jids } } }),
-      ]) : [[], []];
-      const cvMap = new Map(convRecs.map(c => [c.jid, c]));
+      // 批量获取联系人信息
+      const jids = convRecs.map(c => c.jid);
+      const ctRecs = jids.length ? await prisma.contact.findMany({
+        where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: jids } },
+      }) : [];
       const ctMap = new Map(ctRecs.map(c => [c.jid, c]));
       const out = [];
-      for (const [jid, e] of cMap) {
-        const chatId = jid.replace("@telegram", "");
-        const ct = ctMap.get(jid);
-        const cv = cvMap.get(jid) || {};
+      for (const cv of convRecs) {
         if (cv.blocked && !showBlocked) continue;
+        const chatId = cv.jid.replace("@telegram", "");
+        const ct = ctMap.get(cv.jid);
+        // 尝试从 Message 表获取最新消息（比 Conversation.lastMessage 更准确）
+        let lastMsg = cv.lastMessage || "";
+        let lastMsgTime = cv.lastMessageAt;
+        let direction = "inbound";
+        try {
+          const latestMsg = await prisma.message.findFirst({
+            where: { accountId: cv.accountId, platform: "telegram", jid: cv.jid },
+            orderBy: { timestamp: "desc" },
+          });
+          if (latestMsg && (!lastMsgTime || new Date(latestMsg.timestamp) > new Date(lastMsgTime))) {
+            lastMsg = latestMsg.content || "";
+            lastMsgTime = latestMsg.timestamp;
+            direction = latestMsg.fromMe ? "outbound" : "inbound";
+          }
+        } catch {}
         out.push({
-          jid, platform: "telegram", phone: chatId,
+          jid: cv.jid, platform: "telegram", phone: chatId,
           name: ct?.displayName || ct?.name || chatId,
           avatar: ct?.avatar || null,
-          lastMessage: e.lastMsg.body || e.lastMsg.content || "",
-          lastMessageTime: e.lastMsg.timestamp,
-          direction: e.lastMsg.direction,
-          unreadCount: e.unread,
+          lastMessage: lastMsg,
+          lastMessageTime: lastMsgTime,
+          direction,
+          unreadCount: cv.unreadCount || 0,
           pinned: !!cv.pinned, starred: !!cv.starred, blocked: !!cv.blocked,
         });
       }
-      out.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+      out.sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
       return res.json(out);
     }
     // ── WhatsApp 分支（原逻辑不变） ──
