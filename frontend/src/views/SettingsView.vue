@@ -81,6 +81,37 @@
         </div>
       </div>
 
+      <!-- Telegram User Bot -->
+      <section class="settings-section tg-section">
+        <div class="section-header">
+          <h2>📡 Telegram 连接</h2>
+          <button v-if="tgStatus.connected" class="btn-add" @click="syncTgContacts" :disabled="tgSyncing">
+            {{ tgSyncing ? '同步中...' : '同步联系人' }}
+          </button>
+        </div>
+        <div v-if="tgLoading" class="tg-status">
+          <span class="tg-loading">加载中...</span>
+        </div>
+        <div v-else-if="tgStatus.connected" class="tg-info">
+          <div class="tg-status-row">
+            <span class="tg-dot connected"></span>
+            <span class="tg-label">已连接</span>
+            <span class="tg-username">@{{ tgStatus.user?.username }}</span>
+            <span class="tg-phone">{{ tgStatus.user?.phone }}</span>
+          </div>
+          <div class="tg-stats">
+            <span class="tg-stat">联系人: {{ tgContactCount }}</span>
+          </div>
+          <div v-if="tgSyncResult" class="tg-sync-result">
+            ✅ 已同步 {{ tgSyncResult.synced }} 个联系人到CRM数据库
+          </div>
+        </div>
+        <div v-else class="tg-status">
+          <span class="tg-dot disconnected"></span>
+          <span class="tg-label">未连接</span>
+        </div>
+      </section>
+
       <!-- 模型管理区域（所有Tab共用） -->
       <section class="settings-section">
         <div class="section-header">
@@ -462,6 +493,13 @@ import { useAuthStore } from '../stores/auth.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import api from '../utils/api.js';
 
+// TG User Bot
+const tgStatus = ref({ connected: false, user: null });
+const tgLoading = ref(true);
+const tgSyncing = ref(false);
+const tgContactCount = ref(0);
+const tgSyncResult = ref(null);
+
 const router = useRouter();
 const authStore = useAuthStore();
 const teamUsers = ref([]);
@@ -630,7 +668,42 @@ const backgroundQuery = ref('');
 const backgroundResult = ref(null);
 const testingBackground = ref(false);
 
+// TG methods
+const fetchTgStatus = async () => {
+  try {
+    const res = await fetch('/api/tg-userbot/state');
+    if (res.ok) {
+      tgStatus.value = await res.json();
+    }
+    if (tgStatus.value.connected) {
+      const contactsRes = await fetch('/api/tg-userbot/contacts').then(r => r.json());
+      tgContactCount.value = contactsRes.contacts?.length || 0;
+    }
+  } catch (e) {
+    console.warn('TG status fetch failed:', e);
+  } finally {
+    tgLoading.value = false;
+  }
+};
+
+const syncTgContacts = async () => {
+  tgSyncing.value = true;
+  tgSyncResult.value = null;
+  try {
+    const res = await fetch('/api/tg-userbot/sync-contacts', { method: 'POST' });
+    if (res.ok) {
+      tgSyncResult.value = await res.json();
+      tgContactCount.value = tgSyncResult.value.total;
+    }
+  } catch (e) {
+    console.error('TG sync failed:', e);
+  } finally {
+    tgSyncing.value = false;
+  }
+};
+
 onMounted(async () => {
+  fetchTgStatus();
   loadTeam();
   await loadProviders();
   await loadTransSettings();
@@ -1572,4 +1645,20 @@ async function testBackground() {
 .inline-msg.ok { background: rgba(0,168,132,0.15); color: var(--accent); }
 .inline-msg.err { background: rgba(239,68,68,0.15); color: #ef4444; }
 
+
+/* Telegram Section */
+.tg-section { border-left: 3px solid #0088cc; }
+.tg-status { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.tg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tg-dot.connected { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.5); }
+.tg-dot.disconnected { background: #999; }
+.tg-label { font-weight: 500; }
+.tg-info { padding: 8px 0; }
+.tg-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.tg-username { color: #0088cc; font-weight: 500; }
+.tg-phone { color: #888; font-size: 13px; }
+.tg-stats { display: flex; gap: 16px; margin-top: 4px; }
+.tg-stat { background: var(--bg-secondary, #f5f5f5); padding: 4px 12px; border-radius: 12px; font-size: 13px; color: #666; }
+.tg-sync-result { margin-top: 8px; color: #4caf50; font-size: 13px; }
+.tg-loading { color: #888; }
 </style>

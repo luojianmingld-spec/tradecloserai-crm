@@ -2237,3 +2237,20 @@ Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/
 [Assistant] No JSON tool pattern found in AI response
 [Assistant] No CRM task detected for: 0.5美金我们做不到
 [Socket] User 1 disconnected (socket: O_o_lGIoujIoW-xoAAAL)
+[Socket] User 1 connected (socket: DH-9ddJlvKTXDm5zAAAN)
+[Socket] User 1 disconnected (socket: DH-9ddJlvKTXDm5zAAAN)
+[Socket] User 1 connected (socket: D-glpb9Ae4s2HOYzAAAP)
+[Assistant] AI raw response: "哈哈，你也在跟我打招呼呢。刚刚聊到那个印度客户，0.5美金的价格确实做不了，这个我心里有数。\n\n你现在是准备回复他了，还是想再想想怎么谈价格？需要我帮你拟一段有策略的回复话术的话，随时说。"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] No CRM task detected for: 你好
+[Socket] User 1 disconnected (socket: D-glpb9Ae4s2HOYzAAAP)
+[Automation Scheduler] Running check at 2026-07-26T10:53:46.431Z
+[Socket] User 1 connected (socket: VQKQZ2kve3gJi4rvAAAR)
+[Socket] User 1 disconnected (socket: VQKQZ2kve3gJi4rvAAAR)
+[Socket] User 1 connected (socket: F5bmjq7_T8b3NX9eAAAT)
+[Socket] User 1 disconnected (socket: F5bmjq7_T8b3NX9eAAAT)
+[Automation Scheduler] Running check at 2026-07-26T11:23:46.444Z
+[Socket] User 1 disconnected (socket: XLAoOHvhr9baLPCgAAAD)
+[Automation Scheduler] Running check at 2026-07-26T11:53:46.457Z
+[Evolution Webhook] outbound jid=963981860908@s.whatsapp.net me=true type=text dup=false text="كيف حالك اليوم؟"
+[Evolution Webhook] msg AC62F78FA5 status=DELIVERY_ACK

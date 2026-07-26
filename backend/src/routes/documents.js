@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { numberToWords } from '../utils/numberToWords.js';
+import { generateStructuredPDF, generateQuotePDF } from '../services/pdf-generator.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -373,5 +374,35 @@ router.post('/:id/duplicate', async (req, res) => {
 
 // GET seller info (endpoint /api/settings/seller-info is also served here via direct read)
 // PUT seller info
+
+
+// Export document as PDF
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const doc = await prisma.document.findUnique({
+      where: { id: req.params.id },
+      include: { items: { orderBy: { sortOrder: 'asc' } } },
+    });
+    if (!doc) return res.status(404).json({ error: 'Document not found' });
+    
+    const result = await generateQuotePDF(doc);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[Documents] PDF export error:', err);
+    res.status(500).json({ error: 'PDF generation failed: ' + err.message });
+  }
+});
+
+// Generate PDF from AI assistant structured content
+router.post('/generate-pdf', async (req, res) => {
+  try {
+    const { title, subtitle, sections, options } = req.body;
+    const result = await generateStructuredPDF({ title, subtitle, sections, options });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[Documents] Generate PDF error:', err);
+    res.status(500).json({ error: 'PDF generation failed: ' + err.message });
+  }
+});
 
 export default router;
