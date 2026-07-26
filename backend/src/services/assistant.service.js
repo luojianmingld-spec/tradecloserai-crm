@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { chatComplete, analyzeImageWithVision } from './ai-client.js';
+import { generateStructuredPDF, generateQuotePDF } from './pdf-generator.js';
 
 const prisma = new PrismaClient();
 
@@ -662,9 +663,9 @@ ${rawSummary}
               });
             }
             
-            // Generate PDF via internal API
-            const resp = await axios.get(`${baseUrl}/api/documents/${docRecord.id}/pdf`);
-            return { success: true, url: resp.data.url, filename: resp.data.filename, docId: docRecord.id };
+            // Generate PDF directly
+            const pdfResult = await generateQuotePDF(docRecord);
+            return { success: true, url: pdfResult.url, filename: pdfResult.filename, docId: docRecord.id };
             
           } else {
             // General document - parse markdown-like content into sections
@@ -698,8 +699,8 @@ ${rawSummary}
               }
             };
             
-            const resp = await axios.post(`${baseUrl}/api/documents/generate-pdf`, payload);
-            return { success: true, url: resp.data.url, filename: resp.data.filename };
+            const pdfResult = await generateStructuredPDF(payload);
+            return { success: true, url: pdfResult.url, filename: pdfResult.filename };
           }
         } catch (genErr) {
           console.error('[Assistant] generate_document error:', genErr);
