@@ -134,3 +134,32 @@ WhatsApp：+8610308625
 [Socket] User 1 connected (socket: zJc3gP-sfmy5f1OWAAAB)
 [TG] Webhook already OK for @jzjglass2026_bot, skip reset
 [Automation Scheduler] Running check at 2026-07-26T12:11:08.713Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: zJc3gP-sfmy5f1OWAAAB)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 9sTYaabnGCZyPCMuAAAB)
+[Automation Scheduler] Running check at 2026-07-26T12:13:25.695Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 9sTYaabnGCZyPCMuAAAB)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: Hr2BECCX9uTbPF6FAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset

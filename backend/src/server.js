@@ -1827,6 +1827,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ─── 文档下载（所有环境） ───
+app.use("/uploads/documents", express.static(path.join(__dirname, '../uploads/documents')));
+
 // ─── 前端静态资源（生产环境） ───
 if (isProduction) {
   const cwdFrontendPath = path.join(process.cwd(), '../frontend/dist');
@@ -1839,7 +1842,6 @@ if (isProduction) {
     // Company material uploads (served before SPA fallback)
     app.use("/uploads/company", express.static(path.join(__dirname, "uploads/company")));
     app.use("/uploads/outbound", express.static(path.join(__dirname, "uploads/outbound")));
-    app.use("/uploads/documents", express.static(path.join(__dirname, "uploads/documents")));
     app.use(express.static(frontendPath));
     app.get('{*path}', (req, res, next) => {
       if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
