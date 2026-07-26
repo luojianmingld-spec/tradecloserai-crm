@@ -122,7 +122,8 @@ class AssistantService {
     if (!msg) return false;
     const keywords = ['查', '分析', '搜索', '找', '发', '更新', '修改', '添加',
       '客户', '订单', '消息', '记录', '状态', '跟进', '背调', '汇总', '总结',
-      'query', 'send', 'update', 'add', 'analyze'];
+      '出', '报价', 'PDF', 'pi', '生成', '文档', '发票', '目录', 'product',
+      'query', 'send', 'update', 'add', 'analyze', 'generate', 'document', 'quotation'];
     return keywords.some(k => msg.includes(k));
   }
 
@@ -190,6 +191,13 @@ class AssistantService {
     // 添加跟进
     if (m.includes('跟进') || m.includes('添加跟进') || (m.includes('记录') && m.includes('添加'))) {
       return { tool: 'add_follow_up', params: {} };
+    }
+
+    // 生成PDF/报价单/PI
+    if (m.includes('报价') || m.includes('pdf') || m.includes('pi') || m.includes('发票') ||
+        m.includes('出报价') || m.includes('出份') || m.includes('出个') || m.includes('生成文档') ||
+        m.includes('产品目录') || m.includes('quotation') || m.includes('proforma')) {
+      return { tool: 'generate_document', params: { docType: m.includes('pi') || m.includes('发票') || m.includes('proforma') ? 'PI' : 'quote' } };
     }
 
     return null;
