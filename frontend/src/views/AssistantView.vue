@@ -183,9 +183,9 @@
                   <div class="skill-card-name">{{ skill.label }}</div>
                   <div class="skill-card-desc">{{ skill.desc || skill.label }}</div>
                 </div>
-                <button class="skill-toggle" :class="{ on: activeSkills.includes(skill.key) }" @click="toggleSkill(skill.key)">
+                <div class="skill-toggle" role="switch" :class="{ on: activeSkills.includes(skill.key) }" @click="toggleSkill(skill.key)">
                   <span class="skill-toggle-dot"></span>
-                </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1241,31 +1241,37 @@ async function loadProviders() {
 }
 .skill-toggle {
   width: 44px;
-  height: 26px;
-  border-radius: 13px;
-  border: none;
-  background: var(--border-color);
+  height: 24px;
+  border-radius: 12px;
+  background: #343a40;
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
-  padding: 0 !important;
-  transition: background 0.2s;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+  transition: background 0.25s;
+  display: inline-flex;
+  align-items: center;
 }
 .skill-toggle.on {
-  background: var(--accent);
+  background: #34c759;
 }
 .skill-toggle-dot {
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 2px;
+  left: 2px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
 }
 .skill-toggle.on .skill-toggle-dot {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 
 /* 附件预览 */
