@@ -308,8 +308,9 @@ router.post('/sync-dialogs', async (req, res) => {
     let synced = 0, updated = 0;
     
     for (const d of dialogs) {
+      const dialogJid = d.id + '@telegram';
       const contact = await prisma.contact.findFirst({
-        where: { accountId: account.id, platform: 'telegram', jid: d.id }
+        where: { accountId: account.id, platform: 'telegram', jid: dialogJid }
       });
       if (!contact) continue;
       
@@ -317,7 +318,7 @@ router.post('/sync-dialogs', async (req, res) => {
         accountId: account.id,
         platform: 'telegram',
         contactId: contact.id,
-        jid: d.id,
+        jid: dialogJid,
         lastMessage: d.lastMessage || null,
         lastMessageAt: d.lastMessageDate ? new Date(d.lastMessageDate) : null,
         unreadCount: d.unreadCount || 0,
@@ -325,7 +326,7 @@ router.post('/sync-dialogs', async (req, res) => {
       };
       
       const existing = await prisma.conversation.findFirst({
-        where: { accountId: account.id, platform: 'telegram', jid: d.id }
+        where: { accountId: account.id, platform: 'telegram', jid: dialogJid }
       });
       
       if (existing) {
