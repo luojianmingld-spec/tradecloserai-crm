@@ -3,6 +3,8 @@
  * 登录流程: POST /login (传手机号) → 等TG验证码 → POST /login/code (传验证码)
  */
 import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 import {
   initUserBot,
   autoConnectUserBot,
@@ -210,6 +212,132 @@ router.post('/logout', async (req, res) => {
   try {
     await logout();
     res.json({ status: 'logged_out' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Sync TG contacts to CRM database ---
+router.post('/sync-contacts', async (req, res) => {
+  try {
+    if (!isConnected()) return res.status(400).json({ error: '未连接' });
+    
+    const contacts = await getContacts();
+    console.log(`[TG-UB] Syncing ${contacts.length} contacts to CRM...`);
+    
+    // Find or create TG User Bot account
+    const me = getMe();
+    let account = await prisma.whatsAppAccount.findFirst({
+      where: { platform: 'telegram', sessionDir: 'tg_userbot_' + me.id.toString() }
+    });
+    
+    if (!account) {
+      account = await prisma.whatsAppAccount.create({
+        data: {
+          userId: 1, // default admin user
+          platform: 'telegram',
+          phone: me.phone || '',
+          name: me.username || 'TG UserBot',
+          pushName: [me.firstName, me.lastName].filter(Boolean).join(' '),
+          status: 'connected',
+          sessionDir: 'tg_userbot_' + me.id.toString(),
+          telegramBotInfo: JSON.stringify({ type: 'userbot', userId: me.id.toString(), username: me.username }),
+        }
+      });
+      console.log(`[TG-UB] Created account ${account.id} for ${me.username}`);
+    } else {
+      // Update status
+      await prisma.whatsAppAccount.update({
+        where: { id: account.id },
+        data: { status: 'connected', lastActiveAt: new Date() }
+      });
+    }
+    
+    let synced = 0, updated = 0;
+    
+    for (const c of contacts) {
+      if (c.bot) continue; // Skip bots
+      
+      const existing = await prisma.contact.findFirst({
+        where: { accountId: account.id, platform: 'telegram', jid: c.id }
+      });
+      
+      const contactData = {
+        accountId: account.id,
+        platform: 'telegram',
+        jid: c.id,
+        name: c.displayName || c.username || null,
+        phone: c.phone || null,
+        pushName: c.firstName || null,
+      };
+      
+      if (existing) {
+        await prisma.contact.update({
+          where: { id: existing.id },
+          data: { ...contactData, updatedAt: new Date() }
+        });
+        updated++;
+      } else {
+        await prisma.contact.create({ data: contactData });
+        synced++;
+      }
+    }
+    
+    console.log(`[TG-UB] Sync complete: ${synced} new, ${updated} updated`);
+    res.json({ synced, updated, total: contacts.length, accountId: account.id });
+  } catch (e) {
+    console.error('[TG-UB] Sync error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Sync dialogs (conversations) ---
+router.post('/sync-dialogs', async (req, res) => {
+  try {
+    if (!isConnected()) return res.status(400).json({ error: '未连接' });
+    
+    const limit = parseInt(req.body?.limit) || 200;
+    const dialogs = await getDialogs(limit);
+    
+    const me = getMe();
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { platform: 'telegram', sessionDir: 'tg_userbot_' + me.id.toString() }
+    });
+    if (!account) return res.status(400).json({ error: 'TG账号未初始化，请先同步联系人' });
+    
+    let synced = 0, updated = 0;
+    
+    for (const d of dialogs) {
+      const contact = await prisma.contact.findFirst({
+        where: { accountId: account.id, platform: 'telegram', jid: d.id }
+      });
+      if (!contact) continue;
+      
+      const convData = {
+        accountId: account.id,
+        platform: 'telegram',
+        contactId: contact.id,
+        jid: d.id,
+        lastMessage: d.lastMessage || null,
+        lastMessageAt: d.lastMessageDate ? new Date(d.lastMessageDate) : null,
+        unreadCount: d.unreadCount || 0,
+        pinned: d.pinned || false,
+      };
+      
+      const existing = await prisma.conversation.findFirst({
+        where: { accountId: account.id, platform: 'telegram', jid: d.id }
+      });
+      
+      if (existing) {
+        await prisma.conversation.update({ where: { id: existing.id }, data: convData });
+        updated++;
+      } else {
+        await prisma.conversation.create({ data: convData });
+        synced++;
+      }
+    }
+    
+    res.json({ synced, updated, total: dialogs.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
