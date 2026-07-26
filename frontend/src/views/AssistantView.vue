@@ -80,9 +80,9 @@
         <textarea
           v-if="!isVoiceMode"
           v-model="inputMessage"
-          @keydown.enter.exact.prevent="sendMessage"
+          @keydown.enter.exact=""
           placeholder="发送消息开始任务"
-          rows="2"
+          rows="1"
           ref="inputRef"
         ></textarea>
         <div v-else class="voice-placeholder">
@@ -928,9 +928,9 @@ async function loadProviders() {
   font-size: 15px;
   padding: 10px 14px 4px;
   resize: none;
-  min-height: 36px;
-  max-height: 100px;
-  line-height: 1.4;
+  height: 40px;
+  max-height: 80px;
+  line-height: 1.3;
   font-family: inherit;
   box-sizing: border-box;
 }
