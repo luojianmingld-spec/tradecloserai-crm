@@ -138,17 +138,6 @@ export async function autoConnectUserBot(opts) {
     connectionState = 'connected';
     console.log(`[TG-UB] Auto-connected as: ${me.username || me.phone || me.id.toString()}`);
     registerUpdateHandler();
-    // 显式请求更新状态，触发消息推送
-    try {
-      const state = await client.invoke(new Api.updates.GetState());
-      console.log('[TG-UB] GetState success, pts=' + state?.pts + ' qts=' + state?.qts);
-    } catch (e) {
-      console.warn('[TG-UB] GetState failed:', e.message);
-    }
-
-    // 启动轮询兜底：每30秒主动拉取最新私聊消息
-    startPolling();
-
     if (eventHandlers.onReady) eventHandlers.onReady(me);
     return me;
   } catch (e) {
@@ -160,140 +149,29 @@ export async function autoConnectUserBot(opts) {
   }
 }
 
-
-// ── 轮询兜底机制 ──
-let pollingTimer = null;
-let lastKnownMsgIds = new Set(); // 已处理的消息ID
-
-function startPolling() {
-  if (pollingTimer) return;
-  console.log('[TG-UB] Starting message polling (every 30s)...');
-  // 先初始化已知消息ID集合
-  initKnownMessages().then(() => {
-    pollingTimer = setInterval(() => pollNewMessages(), 30000);
-  }).catch(e => {
-    console.warn('[TG-UB] initKnownMessages failed:', e.message);
-    pollingTimer = setInterval(() => pollNewMessages(), 30000);
-  });
-}
-
-export function stopPolling() {
-  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
-}
-
-let pollStartTime = 0; // 只处理此时间戳之后的消息
-
-async function initKnownMessages() {
-  if (!client) return;
-  pollStartTime = Math.floor(Date.now() / 1000) - 120; // 2分钟缓冲
-  try {
-    const dialogs = await client.getDialogs({ limit: 50 });
-    for (const d of dialogs) {
-      if (!d.isUser) continue;
-      const peerId = d.id?.toString?.();
-      if (!peerId) continue;
-      // 获取每个对话最近20条消息，确保覆盖
-      const msgs = await client.getMessages(peerId, { limit: 20 });
-      for (const m of msgs) {
-        lastKnownMsgIds.add(m.id);
-      }
-    }
-    console.log('[TG-UB] Initialized ' + lastKnownMsgIds.size + ' known msg IDs, pollStartTime=' + pollStartTime);
-  } catch (e) {
-    console.warn('[TG-UB] initKnownMessages error:', e.message);
-  }
-}
-
-async function pollNewMessages() {
-  if (!client || connectionState !== 'connected') return;
-  try {
-    const dialogs = await client.getDialogs({ limit: 20 });
-    for (const d of dialogs) {
-      if (!d.isUser) continue;
-      const peerId = d.id?.toString?.();
-      if (!peerId) continue;
-      const msgs = await client.getMessages(peerId, { limit: 10 });
-      for (const m of msgs) {
-        if (lastKnownMsgIds.has(m.id)) continue;
-        // 只处理最近2分钟内的消息，避免捡到老消息
-        if (m.date && m.date < pollStartTime) { lastKnownMsgIds.add(m.id); continue; }
-        if (m.out) { lastKnownMsgIds.add(m.id); continue; } // 跳过自己发的
-        lastKnownMsgIds.add(m.id);
-        const text = m.message || (m.media ? '[media]' : '');
-        const incoming = {
-          chatId: peerId,
-          messageId: m.id,
-          text: text,
-          timestamp: m.date ? (m.date * 1000) : Date.now(),
-          mediaType: m.media ? m.media.className : null,
-          fromMe: false,
-          raw: m,
-        };
-        console.log('[TG-UB] Poll found message from', peerId, 'text:', text?.substring(0, 50));
-        if (eventHandlers.onMessage) eventHandlers.onMessage(incoming);
-      }
-    }
-  } catch (e) {
-    console.warn('[TG-UB] Poll error:', e.message);
-  }
-}
-
 /** 监听新消息 */
 function registerUpdateHandler() {
   if (!client) return;
-  console.log('[TG-UB] Registering update handler...');
-
-  // 方法1: 用 NewMessage 事件类注册（最可靠）
-  client.addEventHandler(async (event) => {
-    try {
-      const msg = event.message;
-      if (!msg) return;
-      // 只处理私聊消息
-      if (msg.peerId && msg.peerId.className !== 'PeerUser') return;
-      // 跳过自己发的
-      if (msg.out) return;
-
-      const peerId = msg.peerId?.userId?.toString() || msg.senderId?.toString();
-      if (!peerId) return;
-      const text = msg.message || '';
-      const msgId = msg.id;
-      const timestamp = msg.date ? (msg.date * 1000) : Date.now();
-      const mediaType = msg.media ? msg.media.className : null;
-
-      const incoming = {
-        chatId: peerId,
-        messageId: msgId,
-        text: text || (mediaType ? `[${mediaType}]` : ''),
-
-        timestamp,
-        mediaType,
-        fromMe: false,
-        raw: msg,
-      };
-
-      console.log('[TG-UB] NewMessage from', peerId, 'text:', text?.substring(0, 50));
-      if (eventHandlers.onMessage) eventHandlers.onMessage(incoming);
-    } catch (e) {
-      console.error('[TG-UB] NewMessage handler error:', e.message);
-    }
-  }, new NewMessage({}));
-
-  // 方法2: 同时也注册 raw handler 兜底（处理 UpdateShortMessage 等）
-  let rawCount = 0;
+  console.log('[TG-UB] Registering update handler (raw mode)...');
+  // 先测试: 不带 filter，记录所有收到的 update 类型
+  let updateCount = 0;
   client.addEventHandler(async (update) => {
-    rawCount++;
-    if (rawCount <= 50) {
-      const ctorName = update?.constructor?.name || update?.className || 'unknown';
-      console.log('[TG-UB] Raw update #' + rawCount + ': ' + ctorName);
+    updateCount++;
+    if (updateCount <= 100) {
+      // Try different ways to identify the update type
+      const type1 = update?.className;
+      const type2 = update?.CONSTRUCTOR;
+      const type3 = update?.constructor?.name;
+      const state = update?.state;
+      console.log('[TG-UB] Update #' + updateCount + ': type1=' + type1 + ' type2=' + type2 + ' type3=' + type3 + ' state=' + state);
     }
     try {
       await handleIncomingUpdate(update);
     } catch (e) {
-      // ignore raw handler errors
+      console.error('[TG-UB] update handler error:', e.message);
     }
   });
-
-  console.log('[TG-UB] Update handlers registered. Client connected:', client.connected);
+  console.log('[TG-UB] Update handler registered. Client connected:', client.connected);
 }
 
 async function handleIncomingUpdate(update) {
@@ -489,7 +367,6 @@ export async function getUserInfo(peerId) {
 
 /** 登出并清除session */
 export async function logout() {
-  stopPolling();
   if (client) {
     try { await client.invoke(new Api.auth.LogOut()); } catch {}
     client = null;
