@@ -4994,16 +4994,23 @@ async function sendTgMessage() {
   if (!text || tgSending.value || !tgActiveJid.value) return;
   tgSending.value = true;
   try {
-    await api.post('/whatsapp/send', { to: tgActiveJid.value, message: text });
+    const { data } = await api.post('/whatsapp/send', { to: tgActiveJid.value, message: text });
+    // Use server response to avoid duplicate + include translation
+    const savedId = data?.savedId || Date.now();
+    const msgBody = text;
+    let localTrans = null;
+    if (data?.translation) { try { localTrans = typeof data.translation === 'string' ? JSON.parse(data.translation) : data.translation; } catch(e){} }
     tgMessages.value.push({
-      id: 'local-' + Date.now(),
+      id: savedId,
       fromMe: true,
-      body: text,
-      text,
+      body: msgBody,
+      text: msgBody,
       timestamp: new Date().toISOString(),
       direction: 'outbound',
       time: formatMsgTime(new Date()),
       platform: 'telegram',
+      waMessageId: data?.waMessageId || '',
+      translationObj: localTrans,
     });
     tgInputText.value = '';
     nextTick(() => {
