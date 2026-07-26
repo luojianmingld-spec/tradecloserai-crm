@@ -1839,6 +1839,7 @@ if (isProduction) {
     // Company material uploads (served before SPA fallback)
     app.use("/uploads/company", express.static(path.join(__dirname, "uploads/company")));
     app.use("/uploads/outbound", express.static(path.join(__dirname, "uploads/outbound")));
+    app.use("/uploads/documents", express.static(path.join(__dirname, "uploads/documents")));
     app.use(express.static(frontendPath));
     app.get('{*path}', (req, res, next) => {
       if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
