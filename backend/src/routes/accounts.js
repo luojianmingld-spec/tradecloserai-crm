@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import crypto from "crypto";
+import { getTelegramConnector, clearTelegramConnector } from "../services/telegram-connector.js";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -42,6 +44,117 @@ router.post('/', async (req, res) => {
 });
 
 // Get account by ID
+
+// ===== Telegram Bot 管理 (放在 /:id 前面避免冲突) =====
+// ===== Telegram Bot 管理 =====
+
+// POST /api/accounts/telegram/connect { token, name? }
+// 绑定Telegram Bot Token，调用getMe验证，自动设置webhook
+router.post("/telegram/connect", async (req, res) => {
+  try {
+    const { token, name } = req.body || {};
+    if (!token || !/^\d+:[A-Za-z0-9_-]{20,}$/.test(token)) {
+      return res.status(400).json({ error: "Invalid Telegram Bot Token" });
+    }
+    // 检查是否已存在
+    const existing = await prisma.whatsAppAccount.findFirst({
+      where: { userId: req.userId, platform: "telegram", telegramBotToken: token },
+    });
+    if (existing) {
+      return res.status(409).json({ error: "This bot is already connected", account: existing });
+    }
+    const connector = getTelegramConnector(token);
+    let me;
+    try {
+      me = await connector.getMe();
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid token or Telegram unreachable: " + e.message });
+    }
+    const botUsername = me.username;
+    const secretBytes = crypto.randomBytes(12).toString("hex");
+    const sessionDir = `tgwh_${secretBytes}`;
+    const account = await prisma.whatsAppAccount.create({
+      data: {
+        userId: req.userId,
+        platform: "telegram",
+        name: name || `TG @${botUsername}`,
+        phone: me.id ? String(me.id) : null,
+        pushName: `@${botUsername}`,
+        status: "connected",
+        sessionDir,
+        telegramBotToken: token,
+        telegramBotUsername: botUsername,
+        telegramBotInfo: JSON.stringify(me),
+        lastActiveAt: new Date(),
+      },
+    });
+    // 设置webhook
+    const baseUrl = process.env.PUBLIC_BASE_URL || "https://ai.jzjglass.com";
+    const webhookUrl = `${baseUrl}/api/telegram/webhook/${secretBytes}`;
+    try {
+      await connector.setWebhook(webhookUrl, secretBytes);
+      console.log(`[TG] Webhook set for @${botUsername}: ${webhookUrl}`);
+    } catch (e) {
+      console.warn("[TG] setWebhook failed:", e.message);
+    }
+    res.status(201).json({ account, bot: me, webhookUrl });
+  } catch (err) {
+    console.error("[TG] connect error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/accounts/telegram/disconnect/:id
+router.post("/telegram/disconnect/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { id, userId: req.userId, platform: "telegram" },
+    });
+    if (!account) return res.status(404).json({ error: "Not found" });
+    if (account.telegramBotToken) {
+      try {
+        const c = getTelegramConnector(account.telegramBotToken);
+        await c.deleteWebhook();
+        clearTelegramConnector(account.telegramBotToken);
+      } catch (e) {
+        console.warn("[TG] deleteWebhook failed:", e.message);
+      }
+    }
+    await prisma.whatsAppAccount.update({
+      where: { id: account.id },
+      data: { status: "disconnected" },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/accounts/telegram/:id —— 完整删除（删webhook+账号+关联数据）
+router.delete("/telegram/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { id, userId: req.userId, platform: "telegram" },
+    });
+    if (!account) return res.status(404).json({ error: "Not found" });
+    if (account.telegramBotToken) {
+      try {
+        const c = getTelegramConnector(account.telegramBotToken);
+        await c.deleteWebhook();
+        clearTelegramConnector(account.telegramBotToken);
+      } catch {}
+    }
+    await prisma.whatsAppAccount.delete({ where: { id: account.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;
+
 router.get('/:id', async (req, res) => {
   try {
     const account = await prisma.whatsAppAccount.findFirst({
@@ -73,5 +186,3 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete account' });
   }
 });
-
-export default router;

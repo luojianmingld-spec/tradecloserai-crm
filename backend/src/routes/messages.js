@@ -18,45 +18,45 @@ router.get('/', async (req, res) => {
     }
 
     const where = {};
-    if (accountId) where.accountId = parseInt(accountId);
-    if (contactId) where.contactId = parseInt(contactId);
-    if (jid) where.jid = jid;
+    if (jid) {
+      where.OR = [
+        { from: jid },
+        { to: jid },
+      ];
+    }
     if (before) where.id = { lt: parseInt(before) };
 
-    const messages = await prisma.message.findMany({
+    const messages = await prisma.wAMessage.findMany({
       where,
       orderBy: { timestamp: 'desc' },
       take: parseInt(limit),
     });
 
-    res.json(messages.reverse());
+    // Convert WAMessage format to frontend expected format
+    const converted = messages.reverse().map(msg => ({
+      id: msg.id,
+      jid: msg.direction === 'outbound' || msg.direction === 'outgoing' ? msg.to : msg.from,
+      from: msg.from,
+      to: msg.to,
+      content: msg.body,
+      body: msg.body,
+      fromMe: msg.direction === 'outbound' || msg.direction === 'outgoing',
+      direction: msg.direction,
+      messageType: msg.type || 'text',
+      timestamp: msg.timestamp,
+      translation: msg.translation || null,
+      sourceLang: msg.sourceLang || null,
+      waMessageId: msg.waMessageId,
+      deliveredAt: msg.deliveredAt || null,
+      readAt: msg.readAt || null,
+      ackError: msg.ackError || null,
+      read: !!msg.read,
+    }));
+
+    res.json(converted);
   } catch (err) {
     console.error('[Messages] List error:', err);
     res.status(500).json({ error: 'Failed to list messages' });
-  }
-});
-
-// Get conversations list for an account
-router.get('/conversations', async (req, res) => {
-  try {
-    const { accountId } = req.query;
-    if (!accountId) return res.status(400).json({ error: 'accountId required' });
-
-    const account = await prisma.whatsAppAccount.findFirst({
-      where: { id: parseInt(accountId), userId: req.userId },
-    });
-    if (!account) return res.status(403).json({ error: 'Access denied' });
-
-    const conversations = await prisma.conversation.findMany({
-      where: { accountId: parseInt(accountId) },
-      orderBy: [{ pinned: 'desc' }, { lastMessageAt: 'desc' }],
-      include: { contact: true },
-    });
-
-    res.json(conversations);
-  } catch (err) {
-    console.error('[Messages] Conversations error:', err);
-    res.status(500).json({ error: 'Failed to get conversations' });
   }
 });
 

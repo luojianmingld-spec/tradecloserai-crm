@@ -8,8 +8,8 @@
             <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a7.96 7.96 0 01-4.11-1.14L4 20l1.14-3.89A7.96 7.96 0 014 12c0-4.411 3.589-8 8-8s8 3.589 8 8-3.589 8-8 8z" fill="#00a884"/>
           </svg>
         </div>
-        <h1>WhatsApp CRM</h1>
-        <p class="subtitle">外贸客户管理系统</p>
+        <h1>TradeAgent</h1>
+        <p class="subtitle">外贸客户沟通平台</p>
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
@@ -42,21 +42,10 @@
             class="login-btn"
             @click="handleLogin"
           >
-            {{ isRegister ? '注册' : '登录' }}
+            登录
           </el-button>
         </el-form-item>
-
-        <div class="switch-mode">
-          <span @click="isRegister = !isRegister">
-            {{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}
-          </span>
-        </div>
       </el-form>
-
-      <div class="demo-hint">
-        <el-divider>演示账号</el-divider>
-        <p>用户名: admin / 密码: admin123</p>
-      </div>
     </div>
   </div>
 </template>
@@ -74,8 +63,6 @@ const authStore = useAuthStore();
 
 const formRef = ref(null);
 const loading = ref(false);
-const isRegister = ref(false);
-
 const form = reactive({
   username: '',
   password: '',
@@ -92,13 +79,8 @@ async function handleLogin() {
 
   loading.value = true;
   try {
-    if (isRegister.value) {
-      await authStore.register(form.username, form.password, form.username);
-      ElMessage.success('注册成功');
-    } else {
-      await authStore.login(form.username, form.password);
-      ElMessage.success('登录成功');
-    }
+    await authStore.login(form.username, form.password);
+    ElMessage.success('登录成功');
     initSocket();
     router.push('/');
   } catch (err) {
@@ -115,13 +97,13 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0b141a 0%, #111b21 50%, #0b141a 100%);
+  background: linear-gradient(135deg, var(--chat-bg) 0%, var(--panel-bg) 50%, var(--chat-bg) 100%);
 }
 
 .login-card {
   width: 400px;
   padding: 48px 40px;
-  background: #111b21;
+  background: var(--panel-bg);
   border-radius: 16px;
   border: 1px solid var(--border-color);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
@@ -211,7 +193,7 @@ h1 {
 }
 
 :deep(.el-divider__text) {
-  background: #111b21;
+  background: var(--panel-bg);
   color: var(--text-muted);
 }
 

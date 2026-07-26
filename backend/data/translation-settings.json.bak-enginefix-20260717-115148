@@ -1,0 +1,19 @@
+{
+  "receiveEnabled": true,
+  "receiveEngine": "doubao",
+  "receiveSourceLang": "auto",
+  "receiveTargetLang": "zh",
+  "sendEnabled": true,
+  "sendEngine": "deepseek",
+  "sendSourceLang": "auto",
+  "sendTargetLang": "ru",
+  "groupAutoTranslate": false,
+  "blockChinese": false,
+  "translateConfirm": false,
+  "translationColor": "#8696a0",
+  "translationSize": "12px",
+  "translationEnabled": true,
+  "translationEngine": "doubao",
+  "targetLanguage": "zh",
+  "sendTargetLanguage": "ko"
+}

@@ -1,0 +1,84 @@
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+router.get('/stats', async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [customers, conversations, messages, contacts, accounts, todayMessages, todayConversations, weekMessages] = await Promise.all([
+      prisma.customer.count(),
+      prisma.conversation.count(),
+      prisma.message.count(),
+      prisma.contact.count(),
+      prisma.whatsAppAccount.count(),
+      prisma.message.count({ where: { createdAt: { gte: today } } }),
+      prisma.conversation.count({ where: { updatedAt: { gte: today } } }),
+      prisma.message.count({ where: { timestamp: { gte: weekAgo } } }),
+    ]);
+
+    // 平均响应时间：对最近7天入站消息，找之后最近一条同jid出站消息的时间差
+    let avgResponseMinutes = null;
+    try {
+      const inbound = await prisma.message.findMany({
+        where: { fromMe: false, timestamp: { gte: weekAgo } },
+        orderBy: { timestamp: 'asc' },
+        select: { jid: true, timestamp: true, id: true },
+        take: 500,
+      });
+      const outbound = await prisma.message.findMany({
+        where: { fromMe: true, timestamp: { gte: weekAgo } },
+        orderBy: { timestamp: 'asc' },
+        select: { jid: true, timestamp: true },
+        take: 2000,
+      });
+      const outByJid = {};
+      for (const m of outbound) {
+        if (!outByJid[m.jid]) outByJid[m.jid] = [];
+        outByJid[m.jid].push(m.timestamp.getTime());
+      }
+      const diffs = [];
+      for (const m of inbound) {
+        const outs = outByJid[m.jid];
+        if (!outs || !outs.length) continue;
+        const t = m.timestamp.getTime();
+        // binary search first outbound > t
+        let lo = 0, hi = outs.length;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (outs[mid] > t) hi = mid; else lo = mid + 1;
+        }
+        if (lo < outs.length) {
+          const diff = (outs[lo] - t) / 60000; // minutes
+          if (diff >= 0 && diff < 60 * 24) diffs.push(diff); // 限24小时内
+        }
+      }
+      if (diffs.length >= 1) {
+        avgResponseMinutes = Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length);
+      }
+    } catch (e) {
+      console.error('[Dashboard] avg response calc error:', e.message);
+    }
+
+    res.json({
+      customers,
+      conversations,
+      messages,
+      contacts,
+      accounts,
+      todayMessages,
+      todayConversations,
+      weekMessages,
+      avgResponseMinutes,
+    });
+  } catch (err) {
+    console.error('[Dashboard Stats Error]', err);
+    res.status(500).json({ error: '获取统计数据失败: ' + err.message });
+  }
+});
+
+export default router;

@@ -1,0 +1,79 @@
+import { Router } from 'express';
+import { authMiddleware as auth } from '../middleware/auth.js';
+import assistantService from '../services/assistant.service.js';
+
+const router = Router();
+
+// POST /api/assistant/chat - 发送对话消息
+router.post('/chat', auth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: '消息不能为空' });
+    }
+    
+    const userId = req.userId || 1; // admin用户
+    const result = await assistantService.processMessage(userId, message.trim());
+    res.json(result);
+  } catch (err) {
+    console.error('[Assistant] chat error:', err);
+    res.status(500).json({ error: err.message || '处理失败' });
+  }
+});
+
+// GET /api/assistant/conversations - 查询对话历史
+router.get('/conversations', auth, async (req, res) => {
+  try {
+    const userId = req.userId || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const conversations = await assistantService.getConversations(userId, limit);
+    res.json(conversations);
+  } catch (err) {
+    console.error('[Assistant] conversations error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/assistant/tasks - 查询任务列表
+router.get('/tasks', auth, async (req, res) => {
+  try {
+    const userId = req.userId || 1;
+    const status = req.query.status;
+    const tasks = await assistantService.getTasks(userId, status);
+    res.json(tasks);
+  } catch (err) {
+    console.error('[Assistant] tasks error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/assistant/tasks/:id/confirm - 确认执行任务
+router.post('/tasks/:id/confirm', auth, async (req, res) => {
+  try {
+    const userId = req.userId || 1;
+    const taskId = parseInt(req.params.id);
+    const modifications = req.body.modifications; // 可选的修改（如修改消息内容）
+    
+    const result = await assistantService.confirmTask(userId, taskId, modifications);
+    res.json(result);
+  } catch (err) {
+    console.error('[Assistant] confirm task error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/assistant/tasks/:id/cancel - 取消任务
+router.post('/tasks/:id/cancel', auth, async (req, res) => {
+  try {
+    const userId = req.userId || 1;
+    const taskId = parseInt(req.params.id);
+    
+    const result = await assistantService.cancelTask(userId, taskId);
+    res.json(result);
+  } catch (err) {
+    console.error('[Assistant] cancel task error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./crm.db"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  accounts  WhatsAppAccount[]
+  settings  Setting[]
+  waConnection WAConnection[]
+  customers    Customer[]    @relation("CustomerOwner")
+  assignedCustomers Customer[] @relation("CustomerAssignee")
+  emailAccounts  EmailAccount[]
+  automationRules AutomationRule[]
+  automationCustomers AutomationCustomer[]
+  automationQueue AutomationQueueItem[]
+}
+
+model WhatsAppAccount {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone        String?
+  name         String?
+  pushName     String?
+  status       String   @default("disconnected")
+  sessionDir   String   @unique
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime?
+  contacts     Contact[]
+  conversations Conversation[]
+  messages     Message[]
+}
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  accountId   Int
+  account     WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  jid         String
+  name        String?
+  phone       String?
+  pushName    String?
+  avatarUrl   String?
+  tags        String?
+  notes       String?
+  country     String?
+  language    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  messages    Message[]
+  conversation Conversation?
+
+  @@unique([accountId, jid])
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+}
+
+model TranslationCache {
+  id           Int      @id @default(autoincrement())
+  sourceText   String
+  sourceLang   String
+  targetLang   String
+  engine       String
+  translated   String
+  createdAt    DateTime @default(now())
+
+  @@unique([sourceText, sourceLang, targetLang, engine])
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  accountId   Int
+  account     WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId   Int
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jid         String
+  fromMe      Boolean
+  content     String
+  translation String?
+  sourceLang  String?
+  messageType String   @default("text")
+  mediaUrl    String?
+  mediaKey    String?
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Conversation {
+  id            Int      @id @default(autoincrement())
+  accountId    Int
+  account      WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId    Int      @unique
+  contact      Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jid          String
+  lastMessage  String?
+  lastMessageAt DateTime?
+  unreadCount  Int      @default(0)
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([accountId, jid])
+}
+
+model WAConnection {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String    @unique
+  phone           String?
+  status          String    @default("disconnected")
+  lastConnectedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  messages        WAMessage[]
+}
+
+model WAMessage {
+  id          Int      @id @default(autoincrement())
+  sessionId   String
+  connection  WAConnection @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  from        String
+  to          String
+  body        String
+  type        String   @default("text")
+  direction   String   @default("inbound")
+  timestamp   DateTime
+  read        Boolean  @default(false)
+  waMessageId String?
+  mediaUrl    String?
+  fileName    String?
+  translation   String?
+  sourceLang   String?
+  createdAt   DateTime @default(now())
+}
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation("CustomerOwner", fields: [userId], references: [id], onDelete: Cascade)
+  jid           String?  // WhatsApp JID (e.g. 86138...@s.whatsapp.net), unique per user
+  name          String   @default("")
+  companyName   String?  // V2: 客户公司名（硬性门槛）
+  contactName   String?  // 联系人名
+  title         String?  // 职位/头衔
+  website       String?  // 网站
+  customerLevel String   @default("C") // A/B/C
+  firstContactAt DateTime?
+  businessProfileSyncedAt DateTime?
+  aiExtractedAt DateTime?
+  phone         String?
+  email         String?
+  company       String?  // legacy 旧字段，保留兼容
+  country       String?
+  address      String?
+  industry     String?
+  tags          String?  @default("[]")
+  notes         String?
+  source        String?  @default("whatsapp") // 展会/独立站询盘/主动开发/老客户推荐/其他/未知
+  intentLevel   Int      @default(5)
+  status        String   @default("potential")
+  assignedTo    Int?
+  assignee      User?    @relation("CustomerAssignee", fields: [assignedTo], references: [id])
+  lastContactAt DateTime?
+  // 需求总结模块
+  requirementSummary   String?   @map("requirement_summary")    // 需求总结（较长文本）
+  requirementProducts  String?   @map("requirement_products")   // 意向产品
+  requirementBudget    String?   @map("requirement_budget")     // 预算/目标价
+  requirementQuantity  String?   @map("requirement_quantity")   // 数量
+  requirementDelivery  String?   @map("requirement_delivery")   // 交期要求
+  requirementUpdatedAt DateTime? @map("requirement_updated_at") // 需求最后更新时间
+  requirementSource    String?   @map("requirement_source")     // manual / ai_summary
+  automationAssignments AutomationCustomer[]
+  documents    Document[]
+  followUps    CustomerFollowUp[]
+  automationQueueItems AutomationQueueItem[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, jid])
+}
+
+model EmailAccount {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       String
+  provider    String   @default("custom")
+  imapHost    String
+  imapPort    Int      @default(993)
+  smtpHost    String
+  smtpPort    Int      @default(465)
+  password    String
+  status      String   @default("disconnected")
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  emails      EmailMessage[]
+}
+
+model EmailMessage {
+  id              Int      @id @default(autoincrement())
+  accountId       Int
+  account         EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messageId       String?
+  from            String
+  to              String
+  subject         String
+  body            String
+  bodyHtml        String?
+  bodyPlain       String?
+  direction       String   @default("inbound")
+  translation     String?
+  sourceLang      String?
+  attachmentNames String?
+  createdAt       DateTime @default(now())
+  read            Boolean  @default(false)
+
+  @@unique([accountId, messageId])
+}
+
+model AutomationRule {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  enabled       Boolean  @default(false)
+  schedule      String   @default("{}")
+  languageMode  String   @default("auto")
+  defaultLang   String?
+  aiPrompt      String?
+  lastRunAt     DateTime?
+  nextRunAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  items         AutomationQueueItem[]
+  @@unique([userId, type])
+}
+
+model AutomationCustomer {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId   Int
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  types        String   @default("[]")
+  customLang   String?
+  lastSentAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@unique([userId, customerId])
+}
+
+model AutomationQueueItem {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId        Int
+  rule          AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  customerId    Int
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type          String
+  language      String   @default("en")
+  content       String
+  subject       String?
+  reference     String?
+  status        String   @default("pending")
+  editedContent String?
+  sentAt        DateTime?
+  waMessageId   String?
+  errorMsg      String?
+  scheduledFor  DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([userId, status])
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  userId        Int      @default(1)
+  customerId    Int?
+  customerJid   String?
+  type          String   // QUOTATION / PI
+  docNumber     String   @unique
+  title         String
+  issueDate     DateTime @default(now())
+  validUntil    DateTime?
+  currency      String   @default("USD")
+  totalAmount   Float    @default(0)
+  amountInWords String?
+  status        String   @default("DRAFT")
+  sellerInfo    Json
+  buyerInfo     Json
+  tradeTerm     String?
+  paymentTerm   String?
+  portOfLoading String?
+  portOfDest    String?
+  shipDate      String?
+  remarks       String?
+  items         DocumentItem[]
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([userId, customerId])
+  @@index([type])
+}
+
+model DocumentItem {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sortOrder   Int      @default(0)
+  productName String
+  model       String?
+  spec        String?
+  quantity    Float    @default(1)
+  unit        String   @default("pcs")
+  unitPrice   Float    @default(0)
+  amount      Float    @default(0)
+  remark      String?
+  @@index([documentId])
+}
+
+model CustomerFollowUp {
+  id         String   @id @default(cuid())
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  content    String
+  source     String   @default("manual")
+  metadata   String?
+  createdAt  DateTime @default(now())
+  @@index([customerId])
+}

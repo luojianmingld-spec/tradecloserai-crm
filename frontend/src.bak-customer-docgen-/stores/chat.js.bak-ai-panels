@@ -1,0 +1,664 @@
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import api from '../utils/api.js';
+import { useSocket } from '../utils/socket.js';
+
+export const useChatStore = defineStore('chat', () => {
+  // WhatsApp Connection
+  const connectionStatus = ref('disconnected');
+  const sessionId = ref(null);
+  const connectedPhone = ref(null);
+  const qrCode = ref(null);
+  const waError = ref(null);
+
+  // Conversations
+  const conversations = ref([]);
+  const activeJid = ref(null);
+
+  // Messages
+  const messages = ref({});
+  const loadingMessages = ref(false);
+
+  // Translation
+  const translationSettings = ref({
+    translationEnabled: true,
+    translationEngine: 'doubao',
+    targetLanguage: 'zh',
+    doubaoApiKey: '',
+    deepseekApiKey: '',
+  });
+  const autoTranslateOutgoing = ref(false); // 关闭自动翻译，改为手动按钮触发
+
+  // ── AI 迷你聊天框状态 ──
+  const aiMode = ref(null); // 'reply' | 'summary' | 'profile' | 'translate' | null
+  const aiChat = ref([]); // [{id, role:'user'|'assistant', content, ts, extra?}]
+  const aiLoading = ref(false);
+  const aiCollapsed = ref(false); // 供外部切换展开/收起（主进程控制实际 Layout 折叠）
+  // 触发消息悬浮按钮时记录上下文
+  const aiFocusMessage = ref(null);
+  const replyStyle = ref('formal'); // formal | friendly | concise
+
+  // Legacy AI state（保留以兼容旧代码，但新面板不再使用 aiReplies/needSummary）
+  const aiReplies = ref([]);
+  const aiGenerating = ref(false);
+  const insertText = ref('');
+  const needSummary = ref(null);
+  const summarizeLoading = ref(false);
+
+  // Computed
+  const activeConversation = computed(() =>
+    conversations.value.find(c => c.jid === activeJid.value)
+  );
+
+  const currentMessages = computed(() => {
+    if (!activeJid.value) return [];
+    return messages.value[activeJid.value] || [];
+  });
+
+  const sortedConversations = computed(() => {
+    return [...conversations.value].sort((a, b) => {
+      const tA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+      const tB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+      return tB - tA;
+    });
+  });
+
+  const isConnected = computed(() => connectionStatus.value === 'connected');
+
+  // ─── WhatsApp Connection Actions ───
+
+  async function fetchConnectionStatus() {
+    try {
+      const { data } = await api.get('/whatsapp/status');
+      connectionStatus.value = data.status;
+      sessionId.value = data.sessionId;
+      connectedPhone.value = data.phone || null;
+      if (data.status === 'connected') qrCode.value = null;
+      return data;
+    } catch (err) {
+      console.error('Failed to fetch connection status:', err);
+      return null;
+    }
+  }
+
+  async function requestQR() {
+    try {
+      qrCode.value = null;
+      connectionStatus.value = 'connecting';
+      waError.value = null;
+      const { data } = await api.post('/whatsapp/qr');
+      sessionId.value = data.sessionId;
+      if (data.qr) qrCode.value = { qr: data.qr, sessionId: data.sessionId };
+      if (data.status === 'connected') {
+        connectionStatus.value = 'connected';
+        connectedPhone.value = data.phone;
+        qrCode.value = null;
+      }
+      if (data.status === 'unavailable') {
+        connectionStatus.value = 'unavailable';
+        waError.value = data.message || 'WhatsApp 库未安装';
+      }
+      return data;
+    } catch (err) {
+      console.error('Failed to request QR:', err);
+      connectionStatus.value = 'disconnected';
+      waError.value = err.response?.data?.error || err.message || '连接失败';
+      return null;
+    }
+  }
+
+  async function disconnectWhatsApp() {
+    try {
+      await api.post('/whatsapp/disconnect');
+      connectionStatus.value = 'disconnected';
+      connectedPhone.value = null;
+      qrCode.value = null;
+      sessionId.value = null;
+    } catch (err) { console.error('Failed to disconnect:', err); }
+  }
+
+  // ─── Conversations Actions ───
+
+  async function fetchConversations() {
+    try {
+      const { data } = await api.get('/whatsapp/conversations');
+      conversations.value = data;
+    } catch (err) { console.error('Failed to fetch conversations:', err); }
+  }
+
+  async function fetchMessages(jid, limit = 50) {
+    if (!jid) return;
+    loadingMessages.value = true;
+    try {
+      const { data } = await api.get('/whatsapp/messages', { params: { jid, limit } });
+      messages.value[jid] = data.map(normalizeMessage);
+    } catch (err) { console.error('Failed to fetch messages:', err); }
+    finally { loadingMessages.value = false; }
+  }
+
+  function normalizeMessage(msg) {
+    const fromJid = (msg.direction === 'inbound' || msg.direction === 'incoming') ? msg.from : msg.to;
+    return {
+      id: msg.id ?? msg.waMessageId ?? Date.now(),
+      waMessageId: msg.waMessageId || null,
+      jid: msg.jid || fromJid,
+      from: msg.from,
+      to: msg.to,
+      content: msg.body || msg.content || '',
+      body: msg.body || msg.content || '',
+      fromMe: msg.direction === 'outbound' || msg.direction === 'outgoing' || msg.fromMe === true,
+      direction: msg.direction,
+      messageType: msg.type || msg.messageType || 'text',
+      timestamp: msg.timestamp,
+      translation: msg.translation || null,
+      sourceLang: msg.sourceLang || null,
+      pending: !!msg.pending,
+    };
+  }
+
+  async function sendMessage(jid, text) {
+    const tempId = 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    if (!messages.value[jid]) messages.value[jid] = [];
+    const optimistic = {
+      id: tempId,
+      jid,
+      from: 'me',
+      to: jid,
+      content: text,
+      body: text,
+      fromMe: true,
+      direction: 'outbound',
+      messageType: 'text',
+      timestamp: new Date(),
+      pending: true,
+    };
+    messages.value[jid].push(optimistic);
+    let conv = conversations.value.find(c => c.jid === jid);
+    if (conv) {
+      conv.lastMessage = text.substring(0, 100);
+      conv.lastMessageTime = optimistic.timestamp;
+    }
+    try {
+      const { data } = await api.post('/whatsapp/send', { to: jid, message: text });
+      // 仅记下真实 id，不立即清 pending，等待 socket whatsapp:message_sent 事件回来后再合并
+      // （该事件会携带 savedId，按 pending+fromMe+同内容匹配替换，避免重复条目）
+      if (data?.savedId) {
+        const m = messages.value[jid].find(x => x.id === tempId);
+        if (m) { m.savedId = data.savedId; m.waMessageId = data.messageId || null; }
+      }
+    } catch (err) {
+      console.error('Send failed:', err);
+      const m = messages.value[jid].find(x => x.id === tempId);
+      if (m) m.error = '发送失败';
+    }
+  }
+
+  function setActiveConversation(jid) {
+    activeJid.value = jid;
+    aiMode.value = null;
+    aiChat.value = [];
+    aiLoading.value = false;
+    aiFocusMessage.value = null;
+    aiReplies.value = [];
+    needSummary.value = null;
+    if (jid) {
+      const socket = useSocket();
+      socket.emit('whatsapp:mark_read', { jid });
+      const conv = conversations.value.find(c => c.jid === jid);
+      if (conv) conv.unreadCount = 0;
+      fetchMessages(jid);
+    }
+  }
+
+  // ─── Socket Event Handlers ───
+
+  function handleQRCode(data) {
+    qrCode.value = data;
+    connectionStatus.value = 'waiting_qr';
+    waError.value = null;
+  }
+  function handleWAError(data) {
+    connectionStatus.value = 'error';
+    qrCode.value = null;
+    waError.value = data.message || '未知错误';
+  }
+  function handleStatus(data) {
+    if (data.status === 'connected') {
+      connectionStatus.value = 'connected';
+      connectedPhone.value = data.phone || null;
+      qrCode.value = null;
+      waError.value = null;
+      fetchConversations();
+    } else if (data.status === 'disconnected') {
+      connectionStatus.value = 'disconnected';
+      connectedPhone.value = null;
+    } else if (data.status === 'error') {
+      connectionStatus.value = 'error';
+      qrCode.value = null;
+    } else if (['connecting','waiting_qr','reconnecting'].includes(data.status)) {
+      connectionStatus.value = data.status;
+    }
+  }
+
+  function handleNewMessage(data) {
+    const msg = normalizeMessage(data);
+    const jid = msg.jid || (msg.fromMe ? msg.to : msg.from);
+    if (!jid) return;
+    if (!messages.value[jid]) messages.value[jid] = [];
+    const exists = messages.value[jid].find(m => m.id === msg.id || (msg.waMessageId && m.waMessageId === msg.waMessageId));
+    if (!exists) messages.value[jid].push(msg);
+
+    const conv = conversations.value.find(c => c.jid === jid);
+    if (conv) {
+      conv.lastMessage = msg.content?.substring(0, 100) || '';
+      conv.lastMessageTime = msg.timestamp;
+      if (!msg.fromMe) conv.unreadCount = (conv.unreadCount || 0) + 1;
+    } else {
+      const phone = jid.split('@')[0];
+      conversations.value.unshift({
+        jid, name: data.contact?.name || phone, phone,
+        lastMessage: msg.content?.substring(0, 100) || '',
+        lastMessageTime: msg.timestamp,
+        unreadCount: msg.fromMe ? 0 : 1,
+      });
+    }
+  }
+
+  function handleMessageSent(data) {
+    // 关键修复：替换 tmp- 开头的乐观消息，不再 push 新的，避免重复
+    const msg = normalizeMessage(data);
+    const jid = msg.jid || msg.to;
+    if (!jid) return;
+    if (!messages.value[jid]) messages.value[jid] = [];
+
+    // 1) 优先按 id/waMessageId/savedId 定位已存在的同一条消息
+    let idx = messages.value[jid].findIndex(m =>
+      (msg.id && (m.id === msg.id || m.savedId === msg.id)) ||
+      (msg.waMessageId && m.waMessageId === msg.waMessageId)
+    );
+
+    // 2) 否则定位最后一条 pending 的 fromMe 同内容消息（乐观 tmp- 条目）
+    if (idx < 0) {
+      for (let i = messages.value[jid].length - 1; i >= 0; i--) {
+        const m = messages.value[jid][i];
+        if (m.pending && m.fromMe && m.content === msg.content) { idx = i; break; }
+      }
+    }
+
+    if (idx >= 0) {
+      messages.value[jid][idx] = { ...messages.value[jid][idx], ...msg, pending: false };
+    } else {
+      // 3) 仍未找到，且是 fromMe，说明是其他设备发送的，去重追加
+      const exists = messages.value[jid].find(m =>
+        m.id === msg.id || (msg.waMessageId && m.waMessageId === msg.waMessageId)
+      );
+      if (!exists) messages.value[jid].push(msg);
+    }
+    const conv = conversations.value.find(c => c.jid === jid);
+    if (conv) {
+      conv.lastMessage = msg.content?.substring(0, 100) || '';
+      conv.lastMessageTime = msg.timestamp;
+    }
+  }
+
+  function handleMessageTranslated(data) {
+    for (const jid in messages.value) {
+      const msg = messages.value[jid].find(m => m.id === data.id);
+      if (msg) { msg.translation = data.translation; msg.sourceLang = data.sourceLang; break; }
+    }
+  }
+
+  function handleConversations(data) {
+    if (Array.isArray(data)) conversations.value = data;
+    else if (data?.conversations) conversations.value = data.conversations;
+  }
+  function handleMessages(data) {
+    if (data?.jid) messages.value[data.jid] = (data.messages || []).map(normalizeMessage);
+  }
+
+  // ─── Settings ───
+  async function fetchTranslationSettings() {
+    try {
+      const { data } = await api.get('/settings');
+      const settingsMap = {};
+      if (Array.isArray(data)) data.forEach(s => { settingsMap[s.key] = s.value; });
+      else Object.assign(settingsMap, data);
+      translationSettings.value = {
+        translationEnabled: settingsMap.translationEnabled !== 'false',
+        translationEngine: settingsMap.translationEngine || 'doubao',
+        targetLanguage: settingsMap.targetLanguage || settingsMap.translationTargetLang || 'zh',
+        doubaoApiKey: settingsMap.doubaoApiKey || '',
+        deepseekApiKey: settingsMap.deepseekApiKey || '',
+        aiModel: settingsMap.aiModel || 'doubao-seed-2-0-pro-260215',
+        aiApiEndpoint: settingsMap.aiApiEndpoint || '',
+      };
+    } catch (err) { console.error('Failed to fetch translation settings:', err); }
+  }
+  async function updateTranslationSettings(settings) {
+    try {
+      const entries = Object.entries(settings).map(([key, value]) => ({ key, value: String(value) }));
+      await api.put('/settings', { settings: entries });
+      translationSettings.value = { ...translationSettings.value, ...settings };
+    } catch (err) { console.error('Failed to update translation settings:', err); }
+  }
+
+  // ─── AI 翻译（单次） ───
+  async function translateMessage(text, sourceLang, targetLang) {
+    try {
+      const { data } = await api.post('/ai/translate', {
+        text, sourceLang: sourceLang || 'auto', targetLang: targetLang || 'zh',
+      });
+      return data;
+    } catch (err) {
+      try {
+        const { data } = await api.post('/translation/translate', {
+          text, sourceLang: sourceLang || 'auto', targetLang: targetLang || 'zh',
+        });
+        return data;
+      } catch (err2) { console.error('Failed to translate message:', err2); return null; }
+    }
+  }
+
+  // ─── AI 迷你聊天框核心 ───
+  function _pushAiMsg(role, content, extra = {}) {
+    aiChat.value.push({
+      id: 'ai-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      role, content, ts: new Date(), ...extra,
+    });
+  }
+
+  function clearAiChat() {
+    aiChat.value = [];
+    aiMode.value = null;
+    aiFocusMessage.value = null;
+  }
+
+  function _modeMeta(mode) {
+    return {
+      reply:    { title: '💬 AI话术',  placeholder: '继续追问（如"更正式一点"/"缩短点"/"强调工厂"）' },
+      summary:  { title: '📋 需求总结', placeholder: '继续追问（如"更详细一点"/"分点列出"）' },
+      profile:  { title: '👤 客户背调', placeholder: '继续追问（如"重点分析价格敏感度"）' },
+      translate:{ title: '🌐 翻译消息', placeholder: '输入要翻译的文字...' },
+    }[mode] || { title: '🤖 AI 助手', placeholder: '继续追问...' };
+  }
+
+  /**
+   * 点击 4 个 AI 功能按钮的入口
+   */
+  async function startAIMode(mode, opts = {}) {
+    if (!activeJid.value && mode !== 'translate') return;
+    aiMode.value = mode;
+    aiChat.value = [];
+    aiLoading.value = true;
+    const meta = _modeMeta(mode);
+
+    try {
+      if (mode === 'reply') {
+        aiFocusMessage.value = opts.focusMessage || null;
+        replyStyle.value = 'formal';
+        aiReplies.value = [];
+        // reply 模式不自动调接口；等用户点「生成AI回复」按钮
+      } else if (mode === 'summary') {
+        _pushAiMsg('user', '请总结当前会话的客户需求要点');
+        const { data } = await api.post('/ai/summarize', { jid: activeJid.value });
+        let txt = '';
+        if (data?.summary) {
+          const s = data.summary;
+          const lines = [];
+          if (s.products) lines.push(`📋 产品：${s.products}`);
+          if (s.quantity) lines.push(`📦 数量：${s.quantity}`);
+          if (s.priceSensitivity) lines.push(`💰 价格敏感度：${s.priceSensitivity}`);
+          if (s.deliveryRequirements) lines.push(`🚚 交期：${s.deliveryRequirements}`);
+          if (s.keyConcerns) lines.push(`🎯 关注点：${s.keyConcerns}`);
+          if (s.nextActions) lines.push(`✅ 下一步：${s.nextActions}`);
+          if (s.intentionScore) lines.push(`⭐ 意向度：${s.intentionScore}/10`);
+          txt = lines.join('\n') || '(无明显需求要点)';
+        } else if (data?.error) {
+          txt = '⚠️ ' + data.error;
+        }
+        if (!txt) {
+          // Fallback 到 chat 接口
+          const { data: d2 } = await api.post('/ai/chat', {
+            prompt: '请结构化总结当前与客户的沟通要点：产品/数量/价格/交期/关注点/下一步/意向度，用 emoji 小标题。',
+            jid: activeJid.value,
+          });
+          txt = d2?.reply || '无结果';
+        }
+        _pushAiMsg('assistant', txt, { insertable: true });
+      } else if (mode === 'profile') {
+        _pushAiMsg('user', '请分析当前客户画像（国家/风格/意向度/跟进建议）');
+        const prompt = `你是一位资深外贸业务专家。请根据当前与客户的 WhatsApp 对话上下文，输出客户背调分析：
+👤 客户类型
+🌍 所在国家/地区（推断）
+💬 沟通风格
+📈 采购阶段
+💰 预算敏感度
+⭐ 意向度(1-10星)
+🔑 关键信息(3-5条)
+✅ 跟进建议(3条以内具体建议)
+全部中文，emoji开头，简洁实用。`;
+        const { data } = await api.post('/ai/chat', { prompt, jid: activeJid.value });
+        _pushAiMsg('assistant', data?.reply || '(无结果)', { insertable: true });
+      } else if (mode === 'translate') {
+        // 若传了 text，则直接翻译；否则取当前会话最近一条入站消息
+        const source = opts.text || null;
+        let original = source;
+        if (!original && activeJid.value) {
+          const msgs = currentMessages.value;
+          const lastIn = [...msgs].reverse().find(m => !m.fromMe && m.content);
+          original = lastIn?.content || '';
+        }
+        if (!original) {
+          _pushAiMsg('assistant', '⚠️ 未找到待翻译消息，请先选择有记录的会话或在下方输入要翻译的文字', { error: true });
+        } else {
+          _pushAiMsg('user', `翻译：${original}`);
+          const { data } = await api.post('/ai/translate', { text: original, targetLang: 'zh' });
+          const translated = data?.translated || '(翻译失败)';
+          _pushAiMsg('assistant', '', {
+            insertable: true,
+            translateData: { original, translated },
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[AI startAIMode error]', err);
+      _pushAiMsg('assistant', '⚠️ ' + (err?.response?.data?.error || err.message || '请求失败'), { error: true });
+    } finally {
+      aiLoading.value = false;
+    }
+  }
+
+  function setReplyStyle(style) {
+    replyStyle.value = style;
+  }
+
+  /**
+   * AI 话术：按当前 replyStyle 生成 3 条回复
+   * @param extraPrompt 可选，用户在输入框里的补充要求
+   */
+  async function generateAiReplies(extraPrompt) {
+    if (!activeJid.value) return;
+    aiGenerating.value = true;
+    aiReplies.value = [];
+    const style = replyStyle.value;
+    try {
+      const body = { jid: activeJid.value, style };
+      if (extraPrompt) body.extraPrompt = extraPrompt;
+      const { data } = await api.post('/ai/reply', body);
+      const replies = (data?.replies || []).map((text, i) => ({
+        id: 'r-' + Date.now() + '-' + i,
+        text,
+        style,
+        confidence: Math.round(88 + Math.random() * 10), // 后端暂未返回置信度，用模拟值
+      }));
+      aiReplies.value = replies;
+    } catch (err) {
+      console.error('[generateAiReplies error]', err);
+      aiReplies.value = [{
+        id: 'r-err-' + Date.now(),
+        text: '⚠️ ' + (err?.response?.data?.error || err.message || '生成失败'),
+        style,
+        confidence: 0,
+        error: true,
+      }];
+    } finally {
+      aiGenerating.value = false;
+    }
+  }
+
+  /**
+   * AI 迷你聊天框里用户发送追问
+   */
+  async function sendAiChat(userText) {
+    const text = (userText || '').trim();
+    if (!text || aiLoading.value) return;
+    if (!aiMode.value) aiMode.value = 'reply';
+    _pushAiMsg('user', text);
+    aiLoading.value = true;
+    try {
+      if (aiMode.value === 'reply') {
+        // reply 模式下用户输入作为补充要求重新生成
+        await generateAiReplies(text);
+        aiLoading.value = false;
+        return;
+      }
+      if (aiMode.value === 'translate') {
+        const { data } = await api.post('/ai/translate', { text, targetLang: 'zh' });
+        _pushAiMsg('assistant', '', {
+          insertable: true,
+          translateData: { original: text, translated: data?.translated || '(翻译失败)' },
+        });
+      } else {
+        // reply / summary / profile 都走通用 chat 多轮
+        // 构造对话历史（仅保留 role+content）
+        const history = [];
+        for (const m of aiChat.value) {
+          if (m.role === 'user' || m.role === 'assistant') {
+            if (m.translateData) {
+              history.push({ role: m.role, content: `原文：${m.translateData.original}\n译文：${m.translateData.translated}` });
+            } else {
+              history.push({ role: m.role, content: m.content });
+            }
+          }
+        }
+        const { data } = await api.post('/ai/chat', { messages: history, jid: activeJid.value });
+        _pushAiMsg('assistant', data?.reply || '(无结果)', { insertable: true });
+      }
+    } catch (err) {
+      console.error('[AI sendAiChat error]', err);
+      _pushAiMsg('assistant', '⚠️ ' + (err?.response?.data?.error || err.message || '请求失败'), { error: true });
+    } finally {
+      aiLoading.value = false;
+    }
+  }
+
+  async function regenerateLastAi() {
+    if (aiLoading.value || !aiMode.value) return;
+    // 移除最后一条 assistant 消息（及可能的 loading 占位），重新请求
+    while (aiChat.value.length && aiChat.value[aiChat.value.length - 1].role === 'assistant') {
+      aiChat.value.pop();
+    }
+    // 找到最后一条 user 消息作为追问
+    const lastUser = [...aiChat.value].reverse().find(m => m.role === 'user');
+    if (!lastUser) { startAIMode(aiMode.value, { focusMessage: aiFocusMessage.value }); return; }
+    aiLoading.value = true;
+    try {
+      const history = aiChat.value
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => m.translateData
+          ? { role: m.role, content: `原文：${m.translateData.original}\n译文：${m.translateData.translated}` }
+          : { role: m.role, content: m.content });
+      const { data } = await api.post('/ai/chat', { messages: history, jid: activeJid.value });
+      _pushAiMsg('assistant', data?.reply || '(无结果)', { insertable: true });
+    } catch (err) {
+      _pushAiMsg('assistant', '⚠️ ' + (err?.response?.data?.error || err.message || '请求失败'), { error: true });
+    } finally { aiLoading.value = false; }
+  }
+
+  /**
+   * 把 AI 气泡的内容填入主聊天输入框
+   */
+  function insertToInput(text) {
+    if (!text) return;
+    insertText.value = text;
+  }
+  function clearInsertText() { insertText.value = ''; }
+
+  /**
+   * 消息悬浮按钮入口：点消息旁的小圆点触发
+   */
+  function triggerAIReplyForMessage(msg) {
+    if (!msg) return;
+    // 触发 AI 话术模式，并把该消息作为焦点
+    startAIMode('reply', { focusMessage: msg });
+    // 展开 AI 面板（由 Layout 监听 aiMode 变化处理）
+    aiCollapsed.value = false;
+  }
+
+  // ─── 兼容旧 API（aiReplies/needSummary 等旧组件可能调用） ───
+  async function generateAIReply(accountId, jid, style = 'formal') {
+    if (!jid) return;
+    aiGenerating.value = true;
+    aiReplies.value = [];
+    try {
+      const { data } = await api.post('/ai/reply', { jid, style });
+      if (data.replies) aiReplies.value = data.replies.map((text, i) => ({ id: i, text }));
+    } catch (err) { console.error('Failed to generate AI reply:', err); }
+    finally { aiGenerating.value = false; }
+    // 同步触发新面板
+    startAIMode('reply');
+  }
+  async function generateNeedSummary(accountId, jid) {
+    if (!jid) return;
+    summarizeLoading.value = true;
+    needSummary.value = null;
+    try {
+      const { data } = await api.post('/ai/summarize', { jid });
+      if (data.summary) needSummary.value = data.summary;
+    } catch (err) { console.error('Failed to generate need summary:', err); }
+    finally { summarizeLoading.value = false; }
+    startAIMode('summary');
+  }
+  function clearNeedSummary() { needSummary.value = null; }
+
+  async function searchConversations(keyword) {
+    try {
+      const { data } = await api.get('/whatsapp/conversations', { params: keyword ? { search: keyword } : {} });
+      conversations.value = data;
+      return data;
+    } catch (err) { console.error('Search conversations failed:', err); }
+  }
+
+  return {
+    // State
+    connectionStatus, sessionId, connectedPhone, qrCode, waError,
+    conversations, activeJid, messages, loadingMessages,
+    translationSettings, autoTranslateOutgoing,
+    aiMode, aiChat, aiLoading, aiCollapsed, aiFocusMessage, replyStyle,
+    aiReplies, aiGenerating, insertText, needSummary, summarizeLoading,
+
+    // Computed
+    activeConversation, currentMessages, sortedConversations, isConnected,
+
+    // Connection
+    fetchConnectionStatus, requestQR, disconnectWhatsApp,
+
+    // Conversations / Messages
+    fetchConversations, fetchMessages, sendMessage, setActiveConversation, normalizeMessage,
+
+    // Socket handlers
+    handleQRCode, handleStatus, handleWAError,
+    handleNewMessage, handleMessageSent, handleMessageTranslated,
+    handleConversations, handleMessages,
+
+    // Settings
+    fetchTranslationSettings, updateTranslationSettings,
+
+    // AI chat
+    translateMessage, startAIMode, sendAiChat, regenerateLastAi, clearAiChat, insertToInput, clearInsertText,
+    setReplyStyle, generateAiReplies, triggerAIReplyForMessage,
+
+    // Legacy
+    generateAIReply, generateNeedSummary, clearNeedSummary, searchConversations,
+  };
+});

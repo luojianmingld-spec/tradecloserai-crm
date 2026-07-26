@@ -1,0 +1,238 @@
+import express from "express";
+import { PrismaClient } from "@prisma/client";
+import { getEvolutionConnector } from "../services/evolution-connector.js";
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+const DEFAULT_SESSION_ID = "user_1";
+
+function jidToPhone(jid) {
+  return (jid || "").split("@")[0];
+}
+function isGroup(jid) {
+  return (jid || "").includes("@g.us");
+}
+
+/**
+ * 把 @lid 临时ID解析成真实JID（WhatsApp对部分号段先用匿名lid投递）
+ * Evolution在 key.remoteJidAlt 里给出真实的 @s.whatsapp.net JID
+ */
+function resolveRealJid(msg, fallbackJid) {
+  const key = msg?.key || {};
+  const alt = key.remoteJidAlt;
+  if (alt && alt.includes("@s.whatsapp.net")) return alt;
+  return fallbackJid;
+}
+
+function extractBody(msg) {
+  const m = msg.message || {};
+  const t = msg.messageType;
+  if (m.conversation) return { body: m.conversation, type: "text" };
+  if (m.extendedTextMessage) return { body: m.extendedTextMessage.text || "", type: "text" };
+  if (m.imageMessage) return { body: m.imageMessage.caption || "[图片]", type: "image", mediaUrl: m.imageMessage.url || null };
+  if (m.videoMessage) return { body: m.videoMessage.caption || "[视频]", type: "video" };
+  if (m.audioMessage) return { body: "[语音]", type: "audio" };
+  if (m.documentMessage) return { body: m.documentMessage.fileName || "[文件]", type: "document", fileName: m.documentMessage.fileName };
+  if (m.stickerMessage) return { body: "[贴纸]", type: "sticker" };
+  if (m.locationMessage) return { body: `[位置] ${m.locationMessage.degreesLatitude || ""},${m.locationMessage.degreesLongitude || ""}`, type: "location" };
+  if (m.contactsArrayMessage) return { body: "[联系人卡片]", type: "contacts" };
+  return { body: `[${t || "unknown"}]`, type: t || "unknown" };
+}
+
+function evoTsToDate(ts) {
+  if (!ts) return new Date();
+  const n = typeof ts === "object" ? ts.low : Number(ts);
+  return new Date(n > 1e12 ? n : n * 1000);
+}
+
+async function ensureWAConnection(sessionId, phone) {
+  let conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+  if (!conn) {
+    conn = await prisma.wAConnection.create({ data: { sessionId, phone: phone || null, status: "connected" } });
+  } else if (conn.status !== "connected") {
+    await prisma.wAConnection.update({ where: { id: conn.id }, data: { status: "connected" } });
+  }
+  return conn;
+}
+
+async function upsertCustomer(phone, pushName) {
+  if (!phone || phone.length < 5) return null;
+  try {
+    let cust = await prisma.customer.findFirst({ where: { phone } });
+    const name = pushName && pushName.trim() ? pushName.trim() : phone;
+    if (!cust) {
+      cust = await prisma.customer.create({
+        data: { userId: 1, phone, name, source: "whatsapp", status: "potential", lastContactAt: new Date() },
+      });
+    } else if (pushName && pushName.trim() && cust.name === phone) {
+      await prisma.customer.update({ where: { id: cust.id }, data: { name: pushName.trim(), lastContactAt: new Date() } });
+    } else {
+      await prisma.customer.update({ where: { id: cust.id }, data: { lastContactAt: new Date() } });
+    }
+    return cust;
+  } catch (e) {
+    console.warn("[Webhook] upsertCustomer error:", e.message);
+    return null;
+  }
+}
+
+async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJid, io) {
+  if (!rawRemoteJid) return null;
+  if (isGroup(rawRemoteJid)) return null;
+  if (rawRemoteJid === "status@broadcast") return null;
+  if (fromMe && rawRemoteJid === ownerJid) return null;
+
+  const remoteJid = resolveRealJid(msg, rawRemoteJid);
+  if (!remoteJid || remoteJid === ownerJid) return null;
+
+  const { body, type, mediaUrl, fileName } = extractBody(msg);
+  if (!body || body === "[unknown]") return null;
+  const pushName = msg.pushName || "";
+  const timestamp = evoTsToDate(msg.messageTimestamp);
+  const waMessageId = (msg.key || {}).id || null;
+  if (!waMessageId) return null;
+
+  const mePhone = jidToPhone(ownerJid);
+  const from = fromMe ? ownerJid : remoteJid;
+  const to = fromMe ? remoteJid : ownerJid;
+  const direction = fromMe ? "outbound" : "inbound";
+  const convJid = remoteJid;
+
+  await ensureWAConnection(DEFAULT_SESSION_ID, mePhone);
+
+  let saved, duplicate = false;
+  try {
+    const exists = await prisma.wAMessage.findFirst({ where: { waMessageId } });
+    if (exists) { saved = exists; duplicate = true; }
+    else {
+      saved = await prisma.wAMessage.create({
+        data: {
+          sessionId: DEFAULT_SESSION_ID, from, to, body: body || "", type: type || "text", direction,
+          timestamp, waMessageId,
+          mediaUrl: mediaUrl || null, fileName: fileName || null,
+        },
+      });
+    }
+  } catch (e) {
+    console.warn("[Webhook] saveMessage error:", e.message);
+    return null;
+  }
+
+  if (direction === "inbound") {
+    const phone = jidToPhone(remoteJid);
+    await upsertCustomer(phone, pushName);
+  }
+
+  const lidNote = rawRemoteJid !== remoteJid ? ` [@lid->${remoteJid}]` : "";
+  console.log(`[Evolution Webhook] ${direction} jid=${convJid} me=${fromMe} type=${type} dup=${duplicate}${lidNote} text="${body.slice(0,50)}"`);
+
+  // 入站消息实时推送；出站REST端已乐观推送，webhook回环跳过避免前端重复
+  if (io && !duplicate && direction === "inbound") {
+    const payload = {
+      id: saved.id,
+      waMessageId: saved.waMessageId,
+      from: saved.from,
+      to: saved.to,
+      body: saved.body,
+      content: saved.body,
+      type: saved.type,
+      messageType: saved.type,
+      direction: saved.direction,
+      fromMe: false,
+      jid: convJid,
+      timestamp: saved.timestamp,
+      contact: { name: pushName || jidToPhone(remoteJid), phone: jidToPhone(remoteJid) },
+    };
+    io.emit("whatsapp:message", payload);
+  }
+
+  return { saved, direction, jid: convJid };
+}
+
+router.post("/", async (req, res) => {
+  // DEBUG: 打印所有到达webhook的原始事件
+  const rawEvent = req.body;
+  const rawType = (rawEvent?.event || rawEvent?.type || "unknown");
+  console.log(`[Webhook RAW] event=${rawType} instance=${rawEvent?.instance||"?"} keys=${Object.keys(rawEvent?.data||{}).join(",")}`);
+  if (rawType.toLowerCase().includes("upsert") || rawType.toLowerCase().includes("message")) {
+    console.log("[Webhook RAW payload]", JSON.stringify(rawEvent).slice(0, 2000));
+  }
+  try {
+    const event = req.body;
+    let eventType = event.event || event.type || "unknown";
+    eventType = eventType.toLowerCase().replace(/_/g, ".");
+    const instanceName = event.instance || event.instance_name || "jeremy-main";
+    const data = event.data || {};
+
+    const io = req.app.get("io");
+    const connector = getEvolutionConnector(instanceName);
+
+    if (eventType === "connection.update") {
+      let state = "";
+      if (typeof data.state === "string") state = data.state;
+      else if (data.state) state = data.state.state || data.state || "";
+      console.log(`[Evolution Webhook] connection state: ${state}`);
+      if (state === "open") {
+        connector.connected = true;
+        const info = await connector.getInstanceInfo().catch(() => null);
+        const ownerJid = info?.ownerJid || event.sender || "";
+        const ownerPhone = jidToPhone(ownerJid);
+        await ensureWAConnection(DEFAULT_SESSION_ID, ownerPhone);
+        if (io) io.emit("whatsapp:status", { status: "connected", phone: ownerPhone, instance: instanceName, sessionId: DEFAULT_SESSION_ID });
+      } else if (state === "close" || state === "disconnected") {
+        connector.connected = false;
+        if (io) io.emit("whatsapp:status", { status: "disconnected", instance: instanceName, sessionId: DEFAULT_SESSION_ID });
+      }
+      return res.status(200).json({ received: true, event: eventType });
+    }
+
+    let ownerJid = event.sender || "";
+    if (!ownerJid) {
+      try { ownerJid = (await connector.getOwnerJid()) || ""; } catch(e){}
+    }
+
+    let processed = 0;
+
+    if (eventType === "messages.upsert") {
+      const messages = Array.isArray(data.messages) ? data.messages : (data.message ? [data.message] : [data]);
+      for (const m of messages) {
+        if (!m || typeof m !== "object") continue;
+        const key = m.key || data.key || {};
+        const remoteJid = key.remoteJid || data.remoteJid || "";
+        const fromMe = !!key.fromMe;
+        if (!remoteJid) continue;
+        await processOneMessage(instanceName, m, fromMe, remoteJid, ownerJid, io);
+        processed++;
+      }
+    }
+    else if (eventType === "send.message") {
+      const m = data;
+      const key = m.key || {};
+      const remoteJid = key.remoteJid || m.remoteJid || m.chatId || "";
+      if (remoteJid) {
+        await processOneMessage(instanceName, m, true, remoteJid, ownerJid, io);
+        processed++;
+      }
+    }
+    else if (eventType === "messages.update") {
+      const status = data.status || "";
+      const keyId = data.keyId || "";
+      if (keyId && (status === "SERVER_ACK" || status === "DELIVERY_ACK" || status === "READ" || status === "ERROR")) {
+        try {
+          if (status === "READ") {
+            await prisma.wAMessage.updateMany({ where: { waMessageId: keyId }, data: { read: true } });
+          }
+        } catch(e){}
+        console.log(`[Evolution Webhook] msg ${keyId.slice(0,10)} status=${status}`);
+      }
+    }
+
+    return res.status(200).json({ received: true, event: eventType, processed });
+  } catch (e) {
+    console.error("[Webhook] error:", e.message, e.stack);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+export default router;

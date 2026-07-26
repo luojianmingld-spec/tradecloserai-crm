@@ -1,0 +1,710 @@
+/**
+ * WhatsApp Provider — 修复版 v2
+ * 针对 Baileys 6.7.16 稳定版
+ * 核心修复：
+ *  1. 代理只在 makeWASocket 内部使用，不污染全局 http/https agent
+ *  2. 代理地址通过环境变量 WA_PROXY 配置，默认 127.0.0.1:1080 (SSH动态转发走本地VPN)
+ *  3. QR超时60秒，与前端对齐；重试使用指数退避，不限次数
+ *  4. 增加连接状态中间态 (scanned)：扫码后到open之前反馈给前端
+ *  5. IP健康预检：连接前通过代理访问 WA 域名验证出口IP
+ *  6. 连接成功后主动拉取最近历史消息
+ *  7. 详细诊断日志，方便排查
+ */
+
+import { EventEmitter } from 'events';
+import { SocksProxyAgent } from 'socks-proxy-agent';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
+import http from 'http';
+import https from 'https';
+
+const prisma = new PrismaClient();
+
+// 代理配置：默认走本地SSH动态转发(SOCKS5)，走用户本地VPN出口
+// 环境变量 WA_PROXY 支持：
+//   - socks5://user:pass@host:port
+//   - http://user:pass@host:port
+//   - direct (直连，不使用代理)
+const WA_PROXY = process.env.WA_PROXY || 'socks5://127.0.0.1:1080';
+
+function createProxyAgent(proxyUrl) {
+  if (!proxyUrl || proxyUrl === 'direct') return undefined;
+  // 只支持SOCKS5代理（SSH动态转发）
+  return new SocksProxyAgent(proxyUrl);
+}
+
+class BaileysProvider extends EventEmitter {
+  constructor() {
+    super();
+    this.sockets = new Map();
+    this._connecting = new Set();
+    this.statuses = new Map();
+    this._qrDataUrls = new Map();
+    this.phones = new Map();
+    this._baileys = null;
+    this._pino = null;
+    this._manualDisconnect = new Set();
+    this._sentMessageIds = new Set();
+    this._sentMessageIdsMax = 500;
+    this._userIdMap = new Map();
+    this._retryCount = new Map();
+    this._qrTimeouts = new Map();
+    this._connectTimeouts = new Map();
+    console.log('[WA] Provider initialized, proxy:', WA_PROXY);
+  }
+
+  async _loadBaileys() {
+    if (this._baileys) return this._baileys;
+    try {
+      const baileys = await import('@whiskeysockets/baileys');
+      this._baileys = baileys;
+      try {
+        this._pino = (await import('pino')).default;
+      } catch {}
+      console.log('[WA] Baileys loaded, version:', baileys?.default?.version || 'unknown');
+      return baileys;
+    } catch (err) {
+      console.error('[WA] Baileys not available:', err.message);
+      this._baileys = null;
+      return null;
+    }
+  }
+
+  isAvailable() { return this._baileys !== null; }
+
+  _getAuthDir(sessionId) {
+    return path.join(process.cwd(), 'sessions', sessionId);
+  }
+
+  async _getAuthState(sessionId) {
+    const baileys = await this._loadBaileys();
+    if (!baileys) throw new Error('Baileys not loaded');
+    const { useMultiFileAuthState } = baileys;
+    const authDir = this._getAuthDir(sessionId);
+    const fs = await import('fs');
+    const pathMod = await import('path');
+    const parentDir = pathMod.dirname(authDir);
+    if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });
+    if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
+    return await useMultiFileAuthState(authDir);
+  }
+
+  _isNetworkError(lastDisconnect) {
+    const err = lastDisconnect?.error;
+    if (!err) return false;
+    const code = err.data?.code || err.code;
+    if (code && ['ETIMEDOUT','ENOTFOUND','ECONNREFUSED','EAI_AGAIN','EHOSTUNREACH','ENETUNREACH','ECONNRESET','EPIPE'].includes(code)) return true;
+    if (err.output?.statusCode === 408) return true;
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('timed out') || msg.includes('proxy') || msg.includes('socket')) return true;
+    return false;
+  }
+
+  /**
+   * IP健康预检：通过当前代理访问 https://web.whatsapp.com 检查出口IP是否可达WhatsApp
+   * 返回 { ok: boolean, ip?: string, error?: string }
+   */
+  async _checkProxyHealth() {
+    return new Promise((resolve) => {
+      const agent = createProxyAgent(WA_PROXY);
+      const options = {
+        hostname: 'web.whatsapp.com',
+        port: 443,
+        path: '/',
+        method: 'HEAD',
+        timeout: 10000,
+        ...(agent ? { agent } : {}),
+      };
+      const req = https.request(options, (res) => {
+        // 只要能收到响应（哪怕4xx），说明IP可达WhatsApp
+        console.log('[WA] Proxy health check: status', res.statusCode);
+        res.resume();
+        resolve({ ok: res.statusCode < 500, statusCode: res.statusCode });
+      });
+      req.on('error', (e) => {
+        console.error('[WA] Proxy health check failed:', e.message);
+        resolve({ ok: false, error: e.message });
+      });
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({ ok: false, error: 'timeout' });
+      });
+      req.end();
+    });
+  }
+
+  _getRetryDelay(retryCount) {
+    // 指数退避：2s → 5s → 10s → 20s → 30s → 30s （封顶30秒）
+    const base = [2000, 5000, 10000, 20000, 30000];
+    return base[Math.min(retryCount, base.length - 1)];
+  }
+
+  async connect(sessionId, userId) {
+    if (this._connecting.has(sessionId)) {
+      return { status: this.statuses.get(sessionId) || 'connecting', sessionId };
+    }
+    if (this.sockets.has(sessionId) && this.statuses.get(sessionId) === 'connected') {
+      return { status: 'connected', phone: this.phones.get(sessionId), sessionId };
+    }
+    this._connecting.add(sessionId);
+    const done = () => this._connecting.delete(sessionId);
+
+    const baileys = await this._loadBaileys();
+    if (!baileys) { done(); return { status: 'unavailable', message: 'WhatsApp library not installed.' }; }
+
+    // 清理旧socket
+    if (this.sockets.has(sessionId)) {
+      const oldSock = this.sockets.get(sessionId);
+      const oldStatus = this.statuses.get(sessionId);
+      try { oldSock.end(new Error('reconnecting')); } catch {}
+      this.sockets.delete(sessionId);
+      console.log(`[WA] Cleaned up stale socket for ${sessionId} (was: ${oldStatus})`);
+    }
+
+    this._userIdMap.set(sessionId, userId);
+
+    const { makeWASocket, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } = baileys;
+
+    this.statuses.set(sessionId, 'connecting');
+    this.emit('status', sessionId, 'connecting');
+
+    const retries = this._retryCount.get(sessionId) || 0;
+    console.log(`[WA] Connecting ${sessionId} (retry #${retries})...`);
+
+    // 预检代理健康
+    if (retries === 0) {
+      const health = await this._checkProxyHealth();
+      if (!health.ok) {
+        done();
+        this.statuses.set(sessionId, 'error');
+        this.emit('status', sessionId, 'error');
+        this.emit('error', sessionId, {
+          message: `代理连接失败（${health.error}），请确认SSH隧道/VPN已启动`,
+          code: 'PROXY_UNREACHABLE',
+          detail: health.error,
+        });
+        return { status: 'error', message: '代理连接失败' };
+      }
+    }
+
+    // 获取版本号
+    let version;
+    try {
+      const result = await Promise.race([
+        fetchLatestBaileysVersion(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('version timeout')), 10000)),
+      ]);
+      version = result.version;
+      console.log('[WA] Latest WA Web version:', version);
+    } catch (err) {
+      console.warn('[WA] Version fetch failed, using hardcoded fallback:', err.message);
+      version = [2, 3000, 1036105860];
+    }
+
+    // 加载认证状态
+    console.log('[WA] Loading auth state for', sessionId);
+    const { state, saveCreds } = await this._getAuthState(sessionId);
+
+    // 创建代理agent
+    const proxyAgent = createProxyAgent(WA_PROXY);
+    console.log('[WA] Creating socket, proxy:', WA_PROXY);
+
+    const sock = makeWASocket({
+      version,
+      auth: state,
+      printQRInTerminal: false,
+      logger: this._pino ? this._pino({ level: 'silent' }) : undefined, // 静默日志减少干扰
+      defaultQueryTimeoutMs: 60000,
+      connectTimeoutMs: 30000,
+      browser: ['Chrome (Windows)', 'Chrome', '125.0.0.0'],
+      syncFullHistory: false, // 登录后主动拉取，避免初次连接阻塞
+      fireInitQueries: true,
+      markOnlineOnConnect: false,
+      generateHighQualityLinkPreview: false,
+      ...(proxyAgent ? { agent: proxyAgent, fetchAgent: proxyAgent } : {}),
+    });
+    this.sockets.set(sessionId, sock);
+
+    sock.ev.on('creds.update', saveCreds);
+
+    // QR超时：60秒后刷新
+    let qrTimeout = null;
+    const resetQrTimeout = () => {
+      if (qrTimeout) clearTimeout(qrTimeout);
+      qrTimeout = setTimeout(() => {
+        const st = this.statuses.get(sessionId);
+        if (st === 'waiting_qr' || st === 'connecting') {
+          console.log(`[WA] QR expired for ${sessionId} after 60s, refreshing...`);
+          this.emit('status', sessionId, 'qr_refreshing');
+          try { sock.end(new Error('QR refresh')); } catch {}
+          this.sockets.delete(sessionId);
+          setTimeout(() => {
+            if (this.statuses.get(sessionId) !== 'connected' && !this._manualDisconnect.has(sessionId)) {
+              console.log('[WA] Auto-reconnecting for new QR...');
+              this._retryCount.set(sessionId, (this._retryCount.get(sessionId) || 0));
+              this.connect(sessionId, this._userIdMap.get(sessionId)).catch(e => {
+                console.error('[WA] Auto-reconnect failed:', e.message);
+              });
+            }
+          }, 500);
+          this._qrTimeouts.delete(sessionId);
+        }
+      }, 60000);
+      this._qrTimeouts.set(sessionId, qrTimeout);
+    };
+
+    // 连接状态更新
+    sock.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr, isNewLogin } = update;
+      console.log(`[WA] connection.update: connection=${connection}, hasQR=${!!qr}, isNewLogin=${!!isNewLogin}, qrTimeout=${qrTimeout ? 'active' : 'none'}`);
+
+      if (connection === 'close' || connection === 'open') {
+        done();
+      }
+
+      // QR码
+      if (qr) {
+        console.log(`[WA] New QR received, length=${qr.length}`);
+        try {
+          const QRCode = (await import('qrcode')).default;
+          const qrDataUrl = await QRCode.toDataURL(qr, { width: 280, margin: 2 });
+          this.statuses.set(sessionId, 'waiting_qr');
+          this._qrDataUrls.set(sessionId, qrDataUrl);
+          this.emit('status', sessionId, 'waiting_qr');
+          this.emit('qr', sessionId, qrDataUrl);
+          resetQrTimeout();
+          console.log('[WA] QR emitted to frontend');
+        } catch (err) {
+          console.error('[WA] QR generation failed:', err.message);
+          this.emit('error', sessionId, { message: '二维码生成失败: ' + err.message, code: 'QR_GEN_ERROR' });
+        }
+      }
+
+      // 扫码中间态检测：Baileys 6.x 在用户扫码后会触发一些中间事件
+      // 我们通过检查是否已不再是 waiting_qr 但还没 open 来判断
+      if (update.qr === undefined && connection === undefined && this.statuses.get(sessionId) === 'waiting_qr') {
+        // 可能已经扫码，等connection open
+        console.log('[WA] Possible scan detected, waiting for connection open...');
+        this.statuses.set(sessionId, 'scanning');
+        this.emit('status', sessionId, 'scanning');
+      }
+
+      if (connection === 'close') {
+        if (qrTimeout) { clearTimeout(qrTimeout); qrTimeout = null; this._qrTimeouts.delete(sessionId); }
+        if (this._manualDisconnect.has(sessionId)) {
+          this._manualDisconnect.delete(sessionId);
+          this.sockets.delete(sessionId);
+          this.statuses.set(sessionId, 'disconnected');
+          this._qrDataUrls.delete(sessionId);
+          this.phones.delete(sessionId);
+          this._userIdMap.delete(sessionId);
+          this._retryCount.delete(sessionId);
+          this.emit('status', sessionId, 'disconnected');
+          this.emit('disconnected', sessionId, 'manual');
+          await this._updateDBStatus(sessionId, 'disconnected').catch(() => {});
+          return;
+        }
+
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const reason = lastDisconnect?.error?.message || lastDisconnect?.error?.toString() || 'Unknown';
+        const errCode = lastDisconnect?.error?.data?.code || lastDisconnect?.error?.code;
+        const isLoggedIn = !!state.creds?.me; // 是否已经登录过（有creds）
+
+        console.log(`[WA] Connection closed: statusCode=${statusCode}, reason=${reason}, errCode=${errCode}, isLoggedIn=${isLoggedIn}`);
+
+        // 被踢出/登出
+        if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
+          console.log('[WA] Logged out, clearing session');
+          this.sockets.delete(sessionId);
+          this.statuses.set(sessionId, 'disconnected');
+          this._qrDataUrls.delete(sessionId);
+          this.phones.delete(sessionId);
+          this._userIdMap.delete(sessionId);
+          this._retryCount.delete(sessionId);
+          this.emit('status', sessionId, 'disconnected');
+          this.emit('disconnected', sessionId, 'logged_out');
+          await this._updateDBStatus(sessionId, 'disconnected').catch(() => {});
+          // 清除旧的auth文件
+          try {
+            const fs = await import('fs');
+            const authDir = this._getAuthDir(sessionId);
+            fs.rmSync(authDir, { recursive: true, force: true });
+          } catch {}
+          return;
+        }
+
+        // 网络/代理错误（可能是SSH隧道断了）
+        if (this._isNetworkError(lastDisconnect) || errCode === 'ECONNREFUSED' || errCode === 'ECONNRESET') {
+          const delay = isLoggedIn ? 5000 : this._getRetryDelay(retries);
+          console.warn(`[WA] Network error (${reason}), retrying in ${delay}ms...`);
+          this.sockets.delete(sessionId);
+          this._qrDataUrls.delete(sessionId);
+          this.statuses.set(sessionId, 'reconnecting');
+          this.emit('status', sessionId, 'reconnecting');
+          this._retryCount.set(sessionId, retries + 1);
+          setTimeout(() => {
+            if (this.statuses.get(sessionId) !== 'connected' && !this._manualDisconnect.has(sessionId)) {
+              this.connect(sessionId, this._userIdMap.get(sessionId)).catch(e => {
+                console.error('[WA] Retry connect failed:', e.message);
+              });
+            }
+          }, delay);
+          return;
+        }
+
+        // 连接被关闭（可能是IP被标记/tab冲突等）
+        // 非登录态：重新生成QR继续尝试（指数退避）
+        // 已登录态：用现有creds重连
+        const delay = this._getRetryDelay(retries);
+        console.warn(`[WA] Connection closed (${reason}), retry #${retries + 1} in ${delay}ms...`);
+        this.sockets.delete(sessionId);
+        this._qrDataUrls.delete(sessionId);
+        this.statuses.set(sessionId, 'reconnecting');
+        this.emit('status', sessionId, 'reconnecting');
+        this._retryCount.set(sessionId, retries + 1);
+        setTimeout(() => {
+          if (this.statuses.get(sessionId) !== 'connected' && !this._manualDisconnect.has(sessionId)) {
+            this.connect(sessionId, this._userIdMap.get(sessionId)).catch(e => {
+              console.error('[WA] Reconnect failed:', e.message);
+            });
+          }
+        }, delay);
+      }
+
+      if (connection === 'open') {
+        if (qrTimeout) { clearTimeout(qrTimeout); qrTimeout = null; this._qrTimeouts.delete(sessionId); }
+        this._retryCount.set(sessionId, 0);
+        this._qrDataUrls.delete(sessionId);
+        const phone = sock.user?.id?.split(':')[0] || sock.user?.name || 'unknown';
+        this.statuses.set(sessionId, 'connected');
+        this.phones.set(sessionId, phone);
+        console.log(`[WA] Connected! Phone: ${phone}, user:`, JSON.stringify(sock.user));
+        this.emit('status', sessionId, 'connected');
+        this.emit('connected', sessionId, phone);
+        await this._updateDBStatus(sessionId, 'connected', phone).catch(() => {});
+
+        // 登录后主动拉取最近聊天和联系人
+        try {
+          console.log('[WA] Fetching chats and contacts...');
+          const chats = await sock.groupFetchAllParticipating().catch(() => ({}));
+          console.log('[WA] Groups fetched:', Object.keys(chats).length);
+        } catch (e) {
+          console.warn('[WA] Fetch groups failed (non-critical):', e.message);
+        }
+      }
+    });
+
+    // 收到新消息
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
+      console.log('[WA] messages.upsert type:', type, 'count:', messages?.length);
+      if (type === 'append') return; // 历史同步消息由 messaging-history.set 处理（如果有的话）
+      // 注意：Baileys 6.x 初始同步消息 type 通常是 'notify' 但会带很多历史消息
+      // 我们按时间过滤：只处理2分钟内的消息作为"新消息"，避免初始同步时大量消息涌入
+      const now = Date.now();
+      const TWO_MIN = 2 * 60 * 1000;
+
+      for (const msg of messages) {
+        if (!msg.message) continue;
+        const from = msg.key.remoteJid;
+        if (!from) continue;
+        const fromMe = !!msg.key.fromMe;
+        const msgTs = parseInt(msg.messageTimestamp?.toString() || '0') * 1000;
+
+        let body = '';
+        if (msg.message.conversation) body = msg.message.conversation;
+        else if (msg.message.extendedTextMessage?.text) body = msg.message.extendedTextMessage.text;
+        else if (msg.message.imageMessage?.caption) body = msg.message.imageMessage.caption;
+        else if (msg.message.videoMessage?.caption) body = msg.message.videoMessage.caption;
+        else if (msg.message.documentMessage?.caption) body = msg.message.documentMessage.caption;
+        // 跳过系统消息和空消息
+        if (!body && !msg.message.imageMessage && !msg.message.videoMessage && !msg.message.audioMessage && !msg.message.documentMessage) {
+          // 可能是系统通知，跳过
+          continue;
+        }
+
+        const waMessageId = msg.key.id;
+        const messageData = {
+          sessionId,
+          from: fromMe ? (sock.user?.id || 'me') : from,
+          to: fromMe ? from : (sock.user?.id || 'me'),
+          body: body || '[media]',
+          type: msg.message.imageMessage ? 'image' : msg.message.videoMessage ? 'video' : msg.message.audioMessage ? 'audio' : msg.message.documentMessage ? 'document' : 'text',
+          direction: fromMe ? 'outbound' : 'inbound',
+          timestamp: new Date(msgTs || now),
+          waMessageId,
+        };
+
+        if (fromMe) {
+          if (waMessageId && this._sentMessageIds.has(waMessageId)) {
+            this._sentMessageIds.delete(waMessageId);
+            continue;
+          }
+          try {
+            const saved = await this._saveMessage(messageData);
+            if (saved) messageData.id = saved.id;
+          } catch (e) { console.warn('[WA] save outbound echo failed:', e.message); }
+          this.emit('sent', sessionId, messageData);
+          continue;
+        }
+
+        // 入站消息：历史消息（超过2分钟）也保存但不emit通知（避免首次登录刷屏）
+        const isHistory = msgTs > 0 && (now - msgTs) > TWO_MIN;
+        try {
+          const savedMsg = await this._saveMessage(messageData);
+          if (savedMsg) messageData.id = savedMsg.id;
+        } catch (e) { console.warn('[WA] save incoming failed:', e.message); }
+        if (!isHistory) {
+          this.emit('message', sessionId, messageData);
+        }
+        await this._autoCreateCustomer(sessionId, from, body).catch(() => {});
+      }
+    });
+
+    // 历史消息同步（Baileys 6.x 在连接后可能触发）
+    sock.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
+      console.log(`[WA] History sync: ${messages?.length || 0} msgs, ${chats?.length || 0} chats, ${contacts?.length || 0} contacts, isLatest=${isLatest}`);
+      if (messages && messages.length > 0) {
+        let saved = 0;
+        for (const msg of messages) {
+          try {
+            const from = msg.key.remoteJid;
+            if (!from) continue;
+            let body = '';
+            if (msg.message?.conversation) body = msg.message.conversation;
+            else if (msg.message?.extendedTextMessage?.text) body = msg.message.extendedTextMessage.text;
+            else if (msg.message?.imageMessage?.caption) body = msg.message.imageMessage.caption;
+            if (!body) continue;
+            const fromMe = msg.key.fromMe === true;
+            const timestamp = new Date(parseInt(msg.messageTimestamp?.toString() || '0') * 1000 || Date.now());
+            await this._saveMessage({
+              sessionId,
+              from: fromMe ? (sock.user?.id || 'me') : from,
+              to: fromMe ? from : (sock.user?.id || 'me'),
+              body, type: 'text',
+              direction: fromMe ? 'outbound' : 'inbound',
+              timestamp,
+              waMessageId: msg.key.id,
+            });
+            saved++;
+          } catch (err) { /* skip */ }
+        }
+        console.log(`[WA] Saved ${saved} historical messages`);
+      }
+      // 同步chats
+      if (chats && chats.length > 0) {
+        console.log(`[WA] Syncing ${chats.length} chats...`);
+        for (const chat of chats) {
+          try {
+            const jid = chat.id;
+            if (jid && jid.endsWith('@s.whatsapp.net') && !jid.includes('@g.us')) {
+              const phone = jid.split('@')[0];
+              const name = chat.name || chat.conversationTimestamp ? phone : phone;
+              const userId = this._userIdMap.get(sessionId);
+              if (userId) {
+                const existing = await prisma.customer.findFirst({ where: { userId, phone } });
+                if (!existing) {
+                  await prisma.customer.create({
+                    data: { userId, phone, name, source: 'whatsapp', status: 'potential', lastContactAt: new Date() },
+                  });
+                }
+              }
+            }
+          } catch (err) { /* ignore */ }
+        }
+      }
+    });
+
+    // 聊天更新
+    sock.ev.on('chats.upsert', async (chats) => {
+      console.log('[WA] chats.upsert:', chats?.length);
+      for (const chat of chats) {
+        try {
+          const jid = chat.id;
+          if (jid.endsWith('@s.whatsapp.net') && !jid.includes('@g.us')) {
+            const phone = jid.split('@')[0];
+            const name = chat.name || phone;
+            const userId = this._userIdMap.get(sessionId);
+            if (userId) {
+              const existing = await prisma.customer.findFirst({ where: { userId, phone } });
+              if (!existing) {
+                await prisma.customer.create({
+                  data: { userId, phone, name, source: 'whatsapp', status: 'potential', lastContactAt: new Date() },
+                });
+              }
+            }
+          }
+        } catch (err) { /* ignore */ }
+      }
+    });
+
+    // 联系人更新
+    sock.ev.on('contacts.upsert', async (contacts) => {
+      console.log('[WA] contacts.upsert:', contacts?.length);
+      for (const contact of contacts) {
+        try {
+          const jid = contact.id;
+          if (jid && jid.endsWith('@s.whatsapp.net')) {
+            const phone = jid.split('@')[0];
+            const name = contact.name || contact.notify || phone;
+            const userId = this._userIdMap.get(sessionId);
+            if (userId) {
+              await prisma.customer.updateMany({ where: { userId, phone }, data: { name } }).catch(() => {});
+            }
+          }
+        } catch (err) { /* ignore */ }
+      }
+    });
+
+    return { status: 'connecting' };
+  }
+
+  async sendMessage(sessionId, to, message) {
+    if (!this._baileys && !(await this._loadBaileys())) {
+      throw new Error('WhatsApp library not installed');
+    }
+    const sock = this.sockets.get(sessionId);
+    if (!sock || this.statuses.get(sessionId) !== 'connected') {
+      throw new Error('WhatsApp not connected');
+    }
+    if (!to.includes('@')) to = `${to}@s.whatsapp.net`;
+
+    const sent = await sock.sendMessage(to, { text: message });
+    const waMessageId = sent?.key?.id;
+    if (waMessageId) {
+      this._sentMessageIds.add(waMessageId);
+      if (this._sentMessageIds.size > this._sentMessageIdsMax) {
+        const first = this._sentMessageIds.values().next().value;
+        this._sentMessageIds.delete(first);
+      }
+    }
+    return { success: true, messageId: waMessageId };
+  }
+
+  async disconnect(sessionId) {
+    this._manualDisconnect.add(sessionId);
+    if (this._qrTimeouts.has(sessionId)) {
+      clearTimeout(this._qrTimeouts.get(sessionId));
+      this._qrTimeouts.delete(sessionId);
+    }
+    const sock = this.sockets.get(sessionId);
+    const currentStatus = this.statuses.get(sessionId);
+    if (sock) {
+      if (currentStatus === 'connected') {
+        try { await sock.logout(); } catch (e) { console.warn('[WA] logout() error:', e.message); }
+      }
+      try { sock.end(); } catch {}
+      this.sockets.delete(sessionId);
+    }
+    this.statuses.set(sessionId, 'disconnected');
+    this.phones.delete(sessionId);
+    this._qrDataUrls.delete(sessionId);
+    await this._updateDBStatus(sessionId, 'disconnected');
+    this._userIdMap.delete(sessionId);
+    this._retryCount.delete(sessionId);
+    this.emit('status', sessionId, 'disconnected');
+    this.emit('disconnected', sessionId, 'manual');
+  }
+
+  getStatus(sessionId) {
+    return {
+      status: this.statuses.get(sessionId) || 'disconnected',
+      phone: this.phones.get(sessionId),
+      qrDataUrl: this._qrDataUrls.get(sessionId) || null,
+      proxy: WA_PROXY,
+    };
+  }
+
+  getActiveConnections() {
+    const connections = [];
+    for (const [sessionId, status] of this.statuses) {
+      if (status !== 'disconnected') connections.push({ sessionId, status, phone: this.phones.get(sessionId) });
+    }
+    return connections;
+  }
+
+  async _saveMessage(msgData) {
+    try {
+      const created = await prisma.wAMessage.create({
+        data: {
+          sessionId: msgData.sessionId,
+          from: msgData.from,
+          to: msgData.to,
+          body: msgData.body,
+          type: msgData.type,
+          direction: msgData.direction,
+          timestamp: msgData.timestamp,
+          waMessageId: msgData.waMessageId,
+        },
+      });
+      return created;
+    } catch (err) {
+      console.error('[WA] Failed to save message:', err.message);
+      return null;
+    }
+  }
+
+  async _updateDBStatus(sessionId, status, phone) {
+    try {
+      let userId = this._userIdMap.get(sessionId);
+      if (!userId && sessionId && sessionId.startsWith('user_')) {
+        userId = parseInt(sessionId.replace('user_', '')) || null;
+      }
+      const createData = { sessionId, status, phone: phone || null, lastConnectedAt: status === 'connected' ? new Date() : null };
+      if (userId) createData.userId = userId;
+      await prisma.wAConnection.upsert({
+        where: { sessionId },
+        create: createData,
+        update: { status, ...(phone && { phone }), ...(status === 'connected' && { lastConnectedAt: new Date() }) },
+      });
+    } catch (err) {
+      console.error('[WA] Failed to update DB status:', err.message);
+    }
+  }
+
+  async _autoCreateCustomer(sessionId, jid, messageBody) {
+    try {
+      const phone = jid.split('@')[0];
+      if (phone.length < 6) return; // 广播等非个人
+      const userId = this._userIdMap.get(sessionId);
+      if (!userId) return;
+      const existing = await prisma.customer.findFirst({ where: { userId, phone } });
+      if (!existing) {
+        await prisma.customer.create({
+          data: { userId, phone, name: phone, source: 'whatsapp', status: 'potential', lastContactAt: new Date() },
+        });
+        console.log(`[WA] Auto-created customer for ${phone}`);
+      } else {
+        await prisma.customer.update({ where: { id: existing.id }, data: { lastContactAt: new Date() } }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('[WA] Failed to auto-create customer:', err.message);
+    }
+  }
+
+  async autoReconnect() {
+    const fsMod = await import('fs');
+    const pathMod = await import('path');
+    const baseDir = pathMod.join(process.cwd(), 'sessions');
+    try {
+      if (!fsMod.existsSync(baseDir)) { console.log('[WA] No sessions directory, skipping auto-reconnect'); return; }
+      const dirs = fsMod.readdirSync(baseDir);
+      for (const dir of dirs) {
+        const sessionDir = pathMod.join(baseDir, dir);
+        const credsFile = pathMod.join(sessionDir, 'creds.json');
+        if (fsMod.existsSync(credsFile)) {
+          console.log('[WA] Found saved session for', dir, '- auto-reconnecting...');
+          try {
+            const userId = parseInt(dir.replace('user_', '')) || 1;
+            await this.connect(dir, userId);
+          } catch (err) { console.warn('[WA] Auto-reconnect failed for', dir, ':', err.message); }
+        }
+      }
+    } catch (err) { console.warn('[WA] Auto-reconnect scan failed:', err.message); }
+  }
+}
+
+const whatsappProvider = new BaileysProvider();
+export default whatsappProvider;
+export { BaileysProvider };
+export function getBaileysProvider() { return whatsappProvider; }

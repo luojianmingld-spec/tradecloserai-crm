@@ -1,0 +1,213 @@
+import { getBaileysProvider } from '../services/whatsapp-provider.js';
+
+export function setupSocketHandlers(io, prisma) {
+  io.on('connection', (socket) => {
+    const userId = socket.handshake.auth?.userId;
+    const token = socket.handshake.auth?.token;
+
+    if (!userId) {
+      console.warn('[Socket] Connection without userId');
+      return;
+    }
+
+    socket.join(`user_${userId}`);
+    console.log(`[Socket] User ${userId} connected (socket: ${socket.id})`);
+
+    // 补发：如果provider当前有QR待扫（socket在QR生成后才连上的情况），立即推给这个socket
+    try {
+      // use already-imported getBaileysProvider
+      const provider = getBaileysProvider();
+      const sessionId = `user_${userId}`;
+      const st = provider.getStatus(sessionId);
+      if (st.status === 'waiting_qr' && st.qrDataUrl) {
+        socket.emit('whatsapp:qr', { sessionId, qr: st.qrDataUrl });
+        console.log(`[Socket] Replayed pending QR to ${socket.id} for ${sessionId}`);
+      }
+    } catch (e) {
+      console.warn('[Socket] QR replay check failed:', e.message);
+    }
+
+    socket.on('whatsapp:request_qr', async () => {
+      try {
+        const provider = getBaileysProvider();
+        let connection = (await prisma.wAConnection.findMany({ where: { userId } }))[0];
+        if (!connection) {
+          connection = await prisma.wAConnection.create({
+            data: { userId, sessionId: `user_${userId}`, status: 'disconnected' },
+          });
+        }
+        if (connection.status === 'connected') {
+          socket.emit('whatsapp:status', { sessionId: connection.sessionId, status: 'connected', phone: connection.phone });
+          return;
+        }
+        const result = await provider.connect(connection.sessionId, userId);
+        if (result.qr) socket.emit('whatsapp:qr', { sessionId: connection.sessionId, qr: result.qr });
+      } catch (err) {
+        console.error('[Socket] whatsapp:request_qr error:', err.message);
+        socket.emit('whatsapp:error', { message: '获取二维码失败: ' + err.message, code: 'QR_ERROR' });
+      }
+    });
+
+    socket.on('whatsapp:send_message', async (data) => {
+      try {
+        // 注意：前端走 HTTP POST /api/whatsapp/send，不再通过 socket 发消息。
+        // 此分支保留以兼容旧客户端，逻辑同 REST：只发原文，只 emit 一次。
+        const { to, message } = data;
+        if (!to || !message) {
+          socket.emit('whatsapp:error', { message: '缺少收件人或消息内容', code: 'MISSING_PARAMS' });
+          return;
+        }
+        const connection = await prisma.wAConnection.findFirst({ where: { userId, status: 'connected' } });
+        if (!connection) {
+          socket.emit('whatsapp:error', { message: 'WhatsApp 未连接，请先扫码登录', code: 'NOT_CONNECTED' });
+          return;
+        }
+        const provider = getBaileysProvider();
+        const msgResult = await provider.sendMessage(connection.sessionId, to, message);
+
+        const savedMsg = await prisma.wAMessage.create({
+          data: {
+            sessionId: connection.sessionId,
+            from: connection.phone || 'me',
+            to,
+            body: message,
+            type: 'text',
+            direction: 'outbound',
+            timestamp: new Date(),
+            waMessageId: msgResult.messageId || null,
+          },
+        });
+        await autoCreateCustomer(prisma, userId, to);
+
+        // 只广播一次 whatsapp:message_sent，前端据此替换 tmp- 乐观条目；
+        // 不再发 whatsapp:message，避免重复追加。
+        io.to(`user_${userId}`).emit('whatsapp:message_sent', {
+          id: savedMsg.id,
+          waMessageId: msgResult.messageId || null,
+          to,
+          from: connection.phone || 'me',
+          body: message,
+          content: message,
+          direction: 'outbound',
+          fromMe: true,
+          messageType: 'text',
+          timestamp: savedMsg.timestamp,
+        });
+      } catch (err) {
+        console.error('[Socket] whatsapp:send_message error:', err.message);
+        socket.emit('whatsapp:error', { message: '发送消息失败: ' + err.message, code: 'SEND_ERROR' });
+      }
+    });
+
+    socket.on('whatsapp:disconnect', async () => {
+      try {
+        const connection = await prisma.wAConnection.findFirst({ where: { userId } });
+        if (connection) {
+          const provider = getBaileysProvider();
+          await provider.disconnect(connection.sessionId);
+          await prisma.wAConnection.update({
+            where: { id: connection.id },
+            data: { status: 'disconnected', lastConnectedAt: new Date() },
+          });
+          socket.emit('whatsapp:status', { sessionId: connection.sessionId, status: 'disconnected' });
+        }
+      } catch (err) { console.error('[Socket] whatsapp:disconnect error:', err.message); }
+    });
+
+    socket.on('whatsapp:get_conversations', async () => {
+      try {
+        const connection = await prisma.wAConnection.findFirst({ where: { userId } });
+        if (!connection) { socket.emit('whatsapp:conversations', []); return; }
+        const contacts = await prisma.wAMessage.findMany({
+          where: { sessionId: connection.sessionId },
+          select: { from: true, to: true, direction: true },
+          orderBy: { timestamp: 'desc' },
+        });
+        const jids = new Set();
+        contacts.forEach((c) => { if (c.direction === 'incoming') jids.add(c.from); else jids.add(c.to); });
+        const conversations = [];
+        for (const jid of jids) {
+          const lastMsg = await prisma.wAMessage.findFirst({
+            where: { sessionId: connection.sessionId, OR: [{ from: jid }, { to: jid }] },
+            orderBy: { timestamp: 'desc' },
+          });
+          const unreadCount = await prisma.wAMessage.count({
+            where: { sessionId: connection.sessionId, from: jid, direction: 'inbound', read: false },
+          });
+          conversations.push({ jid, lastMessage: lastMsg?.body || '', lastMessageTime: lastMsg?.timestamp, unreadCount });
+        }
+        socket.emit('whatsapp:conversations', conversations);
+      } catch (err) {
+        console.error('[Socket] whatsapp:get_conversations error:', err.message);
+        socket.emit('whatsapp:conversations', []);
+      }
+    });
+
+    socket.on('whatsapp:get_messages', async (data) => {
+      try {
+        const { jid, limit = 50, before } = data || {};
+        const connection = await prisma.wAConnection.findFirst({ where: { userId } });
+        if (!connection) { socket.emit('whatsapp:messages', { jid, messages: [] }); return; }
+        const where = { sessionId: connection.sessionId, OR: [{ from: jid }, { to: jid }] };
+        if (before) where.timestamp = { lt: new Date(before) };
+        const messages = await prisma.wAMessage.findMany({
+          where, orderBy: { timestamp: 'desc' }, take: limit,
+        });
+        await prisma.wAMessage.updateMany({
+          where: { sessionId: connection.sessionId, from: jid, direction: 'inbound', read: false },
+          data: { read: true },
+        });
+        socket.emit('whatsapp:messages', { jid, messages: messages.reverse() });
+      } catch (err) {
+        console.error('[Socket] whatsapp:get_messages error:', err.message);
+        socket.emit('whatsapp:messages', { jid: data?.jid, messages: [] });
+      }
+    });
+
+    socket.on('whatsapp:get_status', async () => {
+      try {
+        const connection = await prisma.wAConnection.findFirst({ where: { userId } });
+        if (connection) {
+          const provider = getBaileysProvider();
+          const status = provider.getStatus(connection.sessionId);
+          socket.emit('whatsapp:status', { sessionId: connection.sessionId, status: status.status || connection.status, phone: connection.phone });
+        } else {
+          socket.emit('whatsapp:status', { status: 'disconnected' });
+        }
+      } catch (err) { console.error('[Socket] whatsapp:get_status error:', err.message); }
+    });
+
+    socket.on('whatsapp:mark_read', async (data) => {
+      try {
+        const { jid } = data || {};
+        const connection = await prisma.wAConnection.findFirst({ where: { userId } });
+        if (connection) {
+          await prisma.wAMessage.updateMany({
+            where: { sessionId: connection.sessionId, from: jid, direction: 'inbound', read: false },
+            data: { read: true },
+          });
+        }
+      } catch (err) { console.error('[Socket] whatsapp:mark_read error:', err.message); }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`[Socket] User ${userId} disconnected (socket: ${socket.id})`);
+    });
+  });
+}
+
+async function autoCreateCustomer(prisma, userId, phone) {
+  if (!phone) return;
+  const normalizedPhone = phone.replace('@s.whatsapp.net', '').replace('@c.us', '');
+  try {
+    const existing = await prisma.customer.findFirst({ where: { userId, phone: normalizedPhone } });
+    if (!existing) {
+      await prisma.customer.create({
+        data: { userId, phone: normalizedPhone, name: normalizedPhone, source: 'whatsapp', status: 'potential' },
+      });
+      console.log(`[AutoCreate] Customer created for phone: ${normalizedPhone}`);
+    } else {
+      await prisma.customer.update({ where: { id: existing.id }, data: { lastContactAt: new Date() } });
+    }
+  } catch (err) { console.error('[AutoCreate] Customer auto-create error:', err.message); }
+}

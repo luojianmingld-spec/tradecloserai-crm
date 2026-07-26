@@ -1,0 +1,207 @@
+/**
+ * Evolution API v2 Connector
+ * 通过HTTP REST API对接Evolution，替代旧的裸Baileys直连
+ * 支持多实例（后期多账号）
+ */
+
+const EVO_API_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
+const EVO_API_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+
+class EvolutionConnector {
+  constructor(instanceName = DEFAULT_INSTANCE) {
+    this.instance = instanceName;
+    this.connected = false;
+    this.qrCallbacks = new Set();
+    this.messageCallbacks = new Set();
+    this.statusCallbacks = new Set();
+  }
+
+  /** 切换当前实例（多账号支持） */
+  useInstance(name) {
+    this.instance = name;
+  }
+
+  _headers() {
+    return {
+      "Content-Type": "application/json",
+      apikey: EVO_API_KEY,
+    };
+  }
+
+  async _get(path) {
+    const res = await fetch(`${EVO_API_URL}${path}`, { headers: this._headers() });
+    return res.json();
+  }
+
+  async _post(path, body = {}) {
+    const res = await fetch(`${EVO_API_URL}${path}`, {
+      method: "POST",
+      headers: this._headers(),
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  async _delete(path) {
+    const res = await fetch(`${EVO_API_URL}${path}`, {
+      method: "DELETE",
+      headers: this._headers(),
+    });
+    return res.json();
+  }
+
+  /** 检查实例连接状态 */
+  async getConnectionState() {
+    try {
+      const r = await this._get(`/instance/connectionState/${this.instance}`);
+      const state = r?.instance?.state || "close";
+      this.connected = state === "open";
+      return state;
+    } catch (e) {
+      return "close";
+    }
+  }
+
+  /** 获取当前QR码 */
+  async getQRCode() {
+    try {
+      const r = await this._get(`/instance/connect/${this.instance}`);
+      return r?.base64 || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** 发送文本消息 */
+  async sendTextMessage(jidOrNumber, text) {
+    const number = jidOrNumber.replace(/@.*/, "").replace(/\D/g, "");
+    try {
+      const r = await this._post(`/message/sendText/${this.instance}`, { number, text });
+      return {
+        success: !r?.error,
+        key: r?.key || null,
+        messageId: r?.key?.id || r?.key?.id || null,
+        data: r,
+      };
+    } catch (e) {
+      console.error("[Evolution] sendText error:", e.message);
+      return { success: false, error: e.message };
+    }
+  }
+
+  /** 获取聊天列表（POST /chat/findChats） */
+  async fetchChats() {
+    try {
+      const r = await this._post(`/chat/findChats/${this.instance}`, {
+        where: { conversationTimestamp: { $gt: 0 } },
+        page: 1,
+        offset: 100,
+        sort: "-conversationTimestamp",
+      });
+      // Evolution 2.3.7 直接返回数组
+      if (Array.isArray(r)) return r;
+      if (r?.response && Array.isArray(r.response)) return r.response;
+      if (r?.data && Array.isArray(r.data)) return r.data;
+      return [];
+    } catch (e) {
+      console.error("[Evolution] fetchChats error:", e.message);
+      return [];
+    }
+  }
+
+  /** 获取联系人列表（POST /chat/findContacts） */
+  async fetchContacts() {
+    try {
+      const r = await this._post(`/chat/findContacts/${this.instance}`, {});
+      if (Array.isArray(r)) return r;
+      if (r?.response && Array.isArray(r.response)) return r.response;
+      if (r?.data && Array.isArray(r.data)) return r.data;
+      return [];
+    } catch (e) {
+      console.error("[Evolution] fetchContacts error:", e.message);
+      return [];
+    }
+  }
+
+  /** 获取某个聊天的消息历史（POST /chat/findMessages） */
+  async fetchMessages(remoteJid, limit = 50) {
+    const number = remoteJid.replace(/@.*/, "").replace(/\D/g, "");
+    try {
+      const r = await this._post(`/chat/findMessages/${this.instance}`, {
+        where: { remoteJid: { _eq: number + "@s.whatsapp.net" } },
+        page: 1,
+        offset: limit,
+        sort: "-messageTimestamp",
+      });
+      // 新版返回格式 {messages: {records: [...]}}
+      let list = [];
+      if (Array.isArray(r)) list = r;
+      else if (r?.messages?.records && Array.isArray(r.messages.records)) list = r.messages.records;
+      else if (r?.response?.messages?.records) list = r.response.messages.records;
+      else if (r?.data && Array.isArray(r.data)) list = r.data;
+      // 按时间升序返回（旧的在前）
+      return list.sort((a, b) => (a.messageTimestamp || 0) - (b.messageTimestamp || 0));
+    } catch (e) {
+      console.error("[Evolution] fetchMessages error:", e.message);
+      return [];
+    }
+  }
+
+  /** 实例基本信息 */
+  async getInstanceInfo() {
+    try {
+      const instances = await this._get("/instance/fetchInstances");
+      const list = Array.isArray(instances) ? instances : (instances?.response || []);
+      return list.find(i => i.name === this.instance || i.instanceName === this.instance) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /** 获取所有者JID（当前登录的我自己） */
+  async getOwnerJid() {
+    const info = await this.getInstanceInfo();
+    return info?.ownerJid || null;
+  }
+
+  on(event, cb) {
+    if (event === "qr") this.qrCallbacks.add(cb);
+    else if (event === "message") this.messageCallbacks.add(cb);
+    else if (event === "status") this.statusCallbacks.add(cb);
+  }
+
+  /** 由webhook路由调用 */
+  handleWebhookEvent(event) {
+    const eventType = event.event || event.type;
+    if (eventType === "messages.upsert") {
+      const msgs = event?.data?.messages || [];
+      msgs.forEach(msg => {
+        this.messageCallbacks.forEach(cb => { try { cb(msg); } catch (e) {} });
+      });
+    } else if (eventType === "connection.update") {
+      this.statusCallbacks.forEach(cb => { try { cb(event.data); } catch (e) {} });
+    }
+  }
+
+  async init() {
+    console.log(`[Evolution Connector] API=${EVO_API_URL} instance=${this.instance}`);
+    const state = await this.getConnectionState();
+    console.log(`[Evolution Connector] state=${state}`);
+    this.connected = state === "open";
+    return this;
+  }
+}
+
+// 单例（默认实例）
+let _instance = null;
+export function getEvolutionConnector(name) {
+  if (name && _instance && _instance.instance !== name) {
+    // 多实例场景：切到目标实例
+    _instance.useInstance(name);
+  }
+  if (!_instance) _instance = new EvolutionConnector(name);
+  return _instance;
+}
+
+export default EvolutionConnector;

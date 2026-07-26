@@ -1,0 +1,174 @@
+:root {
+  --sidebar-bg: #111b21;
+  --sidebar-header-bg: #202c33;
+  --sidebar-hover: #202c33;
+  --sidebar-active: #2a3942;
+  --chat-bg: #0b141a;
+  --chat-header-bg: #202c33;
+  --panel-bg: #111b21;
+  --panel-header-bg: #202c33;
+  --msg-outgoing: #005c4b;
+  --msg-incoming: #202c33;
+  --accent: #00a884;
+  --accent-hover: #06cf9c;
+  --text-primary: #e9edef;
+  --text-secondary: #8696a0;
+  --text-muted: #667781;
+  --border-color: #222d34;
+  --unread-bg: #00a884;
+  --danger: #ea4335;
+  --input-bg: #2a3942;
+  --search-bg: #202c33;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--chat-bg);
+  color: var(--text-primary);
+}
+
+/* Element Plus overrides for dark theme */
+.el-menu {
+  background-color: var(--sidebar-bg) !important;
+  border-right: none !important;
+}
+
+.el-menu-item {
+  color: var(--text-secondary) !important;
+}
+
+.el-menu-item:hover,
+.el-menu-item:focus {
+  background-color: var(--sidebar-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.el-menu-item.is-active {
+  background-color: var(--sidebar-active) !important;
+  color: var(--accent) !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 150, 160, 0.5);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.2s ease-out;
+}
+
+/* ========== Mobile Responsive Global ========== */
+/* 注意：新CRM 7栏布局自带响应式，以下旧 .chat-layout / .email-page / .customers-page 规则保留用于旧页面兼容，
+   新布局使用 .crm-layout / .col-xxx 类名，不受影响 */
+@media (max-width: 768px) {
+  html, body, #app {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  .el-button--small {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  .el-dialog {
+    margin: 0 auto !important;
+    max-width: 95vw !important;
+  }
+
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}
+
+@media (max-width: 380px) {
+  html, body {
+    font-size: 13px;
+  }
+}
+
+
+/* ===== 2026-07-13 移动端全局补丁 ===== */
+@media (max-width: 768px) {
+  html, body, #app {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: fixed;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  /* 按钮、输入统一触摸尺寸 */
+  button { min-height: 36px; }
+  input, textarea { font-size: 16px; }
+  /* Element Plus 组件自适应 */
+  .el-dialog { width: 94vw !important; max-width: 94vw !important; margin: 3vh auto !important; }
+  .el-message-box { width: 90vw !important; max-width: 360px !important; }
+  .el-select-dropdown { max-width: 90vw !important; }
+  .el-popper.crm-dark-popper { max-width: 90vw !important; }
+  /* 滚动条细化 */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+}
+/* 防止 iOS 输入框缩放的最低字号 */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 768px) {
+    input, textarea, select { font-size: 16px !important; }
+  }
+}
+
+/* ===== 2026-07-13 页面级横向滚动禁止 ===== */
+html, body { overflow-x: hidden; max-width: 100vw; }
+#app { overflow: hidden; max-width: 100vw; }
+/* module-full 内允许垂直滚动、禁止横向溢出，内容表格自己处理横向滚动 */
+.module-full, .comm-module, .workspace, .crm-layout { min-width: 0; }
+/* Element Plus下拉不超出边界 */
+.el-select-dropdown, .el-dropdown-menu, .el-popper { max-width: calc(100vw - 20px); }
+
+/* 文件超限弹窗 居中醒目 */
+.size-alert-modal { max-width: 380px !important; border-radius: 12px !important; }
+.size-alert-modal .el-message-box__header { padding-bottom: 8px !important; }
+.size-alert-modal .el-message-box__title { color: #e9edef !important; font-size: 17px !important; font-weight: 600 !important; }
+.size-alert-modal .el-message-box__message { color: #e9edef !important; font-size: 15px !important; line-height: 1.6 !important; padding: 10px 0 14px !important; white-space: pre-line !important; }
+.size-alert-modal .el-message-box__btns { padding-top: 0 !important; }
+.size-alert-modal .el-button--primary { background: #00a884 !important; border-color: #00a884 !important; font-size: 15px !important; padding: 10px 28px !important; border-radius: 8px !important; }
+.size-alert-modal .el-message-box__status.el-icon-warning { color: #f5a623 !important; font-size: 24px !important; }

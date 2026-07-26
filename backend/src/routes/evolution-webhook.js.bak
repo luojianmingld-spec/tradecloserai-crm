@@ -1,0 +1,107 @@
+import express from "express";
+import { getEvolutionConnector } from "../services/evolution-connector.js";
+
+const router = express.Router();
+
+// 从remoteJid提取手机号
+function jidToPhone(jid) {
+  return (jid || "").split("@")[0];
+}
+
+// 判断是否是群聊
+function isGroup(jid) {
+  return (jid || "").includes("@g.us");
+}
+
+router.post("/", async (req, res) => {
+  try {
+    const event = req.body;
+    const eventType = event.event || event.type || "unknown";
+    const instanceName = event.instance || event.instance_name || "unknown";
+    const data = event.data || {};
+    
+    console.log(`[Evolution Webhook] event=${eventType} instance=${instanceName}`);
+    
+    const io = req.app.get("io");
+    const connector = getEvolutionConnector();
+    
+    // 通知connector（可选：用于内部状态）
+    try { connector.handleWebhookEvent(event); } catch(e) {}
+    
+    if (eventType === "messages.upsert") {
+      const messages = data.messages || [];
+      messages.forEach(msg => {
+        const key = msg.key || {};
+        const remoteJid = key.remoteJid || "";
+        const fromMe = key.fromMe || false;
+        
+        // 忽略群消息和回执等
+        if (isGroup(remoteJid)) return;
+        
+        const msgType = msg.messageType || Object.keys(msg.message || {})[0] || "unknown";
+        
+        // 提取文本
+        let body = "";
+        const m = msg.message || {};
+        if (m.conversation) body = m.conversation;
+        else if (m.extendedTextMessage) body = m.extendedTextMessage.text || "";
+        else if (m.imageMessage) body = m.imageMessage.caption || "[图片]";
+        else if (m.videoMessage) body = m.videoMessage.caption || "[视频]";
+        else if (m.audioMessage) body = "[语音]";
+        else if (m.documentMessage) body = m.documentMessage.fileName || "[文件]";
+        else body = `[${msgType}]`;
+        
+        const pushName = msg.pushName || "";
+        const phone = jidToPhone(remoteJid);
+        const timestamp = msg.messageTimestamp 
+          ? (typeof msg.messageTimestamp === "object" ? msg.messageTimestamp.low * 1000 : Number(msg.messageTimestamp) * 1000)
+          : Date.now();
+        
+        console.log(`[Evolution Webhook] msg from=${pushName}(${phone}) fromMe=${fromMe} text=${body.substring(0,80)}`);
+        
+        if (io) {
+          // 对前端广播whatsapp:message，与旧BaileysProvider格式保持一致
+          const payload = {
+            id: key.id || `evo_${Date.now()}`,
+            jid: remoteJid,
+            from: fromMe ? "me" : remoteJid,
+            to: fromMe ? remoteJid : "me",
+            body: body,
+            content: body,
+            direction: fromMe ? "outbound" : "inbound",
+            fromMe: fromMe,
+            messageType: msgType === "conversation" ? "text" : msgType,
+            timestamp: timestamp,
+            contact: { name: pushName || phone, phone, pushName },
+            instance: instanceName,
+          };
+          
+          // 广播给所有已登录用户（MVP阶段先广播）
+          io.emit("whatsapp:message", payload);
+          if (fromMe) {
+            io.emit("whatsapp:message_sent", { ...payload, waMessageId: key.id });
+          }
+        }
+      });
+    } else if (eventType === "CONNECTION_UPDATE" || eventType === "connection.update") {
+      const state = data.state || data;
+      console.log(`[Evolution Webhook] connection state: ${JSON.stringify(state).substring(0,200)}`);
+      if (io) {
+        if (state === "open" || state?.state === "open") {
+          connector.connected = true;
+          io.emit("whatsapp:status", { status: "connected", phone: "8613016242602", instance: instanceName });
+        } else if (state === "close" || state?.state === "close") {
+          connector.connected = false;
+          io.emit("whatsapp:status", { status: "disconnected", reason: "connection closed", instance: instanceName });
+        }
+      }
+    }
+    
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error("[Evolution Webhook] error:", err.message);
+    res.status(200).json({ received: true, error: err.message });
+  }
+});
+
+export default router;

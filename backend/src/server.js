@@ -1,3 +1,10 @@
+/**
+ * CRM Backend Server - Evolution API 集成版
+ * 替代裸Baileys直连，通过Evolution HTTP REST API对接WhatsApp
+ */
+import dns from 'dns';
+// Vultr日本节点IPv6路由TG不通，强制fetch走IPv4
+dns.setDefaultResultOrder('ipv4first');
 import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -7,7 +14,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { setupSocketHandlers } from './socket/handlers.js';
-import { getBaileysProvider } from './services/whatsapp-provider.js';
+import { getEvolutionConnector } from './services/evolution-connector.js';
 import authRoutes from './routes/auth.js';
 import accountRoutes from './routes/accounts.js';
 import contactRoutes from './routes/contacts.js';
@@ -15,9 +22,23 @@ import messageRoutes from './routes/messages.js';
 import settingsRoutes from './routes/settings.js';
 import translationRoutes from './routes/translation.js';
 import aiRoutes from './routes/ai.js';
-import whatsappRoutes from './routes/whatsapp.js';
 import customerRoutes from './routes/customers.js';
+import emailRoutes from './routes/emails.js';
+import bgCheckRoutes from './routes/background-check.js';
+import automationRoutes from './routes/automation.js';
+import dashboardRoutes from './routes/dashboard.js';
+import evolutionWebhookRoutes from './routes/evolution-webhook.js';
+import documentRoutes from './routes/documents.js';
+import waAvatarRoutes from './routes/wa-avatar.js';
+import telegramWebhookRoutes from './routes/telegram-webhook.js';
+import { getTelegramConnector } from './services/telegram-connector.js';
+import companyMaterialsRouter from './routes/companyMaterials.js';
+import assistantRoutes from './routes/assistant.js';
+import { getPendingFollowups } from './services/followup.service.js';
+import { readTranslationSettings, getTranslationSettings } from "./routes/translation.js";
+import { detectLanguage as _detectLangForSend, translateText as _translateTextForSend } from "./services/ai.service.js";
 import { authMiddleware } from './middleware/auth.js';
+import { recordSample } from "./services/speech-collector.js"; // Phase1 AI话术库采集
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,58 +47,151 @@ const prisma = new PrismaClient();
 const app = express();
 const httpServer = createServer(app);
 
-// Ensure database tables exist before starting
 async function ensureDatabase() {
   try {
-    // Quick check: can we query the User table?
     await prisma.user.count();
     console.log('[DB] Database connected, tables exist');
   } catch (err) {
     console.error('[DB] Database check failed, running prisma db push...');
     try {
       const { execSync } = await import('child_process');
-      execSync('npx prisma db push --accept-data-loss', {
-        stdio: 'inherit',
-        cwd: process.cwd()
-      });
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit', cwd: process.cwd() });
       console.log('[DB] prisma db push completed');
     } catch (pushErr) {
       console.error('[DB] prisma db push failed:', pushErr.message);
-      // Continue anyway - the tables might already exist
     }
   }
 }
 
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
-// Production: MUST read from DEPLOY_RUN_PORT (injected by sandbox)
-// Dev: use PORT (3001) for backend, Vite uses DEPLOY_RUN_PORT for frontend
 const LISTEN_PORT = isProduction ? (parseInt(process.env.DEPLOY_RUN_PORT, 10) || 5000) : PORT;
+const DEFAULT_SESSION_ID = "user_1";
 
-// ─── Global error handlers ───
+// ─── 会话操作辅助函数 ───
+async function _ensureConversation(accountId, jid, platform = "whatsapp") {
+  try {
+    if (!jid || !jid.includes("@")) return null;
+    const _ph = jid.split("@")[0];
+    // telegram的jid是纯数字+@telegram，不需要/^[0-9]+$/校验
+    if (platform === "whatsapp" && (!_ph || _ph === "0" || _ph.length < 5 || !/^[0-9]+$/.test(_ph))) return null;
+    const cwhere = { accountId_platform_jid: { accountId, platform, jid } };
+    let contact = await prisma.contact.findUnique({ where: cwhere });
+    if (!contact) {
+      const phone = jid.split("@")[0];
+      try {
+        contact = await prisma.contact.create({ data: { accountId, platform, jid, phone: platform === "whatsapp" ? phone : null } });
+      } catch (e) {
+        contact = await prisma.contact.findUnique({ where: cwhere });
+      }
+    }
+    const vwhere = { accountId_platform_jid: { accountId, platform, jid } };
+    let conv = await prisma.conversation.findUnique({ where: vwhere });
+    if (!conv && contact) {
+      try {
+        conv = await prisma.conversation.create({
+          data: { accountId, platform, contactId: contact.id, jid, pinned: false, starred: false, blocked: false },
+        });
+      } catch (e) {
+        conv = await prisma.conversation.findUnique({ where: vwhere });
+      }
+    }
+    return conv;
+  } catch (e) {
+    console.warn("[_ensureConversation] error:", e.message);
+    return null;
+  }
+}
+
+async function _toggleConvField(jid, field) {
+  const accountId = 1;
+  let conv = await prisma.conversation.findUnique({ where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid } } });
+  if (!conv) conv = await _ensureConversation(accountId, jid, "whatsapp");
+  if (!conv) throw new Error("conversation not found");
+  return prisma.conversation.update({
+    where: { id: conv.id },
+    data: { [field]: !conv[field], updatedAt: new Date() },
+  });
+}
+
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message);
   console.error(err.stack);
-  // EADDRINUSE is fatal — the server cannot function without the port
   if (err.code === 'EADDRINUSE') {
     console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
     process.exit(1);
   }
-  // For other errors, keep the process alive
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('[ERROR] Unhandled Promise Rejection:', reason);
-  // Don't exit — keep the process alive
 });
 
-// ─── CORS ───
 app.use(cors({
   origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
   credentials: true,
 }));
 
-app.use(express.json());
+// ── Custom multipart parser for /api/whatsapp/send-media (no multer dependency) ──
+// Uses Node v22's built-in Request/FormData via undici.
+async function parseMultipartMedia(req) {
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('multipart/form-data')) return { fields: {}, file: null };
+  // Rebuild a Request from the incoming req so undici's form parser works
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const buf = Buffer.concat(chunks);
+  // Use Node's built-in undici Request/FormData parser through a fake Request
+    // Simpler reliable approach: use undici's form parser if available; otherwise use busboy-free manual parse.
+  // Use @remix-run/web-file? No. Let's use the 'formdata-node'? Not installed.
+  // Final approach: manually parse multipart body using boundary.
+  return parseMultipartBody(buf, contentType);
+}
+
+function parseMultipartBody(buf, contentType) {
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!boundaryMatch) return { fields: {}, file: null };
+  const boundary = '--' + (boundaryMatch[1] || boundaryMatch[2]);
+  const fields = {};
+  let file = null;
+  const raw = buf;
+  const bBuf = Buffer.from(boundary);
+  let idx = raw.indexOf(bBuf);
+  while (idx !== -1) {
+    const nextIdx = raw.indexOf(bBuf, idx + bBuf.length);
+    const partEnd = nextIdx === -1 ? raw.length : nextIdx - 2; // strip \r\n
+    const partStart = idx + bBuf.length + 2; // skip \r\n after boundary
+    if (partStart >= partEnd) { idx = nextIdx; continue; }
+    const part = raw.slice(partStart, partEnd);
+    // Split headers from body at the first double \r\n
+    const headerEnd = part.indexOf('\r\n\r\n');
+    if (headerEnd === -1) { idx = nextIdx; continue; }
+    const headerStr = part.slice(0, headerEnd).toString('utf8');
+    const body = part.slice(headerEnd + 4);
+    const dispMatch = headerStr.match(/content-disposition:\s*form-data;\s*([^\r\n]+)/i);
+    if (!dispMatch) { idx = nextIdx; continue; }
+    const disp = dispMatch[1];
+    const nameMatch = disp.match(/name="([^"]+)"/i);
+    const fnMatch = disp.match(/filename="([^"]*)"/i);
+    const name = nameMatch ? nameMatch[1] : '';
+    const ctypeMatch = headerStr.match(/content-type:\s*([^\r\n;]+)/i);
+    const ctype = ctypeMatch ? ctypeMatch[1].trim() : 'application/octet-stream';
+    if (!name) { idx = nextIdx; continue; }
+    if (fnMatch && name === 'file') {
+      file = { fieldName: name, fileName: fnMatch[1], mimeType: ctype, buffer: body };
+    } else {
+      fields[name] = body.toString('utf8').replace(/\r\n$/, '');
+    }
+    idx = nextIdx;
+  }
+  return { fields, file };
+}
+
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
 
 // ─── API Routes ───
 app.use('/api/auth', authRoutes);
@@ -87,19 +201,1634 @@ app.use('/api/messages', authMiddleware, messageRoutes);
 app.use('/api/settings', authMiddleware, settingsRoutes);
 app.use('/api/translation', authMiddleware, translationRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
-app.use('/api/whatsapp', authMiddleware, whatsappRoutes);
 app.use('/api/customers', authMiddleware, customerRoutes);
+app.use('/api/emails', authMiddleware, emailRoutes);
+app.use('/api/background-check', authMiddleware, bgCheckRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/automation", authMiddleware, automationRoutes);
+app.use("/api/assistant", authMiddleware, assistantRoutes);
+app.use("/api/documents", authMiddleware, documentRoutes);
+app.use("/api/company-materials", companyMaterialsRouter);
+app.use('/', waAvatarRoutes);
+app.use("/api/settings/seller-info", authMiddleware, documentRoutes);
+app.get('/api/followups/pending', authMiddleware, async (req, res) => { try { const data = await getPendingFollowups({ userId: req.userId, sessionId: 'user_1' }); res.json(data); } catch (e) { console.error('[followup] error:', e); res.status(500).json({ error: e.message }); } });
+
+// ─── Evolution Webhook（公开，Evolution通过127.0.0.1访问，不带auth） ───
+// 兼容 Evolution webhookByEvents=true 时带子路径的回调（/messages-upsert 等）：统一重写到根路径
+app.use("/api/evolution/webhook", (req, _res, next) => {
+  if (req.path !== "/" && req.method === "POST") {
+    req.url = "/";
+  }
+  next();
+});
+app.use("/api/evolution/webhook", evolutionWebhookRoutes);
+// Telegram webhook (no auth - TG servers push directly)
+app.use("/api/telegram", telegramWebhookRoutes);
+
+// ─── Evolution WhatsApp 公开接口（状态/QR）必须在authMiddleware之前 ───
+const evoConnector = getEvolutionConnector();
+
+// 批量验号：POST /api/whatsapp/check-number
+app.post("/api/whatsapp/check-number", authMiddleware, async (req, res) => {
+  try {
+    const { numbers } = req.body || {};
+    if (!Array.isArray(numbers) || !numbers.length) {
+      return res.status(400).json({ error: "numbers (array) is required" });
+    }
+    const EVO_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
+    const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
+    const INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+    // 智能补国家码：11位以1开头的中国手机号自动补86；其他不补
+    const cleaned = [];
+    const fallbackMap = {}; // 原始请求索引 -> 带86的二次请求号
+    numbers.forEach(n => {
+      let raw = String(n).replace(/[\s+\-()]/g, "");
+      if (!raw) return;
+      cleaned.push(raw);
+      // 11位以1开头的中国手机号，第一次先原样发，失败时再补86重试
+      if (/^1\d{10}$/.test(raw)) {
+        fallbackMap[cleaned.length - 1] = "86" + raw;
+      }
+    });
+    let r = await fetch(`${EVO_URL}/chat/whatsappnumbers/${INSTANCE}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": EVO_KEY },
+      body: JSON.stringify({ numbers: cleaned }),
+    });
+    let data = await r.json();
+    let result = Array.isArray(data) ? data : (data?.response || data?.data || []);
+    // 对第一次未注册的11位中国号，补86再查一次
+    const retryIdxs = [];
+    const retryNums = [];
+    result.forEach((item, idx) => {
+      if (!item.exists && fallbackMap[idx] !== undefined) {
+        retryIdxs.push(idx);
+        retryNums.push(fallbackMap[idx]);
+      }
+    });
+    if (retryNums.length) {
+      const r2 = await fetch(`${EVO_URL}/chat/whatsappnumbers/${INSTANCE}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": EVO_KEY },
+        body: JSON.stringify({ numbers: retryNums }),
+      });
+      const d2 = await r2.json();
+      const arr2 = Array.isArray(d2) ? d2 : (d2?.response || d2?.data || []);
+      retryIdxs.forEach((origIdx, i) => {
+        if (arr2[i]) {
+          result[origIdx] = arr2[i];
+          result[origIdx]._autoCountryCode = true;
+        }
+      });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error("[WA check-number Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/whatsapp/status", async (req, res) => {
+  try {
+    const state = await evoConnector.getConnectionState();
+    const isConnected = state === "open";
+    const info = isConnected ? await evoConnector.getInstanceInfo().catch(() => null) : null;
+    const ownerJid = info?.ownerJid || "";
+    const phone = ownerJid.split("@")[0] || "8613016242602";
+    // 确保DB有记录
+    try {
+      let conn = await prisma.wAConnection.findUnique({ where: { sessionId: DEFAULT_SESSION_ID } });
+      if (!conn) {
+        await prisma.wAConnection.create({ data: { userId: 1, sessionId: DEFAULT_SESSION_ID, phone, status: isConnected ? "connected" : "disconnected" } });
+      } else if (isConnected && conn.status !== "connected") {
+        await prisma.wAConnection.update({ where: { id: conn.id }, data: { status: "connected", phone, lastConnectedAt: new Date() } });
+      }
+    } catch (e) {}
+    // 读取降频冷却状态
+    let cooldownUntil = null;
+    try {
+      const cdFile = '/opt/whatsapp-crm/backend/.wa-cooldown';
+      if (fs.existsSync(cdFile)) {
+        const cdContent = fs.readFileSync(cdFile, 'utf8');
+        const m = cdContent.match(/COOLDOWN_UNTIL=([^\s]+)/);
+        if (m) {
+          const t = new Date(m[1]).getTime();
+          if (t > Date.now()) cooldownUntil = m[1];
+        }
+      }
+    } catch(e) {}
+    res.json({
+      status: isConnected ? "connected" : "disconnected",
+      connected: isConnected,
+      state,
+      instance: evoConnector.instance,
+      phone,
+      ownerJid,
+      pushName: info?.profileName || info?.pushName || null,
+      profilePicUrl: info?.profilePicUrl || null,
+      sessionId: DEFAULT_SESSION_ID,
+      mode: "evolution-api",
+      cooldownUntil,
+    });
+  } catch (e) {
+    res.json({ status: "disconnected", connected: false, state: "error", error: e.message });
+  }
+});
+
+app.get("/api/whatsapp/qr", async (req, res) => {
+  try {
+    const qr = await evoConnector.getQRCode();
+    res.json({ qr, connected: false });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ─── WA 实例管理接口（登录/登出/状态） ───
+const EVO_API = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
+const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
+const EVO_INST = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+
+async function evoFetch(path, opts = {}) {
+  const headers = { apikey: EVO_KEY, "Content-Type": "application/json", ...(opts.headers||{}) };
+  const r = await fetch(EVO_API + path, { ...opts, headers });
+  if (!r.ok && !opts.skipError) {
+    const txt = await r.text().catch(()=>"");
+    throw new Error("EVO " + r.status + ": " + txt.slice(0,300));
+  }
+  return r.json().catch(()=>({}));
+}
+
+// GET /api/whatsapp/admin/status — 获取当前实例详情+连接状态
+app.get("/api/whatsapp/admin/status", authMiddleware, async (req, res) => {
+  try {
+    const conn = await evoFetch("/instance/connectionState/" + EVO_INST, {skipError:true}).catch(()=>({instance:{state:"error"}}));
+    const state = conn?.instance?.state || "unknown";
+    let info = null;
+    try {
+      const insts = await evoFetch("/instance/fetchInstances");
+      if (Array.isArray(insts)) info = insts.find(i=>i.name===EVO_INST) || null;
+    } catch(e){}
+    res.json({
+      state,
+      connected: state === "open",
+      instanceName: EVO_INST,
+      ownerJid: info?.ownerJid || null,
+      profileName: info?.profileName || info?.pushName || null,
+      profilePicUrl: info?.profilePicUrl || null,
+      instanceId: info?.id || null,
+    });
+  } catch(e) {
+    res.status(500).json({error: e.message});
+  }
+});
+
+// POST /api/whatsapp/admin/qr — 获取QR码(不传phone)或配对码(传phone)
+// body: { phone?: "8613016242602" }
+// 如果实例不存在会自动创建(mobile模式如果传了phone)
+app.post("/api/whatsapp/admin/qr", authMiddleware, async (req, res) => {
+  try {
+    const { phone } = req.body || {};
+    // 先检查实例是否存在
+    let state = "unknown";
+    try {
+      const c = await evoFetch("/instance/connectionState/" + EVO_INST, {skipError:true});
+      state = c?.instance?.state || "unknown";
+    } catch(e) { state = "missing"; }
+
+    // 如果实例不存在(404等)，尝试创建
+    if (state === "missing" || state === "unknown" || state === "close") {
+      // 先尝试connect
+      try {
+        const connectRes = await fetch(EVO_API + "/instance/connect/" + EVO_INST, {
+          headers: { apikey: EVO_KEY }
+        });
+        if (connectRes.ok) {
+          const d = await connectRes.json();
+          if (d?.base64 || d?.pairingCode) {
+            return res.json({
+              qr: d.base64 || null,
+              pairingCode: d.pairingCode || null,
+              state: (await evoFetch("/instance/connectionState/"+EVO_INST,{skipError:true}))?.instance?.state || "connecting"
+            });
+          }
+        }
+      } catch(e){}
+    }
+
+    // 调connect获取新QR
+    const r = await fetch(EVO_API + "/instance/connect/" + EVO_INST + (phone ? ("?phone=" + encodeURIComponent(phone)) : ""), {
+      headers: { apikey: EVO_KEY }
+    });
+    if (!r.ok) {
+      // connect失败可能需要重建实例
+      return res.status(400).json({error: "Failed to get QR, instance may need reset. Try /api/whatsapp/admin/reset"});
+    }
+    const d = await r.json();
+    const newState = (await evoFetch("/instance/connectionState/"+EVO_INST,{skipError:true}))?.instance?.state || "connecting";
+    res.json({
+      qr: d.base64 || d.code || null,
+      pairingCode: d.pairingCode || null,
+      count: d.count || null,
+      state: newState,
+    });
+  } catch(e) {
+    res.status(500).json({error: e.message});
+  }
+});
+
+// POST /api/whatsapp/admin/reset — 删除旧实例并重建（mobile:true=配对码模式）
+// body: { pairingCode?: true } — true则用配对码模式
+app.post("/api/whatsapp/admin/reset", authMiddleware, async (req, res) => {
+  try {
+    const { pairingCode, phone } = req.body || {};
+    // 删除旧实例(忽略错误)
+    await fetch(EVO_API + "/instance/delete/" + EVO_INST, {
+      method: "DELETE",
+      headers: { apikey: EVO_KEY }
+    }).catch(()=>{});
+    // 等待
+    await new Promise(r => setTimeout(r, 1500));
+    // 创建新实例
+    const createBody = {
+      instanceName: EVO_INST,
+      qrcode: !pairingCode,
+      integration: "WHATSAPP-BAILEYS",
+      ...(pairingCode ? { mobile: true } : {})
+    };
+    const cr = await fetch(EVO_API + "/instance/create", {
+      method: "POST",
+      headers: { apikey: EVO_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(createBody),
+    });
+    if (!cr.ok) {
+      const errTxt = await cr.text().catch(()=>"");
+      return res.status(500).json({error: "Create instance failed: " + errTxt.slice(0,300)});
+    }
+    const cd = await cr.json().catch(()=>({}));
+
+    // 设置默认参数(groupsIgnore等)
+    try {
+      await fetch(EVO_API + "/settings/set/" + EVO_INST, {
+        method: "POST",
+        headers: { apikey: EVO_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rejectCall: false, msgCall: "", groupsIgnore: true, alwaysOnline: false,
+          readMessages: false, readStatus: false, syncFullHistory: false, wavoipToken: ""
+        })
+      });
+    } catch(e){}
+
+    // 设置webhook
+    try {
+      await fetch(EVO_API + "/webhook/set/" + EVO_INST, {
+        method: "POST",
+        headers: { apikey: EVO_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          webhook: {
+            enabled: true,
+            url: "http://host.docker.internal:3000/api/evolution/webhook",
+            byEvents: true,
+            events: ["MESSAGES_UPSERT","MESSAGES_UPDATE","MESSAGES_DELETE","CONNECTION_UPDATE","SEND_MESSAGE"]
+          }
+        })
+      });
+    } catch(e){}
+
+    // 如果是QR模式，获取QR
+    let qr = null, pairCode = null;
+    if (!pairingCode) {
+      try {
+        const qrRes = await fetch(EVO_API + "/instance/connect/" + EVO_INST, {headers:{apikey:EVO_KEY}});
+        if (qrRes.ok) {
+          const qd = await qrRes.json();
+          qr = qd.base64 || qd.code || null;
+          pairCode = qd.pairingCode || null;
+        }
+      } catch(e){}
+    } else {
+      // 配对码模式：connect会返回pairingCode
+      try {
+        const qrRes = await fetch(EVO_API + "/instance/connect/" + EVO_INST + (phone ? ("?phone="+encodeURIComponent(phone)) : ""), {headers:{apikey:EVO_KEY}});
+        if (qrRes.ok) {
+          const qd = await qrRes.json();
+          qr = qd.base64 || qd.code || null;
+          pairCode = qd.pairingCode || null;
+        }
+      } catch(e){}
+    }
+
+    // 重启CRM让它感知新instance
+    const { execSync } = require("child_process");
+    try { execSync("systemctl restart whatsapp-crm", {timeout: 5000}); } catch(e){}
+
+    res.json({
+      success: true,
+      qr, pairingCode: pairCode,
+      instance: cd,
+      message: pairingCode ? "实例已重建(配对码模式)，请输入上方8位配对码" : "实例已重建(QR模式)，请扫下方二维码"
+    });
+  } catch(e) {
+    res.status(500).json({error: e.message, stack: e.stack?.slice(0,200)});
+  }
+});
+
+// POST /api/whatsapp/admin/logout — 登出当前实例
+app.post("/api/whatsapp/admin/logout", authMiddleware, async (req, res) => {
+  try {
+    await fetch(EVO_API + "/instance/logout/" + EVO_INST, {
+      method: "DELETE", headers: {apikey: EVO_KEY}
+    }).catch(()=>{});
+    res.json({success: true, message: "已登出，需要重新扫码"});
+  } catch(e) {
+    res.status(500).json({error: e.message});
+  }
+});
+
+
+// ─── WhatsApp 核心业务接口（需auth，走Evolution） ───
+
+// 发消息：POST /api/whatsapp/send  （前端用的接口）
+// ── 出站自动翻译 ──
+app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
+
+
+  try {
+    const body = req.body || {};
+    const to = body.to;
+    const originalText = (body.message || body.text || body.body || "").toString();
+    if (!to || !originalText) return res.status(400).json({ error: "to and message/text required" });
+
+    let toJid = to;
+    if (!toJid.includes("@")) toJid = `${toJid.replace(/\D/g, "")}@s.whatsapp.net`;
+    const toPhone = toJid.split("@")[0];
+
+    // ─── Telegram 账号分发（jid带@telegram后缀时） ───
+    if (toJid.endsWith("@telegram")) {
+      try {
+        const tgChatId = toJid.split("@")[0];
+        // 找用户连接的TG bot账号（用第一个；MVP只支持单TG bot）
+        const tgAccount = await prisma.whatsAppAccount.findFirst({
+          where: { userId: req.userId, platform: "telegram" },
+          orderBy: { createdAt: "desc" },
+        });
+        if (!tgAccount) {
+          return res.status(400).json({ error: "未连接Telegram Bot，请先在账号栏连接" });
+        }
+        const connector = getTelegramConnector(tgAccount.telegramBotToken);
+        const textMsg = originalText;
+        const sent = await connector.sendMessage(tgChatId, textMsg);
+        // 写入/复用 contact + conversation
+        let contact = await prisma.contact.findUnique({ where: { accountId_platform_jid: { accountId: tgAccount.id, platform: "telegram", jid: toJid } } });
+        if (!contact) {
+          contact = await prisma.contact.create({ data: { accountId: tgAccount.id, platform: "telegram", jid: toJid, name: tgChatId } });
+        }
+        let conv = await prisma.conversation.findUnique({ where: { accountId_platform_jid: { accountId: tgAccount.id, platform: "telegram", jid: toJid } } });
+        if (!conv) {
+          conv = await prisma.conversation.create({ data: { accountId: tgAccount.id, platform: "telegram", contactId: contact.id, jid: toJid } });
+        }
+        const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
+        const savedWa = await prisma.wAMessage.create({
+          data: {
+            sessionId: tgSessionId,
+            from: "me",
+            to: toJid,
+            body: textMsg,
+            type: "text",
+            direction: "outbound",
+            timestamp: new Date(),
+            read: true,
+            waMessageId: `tg_${tgAccount.id}_${sent.message_id}_out`,
+          },
+        });
+        await prisma.message.create({
+          data: {
+            accountId: tgAccount.id, platform: "telegram", contactId: contact.id, jid: toJid,
+            fromMe: true, content: textMsg, messageType: "text",
+            timestamp: savedWa.timestamp,
+          },
+        });
+        await prisma.conversation.update({
+          where: { id: conv.id },
+          data: { lastMessage: textMsg.slice(0, 200), lastMessageAt: new Date(), unreadCount: 0 },
+        });
+        const io = req.app.get("io");
+        if (io) {
+          io.emit("telegram:message", {
+            accountId: tgAccount.id, contactId: contact.id, jid: toJid,
+            message: { id: savedWa.id, fromMe: true, content: textMsg, body: textMsg, messageType: "text", timestamp: savedWa.timestamp, platform: "telegram", waMessageId: savedWa.waMessageId, jid: toJid },
+          });
+          io.emit("whatsapp:message_sent", {
+            jid: toJid,
+            message: { id: savedWa.id, body: textMsg, fromMe: true, timestamp: savedWa.timestamp, platform: "telegram", jid: toJid },
+          });
+          io.emit("conversation:update", { accountId: tgAccount.id, conversation: { id: conv.id, jid: toJid, platform: "telegram", lastMessage: textMsg.slice(0,200), lastMessageAt: new Date() } });
+        }
+        return res.json({ ok: true, messageId: String(sent.message_id), platform: "telegram", waMessageId: savedWa.waMessageId, savedId: savedWa.id });
+      } catch (err) {
+        console.error("[TG send] error:", err);
+        return res.status(500).json({ error: "Telegram send failed: " + err.message });
+      }
+    }
+
+
+    // 读取翻译设置（优先按客户独立设置，无则回退全局）
+    const tSettings = await getTranslationSettings(toJid, req.userId);
+    let sendText = originalText;
+    let translation = null;
+    let sourceLang = null;
+
+    // 检测是否包含中文
+    const hasChinese = /[\u4e00-\u9fff]/.test(originalText);
+
+    // 禁发中文检查
+    if (tSettings.blockChinese && !tSettings.sendEnabled && hasChinese) {
+      return res.status(400).json({ error: "请先开启发送翻译或输入英文消息", code: "BLOCK_CHINESE" });
+    }
+
+    // 出站翻译：sendEnabled 开启时，无论原文什么语言都要处理
+    // - 正文翻译成 tgtLang 发出
+    // - 虚线译文永远是中文（original 字段存中文）
+    const tgtLang = tSettings.sendTargetLang || "en";
+    if (tSettings.sendEnabled && tgtLang && tgtLang !== "auto") {
+      try {
+        const engine = tSettings.sendEngine || "google";
+        // 检测源语言
+        let srcLang = "auto";
+        try {
+          const det = await _detectLangForSend(originalText, engine);
+          if (det && det !== "unknown") srcLang = det;
+        } catch (_) { srcLang = "auto"; }
+
+        // 严格判定是否已在目标语
+        function _isInLang(text, lang) {
+          if (!text) return false;
+          const s = text.slice(0, 500);
+          const hasJa = /[\u3040-\u309f\u30a0-\u30ff]/.test(s);
+          const hasKo = /[\uac00-\ud7af]/.test(s);
+          const hasZh = /[\u4e00-\u9fff]/.test(s);
+          const hasAr = /[\u0600-\u06ff]/.test(s);
+          const hasRu = /[\u0400-\u04ff]/.test(s);
+          if (lang === "ja") return hasJa;
+          if (lang === "ko") return hasKo;
+          if (lang === "zh") return hasZh && !hasJa && !hasKo;
+          if (lang === "ar") return hasAr;
+          if (lang === "ru") return hasRu;
+          if (["en","es","fr","de","pt","it","nl","tr","id","vi"].includes(lang)) {
+            if (hasZh || hasAr || hasRu || hasJa || hasKo) return false;
+            const latin = (s.match(/[A-Za-zÀ-ÿ]/g) || []).length;
+            const total = s.replace(/\s+/g, "").length;
+            return total > 0 && latin / total > 0.5;
+          }
+          return false;
+        }
+
+        const alreadyInTarget = _isInLang(originalText, tgtLang);
+        if (!alreadyInTarget && srcLang !== tgtLang) {
+          // 需要翻译：原文 -> tgtLang（发出）；原文 -> zh（虚线）
+          const r = await _translateTextForSend(originalText, srcLang, tgtLang, engine, req.userId || 1);
+          const translated = (r && (r.translated || r.text)) || "";
+          if (translated && translated !== originalText) {
+            sendText = translated;
+            // 虚线永远是中文
+            if (srcLang === "zh" || (srcLang === "auto" && hasChinese)) {
+              translation = { original: originalText, translated: sendText, sourceLang: "zh", targetLang: tgtLang };
+            } else {
+              // 原文不是中文，回译中文作为虚线
+              try {
+                const zhR = await _translateTextForSend(originalText, srcLang, "zh", engine, req.userId || 1);
+                const zhText = (zhR && (zhR.translated || zhR.text)) || originalText;
+                translation = { original: zhText, translated: sendText, sourceLang: srcLang || "auto", targetLang: tgtLang };
+              } catch (_) {
+                translation = { original: originalText, translated: sendText, sourceLang: srcLang || "auto", targetLang: tgtLang };
+              }
+            }
+            sourceLang = srcLang;
+          }
+        } else {
+          // 已经是目标语：正文不变，但目标语非中文时补中文虚线
+          if (tgtLang !== "zh") {
+            try {
+              const zhR = await _translateTextForSend(originalText, srcLang === "auto" ? tgtLang : srcLang, "zh", engine, req.userId || 1);
+              const zhText = (zhR && (zhR.translated || zhR.text)) || "";
+              if (zhText && zhText !== originalText) {
+                translation = { original: zhText, translated: originalText, sourceLang: srcLang === "auto" ? tgtLang : srcLang, targetLang: tgtLang };
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (te) {
+        console.warn("[WA Send] outgoing translate failed:", te.message);
+      }
+    }
+    // 翻译结果对象：translation对象存在就使用（同语发送补中文虚线时也有translation）
+    const translationObj = translation ? translation : null;
+
+    // 1. 通过Evolution发消息（用译文或原文）
+    const quoted = body.quoted || null;
+    const result = await evoConnector.sendTextMessage(toJid, sendText, { quoted });
+
+    // 2. 我自己的JID
+    const info = await evoConnector.getInstanceInfo().catch(() => null);
+    const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
+
+    // 3. 落库：body 保存原文，translation 保存译文
+    let saved = null;
+    try {
+      const waMessageId = result?.key?.id || result?.messageId || null;
+      if (waMessageId) {
+        const exists = await prisma.wAMessage.findFirst({ where: { sessionId: DEFAULT_SESSION_ID, waMessageId } });
+        if (exists) saved = exists;
+      }
+      if (!saved) {
+        saved = await prisma.wAMessage.create({
+          data: {
+            sessionId: DEFAULT_SESSION_ID,
+            from: ownerJid,
+            to: toJid,
+            body: sendText,  // 气泡显示实际发出的文本（译文）
+            type: "text",
+            direction: "outbound",
+            timestamp: new Date(),
+            waMessageId: waMessageId,
+            // translation对象：original=中文原文（虚线显示给用户），translated=发出的外文（气泡）
+            translation: translationObj ? JSON.stringify(translationObj) : null,
+            sourceLang: null,
+          },
+        });
+      } else if (translationObj) {
+        try {
+          await prisma.wAMessage.update({ where: { id: saved.id }, data: { translation: JSON.stringify(translationObj), sourceLang: null } });
+        } catch (_) {}
+      }
+    } catch (e) {
+      console.warn("[WA Send] save outgoing failed:", e.message);
+    }
+
+    // ── Phase1 AI话术库采集：发送成功 + 落库成功后 fire-and-forget ──
+    if (saved && result && result.success !== false) {
+      try { recordSample(saved); } catch (ce) { console.warn("[WA Send] recordSample sync error:", ce.message); }
+    }
+
+    // 4. 维护客户（按jid优先，phone兜底，补全缺失jid）
+    try {
+      const userId = req.userId || 1;
+      let cust = await prisma.customer.findFirst({ where: { userId, jid: toJid } });
+      if (!cust) cust = await prisma.customer.findFirst({ where: { userId, phone: toPhone } });
+      const now = new Date();
+      if (!cust) {
+        await prisma.customer.create({
+          data: { userId, phone: toPhone, jid: toJid, name: toPhone, source: "whatsapp", status: "potential", lastContactAt: now },
+        });
+      } else {
+        const upd = { lastContactAt: now };
+        if (!cust.jid) upd.jid = toJid;
+        await prisma.customer.update({ where: { id: cust.id }, data: upd });
+      }
+    } catch (e) {}
+
+    // 5. Socket广播（webhook也会发MESSAGES_UPSERT，但先发一次乐观更新）
+    try {
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("whatsapp:message_sent", {
+          id: saved?.id || ("tmp-" + Date.now()),
+          waMessageId: result?.key?.id || null,
+          jid: toJid,
+          from: ownerJid,
+          to: toJid,
+          body: sendText,
+          content: sendText,
+          translation: translationObj,
+          sourceLang: sourceLang || null,
+          direction: "outbound",
+          fromMe: true,
+          messageType: "text",
+          timestamp: saved?.timestamp ? new Date(saved.timestamp).getTime() : Date.now(),
+          contact: { name: toPhone, phone: toPhone },
+          instance: evoConnector.instance,
+          sessionId: DEFAULT_SESSION_ID,
+        });
+      }
+    } catch (e) {}
+
+    res.json({ success: result.success, key: result.key, savedId: saved?.id, messageId: result?.key?.id, translation: translationObj });
+  } catch (err) {
+    console.error("[WA Send Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+// 表情回应：POST /api/whatsapp/reaction { jid, waMessageId, fromMe, emoji }
+app.post("/api/whatsapp/reaction", authMiddleware, async (req, res) => {
+  try {
+    const { jid, waMessageId, fromMe, emoji } = req.body || {};
+    if (!jid || !waMessageId || !emoji) {
+      return res.status(400).json({ error: "jid, waMessageId, emoji required" });
+    }
+    let toJid = jid;
+    if (!toJid.includes("@")) toJid = `${toJid.replace(/\D/g, "")}@s.whatsapp.net`;
+    // key: the message being reacted to. fromMe=true means the reacted message is ours.
+    const msgKey = {
+      remoteJid: toJid,
+      fromMe: fromMe === true || fromMe === "true",
+      id: waMessageId,
+    };
+    const result = await evoConnector.sendReaction(toJid, msgKey, emoji);
+    // Broadcast via socket so UI updates
+    try {
+      const io = req.app.get("io");
+      if (io && result?.key) {
+        io.emit("whatsapp:reaction", {
+          jid: toJid,
+          targetKey: msgKey,
+          reactionKey: result.key,
+          emoji,
+          fromMe: true,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (_) {}
+    res.json({ success: result?.success !== false, key: result?.key || null });
+  } catch (err) {
+    console.error("[WA Reaction] error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 媒体代理下载：GET /api/wa/media?url=<url> 或 ?id=<dbMessageId>
+// - 出站消息：mediaUrl 是可直接访问的 URL，走直连 fetch（原有逻辑）
+// - 入站加密媒体：DB 保存 mediaKey/directPath/key/timestamp，调用 Evolution API
+//   /chat/getBase64FromMediaMessage/<instance> 解密为明文 Buffer 返回
+app.get("/api/wa/media", async (req, res) => {
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const prisma = new PrismaClient();
+    const EVO_API = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
+    const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
+    const EVO_INST = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+
+    let msgRecord = null;
+    let mediaUrl = req.query.url;
+    // 1) 优先用 ?id= 查询 DB
+    if (req.query.id) {
+      const id = parseInt(req.query.id, 10);
+      if (Number.isFinite(id)) {
+        msgRecord = await prisma.wAMessage.findUnique({ where: { id } }).catch(() => null);
+      }
+    }
+    // 2) 否则按 mediaUrl 精确匹配（兼容前端只传 url 的请求）
+    if (!msgRecord && mediaUrl && /^https?:\/\//.test(mediaUrl)) {
+      msgRecord = await prisma.wAMessage.findFirst({ where: { mediaUrl } }).catch(() => null);
+    }
+
+    const wantInline = req.query.inline === "1" || req.query.inline === "true";
+    const wantDl = req.query.dl === "1" || req.query.download === "1";
+    const sendBuffer = (buf, ct, fileName) => {
+      res.setHeader("Content-Type", ct);
+      res.setHeader("Content-Length", buf.length);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      const isPdf = ct === "application/pdf" || /\.pdf($|\?)/i.test(fileName || "");
+      const encName = fileName ? ('filename="' + encodeURIComponent(fileName) + '"; filename*=UTF-8\'\'' + encodeURIComponent(fileName)) : '';
+      if (wantDl) {
+        res.setHeader("Content-Disposition", encName ? ('attachment; ' + encName) : 'attachment');
+      } else if (wantInline || isPdf) {
+        res.setHeader("Content-Disposition", encName ? ('inline; ' + encName) : 'inline');
+      } else if (fileName) {
+        res.setHeader("Content-Disposition", 'attachment; ' + encName);
+      }
+      res.send(buf);
+    };
+
+    // Helper: 通过 Evolution findMessages 补齐历史入站消息的媒体字段（懒加载）
+    async function evoFetchMediaMessage(waMessageId) {
+      // Evolution findMessages where.key.id 是模糊搜索，需要本地精确匹配
+      const url = EVO_API + "/chat/findMessages/" + EVO_INST;
+      const pageSize = 50;
+      let offset = 0;
+      for (let page = 0; page < 20; page++) {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: EVO_KEY },
+          body: JSON.stringify({ where: { "key.id": waMessageId }, page: page + 1, offset, count: pageSize }),
+        });
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => null);
+        const records = (j && j.messages && j.messages.records) || [];
+        for (const rec of records) {
+          if (rec && rec.key && rec.key.id === waMessageId && rec.message) {
+            // 确认是媒体类型
+            const mk = Object.keys(rec.message);
+            if (mk.some(k => ["imageMessage", "videoMessage", "audioMessage", "documentMessage", "stickerMessage"].includes(k))) {
+              return rec;
+            }
+          }
+        }
+        const total = (j && j.messages && j.messages.total) || 0;
+        offset += records.length;
+        if (records.length < pageSize || offset >= total) break;
+      }
+      return null;
+    }
+
+    if (msgRecord && (msgRecord.mediaKey || msgRecord.waMessageId)) {
+      // ── 入站加密媒体：调用 Evolution 解密 ──
+      let keyObj, innerMsg, tsSec, evoOriginalMsg = null;
+      if (msgRecord.mediaKey && msgRecord.waKeyJson) {
+        try { keyObj = JSON.parse(msgRecord.waKeyJson); } catch { keyObj = null; }
+      } else if (msgRecord.waMessageId) {
+        // 历史消息/未存key的消息：从 Evolution 拉取原始消息再解密
+        evoOriginalMsg = await evoFetchMediaMessage(msgRecord.waMessageId);
+        if (evoOriginalMsg) {
+          keyObj = evoOriginalMsg.key || null;
+          tsSec = evoOriginalMsg.messageTimestamp || Math.floor(Date.now()/1000);
+        }
+      }
+      if (!keyObj) return res.status(404).send("media key unavailable");
+
+      if (evoOriginalMsg && evoOriginalMsg.message) {
+        // 直接用 Evolution 返回的完整 message 结构
+        innerMsg = evoOriginalMsg.message;
+        if (!tsSec) tsSec = evoOriginalMsg.messageTimestamp || Math.floor(Date.now()/1000);
+      } else {
+        const mediaFieldByType = {
+          image: "imageMessage",
+          video: "videoMessage",
+          audio: "audioMessage",
+          document: "documentMessage",
+        };
+        const field = mediaFieldByType[msgRecord.type] || "documentMessage";
+        innerMsg = {};
+        innerMsg[field] = {
+          url: msgRecord.mediaUrl || undefined,
+          directPath: msgRecord.mediaDirectPath || undefined,
+          mediaKey: msgRecord.mediaKey,
+          mimetype: msgRecord.mimeType || (msgRecord.type === "image" ? "image/jpeg" : "application/octet-stream"),
+          fileName: msgRecord.fileName || undefined,
+          fileLength: msgRecord.fileLength || undefined,
+          fileSha256: msgRecord.mediaSha256 || undefined,
+          fileEncSha256: msgRecord.mediaEncSha256 || undefined,
+        };
+        if (!tsSec) {
+          tsSec = msgRecord.waMsgTimestamp ||
+            (msgRecord.timestamp ? Math.floor(new Date(msgRecord.timestamp).getTime() / 1000) : Math.floor(Date.now() / 1000));
+        }
+      }
+      const evoBody = {
+        message: {
+          key: keyObj,
+          message: innerMsg,
+          messageTimestamp: tsSec,
+        },
+        convertToMp4: false,
+      };
+      const url = EVO_API + "/chat/getBase64FromMediaMessage/" + EVO_INST;
+      const evoResp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: EVO_KEY },
+        body: JSON.stringify(evoBody),
+      });
+      if (!evoResp.ok) {
+        const errText = await evoResp.text().catch(() => "");
+        console.error("[WA Media Proxy] Evolution decrypt failed:", evoResp.status, errText.slice(0, 300));
+        return res.status(502).send("media decrypt failed");
+      }
+      const evoJson = await evoResp.json();
+      if (!evoJson || !evoJson.base64) {
+        return res.status(502).send("no base64 from evolution");
+      }
+      const buf = Buffer.from(evoJson.base64, "base64");
+      const ct = evoJson.mimetype || msgRecord.mimeType || "application/octet-stream";
+      const fileName = msgRecord.fileName || evoJson.fileName || ("media." + (msgRecord.type || "bin"));
+      console.log("[WA Media Proxy] decrypted via Evolution id=" + msgRecord.id + " type=" + msgRecord.type + " size=" + buf.length + " ct=" + ct);
+      return sendBuffer(buf, ct, fileName);
+    }
+
+    // ── Fallback A：本地文件（出站媒体存到 uploads/outbound/） ──
+    if (mediaUrl && mediaUrl.startsWith("/uploads/")) {
+      try {
+        const fsMod = await import("fs");
+        const pathMod = await import("path");
+        const localPath = pathMod.join(__dirname, mediaUrl);
+        // safety: prevent path traversal
+        const normBase = pathMod.resolve(pathMod.join(__dirname, "uploads"));
+        const normTarget = pathMod.resolve(localPath);
+        if (!normTarget.startsWith(normBase)) return res.status(403).send("forbidden");
+        if (!fsMod.existsSync(localPath)) return res.status(404).send("local media not found");
+        const buf = fsMod.readFileSync(localPath);
+        // determine mime from ext
+        const ext = pathMod.extname(localPath).toLowerCase();
+        const extMime = { ".jpg":"image/jpeg",".jpeg":"image/jpeg",".png":"image/png",".gif":"image/gif",".webp":"image/webp",".mp4":"video/mp4",".pdf":"application/pdf",".webm":"video/webm",".mp3":"audio/mpeg",".ogg":"audio/ogg" };
+        const ct = extMime[ext] || (msgRecord && msgRecord.mimeType) || "application/octet-stream";
+        return sendBuffer(buf, ct, msgRecord ? msgRecord.fileName : null);
+      } catch (le) {
+        console.error("[WA Media Proxy] local file read error:", le.message);
+        return res.status(500).send("local media read error");
+      }
+    }
+
+    // ── Fallback B：直接 fetch（出站消息 / 历史明文 URL） ──
+    if (!mediaUrl || !/^https?:\/\//.test(mediaUrl)) return res.status(400).send("invalid url");
+    const r = await fetch(mediaUrl, { headers: { "User-Agent": "WhatsApp/2.24", Accept: "*/*" } });
+    if (!r.ok) return res.status(r.status).send("fetch failed");
+    const ct = r.headers.get("content-type") || "application/octet-stream";
+    const buf = Buffer.from(await r.arrayBuffer());
+    sendBuffer(buf, ct, msgRecord ? msgRecord.fileName : null);
+  } catch (e) {
+    console.error("[WA Media Proxy] error:", e.message);
+    res.status(500).send("proxy error");
+  }
+});
+
+
+// 发送媒体：POST /api/whatsapp/send-media (multipart/form-data: jid, file, mediatype, caption?)
+app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
+  try {
+    const { fields, file } = await parseMultipartMedia(req);
+    const jid = fields.jid || fields.to;
+    const mediatype = fields.mediatype || (file && file.mimeType && file.mimeType.startsWith('video/') ? 'video' : (file && file.mimeType && file.mimeType.startsWith('image/') ? 'image' : 'document'));
+    const caption = fields.caption || '';
+    if (!jid) return res.status(400).json({ error: 'jid is required' });
+    if (!file || !file.buffer || file.buffer.length === 0) return res.status(400).json({ error: 'file is required' });
+    // WhatsApp官方大小限制：图片/视频/音频≤16MB，文档≤100MB
+    let sizeLimit = 100 * 1024 * 1024;
+    let typeLabel = '文件';
+    const mt = (file.mimeType || '').toLowerCase();
+    if (mt.startsWith('image/')) { sizeLimit = 16 * 1024 * 1024; typeLabel = '图片'; }
+    else if (mt.startsWith('video/')) { sizeLimit = 16 * 1024 * 1024; typeLabel = '视频'; }
+    else if (mt.startsWith('audio/')) { sizeLimit = 16 * 1024 * 1024; typeLabel = '音频'; }
+    if (file.buffer.length > sizeLimit) {
+      return res.status(413).json({ error: typeLabel + '超过 ' + Math.round(sizeLimit/1024/1024) + 'MB，WhatsApp无法发送，请压缩后重试' });
+    }
+
+    let toJid = jid;
+    if (!toJid.includes('@')) toJid = toJid.replace(/\D/g, '') + '@s.whatsapp.net';
+    const toPhone = toJid.split('@')[0];
+
+    const result = await evoConnector.sendMediaMessage(toJid, {
+      mediaBuffer: file.buffer,
+      fileName: file.fileName || 'file',
+      mimeType: file.mimeType || 'application/octet-stream',
+      mediatype,
+      caption,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || 'send failed', data: result.data });
+    }
+
+    const info = await evoConnector.getInstanceInfo().catch(() => null);
+    const ownerJid = info?.ownerJid || '8613016242602@s.whatsapp.net';
+
+    let saved = null;
+    let outboundMediaUrl = null;
+    try {
+      const waMessageId = result?.key?.id || result?.messageId || null;
+      const dup = waMessageId ? await prisma.wAMessage.findFirst({ where: { sessionId: DEFAULT_SESSION_ID, waMessageId } }) : null;
+      if (dup) {
+        saved = dup;
+        // If dup exists from a prior send (e.g., retry), still populate outboundMediaUrl if it was persisted
+        if (dup.mediaUrl && dup.mediaUrl.startsWith("/uploads/outbound/")) {
+          outboundMediaUrl = dup.mediaUrl;
+        }
+      } else {
+        // Persist outbound media buffer to local uploads for refresh/reload
+        outboundMediaUrl = null;
+        try {
+          const crypto = await import("crypto");
+          const fsMod = await import("fs");
+          const pathMod = await import("path");
+          const extMatch = (file.fileName || "").match(/\.([a-zA-Z0-9]{1,5})$/);
+          const ext = extMatch ? extMatch[1].toLowerCase() : (mt.startsWith("image/") ? "jpg" : mt.startsWith("video/") ? "mp4" : "bin");
+          const hashName = crypto.randomBytes(16).toString("hex") + "." + ext;
+          const outDir = pathMod.join(__dirname, "uploads/outbound");
+          if (!fsMod.existsSync(outDir)) fsMod.mkdirSync(outDir, { recursive: true });
+          const outPath = pathMod.join(outDir, hashName);
+          fsMod.writeFileSync(outPath, file.buffer);
+          outboundMediaUrl = "/uploads/outbound/" + hashName;
+        } catch (fsErr) {
+          console.warn("[WA SendMedia] failed to persist outbound media:", fsErr.message);
+          outboundMediaUrl = null;
+        }
+        saved = await prisma.wAMessage.create({
+          data: {
+            sessionId: DEFAULT_SESSION_ID,
+            from: ownerJid,
+            to: toJid,
+            body: caption || file.fileName || (mediatype === 'image' ? '[图片]' : mediatype === 'video' ? '[视频]' : '[文件]'),
+            type: mediatype,
+            direction: 'outbound',
+            timestamp: new Date(),
+            waMessageId,
+            mediaUrl: outboundMediaUrl,
+            fileName: file.fileName || null,
+            mimeType: file.mimeType || null,
+            fileLength: file.buffer.length,
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('[WA SendMedia] save outgoing failed:', e.message);
+    }
+
+    // ── Phase1 AI话术库采集：媒体发送成功且有caption时采集 ──
+    if (saved && caption && caption.trim()) {
+      try { recordSample(saved); } catch (ce) { console.warn('[WA SendMedia] recordSample sync error:', ce.message); }
+    }
+
+    // maintain customer（按jid优先，phone兜底，补全缺失jid）
+    try {
+      const userId = req.userId || 1;
+      let cust = await prisma.customer.findFirst({ where: { userId, jid: toJid } });
+      if (!cust) cust = await prisma.customer.findFirst({ where: { userId, phone: toPhone } });
+      const now = new Date();
+      if (!cust) {
+        await prisma.customer.create({ data: { userId, phone: toPhone, jid: toJid, name: toPhone, source: 'whatsapp', status: 'potential', lastContactAt: now } });
+      } else {
+        const upd = { lastContactAt: now };
+        if (!cust.jid) upd.jid = toJid;
+        await prisma.customer.update({ where: { id: cust.id }, data: upd });
+      }
+    } catch (e) {}
+
+    const outPayload = {
+      id: saved?.id || ('tmp-' + Date.now()),
+      waMessageId: result?.key?.id || null,
+      jid: toJid,
+      from: ownerJid,
+      to: toJid,
+      body: caption || file.fileName || (mediatype === 'image' ? '[图片]' : mediatype === 'video' ? '[视频]' : '[文件]'),
+      content: caption || file.fileName || '',
+      direction: 'outbound',
+      fromMe: true,
+      messageType: mediatype,
+      type: mediatype,
+      fileName: file.fileName || null,
+      mimeType: file.mimeType || null,
+      fileSize: file.buffer.length,
+      timestamp: saved?.timestamp ? new Date(saved.timestamp).getTime() : Date.now(),
+      contact: { name: toPhone, phone: toPhone },
+      instance: evoConnector.instance,
+      sessionId: DEFAULT_SESSION_ID,
+      // Include a base64 data URL preview for immediate optimistic rendering
+      mediaUrl: outboundMediaUrl,
+      // Include a base64 data URL preview for immediate optimistic rendering
+      previewDataUrl: mediatype === 'image' ? ('data:' + (file.mimeType || 'image/png') + ';base64,' + file.buffer.toString('base64')) : null,
+    };
+
+    try {
+      const io = req.app.get('io');
+      if (io) io.emit('whatsapp:message_sent', outPayload);
+    } catch (e) {}
+
+    res.json({ success: true, key: result.key, savedId: saved?.id, messageId: result?.key?.id, outPayload });
+  } catch (err) {
+    console.error('[WA SendMedia Error]', err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// alias
+app.post("/api/wa/send-media", (req, res) => { req.url = "/api/whatsapp/send-media"; app(req, res); });
+
+// ── AI Document PDF generation & sending ──────────────────────────────
+app.post("/api/ai/doc-pdf", authMiddleware, async (req, res) => {
+  try {
+    const { docType, content, lang } = req.body || {};
+    if (!content) return res.status(400).json({ error: "content is required" });
+    const { generateDocPdfBuffer, generateDocFileName } = await import("./services/ai.service.js");
+    const pdfBuf = await generateDocPdfBuffer({ docType: docType || "quotation", content, lang });
+    const fileName = generateDocFileName(docType);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader("Content-Length", pdfBuf.length);
+    res.send(pdfBuf);
+  } catch (err) {
+    console.error("[doc-pdf] error:", err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/ai/send-doc-pdf", authMiddleware, async (req, res) => {
+  try {
+    const { jid, docType, content, lang, caption } = req.body || {};
+    if (!jid) return res.status(400).json({ error: "jid is required" });
+    if (!content) return res.status(400).json({ error: "content is required" });
+
+    const { generateDocPdfBuffer, generateDocFileName } = await import("./services/ai.service.js");
+    const pdfBuf = await generateDocPdfBuffer({ docType: docType || "quotation", content, lang });
+    const fileName = generateDocFileName(docType);
+
+    let toJid = jid;
+    if (!toJid.includes("@")) toJid = toJid.replace(/\D/g, "") + "@s.whatsapp.net";
+    if (pdfBuf.length > 100 * 1024 * 1024) {
+      return res.status(413).json({ error: "PDF超过100MB，无法发送" });
+    }
+
+    const result = await evoConnector.sendMediaMessage(toJid, {
+      mediaBuffer: pdfBuf,
+      fileName,
+      mimeType: "application/pdf",
+      mediatype: "document",
+      caption: caption || "",
+    });
+    if (!result.success) {
+      return res.status(500).json({ error: result.error || "send failed", data: result.data });
+    }
+    // Persist outbound doc message to history
+    try {
+      const info = await evoConnector.getInstanceInfo().catch(() => null);
+      const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
+      const waMessageId = result?.key?.id || result?.messageId || null;
+      const docLabelMap = { quotation:"报价单", pi:"形式发票", ci:"商业发票", packing:"装箱单", contract:"销售合同", customs:"报关单" };
+      const bodyLabel = (docLabelMap[docType] || "单证") + "(PDF)";
+      const saved = await prisma.wAMessage.create({
+        data: {
+          sessionId: DEFAULT_SESSION_ID,
+          from: ownerJid,
+          to: toJid,
+          body: bodyLabel,
+          type: "document",
+          direction: "outbound",
+          timestamp: new Date(),
+          waMessageId: waMessageId || ("pdf_" + Date.now()),
+          fileName, mimeType: "application/pdf", fileLength: pdfBuf.length,
+        },
+      }).catch(e => { console.warn("[doc-pdf] persist fail:", e.message); return null; });
+      try {
+        const io = req.app.get("io");
+        if (io) io.emit("whatsapp:message_sent", {
+          key: result.key, savedId: saved?.id, messageId: waMessageId,
+          outPayload: {
+            from: ownerJid, to: toJid, body: bodyLabel, type: "document", direction: "outbound",
+            timestamp: Date.now(), instance: evoConnector.instance, sessionId: DEFAULT_SESSION_ID,
+            previewDataUrl: null,
+          }
+        });
+      } catch (e) {}
+    } catch (e) { console.warn("[doc-pdf] history persist error:", e.message); }
+
+    res.json({ success: true, waMessageId: result?.key?.id || null, fileName, size: pdfBuf.length });
+  } catch (err) {
+    console.error("[send-doc-pdf] error:", err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── 重新翻译消息 POST /api/whatsapp/retranslate ──
+app.post('/api/whatsapp/retranslate', authMiddleware, async (req, res) => {
+  try {
+    const { messageId } = req.body || {};
+    if (messageId == null) return res.status(400).json({ error: 'messageId is required' });
+    const sessionId = `user_${req.userId}`;
+    const msg = await prisma.wAMessage.findFirst({
+      where: { id: Number(messageId), sessionId },
+    });
+    if (!msg) return res.status(404).json({ error: 'message not found' });
+    if (msg.type !== 'text') return res.status(400).json({ error: 'only text messages can be re-translated' });
+
+    const body = (msg.body || '').trim();
+    if (!body || (body.startsWith('[') && body.endsWith(']'))) {
+      return res.status(400).json({ error: 'message body not translatable' });
+    }
+
+    // Use per-customer settings: determine conversation jid from msg direction
+    const convJidForTrans = msg.direction === 'outbound' ? msg.to : msg.from;
+    const ts = await getTranslationSettings(convJidForTrans, req.userId);
+
+    let targetLang, sourceLang, engine;
+    if (msg.direction === 'inbound') {
+      engine = ts.receiveEngine || "google";;
+      sourceLang = ts.receiveSourceLang || 'auto';
+      targetLang = ts.receiveTargetLang || 'zh';
+    } else {
+      engine = ts.sendEngine || ts.receiveEngine || 'google';
+      sourceLang = ts.sendSourceLang || 'auto';
+      targetLang = 'zh';
+      // outbound with existing Chinese original in translation.original: emit cached
+      if (msg.translation) {
+        try {
+          const prev = JSON.parse(msg.translation);
+          if (prev && prev.original && /[\u4e00-\u9fff]/.test(prev.original) && prev.translated) {
+            const io = app.get('io');
+            const convJid = msg.to;
+            if (io) {
+              const payload = { id: msg.id, waMessageId: msg.waMessageId, jid: convJid,
+                translation: prev, sourceLang: prev.sourceLang || sourceLang };
+              io.to(sessionId).emit('whatsapp:translation', payload);
+              io.to(sessionId).emit('whatsapp:message_translated', payload);
+            }
+            return res.json({ success: true, translation: prev, cached: true });
+          }
+        } catch (_) { /* ignore */ }
+      }
+    }
+
+    if (sourceLang === 'auto') {
+      try { sourceLang = await _detectLangForSend(body, engine); } catch (_) { sourceLang = 'auto'; }
+    }
+
+    let translationObj;
+    const alreadyChinese = /[\u4e00-\u9fff]/.test(body);
+    if (!sourceLang || sourceLang === 'unknown') {
+      return res.status(500).json({ error: 'failed to detect language' });
+    }
+    if (sourceLang === targetLang || (targetLang === 'zh' && alreadyChinese)) {
+      translationObj = { original: body, translated: body, sourceLang, targetLang };
+    } else {
+      const result = await _translateTextForSend(body, sourceLang, targetLang, engine, req.userId);
+      const translated = (result && (result.translated || result.text)) || '';
+      if (!translated) return res.status(500).json({ error: 'translation returned empty' });
+      translationObj = { original: body, translated, sourceLang, targetLang };
+    }
+
+    const transJson = JSON.stringify(translationObj);
+    await prisma.wAMessage.update({
+      where: { id: msg.id },
+      data: { translation: transJson, sourceLang },
+    });
+
+    const convJid = msg.direction === 'inbound' ? msg.from : msg.to;
+    const io = app.get('io');
+    if (io) {
+      const payload = { id: msg.id, waMessageId: msg.waMessageId, jid: convJid,
+        translation: translationObj, sourceLang };
+      io.to(sessionId).emit('whatsapp:translation', payload);
+      io.to(sessionId).emit('whatsapp:message_translated', payload);
+    }
+    console.log(`[Retranslate] #${msg.id} ${msg.direction} ${sourceLang}->${targetLang}`);
+    return res.json({ success: true, translation: translationObj });
+  } catch (err) {
+    console.error('[WA Retranslate Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+// 兼容别名：POST /api/whatsapp/send-evo
+app.post("/api/whatsapp/send-evo", authMiddleware, async (req, res) => {
+  req.url = "/api/whatsapp/send";
+  app(req, res);
+});
+
+// 聊天列表：GET /api/whatsapp/conversations
+// 策略：Evolution fetchChats + 本地DB合并，支持 filter=pinned/starred/unread、置顶排序、blocked过滤
+app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
+  try {
+    const search = (req.query.search || "").toString().trim();
+    const filter = (req.query.filter || "all").toString();
+    const showBlocked = req.query.showBlocked === "1";
+    const platform = (req.query.platform || "whatsapp").toString();
+    const accountId = 1;
+
+    // ── Telegram 渠道分支 ──
+    if (platform === "telegram") {
+      const tgAccounts = await prisma.whatsAppAccount.findMany({
+        where: { userId: req.userId || 1, platform: "telegram", status: "connected" },
+      });
+      if (!tgAccounts.length) return res.json([]);
+      const tgAccountIds = tgAccounts.map(a => a.id);
+      const sessions = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
+      const tgMsgs = await prisma.wAMessage.findMany({
+        where: { sessionId: { in: sessions } },
+        orderBy: { timestamp: "desc" },
+        take: 500,
+      });
+      const cMap = new Map();
+      for (const m of tgMsgs) {
+        let jid = m.direction === "inbound" ? m.from : (m.to || null);
+        if (!jid || !jid.endsWith("@telegram")) continue;
+        const existing = cMap.get(jid);
+        if (!existing || new Date(m.timestamp) > new Date(existing.lastMsg.timestamp)) {
+          cMap.set(jid, {
+            jid, lastMsg: m,
+            unread: (existing?.unread || 0) + (m.direction === "inbound" && !m.read ? 1 : 0),
+          });
+        } else if (m.direction === "inbound" && !m.read) {
+          existing.unread++;
+        }
+      }
+      const jids = [...cMap.keys()];
+      const [convRecs, ctRecs] = jids.length ? await Promise.all([
+        prisma.conversation.findMany({ where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: jids } } }),
+        prisma.contact.findMany({ where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: jids } } }),
+      ]) : [[], []];
+      const cvMap = new Map(convRecs.map(c => [c.jid, c]));
+      const ctMap = new Map(ctRecs.map(c => [c.jid, c]));
+      const out = [];
+      for (const [jid, e] of cMap) {
+        const chatId = jid.replace("@telegram", "");
+        const ct = ctMap.get(jid);
+        const cv = cvMap.get(jid) || {};
+        if (cv.blocked && !showBlocked) continue;
+        out.push({
+          jid, platform: "telegram", phone: chatId,
+          name: ct?.displayName || ct?.name || chatId,
+          avatar: ct?.avatar || null,
+          lastMessage: e.lastMsg.body || e.lastMsg.content || "",
+          lastMessageTime: e.lastMsg.timestamp,
+          direction: e.lastMsg.direction,
+          unreadCount: e.unread,
+          pinned: !!cv.pinned, starred: !!cv.starred, blocked: !!cv.blocked,
+        });
+      }
+      out.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+      return res.json(out);
+    }
+    // ── WhatsApp 分支（原逻辑不变） ──
+
+    // 解析@lid临时ID为真实JID
+    const resolveJid = (raw, lastMsg) => {
+      if (!raw) return raw;
+      if (!raw.endsWith("@lid")) return raw;
+      const alt = lastMsg?.key?.remoteJidAlt;
+      if (alt && alt.includes("@s.whatsapp.net")) return alt;
+      return raw;
+    };
+
+    // 拿自己的JID
+    let ownerJid = "8613016242602@s.whatsapp.net";
+    try {
+      const info = await evoConnector.getInstanceInfo();
+      if (info?.ownerJid) ownerJid = info.ownerJid;
+    } catch(e){}
+
+    // 1. 从本地DB聚合
+    const dbMsgs = await prisma.wAMessage.findMany({
+      where: { sessionId: DEFAULT_SESSION_ID },
+      orderBy: { timestamp: "desc" },
+      take: 1000,
+    });
+
+    const contactMap = new Map();
+    for (const msg of dbMsgs) {
+      let contactJid = null;
+      if (msg.direction === "inbound") contactJid = msg.from;
+      else if (msg.to && msg.to !== "me") contactJid = msg.to;
+      if (!contactJid || contactJid === "me" || !contactJid.includes("@")) continue;
+      if (contactJid.includes("@broadcast")) continue;
+      if (contactJid === ownerJid) continue;
+      if (contactJid.endsWith("@lid")) {
+        const other = msg.direction === "inbound" ? msg.to : msg.from;
+        if (other && other.endsWith("@s.whatsapp.net") && other !== ownerJid) contactJid = other;
+        else continue;
+      }
+      // 过滤无效jid（系统/协议/幽灵消息）
+      const _wmph = contactJid.split("@")[0];
+      if (!_wmph || _wmph === "0" || _wmph.length < 5 || !/^[0-9]+$/.test(_wmph)) continue;
+      if (!contactMap.has(contactJid)) {
+        contactMap.set(contactJid, {
+          jid: contactJid,
+          lastMsg: msg,
+          unread: msg.direction === "inbound" && !msg.read ? 1 : 0,
+        });
+      } else {
+        const entry = contactMap.get(contactJid);
+        if (new Date(msg.timestamp) > new Date(entry.lastMsg.timestamp)) entry.lastMsg = msg;
+        if (msg.direction === "inbound" && !msg.read) entry.unread += 1;
+      }
+    }
+
+    // 2. 从Evolution拉取最新聊天
+    try {
+      const evoChats = await evoConnector.fetchChats();
+      for (const chat of evoChats) {
+        let jid = chat.remoteJid;
+        if (!jid || jid.includes("@g.us") || jid.includes("@broadcast")) continue;
+        const lastEv = chat.lastMessage;
+        jid = resolveJid(jid, lastEv);
+        if (jid === ownerJid) continue;
+        if (jid.endsWith("@lid")) continue;
+        // 过滤无效jid（系统/协议/幽灵消息如0@s.whatsapp.net）
+        const _eph = jid.split("@")[0];
+        if (!_eph || _eph === "0" || _eph.length < 5 || !/^[0-9]+$/.test(_eph)) continue;
+        const evoTs = lastEv?.messageTimestamp
+          ? new Date(lastEv.messageTimestamp > 1e12 ? lastEv.messageTimestamp : lastEv.messageTimestamp * 1000)
+          : new Date(chat.updatedAt || Date.now());
+        const body = lastEv?.message?.conversation || lastEv?.message?.extendedTextMessage?.text || "[新会话]";
+        const direction = lastEv?.key?.fromMe ? "outbound" : "inbound";
+        if (!contactMap.has(jid)) {
+          contactMap.set(jid, { jid, lastMsg: { body, timestamp: evoTs, direction }, unread: chat.unreadCount || 0, _evoOnly: true });
+        } else {
+          const entry = contactMap.get(jid);
+          if (evoTs > new Date(entry.lastMsg.timestamp)) {
+            entry.lastMsg = { body, timestamp: evoTs, direction };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[WA conversations] fetchChats failed:", e.message);
+    }
+
+    // 3. 查联系人名
+    const phones = [...contactMap.keys()].map(j => j.split("@")[0]);
+    const customers = phones.length
+      ? await prisma.customer.findMany({
+          where: { userId: req.userId || 1, phone: { in: phones } },
+          select: { id: true, phone: true, name: true },
+        })
+      : [];
+    const custMap = new Map(customers.map(c => [c.phone, c]));
+
+    // 3b. 批量查Contact表（拿头像、pushName）
+    const jids = [...contactMap.keys()];
+    let ctRecords = [];
+    try {
+      ctRecords = jids.length
+        ? await prisma.contact.findMany({ where: { accountId, platform: 'whatsapp', jid: { in: jids } } })
+        : [];
+    } catch (_) {}
+    const ctMap = new Map(ctRecords.map(c => [c.jid, c]));
+
+    // 3c. 批量查Conversation标记 + 确保每条都有记录
+    let convRecords = [];
+    try {
+      convRecords = jids.length
+        ? await prisma.conversation.findMany({ where: { accountId, jid: { in: jids } } })
+        : [];
+    } catch (_) {}
+    const convMap = new Map(convRecords.map(c => [c.jid, c]));
+    for (const jid of jids) {
+      if (!convMap.has(jid)) {
+        const c = await _ensureConversation(accountId, jid);
+        if (c) convMap.set(jid, c);
+      }
+    }
+
+    // 4. 组装返回
+    const conversations = [];
+    for (const [jid, entry] of contactMap) {
+      const phone = jid.split("@")[0];
+      // 过滤无效jid（兜底）
+      if (!phone || phone === "0" || phone.length < 5 || !/^[0-9]+$/.test(phone)) continue;
+      const cust = custMap.get(phone);
+      const ct = ctMap.get(jid);
+      const name = cust?.name || ct?.name || ct?.pushName || phone;
+      const conv = convMap.get(jid) || { pinned: false, starred: false, blocked: false };
+
+      if (conv.blocked && !showBlocked) continue;
+      if (filter === "unread" && entry.unread === 0) continue;
+      if (filter === "starred" && !conv.starred) continue;
+
+      if (search && !name.includes(search) && !phone.includes(search) && !(entry.lastMsg.body || "").includes(search)) continue;
+      conversations.push({
+        jid, phone, name, platform: "whatsapp",
+        avatar: ct?.avatarUrl || null,
+        lastMessage: entry.lastMsg.body || "",
+        lastMessageTime: entry.lastMsg.timestamp,
+        direction: entry.lastMsg.direction,
+        unreadCount: entry.unread,
+        pinned: !!conv.pinned,
+        starred: !!conv.starred,
+        blocked: !!conv.blocked,
+      });
+    }
+    conversations.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
+    });
+    res.json(conversations);
+  } catch (err) {
+    console.error("[WA Conversations Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── 会话操作接口：置顶/特别关注/封锁/删除 ───
+app.post("/api/whatsapp/conversations/:jid/pin", authMiddleware, async (req, res) => {
+  try {
+    const jid = decodeURIComponent(req.params.jid);
+    const updated = await _toggleConvField(jid, "pinned");
+    res.json({ success: true, jid, pinned: updated.pinned });
+  } catch (err) {
+    console.error("[WA Pin Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/whatsapp/conversations/:jid/star", authMiddleware, async (req, res) => {
+  try {
+    const jid = decodeURIComponent(req.params.jid);
+    const updated = await _toggleConvField(jid, "starred");
+    res.json({ success: true, jid, starred: updated.starred });
+  } catch (err) {
+    console.error("[WA Star Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/whatsapp/conversations/:jid/block", authMiddleware, async (req, res) => {
+  try {
+    const jid = decodeURIComponent(req.params.jid);
+    const accountId = 1;
+    let conv = await prisma.conversation.findUnique({ where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid } } });
+    if (!conv) conv = await _ensureConversation(accountId, jid, "whatsapp");
+    if (!conv) return res.status(404).json({ error: "conversation not found" });
+    const newBlocked = !conv.blocked;
+    const updated = await prisma.conversation.update({
+      where: { id: conv.id },
+      data: { blocked: newBlocked, unreadCount: newBlocked ? 0 : conv.unreadCount, updatedAt: new Date() },
+    });
+    res.json({ success: true, jid, blocked: updated.blocked });
+  } catch (err) {
+    console.error("[WA Block Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/whatsapp/conversations/:jid", authMiddleware, async (req, res) => {
+  try {
+    const jid = decodeURIComponent(req.params.jid);
+    const result = await prisma.wAMessage.deleteMany({
+      where: {
+        sessionId: DEFAULT_SESSION_ID,
+        OR: [
+          { from: jid, direction: "inbound" },
+          { to: jid, direction: "outbound" },
+        ],
+      },
+    });
+    try {
+      const conv = await prisma.conversation.findUnique({ where: { accountId_platform_jid: { accountId: 1, platform: "whatsapp", jid } } });
+      if (conv) {
+        await prisma.conversation.update({
+          where: { id: conv.id },
+          data: { unreadCount: 0, lastMessage: null, lastMessageAt: null, updatedAt: new Date() },
+        });
+      }
+    } catch (_) {}
+    res.json({ success: true, jid, deletedCount: result.count });
+  } catch (err) {
+    console.error("[WA Delete Conv Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 消息历史：GET /api/whatsapp/messages?jid=xxx
+app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
+  try {
+    const { jid, limit = 50, before } = req.query;
+    if (!jid) return res.status(400).json({ error: "jid is required" });
+
+    let targetJid = jid;
+    if (!targetJid.includes("@")) targetJid = `${targetJid.replace(/\D/g, "")}@s.whatsapp.net`;
+
+    // ── Telegram 消息分支 ──
+    if (targetJid.endsWith("@telegram")) {
+      const tgAccounts = await prisma.whatsAppAccount.findMany({
+        where: { userId: req.userId || 1, platform: "telegram", status: "connected" },
+      });
+      if (!tgAccounts.length) return res.json([]);
+      const sessions = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
+      const tgWhere = { sessionId: { in: sessions }, OR: [{ from: targetJid }, { to: targetJid }] };
+      if (before) tgWhere.timestamp = { lt: new Date(before) };
+      const dbMsgs = await prisma.wAMessage.findMany({
+        where: tgWhere, orderBy: { timestamp: "desc" }, take: parseInt(limit),
+      });
+      try {
+        await prisma.wAMessage.updateMany({
+          where: { sessionId: { in: sessions }, from: targetJid, direction: "inbound", read: false },
+          data: { read: true },
+        });
+      } catch (_) {}
+      const messages = dbMsgs.map(m => ({
+        id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
+        body: m.body || m.content || "", type: m.type || "text",
+        direction: m.direction, fromMe: m.direction === "outbound",
+        timestamp: m.timestamp,
+        translation: m.translation ? (typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation) : null,
+        sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "telegram",
+      }));
+      return res.json(messages);
+    }
+
+    // 1. 先从DB查
+    const where = { sessionId: DEFAULT_SESSION_ID, OR: [{ from: targetJid }, { to: targetJid }] };
+    if (before) where.timestamp = { lt: new Date(before) };
+    const dbMsgs = await prisma.wAMessage.findMany({
+      where, orderBy: { timestamp: "desc" }, take: parseInt(limit),
+    });
+
+    // 2. 如果DB消息少，从Evolution补拉
+    let messages = [...dbMsgs];
+    if (dbMsgs.length < 10) {
+      try {
+        const evoMsgs = await evoConnector.fetchMessages(targetJid, parseInt(limit));
+        // 落库那些DB中没有的
+        const existingWaIds = new Set(dbMsgs.map(m => m.waMessageId).filter(Boolean));
+        const info = await evoConnector.getInstanceInfo().catch(() => null);
+        const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
+        const bulkInsert = [];
+        for (const m of evoMsgs) {
+          const key = m.key || {};
+          if (key.id && existingWaIds.has(key.id)) continue;
+          let remoteJid = key.remoteJid || targetJid;
+          // 解析@lid -> 真实JID
+          if (key.remoteJidAlt && key.remoteJidAlt.includes('@s.whatsapp.net')) {
+            remoteJid = key.remoteJidAlt;
+          }
+          if (remoteJid.endsWith('@lid')) continue; // 无法解析的@lid跳过
+          const fromMe = !!key.fromMe;
+          let body = "";
+          let type = "text";
+          const mm = m.message || {};
+          if (mm.conversation) body = mm.conversation;
+          else if (mm.extendedTextMessage) { body = mm.extendedTextMessage.text || ""; }
+          else if (mm.imageMessage) { body = mm.imageMessage.caption || "[图片]"; type = "image"; }
+          else if (mm.audioMessage) { body = "[语音]"; type = "audio"; }
+          else if (mm.videoMessage) { body = mm.videoMessage.caption || "[视频]"; type = "video"; }
+          else if (mm.documentMessage) { body = mm.documentMessage.fileName || "[文件]"; type = "document"; }
+          else { body = `[${m.messageType || "unknown"}]`; type = m.messageType || "unknown"; }
+          const ts = m.messageTimestamp ? new Date(m.messageTimestamp > 1e12 ? m.messageTimestamp : m.messageTimestamp * 1000) : new Date();
+          bulkInsert.push({
+            sessionId: DEFAULT_SESSION_ID,
+            from: fromMe ? ownerJid : remoteJid,
+            to: fromMe ? remoteJid : ownerJid,
+            body,
+            type,
+            direction: fromMe ? "outbound" : "inbound",
+            timestamp: ts,
+            waMessageId: key.id || null,
+          });
+        }
+        if (bulkInsert.length) {
+          for (const m of bulkInsert) { try { await prisma.wAMessage.create({ data: m }); } catch(e){ /* dup, skip */ } }
+          // 重新查DB
+          const refreshed = await prisma.wAMessage.findMany({
+            where: { sessionId: DEFAULT_SESSION_ID, OR: [{ from: targetJid }, { to: targetJid }] },
+            orderBy: { timestamp: "desc" }, take: parseInt(limit),
+          });
+          messages = refreshed;
+        }
+      } catch (e) {
+        console.warn("[WA messages] fetch from evolution failed:", e.message);
+      }
+    }
+
+    // 标记已读
+    try {
+      await prisma.wAMessage.updateMany({
+        where: { sessionId: DEFAULT_SESSION_ID, from: targetJid, direction: "inbound", read: false },
+        data: { read: true },
+      });
+    } catch (e) {}
+
+    res.json(messages.reverse());
+  } catch (err) {
+    console.error("[WA Messages Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 获取活跃连接列表
+app.get("/api/whatsapp/connections", authMiddleware, async (req, res) => {
+  try {
+    const state = await evoConnector.getConnectionState();
+    const info = await evoConnector.getInstanceInfo().catch(() => null);
+    res.json([{
+      sessionId: DEFAULT_SESSION_ID,
+      status: state === "open" ? "connected" : "disconnected",
+      phone: (info?.ownerJid || "").split("@")[0] || null,
+      instance: evoConnector.instance,
+      mode: "evolution-api",
+    }]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 断开连接
+app.post("/api/whatsapp/disconnect", authMiddleware, async (req, res) => {
+  try {
+    await evoConnector._delete(`/instance/logout/${evoConnector.instance}`).catch(() => {});
+    await prisma.wAConnection.updateMany({ where: { sessionId: DEFAULT_SESSION_ID }, data: { status: "disconnected" } });
+    const io = app.get("io");
+    if (io) io.emit("whatsapp:status", { status: "disconnected", reason: "manual logout", sessionId: DEFAULT_SESSION_ID });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 兼容别名
+app.get('/api/conversations', authMiddleware, (req, res) => {
+  req.url = '/api/whatsapp/conversations' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
+  app(req, res);
+});
+app.post('/api/messages/send', authMiddleware, (req, res) => {
+  req.url = '/api/whatsapp/send';
+  app(req, res);
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ─── Serve frontend in production ───
+// ─── 前端静态资源（生产环境） ───
 if (isProduction) {
-  // Resolve frontend dist path robustly:
-  // When started via start.sh, cwd is backend/ → ../frontend/dist
-  // Fallback: __dirname (backend/src/) → ../../frontend/dist
   const cwdFrontendPath = path.join(process.cwd(), '../frontend/dist');
   const fallbackFrontendPath = path.join(__dirname, '../../frontend/dist');
   const frontendPath = fs.existsSync(cwdFrontendPath) ? cwdFrontendPath : fallbackFrontendPath;
@@ -107,19 +1836,15 @@ if (isProduction) {
   console.log(`[Production] Serving frontend from: ${frontendPath} (dist exists: ${hasDist})`);
 
   if (hasDist) {
+    // Company material uploads (served before SPA fallback)
+    app.use("/uploads/company", express.static(path.join(__dirname, "uploads/company")));
+    app.use("/uploads/outbound", express.static(path.join(__dirname, "uploads/outbound")));
     app.use(express.static(frontendPath));
-    // Express 5 SPA fallback: catch-all for non-API, non-static GET requests
-    // Must call res.send() or next() for ALL matched routes, otherwise request hangs
     app.get('{*path}', (req, res, next) => {
-      // Skip API and Socket.io paths - let them 404 naturally
-      if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
-        return next();
-      }
-      // For all other paths, serve the SPA index.html
+      if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
       res.sendFile(path.join(frontendPath, 'index.html'));
     });
   } else {
-    // No frontend dist - still serve API, return status page for root
     console.warn('[Production] WARNING: frontend dist not found, serving API-only mode');
     app.get('/', (req, res) => {
       res.json({ status: 'ok', mode: 'api-only', message: 'Frontend not built' });
@@ -127,83 +1852,32 @@ if (isProduction) {
   }
 }
 
-// ─── Socket.io setup (BEFORE listen) ───
+// ─── Socket.io ───
 const io = new SocketIOServer(httpServer, {
   cors: {
     origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  pingInterval: 25000,
+  pingTimeout: 60000,
 });
 
 app.set('io', io);
 app.set('prisma', prisma);
 
+// 简化的Socket handler（直接使用Evolution connector状态，旧BaileysProvider handler保留文件但不引入其依赖）
 setupSocketHandlers(io, prisma);
 
-// ─── Bridge WhatsApp Provider events → Socket.io ───
-const waProvider = getBaileysProvider();
-waProvider.on('qr', (sessionId, qrDataUrl) => {
-  const userId = sessionId.replace('user_', '');
-  io.to(sessionId).emit('whatsapp:qr', { sessionId, qr: qrDataUrl });
-  console.log(`[WA] QR emitted for ${sessionId}`);
-});
-waProvider.on('connected', (sessionId, phone) => {
-  const userId = sessionId.replace('user_', '');
-  io.to(sessionId).emit('whatsapp:status', { sessionId, status: 'connected', phone });
-  io.to(`user_${userId}`).emit('whatsapp:status', { sessionId, status: 'connected', phone });
-  console.log(`[WA] Connected: ${sessionId} (${phone})`);
-});
-waProvider.on('disconnected', (sessionId, reason) => {
-  const userId = sessionId.replace('user_', '');
-  io.to(sessionId).emit('whatsapp:status', { sessionId, status: 'disconnected', reason });
-  io.to(`user_${userId}`).emit('whatsapp:status', { sessionId, status: 'disconnected', reason });
-});
-waProvider.on('status', (sessionId, status) => {
-  const userId = sessionId.replace('user_', '');
-  io.to(`user_${userId}`).emit('whatsapp:status', { sessionId, status });
-});
-waProvider.on('error', (sessionId, errorData) => {
-  const userId = sessionId.replace('user_', '');
-  io.to(`user_${userId}`).emit('whatsapp:error', { sessionId, ...errorData });
-  console.log(`[WA] Error for ${sessionId}: ${errorData.code} — ${errorData.message}`);
-});
-waProvider.on('message', (sessionId, messageData) => {
-  const userId = sessionId.replace('user_', '');
-  // Extract contact JID (the other party, not "me")
-  const fromJid = messageData.direction === 'inbound' ? messageData.from : messageData.to;
-  const phone = fromJid?.split('@')[0] || '';
-  io.to(`user_${userId}`).emit('whatsapp:message', {
-    id: messageData.waMessageId || Date.now(),
-    jid: fromJid,
-    from: messageData.from,
-    to: messageData.to,
-    body: messageData.body,
-    content: messageData.body,
-    direction: messageData.direction,
-    fromMe: messageData.direction === 'outbound',
-    messageType: messageData.type || 'text',
-    timestamp: messageData.timestamp,
-    contact: { name: phone, phone },
-  });
-});
-waProvider.on('sent', (sessionId, messageData) => {
-  const userId = sessionId.replace('user_', '');
-  io.to(`user_${userId}`).emit('whatsapp:message_sent', {
-    id: messageData.waMessageId || Date.now(),
-    jid: messageData.to,
-    from: messageData.from,
-    to: messageData.to,
-    body: messageData.body,
-    content: messageData.body,
-    direction: 'outbound',
-    fromMe: true,
-    messageType: messageData.type || 'text',
-    timestamp: messageData.timestamp,
-  });
+// 客户端(重)连时立即跑一次backfill补漏，断线期间的消息不用等3分钟周期
+io.on('connection', () => {
+  import('./services/message-backfill.js').then(m => {
+    if (m.runOnce) m.runOnce(io).catch(e => console.warn('[Backfill] on-connect error:', e.message));
+  }).catch(() => {});
 });
 
-// ─── Start server ───
+
+// ─── Start ───
 httpServer.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
@@ -212,29 +1886,94 @@ httpServer.on('error', (err) => {
   console.error('[FATAL] Server error:', err);
 });
 
-// ─── Initialize and start ───
+async function seedDefaultUser() {
+  try {
+    try { await prisma.$queryRaw`SELECT name FROM sqlite_master WHERE type='table' LIMIT 1`; }
+    catch {
+      console.log('[Seed] Database not ready, running db push...');
+      const { execSync } = await import('child_process');
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit', cwd: process.cwd() });
+    }
+    const bcrypt = (await import('bcryptjs')).default || (await import('bcryptjs'));
+    const hashFunc = bcrypt.hash || bcrypt.default?.hash;
+    if (!hashFunc) throw new Error('bcrypt.hash not available');
+    const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
+    if (!existing) {
+      const hash = await hashFunc('admin123', 10);
+      await prisma.user.create({ data: { username: 'admin', password: hash, name: 'Admin', role: 'admin' } });
+      console.log('[Seed] Default user created: admin / admin123');
+    }
+  } catch (err) {
+    console.error('[Seed] Error creating default user:', err.message);
+  }
+}
+
 async function startServer() {
   await ensureDatabase();
   await seedDefaultUser();
 
-  // Ensure sessions directory exists for WhatsApp provider
-  // Production fs is read-only — use /tmp (the only writable dir in prod)
-  const sessionsDir = isProduction
-    ? path.join('/tmp', 'wa-sessions')
-    : path.join(process.cwd(), 'sessions');
+  const sessionsDir = path.join(process.cwd(), 'sessions');
   try {
-    if (!fs.existsSync(sessionsDir)) {
-      fs.mkdirSync(sessionsDir, { recursive: true });
-    }
+    if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
     console.log(`[Server] Sessions dir: ${sessionsDir}`);
   } catch (err) {
-    console.warn(`[Server] Could not create sessions dir at ${sessionsDir}: ${err.message}`);
-    // Don't crash — WhatsApp feature will degrade gracefully
+    console.warn(`[Server] Could not create sessions dir: ${err.message}`);
   }
 
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
     console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
-    console.log(`[Server] Build version: 2024-06-19-v3 | Sessions: ${SESSIONS_DIR}`);
+    console.log(`[Server] Build version: evolution-api-v1 | Mode: Evolution REST API`);
+    // 初始化Evolution Connector
+    evoConnector.init().catch(err => console.warn('[Evolution] init error:', err.message));
+
+    // TG webhook自恢复：重启后自动给已连接的TG bot重设webhook（防止进程crash/重启后webhook失效）
+    import('./services/telegram-connector.js').then(async ({ getTelegramConnector }) => {
+      const crypto = await import('node:crypto');
+      const tgAccs = await prisma.whatsAppAccount.findMany({
+        where: { platform: 'telegram', status: 'connected', telegramBotToken: { not: null } }
+      });
+      for (const acc of tgAccs) {
+        try {
+          const conn = getTelegramConnector(acc.telegramBotToken);
+          const expectedPrefix = 'tgwh_';
+          let secret = '';
+          if (acc.sessionDir && acc.sessionDir.startsWith(expectedPrefix)) {
+            secret = acc.sessionDir.slice(expectedPrefix.length).split('_')[0];
+          }
+          if (!secret) {
+            secret = crypto.randomBytes(12).toString('hex');
+            await prisma.whatsAppAccount.update({
+              where: { id: acc.id },
+              data: { sessionDir: `tgwh_${secret}` }
+            });
+          }
+          const baseUrl = process.env.PUBLIC_BASE_URL || 'https://ai.jzjglass.com';
+          const webhookUrl = `${baseUrl}/api/telegram/webhook/${secret}`;
+          // 先getWebhookInfo检查，若已正确则跳过，避免每次重启drop_pending_updates丢消息
+          let needReset = true;
+          try {
+            const info = await conn.getWebhookInfo();
+            if (info && info.url === webhookUrl && !info.last_error_message && info.pending_update_count < 50) {
+              needReset = false;
+            }
+          } catch(e) {}
+          if (needReset) {
+            await conn.setWebhook(webhookUrl, secret, false);
+            console.log(`[TG] Webhook auto-reset for @${acc.telegramBotUsername}: ${webhookUrl}`);
+          } else {
+            console.log(`[TG] Webhook already OK for @${acc.telegramBotUsername}, skip reset`);
+          }
+        } catch (e) {
+          console.warn(`[TG] webhook auto-reset failed for ${acc.telegramBotUsername}:`, e.message);
+        }
+      }
+    }).catch(e => console.warn('[TG] webhook auto-restore skipped:', e.message));
+    // 消息兜底补拉：防止webhook漏推导致消息丢失
+    import("./services/message-backfill.js").then(m => { if (m.startBackfill) m.startBackfill(io); }).catch(e => console.warn("[Backfill] load error:", e.message));
+    // 启动自动化调度器（如果存在）
+    import("./services/automation-scheduler.js").then(m => {
+      if (m.startScheduler) m.startScheduler();
+    }).catch(() => {});
   });
 }
 
@@ -243,38 +1982,6 @@ startServer().catch(err => {
   process.exit(1);
 });
 
-// ─── Seed default user ───
-async function seedDefaultUser() {
-  try {
-    // First ensure DB schema is pushed
-    try {
-      await prisma.$queryRaw`SELECT name FROM sqlite_master WHERE type='table' LIMIT 1`;
-    } catch {
-      console.log('[Seed] Database not ready, running db push...');
-      const { execSync } = await import('child_process');
-      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit', cwd: process.cwd() });
-    }
-
-    const bcrypt = (await import('bcryptjs')).default || (await import('bcryptjs'));
-    const hashFunc = bcrypt.hash || bcrypt.default?.hash;
-    if (!hashFunc) throw new Error('bcrypt.hash not available');
-
-    const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
-    if (!existing) {
-      const hash = await hashFunc('admin123', 10);
-      await prisma.user.create({
-        data: { username: 'admin', password: hash, name: 'Admin', role: 'admin' },
-      });
-      console.log('[Seed] Default user created: admin / admin123');
-    }
-  } catch (err) {
-    console.error('[Seed] Error creating default user:', err.message);
-    console.error('[Seed] Stack:', err.stack);
-  }
-}
-
-
-// ─── Graceful shutdown ───
 async function gracefulShutdown(signal) {
   console.log(`\n[${signal}] Shutting down gracefully...`);
   io.close();
@@ -282,6 +1989,5 @@ async function gracefulShutdown(signal) {
   await prisma.$disconnect();
   process.exit(0);
 }
-
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));

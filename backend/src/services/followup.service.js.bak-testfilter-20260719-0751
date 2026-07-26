@@ -1,0 +1,246 @@
+/**
+ * Follow-up Service — 跟进提醒系统（修复版）
+ * 基于现有 WAMessage 表实时计算待跟进客户，不建新表、无新依赖。
+ */
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+const DEFAULT_SESSION_ID = 'user_1';
+
+const FIRST_RESPONSE_MS = 5 * 60 * 1000;
+const HOURS_URGENT = 4;
+const HOURS_FOLLOWUP = 48;
+const HOURS_REACTIVATE = 7 * 24;
+
+const TEST_PREFIXES = ["[SMOKE TEST]", "[LID-TEST]", "[TEST]"];
+function isTestMsg(body) {
+  if (!body || typeof body !== "string") return false;
+  return TEST_PREFIXES.some(p => body.includes(p));
+}
+
+function extractCustomerJid(msg, selfJid) {
+  const { direction, from, to } = msg;
+  let jid = null;
+  if (direction === 'inbound') jid = from;
+  else if (direction === 'outbound') jid = to;
+  if (!jid) return null;
+  if (jid.includes('@g.us')) return null;
+  if (jid.includes('@broadcast')) return null;
+  if (jid === 'status@broadcast') return null;
+  if (selfJid && jid === selfJid) return null;
+  if (!jid.includes('@s.whatsapp.net') && !jid.includes('@lid')) return null;
+  return jid;
+}
+
+function truncate(s, max = 50) {
+  if (!s) return '';
+  const str = String(s);
+  return str.length > max ? str.slice(0, max) + '…' : str;
+}
+
+export async function getFirstResponseAlerts(opts = {}) {
+  const userId = opts.userId || 1;
+  const sessionId = opts.sessionId || DEFAULT_SESSION_ID;
+  const thresholdMs = opts.thresholdMs || FIRST_RESPONSE_MS;
+
+  const now = new Date();
+  const since = new Date(now.getTime() - 60 * 60 * 1000);
+
+  const messages = await prisma.wAMessage.findMany({
+    where: {
+      sessionId,
+      timestamp: { gte: since },
+      NOT: { body: { contains: '[SMOKE TEST]' } },
+    },
+    orderBy: { timestamp: 'desc' },
+  });
+
+  let selfJid = null;
+  try {
+    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+    if (conn?.phone) selfJid = conn.phone + '@s.whatsapp.net';
+  } catch (e) { /* ignore */ }
+
+  const lastByJid = new Map();
+  const lastInboundByJid = new Map();
+  const hasOutboundAfterInbound = new Set();
+
+  for (const msg of messages) {
+    const jid = extractCustomerJid(msg, selfJid);
+    if (!jid) continue;
+    if (!msg.body || typeof msg.body !== 'string' || msg.body.trim() === '') continue;
+    if (isTestMsg(msg.body)) continue;
+
+    const ts = msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp);
+    if (isNaN(ts.getTime())) continue;
+
+    if (!lastByJid.has(jid)) lastByJid.set(jid, msg);
+
+    if (msg.direction === 'inbound') {
+      if (!lastInboundByJid.has(jid)) lastInboundByJid.set(jid, msg);
+    } else if (msg.direction === 'outbound') {
+      const lastIn = lastInboundByJid.get(jid);
+      if (lastIn) {
+        const inTs = lastIn.timestamp instanceof Date ? lastIn.timestamp : new Date(lastIn.timestamp);
+        if (ts >= inTs) hasOutboundAfterInbound.add(jid);
+      }
+    }
+  }
+
+  const jids = Array.from(lastInboundByJid.keys());
+  const customerMap = new Map();
+  if (jids.length > 0) {
+    try {
+      const customers = await prisma.customer.findMany({
+        where: { userId, jid: { in: jids } },
+        select: { jid: true, name: true, contactName: true, companyName: true, phone: true },
+      });
+      for (const c of customers) {
+        if (c.jid) customerMap.set(c.jid, c);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function resolveName(jid) {
+    const c = customerMap.get(jid);
+    if (c) return c.name || c.contactName || c.companyName || jid.split('@')[0];
+    return jid.split('@')[0];
+  }
+  function resolvePhone(jid) {
+    const c = customerMap.get(jid);
+    if (c?.phone) return c.phone;
+    return jid.split('@')[0];
+  }
+
+  const alerts = [];
+  for (const [jid, inboundMsg] of lastInboundByJid.entries()) {
+    const lastMsg = lastByJid.get(jid);
+    if (!lastMsg || lastMsg.direction !== 'inbound') continue;
+    if (hasOutboundAfterInbound.has(jid)) continue;
+
+    const ts = inboundMsg.timestamp instanceof Date ? inboundMsg.timestamp : new Date(inboundMsg.timestamp);
+    if (isNaN(ts.getTime())) continue;
+    const waitedMs = now.getTime() - ts.getTime();
+    if (waitedMs < thresholdMs) continue;
+
+    alerts.push({
+      jid,
+      name: resolveName(jid),
+      phone: resolvePhone(jid),
+      lastMessage: truncate(inboundMsg.body || ''),
+      lastMessageTime: ts.toISOString(),
+      minutesWaited: Math.floor(waitedMs / 60000),
+    });
+  }
+
+  alerts.sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
+  return alerts;
+}
+
+export async function getPendingFollowups(opts = {}) {
+  const userId = opts.userId || 1;
+  const sessionId = opts.sessionId || DEFAULT_SESSION_ID;
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const since = new Date(now.getTime() - (HOURS_REACTIVATE + 48) * 3600 * 1000);
+
+  const messages = await prisma.wAMessage.findMany({
+    where: {
+      sessionId,
+      timestamp: { gte: since },
+      NOT: { body: { contains: '[SMOKE TEST]' } },
+    },
+    orderBy: { timestamp: 'desc' },
+  });
+
+  let selfJid = null;
+  try {
+    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+    if (conn?.phone) selfJid = conn.phone + '@s.whatsapp.net';
+  } catch (e) { /* ignore */ }
+
+  const lastByJid = new Map();
+  const todayOutboundJids = new Set();
+
+  for (const msg of messages) {
+    const jid = extractCustomerJid(msg, selfJid);
+    if (!jid) continue;
+    if (isTestMsg(msg.body)) continue;
+    if (!lastByJid.has(jid)) lastByJid.set(jid, msg);
+    if (msg.direction === 'outbound') {
+      const ts = msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp);
+      if (ts >= todayStart) todayOutboundJids.add(jid);
+    }
+  }
+
+  const jids = Array.from(lastByJid.keys());
+  const customerMap = new Map();
+  if (jids.length > 0) {
+    try {
+      const customers = await prisma.customer.findMany({
+        where: { userId, jid: { in: jids } },
+        select: { jid: true, name: true, contactName: true, companyName: true },
+      });
+      for (const c of customers) {
+        if (c.jid) customerMap.set(c.jid, c);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function resolveName(jid) {
+    const c = customerMap.get(jid);
+    if (c) return c.name || c.contactName || c.companyName || jid.split('@')[0];
+    return jid.split('@')[0];
+  }
+
+  const urgent = [];
+  const followup = [];
+  const reactivate = [];
+
+  for (const [jid, msg] of lastByJid.entries()) {
+    if (todayOutboundJids.has(jid)) continue;
+
+    const ts = msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp);
+    if (isNaN(ts.getTime())) continue;
+    const hoursSinceLastMsg = (now.getTime() - ts.getTime()) / 3600000;
+
+    const base = {
+      jid,
+      name: resolveName(jid),
+      lastMessage: truncate(msg.body || ''),
+      lastMessageAt: ts.toISOString(),
+      lastMessageTime: ts.toISOString(),
+      hoursSinceLastMsg: Math.round(hoursSinceLastMsg * 10) / 10,
+      lastDirection: msg.direction,
+    };
+
+    if (msg.direction === 'inbound' && hoursSinceLastMsg > HOURS_URGENT) {
+      urgent.push(base);
+    } else if (msg.direction === 'outbound' && hoursSinceLastMsg > HOURS_FOLLOWUP && hoursSinceLastMsg <= HOURS_REACTIVATE) {
+      followup.push(base);
+    } else if (hoursSinceLastMsg > HOURS_REACTIVATE) {
+      reactivate.push(base);
+    }
+  }
+
+  const byTimeAsc = (a, b) => new Date(a.lastMessageAt).getTime() - new Date(b.lastMessageAt).getTime();
+  urgent.sort(byTimeAsc);
+  followup.sort(byTimeAsc);
+  reactivate.sort(byTimeAsc);
+
+  const firstResponse = await getFirstResponseAlerts({ userId, sessionId });
+
+  return {
+    urgent,
+    followup,
+    reactivate,
+    firstResponse,
+    total: urgent.length + followup.length + reactivate.length,
+    firstResponseCount: firstResponse.length,
+    generatedAt: now.toISOString(),
+  };
+}
+
+export default { getPendingFollowups, getFirstResponseAlerts };

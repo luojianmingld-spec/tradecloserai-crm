@@ -1,0 +1,188 @@
+/**
+ * Telegram Bot API connector（MVP）
+ * - 使用原生 fetch 调 TG HTTP API，零依赖
+ * - webhook 模式：TG 推送到 /api/telegram/webhook/:accountId
+ * - 支持：sendText/sendMessage/getMe/setWebhook/deleteWebhook/downloadFile
+ */
+
+import dns from 'dns';
+// Vultr日本节点IPv6路由TG不通，强制fetch走IPv4（在文件最顶部、类定义前）
+// Vultr东京IPv6路由api.telegram.org被封锁，必须强制走IPv4
+// dns.setDefaultResultOrder 在ESM import顺序下不可靠，改用undici全局dispatcher
+import { setGlobalDispatcher, Agent } from 'undici';
+setGlobalDispatcher(new Agent({ connect: { family: 4 } }));
+
+const TG_API = 'https://api.telegram.org';
+
+class TelegramConnector {
+  constructor(token, opts = {}) {
+    this.token = token;
+    this.opts = opts;
+    this.botInfo = null;
+  }
+
+  async _call(method, body) {
+    const url = `${TG_API}/bot${this.token}/${method}`;
+    const opt = { method: 'POST', headers: { 'Content-Type': 'application/json' } };
+    if (body) opt.body = JSON.stringify(body);
+    const resp = await fetch(url, opt);
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { ok: false, description: text }; }
+    if (!data.ok) {
+      const err = new Error(`Telegram API ${method} failed: ${data.description || text}`);
+      err.code = data.error_code;
+      err.parameters = data.parameters;
+      throw err;
+    }
+    return data.result;
+  }
+
+  async getMe() {
+    this.botInfo = await this._call('getMe');
+    return this.botInfo;
+  }
+
+  /**
+   * 设置webhook。drop_pending_updates=true避免一上来就灌入历史消息。
+   */
+  async setWebhook(url, secretToken, dropPending = false) {
+    return this._call('setWebhook', { url, secret_token: secretToken, drop_pending_updates: dropPending });
+  }
+
+  async deleteWebhook() {
+    return this._call('deleteWebhook', { drop_pending_updates: false });
+  }
+
+
+  async getWebhookInfo() {
+    return this._call('getWebhookInfo', {});
+  }
+
+  async sendMessage(chatId, text, extra = {}) {
+    return this._call('sendMessage', {
+      chat_id: chatId,
+      text,
+      parse_mode: extra.parse_mode,
+      disable_web_page_preview: extra.disable_web_page_preview,
+      reply_to_message_id: extra.reply_to_message_id,
+    });
+  }
+
+  async sendPhoto(chatId, photo, extra = {}) {
+    return this._call('sendPhoto', { chat_id: chatId, photo, caption: extra.caption, parse_mode: extra.parse_mode });
+  }
+
+  async sendDocument(chatId, doc, extra = {}) {
+    return this._call('sendDocument', { chat_id: chatId, document: doc, caption: extra.caption, parse_mode: extra.parse_mode });
+  }
+
+  async sendChatAction(chatId, action) {
+    return this._call('sendChatAction', { chat_id: chatId, action }); // typing/upload_photo/etc
+  }
+
+  /**
+   * 通过 chat_id 拿用户 profile 信息（id, first_name, last_name, username, photo）
+   */
+  async getChat(chatId) {
+    return this._call('getChat', { chat_id: chatId });
+  }
+
+  async getUserProfilePhotos(userId, limit = 1) {
+    return this._call('getUserProfilePhotos', { user_id: userId, limit });
+  }
+
+  /**
+   * 获取文件下载URL（通过TG bot API）
+   */
+  async getFile(fileId) {
+    const f = await this._call('getFile', { file_id: fileId });
+    return { ...f, downloadUrl: `${TG_API}/file/bot${this.token}/${f.file_path}` };
+  }
+}
+
+/**
+ * 统一入口：维护 accountId -> connector 实例的内存缓存
+ */
+const _connectors = new Map();
+
+export function getTelegramConnector(token) {
+  if (_connectors.has(token)) return _connectors.get(token);
+  const c = new TelegramConnector(token);
+  _connectors.set(token, c);
+  return c;
+}
+
+export function clearTelegramConnector(token) {
+  _connectors.delete(token);
+}
+
+/**
+ * 从 Telegram Update 提取归一化消息
+ * @returns { fromId, chatId, text, messageId, timestamp, firstName, lastName, username, type, media }
+ *   media: { kind, fileId, fileName?, mimeType?, caption? }
+ */
+export function normalizeIncomingUpdate(update) {
+  // 普通消息 / 频道消息 / 回调查询等 —— MVP先处理message和edited_message
+  const m = update.message || update.edited_message || update.channel_post;
+  if (!m) return null;
+  const chat = m.chat || {};
+  const from = m.from || {};
+
+  // 过滤bot自己的消息（防止回环）
+  if (from.is_bot) return null;
+
+  // chat.id 即TG的peer id，私聊为正整数，群为负
+  const chatId = chat.id;
+  const fromId = from.id;
+
+  // 文本或caption
+  let text = m.text || m.caption || '';
+  // 命令消息去/botname部分（MVP暂保留原文本）
+  let type = 'text';
+  let media = null;
+  if (m.photo) {
+    type = 'image';
+    const best = m.photo[m.photo.length - 1];
+    media = { kind: 'photo', fileId: best.file_id, width: best.width, height: best.height, caption: m.caption };
+  } else if (m.document) {
+    type = 'document';
+    media = { kind: 'document', fileId: m.document.file_id, fileName: m.document.file_name, mimeType: m.document.mime_type, caption: m.caption };
+  } else if (m.video) {
+    type = 'video';
+    media = { kind: 'video', fileId: m.video.file_id, fileName: m.video.file_name, mimeType: m.video.mime_type, caption: m.caption };
+  } else if (m.audio || m.voice) {
+    type = 'audio';
+    const a = m.audio || m.voice;
+    media = { kind: 'audio', fileId: a.file_id, mimeType: a.mime_type, duration: a.duration };
+  } else if (m.sticker) {
+    type = 'sticker';
+    text = '[Sticker]';
+    media = { kind: 'sticker', fileId: m.sticker.file_id, emoji: m.sticker.emoji };
+  } else if (m.contact) {
+    type = 'contact';
+    text = `[Contact] ${m.contact.first_name || ''} ${m.contact.last_name || ''} ${m.contact.phone_number || ''}`;
+  } else if (m.location) {
+    type = 'location';
+    text = `[Location] ${m.location.latitude},${m.location.longitude}`;
+  }
+
+  return {
+    platform: 'telegram',
+    chatId,
+    fromId,
+    messageId: m.message_id,
+    timestamp: m.date ? new Date(m.date * 1000) : new Date(),
+    firstName: from.first_name || '',
+    lastName: from.last_name || '',
+    username: from.username || '',
+    chatType: chat.type, // private/group/supergroup/channel
+    chatTitle: chat.title || '',
+    text,
+    type,
+    media,
+    raw: m,
+  };
+}
+
+export default TelegramConnector;

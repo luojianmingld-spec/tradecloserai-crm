@@ -1,0 +1,943 @@
+/**
+ * AI Service - 统一AI服务
+ * 所有AI功能（翻译、话术生成、需求总结）共用此service
+ * 通过 ai-client 调用LLM，从Settings表读取当前激活的provider配置
+ */
+import { PrismaClient } from '@prisma/client';
+import { chatComplete as aiChatComplete, chatCompleteLite, getActiveProvider, getProviderById, DOUBAO_PRO_MODEL, DOUBAO_LITE_MODEL } from './ai-client.js';
+import { googleTranslate, googleDetect } from './google-translate.js';
+
+const prisma = new PrismaClient();
+const USER_ID = 1;
+
+// Default settings — translationEngine defaults to 'google' for new users;
+// persisted user settings override this.
+const DEFAULT_SETTINGS = {
+  aiModel: 'doubao-pro',
+  translationEnabled: 'true',
+  translationEngine: 'google',
+  translationTargetLang: 'auto',
+  translationAutoSend: 'false',
+};
+
+// In-memory translation cache
+const memoryCache = new Map();
+
+// Helper: get settings
+export async function getAISettings(userId) {
+  const settings = await prisma.setting.findMany({ where: { userId } });
+  const map = {};
+  for (const s of settings) map[s.key] = s.value;
+  return { ...DEFAULT_SETTINGS, ...map };
+}
+
+// Helper: update setting
+export async function updateSetting(userId, key, value) {
+  return prisma.setting.upsert({
+    where: { userId_key: { userId, key } },
+    create: { userId, key, value: String(value) },
+    update: { value: String(value) },
+  });
+}
+
+// Helper: batch update
+export async function updateSettings(userId, obj) {
+  const ops = Object.entries(obj).map(([key, value]) =>
+    prisma.setting.upsert({
+      where: { userId_key: { userId, key } },
+      create: { userId, key, value: String(value) },
+      update: { value: String(value) },
+    })
+  );
+  await Promise.all(ops);
+}
+
+// Helper: resolve model ID - kept for compatibility
+export async function resolveModelId() {
+  const provider = await getActiveProvider();
+  if (provider && provider.model) return provider.model;
+  return 'doubao-seed-2-0-pro-260215';
+}
+
+// Core: generic chat completion (non-translation use cases: reply gen, summarization, docs)
+export async function chatComplete(modelId, systemPrompt, userPrompt, options = {}) {
+  const messages = [];
+  if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+  messages.push({ role: 'user', content: userPrompt });
+
+  return aiChatComplete(messages, {
+    model: modelId,
+    temperature: options.temperature ?? 0.7,
+    max_tokens: options.maxTokens,
+    timeout: options.timeout ?? 60000,
+  });
+}
+
+// ═══════════════════════════════════════════
+// 1. TRANSLATION
+// ═══════════════════════════════════════════
+
+const LANGUAGE_NAMES = {
+  auto: '自动检测', en: '英语', zh: '中文简体', 'zh-TW': '中文繁体', ja: '日语', ko: '韩语', es: '西班牙语',
+  fr: '法语', de: '德语', pt: '葡萄牙语', ru: '俄语', ar: '阿拉伯语',
+  hi: '印地语', it: '意大利语', th: '泰语', vi: '越南语', id: '印尼语',
+  ms: '马来语', tr: '土耳其语', pl: '波兰语', nl: '荷兰语',
+};
+
+export { LANGUAGE_NAMES };
+
+/**
+ * Fast regex-based language detection — covers the most common scripts
+ * to avoid an LLM round-trip.  Returns 'zh' for CJK-heavy (ja/ko/zh all fall
+ * back to zh in MVP since users mostly translate between Chinese & other
+ * languages), 'ja' for hiragana/katakana, 'ko' for hangul,
+ * 'ar' for Arabic, 'ru' for Cyrillic, 'en' for Latin-heavy text that looks
+ * like English.  Returns null when undecided.
+ */
+function fastDetect(text) {
+  if (!text || typeof text !== 'string') return null;
+  const sample = text.slice(0, 200);
+  const hasJapanese = /[\u3040-\u309f\u30a0-\u30ff]/.test(sample);
+  const hasKorean = /[\uac00-\ud7af]/.test(sample);
+  const hasCJK = /[\u4e00-\u9fff]/.test(sample);
+  const hasArabic = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]/.test(sample);
+  const hasCyrillic = /[\u0400-\u04ff\u0500-\u052f]/.test(sample);
+  const hasLatin = /[A-Za-z]/.test(sample);
+
+  if (hasJapanese) return 'ja';
+  if (hasKorean) return 'ko';
+  if (hasCJK) return 'zh';
+  if (hasArabic) return 'ar';
+  if (hasCyrillic) return 'ru';
+  if (hasLatin) {
+    // heuristic: mostly Latin letters/spaces/punctuation → English (covers Spanish/French etc,
+    // but still good enough for the main "zh↔foreign" use case; Google translate will still
+    // pick the correct language on its own if from='auto' is passed down)
+    const latin = (sample.match(/[A-Za-z]/g) || []).length;
+    if (latin > 4 && latin / sample.replace(/\s+/g, '').length > 0.6) {
+      return 'en';
+    }
+  }
+  return null;
+}
+
+
+// ISO 639-1 → 中文名映射
+const LANG_CODE_TO_CN = {
+  ar: '阿拉伯语', en: '英语', zh: '中文', es: '西班牙语',
+  fr: '法语', de: '德语', ja: '日语', ko: '韩语',
+  pt: '葡萄牙语', ru: '俄语', it: '意大利语', tr: '土耳其语',
+  th: '泰语', vi: '越南语', id: '印尼语', hi: '印地语', nl: '荷兰语',
+};
+const LANG_CODE_TO_NATIVE = {
+  ar: 'العربية', en: 'English', zh: '中文', es: 'Español',
+  fr: 'Français', de: 'Deutsch', ja: '日本語', ko: '한국어',
+  pt: 'Português', ru: 'Русский', it: 'Italiano', tr: 'Türkçe',
+  th: 'ไทย', vi: 'Tiếng Việt', id: 'Bahasa Indonesia', hi: 'हिन्दी', nl: 'Nederlands',
+};
+function buildTargetLangDirective(targetLang) {
+  if (!targetLang || targetLang === 'auto') return '';
+  const cn = LANG_CODE_TO_CN[targetLang] || targetLang;
+  const native = LANG_CODE_TO_NATIVE[targetLang] || cn;
+  const NL = '\n';
+  return (
+    NL + NL +
+    '【关键语言强制指令 - 必须遵守】' + NL +
+    '用户已明确指定外文回复语言为【' + cn + '（' + native + '）】。' + NL +
+    '你生成的 foreign 字段必须全部使用【' + cn + '】书写，绝对不能使用英语、中文或其他任何语言。' + NL +
+    'chinese 字段始终是 foreign 对应的中文翻译参考，必须是简体中文。' + NL +
+    '不管客户用什么语言发消息，不管聊天记录里出现什么语言，foreign 必须是【' + cn + '】，违反此指令即为错误输出。'
+  );
+}
+
+/**
+ * Detect language.  Fast-path regex first, then route per engine.
+ * @param {string} text
+ * @param {string} [engine='google'] - 'google' | 'doubao'
+ * @returns {Promise<string>} ISO 639-1 code
+ */
+export async function detectLanguage(text, engine = 'google') {
+  const fast = fastDetect(text);
+  if (fast) return fast;
+
+  const eff = engine === 'doubao' ? 'doubao' : 'google';
+  if (eff === 'google') {
+    try {
+      return await googleDetect(text);
+    } catch (e) {
+      console.error('[AI Service] Google detect failed, fallback to doubao-lite:', e.message);
+      // fall through to doubao lite
+    }
+  }
+
+  // doubao (lite) fallback
+  try {
+    const result = await chatCompleteLite(
+      [
+        { role: 'system', content: 'You are a language detector. Reply with ONLY the ISO 639-1 two-letter language code. No explanation, no punctuation.' },
+        { role: 'user', content: text },
+      ],
+      { temperature: 0.1, max_tokens: 10 }
+    );
+    const code = (result || '').trim().toLowerCase().substring(0, 2);
+    if (/^[a-z]{2}$/.test(code)) return code;
+  } catch (e) {
+    console.error('[AI Service] doubao-lite language detection failed:', e.message);
+  }
+  return 'en';
+}
+
+/**
+ * Translate text. Routes per engine, with doubao fallback when google fails.
+ *
+ * @param {string} text
+ * @param {string} sourceLang - ISO 639-1 or 'auto'
+ * @param {string} targetLang - ISO 639-1
+ * @param {string} [engine='google'] - 'google' | 'doubao'
+ * @param {number} [userId]
+ * @returns {Promise<{translated:string, sourceLang:string, targetLang:string, cached:boolean, engine:string, detectedSourceLang?:string}>}
+ */
+export async function translateText(text, sourceLang, targetLang, engine = 'google', userId) {
+  if (!text) return { translated: text || '', sourceLang: sourceLang || 'auto', targetLang, cached: false, engine };
+  const effectiveTarget = targetLang === 'auto' ? 'zh' : (targetLang || 'zh');
+  let effectiveSource = sourceLang === 'auto' || !sourceLang ? 'auto' : sourceLang;
+  const effectiveEngine = engine === 'doubao' ? 'doubao' : 'google';
+
+  // Cache key (sourceLang may be 'auto', actual detected is not known yet)
+  const cacheKey = `${text}|${effectiveSource}|${effectiveTarget}|${effectiveEngine}`;
+  if (memoryCache.has(cacheKey)) {
+    return { translated: memoryCache.get(cacheKey), sourceLang: effectiveSource, targetLang: effectiveTarget, cached: true, engine: effectiveEngine };
+  }
+
+  const dbCache = await prisma.translationCache.findUnique({
+    where: { sourceText_sourceLang_targetLang_engine: { sourceText: text, sourceLang: effectiveSource, targetLang: effectiveTarget, engine: effectiveEngine } },
+  }).catch(() => null);
+  if (dbCache) {
+    memoryCache.set(cacheKey, dbCache.translated);
+    return { translated: dbCache.translated, sourceLang: effectiveSource, targetLang: effectiveTarget, cached: true, engine: effectiveEngine };
+  }
+
+  let translated = '';
+  let detectedSourceLang;
+  let usedEngine = effectiveEngine;
+
+  // ── google path ──
+  if (effectiveEngine === 'google') {
+    try {
+      const r = await googleTranslate(text, effectiveSource, effectiveTarget);
+      translated = r.translated;
+      detectedSourceLang = r.detectedSourceLang;
+      if (effectiveSource === 'auto' && detectedSourceLang) effectiveSource = detectedSourceLang;
+    } catch (e) {
+      console.error('[AI Service] Google translate failed, falling back to doubao-lite:', e.message);
+      usedEngine = 'doubao'; // fall through to doubao
+    }
+  }
+
+  // ── doubao (lite) path (also reached as google fallback) ──
+  if (!translated) {
+    usedEngine = 'doubao';
+    // if sourceLang still auto, run fast detect first to skip another LLM call
+    if (effectiveSource === 'auto') {
+      const fast = fastDetect(text);
+      if (fast) effectiveSource = fast;
+    }
+    const srcName = LANGUAGE_NAMES[effectiveSource] || (effectiveSource === 'auto' ? '自动检测' : effectiveSource);
+    const tgtName = LANGUAGE_NAMES[effectiveTarget] || effectiveTarget;
+    const systemPrompt = `Translate the user's text from ${srcName} into ${tgtName}. Output ONLY the translation, no explanations, no quotes. If source and target are the same, return the text unchanged.`;
+    try {
+      translated = await chatCompleteLite(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text },
+        ],
+        { temperature: 0.2, max_tokens: 1024 }
+      );
+      translated = (translated || '').trim();
+    } catch (e) {
+      console.error('[AI Service] doubao-lite translate failed:', e.message);
+      throw e; // let caller decide to send original
+    }
+  }
+
+  if (!translated) {
+    throw new Error('Translation returned empty');
+  }
+
+  memoryCache.set(cacheKey, translated);
+  try {
+    await prisma.translationCache.upsert({
+      where: { sourceText_sourceLang_targetLang_engine: { sourceText: text, sourceLang: effectiveSource, targetLang: effectiveTarget, engine: usedEngine } },
+      create: { sourceText: text, sourceLang: effectiveSource, targetLang: effectiveTarget, engine: usedEngine, translated },
+      update: { translated },
+    });
+  } catch (e) {
+    console.error('[AI Service] Cache save error:', e.message);
+  }
+
+  return { translated, sourceLang: effectiveSource, targetLang: effectiveTarget, cached: false, engine: usedEngine, detectedSourceLang };
+}
+
+/**
+ * Translate outgoing (user→foreign).  Default engine = google (fast).
+ * Uses fast regex detection to skip explicit detect step for the common CJK/Latin case.
+ * On any failure returns null so the caller can silently fall back to sending original.
+ */
+export async function translateOutgoing(text, contactLang, userId, opts = {}) {
+  if (!text) return null;
+  try {
+    const settingsPath = userId ? await getAISettings(userId) : null;
+    const engine = opts.engine || settingsPath?.sendEngine || 'google';
+    const sourceLangSetting = opts.sendSourceLang || settingsPath?.sendSourceLang || 'auto';
+    const targetLang = contactLang || opts.targetLang || 'en';
+
+    let sourceLang = sourceLangSetting;
+    if (sourceLang === 'auto') {
+      // fast regex path avoids extra API round-trip entirely
+      const fast = fastDetect(text);
+      sourceLang = fast || 'auto';
+    }
+
+    // When engine is google and source is auto, we send auto and let Google return detectedSourceLang.
+    const result = await translateText(text, sourceLang, targetLang, engine, userId);
+    return result;
+  } catch (e) {
+    console.error('[AI Service] translateOutgoing failed, will send original:', e.message);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════
+// 2. AI REPLY GENERATION
+// ═══════════════════════════════════════════
+
+const STYLE_PROMPTS = {
+  formal: `你是一位专业的外贸销售，擅长用正式商务风格与海外客户沟通。
+要求：
+- 使用正式、礼貌的商务用语
+- 表达专业、严谨，体现公司实力
+- 适当使用敬语和商务术语
+- 回复结构清晰，逻辑性强`,
+  friendly: `你是一位亲切的外贸销售，擅长用友好热情的风格与海外客户沟通。
+要求：
+- 语气热情友好，像朋友一样交流
+- 适当使用感叹号增强亲和力
+- 表达自然流畅，避免过于生硬
+- 让客户感到被重视和关心`,
+  concise: `你是一位高效的外贸销售，擅长用简洁明了的风格与海外客户沟通。
+要求：
+- 回复简短有力，直击要点
+- 不说废话，信息密度高
+- 用最少的文字传达最关键的信息
+- 适合快节奏的商务沟通`,
+};
+
+async function getRecentMessages(accountId, jid, limit = 20) {
+  const sessionId = `user_${accountId}`;
+  try {
+    return await prisma.wAMessage.findMany({
+      where: {
+        sessionId,
+        OR: [
+          { from: jid },
+          { to: jid },
+        ],
+      },
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    });
+  } catch (e) {
+    console.warn('[AI] getRecentMessages wAMessage fallback failed:', e.message);
+    return [];
+  }
+}
+
+async function getContactInfo(accountId, jid) {
+  try {
+    const phone = (jid || '').split('@')[0];
+    const customer = await prisma.customer.findFirst({
+      where: { userId: accountId, phone },
+    });
+    if (customer) {
+      return {
+        name: customer.name,
+        country: customer.country || '',
+        language: '',
+        phone,
+      };
+    }
+  } catch (e) {
+    console.warn('[AI] getContactInfo failed:', e.message);
+  }
+  return null;
+}
+
+function buildConversationContext(messages, contact) {
+  const contactInfo = contact ? `客户: ${contact.name || contact.phone || '未知'}, 国家: ${contact.country || '未知'}, 语言: ${contact.language || '未知'}` : '';
+  const msgLines = messages.slice().reverse().map(m => {
+    const isFromMe = m.fromMe === true || m.direction === 'outbound' || m.direction === 'outgoing';
+    const role = isFromMe ? '我方' : '客户';
+    const content = m.body || m.content || '';
+    const time = new Date(m.timestamp).toLocaleString('zh-CN');
+    return `[${time}] ${role}: ${content}`;
+  });
+  return (contactInfo ? contactInfo + '\n\n' : '') + msgLines.join('\n');
+}
+
+export async function generateReply({ userId, accountId, jid, style = 'formal', model: modelKey = 'doubao-lite', messages: directMessages }) {
+  let messages = directMessages || [];
+  if (messages.length === 0 && accountId && jid) {
+    messages = await getRecentMessages(accountId, jid, 20);
+  }
+  if (messages.length === 0) {
+    return { replies: [], error: '暂无消息记录，无法生成回复' };
+  }
+
+  const contact = (accountId && jid) ? await getContactInfo(accountId, jid) : null;
+  const contextStr = buildConversationContext(messages, contact);
+  const stylePrompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.formal;
+
+  const systemPrompt = `${stylePrompt}
+
+根据以下对话历史，生成3个不同的回复选项。每个回复用数字编号(1/2/3)开头，每个回复之间用"---"分隔。
+回复应直接可发送，不需要额外解释。
+用客户的语言回复（如果客户用英文，用英文回复；如果用中文，用中文回复）。`;
+
+  // modelKey 是 providerId，按 id 路由到对应 provider
+  let callProvider = null;
+  let selectedModelId = null;
+  if (modelKey) {
+    callProvider = await getProviderById(modelKey);
+    if (callProvider) selectedModelId = callProvider.model;
+  }
+  if (!callProvider) {
+    // 降级到激活的 provider
+    callProvider = await getActiveProvider();
+    selectedModelId = callProvider?.model || DOUBAO_LITE_MODEL;
+  }
+  if (!callProvider?.apiKey) {
+    return { replies: [], error: '未配置 AI 模型，请先在「设置-AI模型」添加 API Key', style };
+  }
+
+  const result = await aiChatComplete(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: contextStr },
+    ],
+    { temperature: 0.8, max_tokens: 1024, model: selectedModelId, provider: callProvider, timeout: 60000 }
+  );
+
+  const replies = result
+    .split(/---|\n[123][.、)）]\s*/)
+    .map(s => s.trim())
+    .filter(s => s.length > 5);
+
+  return { replies, engine: 'active', style, model: modelKey, provider: callProvider?.name || callProvider?.provider || '' };
+}
+
+// ═══════════════════════════════════════════
+// 3. NEED SUMMARIZATION
+// ═══════════════════════════════════════════
+
+const EMPTY_SUMMARY = {
+  products: '',
+  quantity: '',
+  priceSensitivity: '',
+  deliveryRequirements: '',
+  keyConcerns: '',
+  customerStyle: '',
+  nextActions: '',
+  intentionScore: 0,
+};
+
+export async function summarizeNeed({ userId, accountId, jid, messages: directMessages }) {
+  let messages = directMessages || [];
+  if (messages.length === 0 && accountId && jid) {
+    messages = await getRecentMessages(accountId, jid, 30);
+  }
+  if (messages.length === 0) {
+    return { summary: EMPTY_SUMMARY, error: '暂无消息记录，无法生成需求总结' };
+  }
+
+  const contact = (accountId && jid) ? await getContactInfo(accountId, jid) : null;
+  const contextStr = buildConversationContext(messages, contact);
+
+  const systemPrompt = `你是一位资深的外贸业务分析师，擅长从客户沟通记录中提炼关键需求信息。
+
+当前客户信息：
+${contact ? `姓名: ${contact.name || '未知'}, 国家: ${contact.country || '未知'}, 语言: ${contact.language || '未知'}` : '未知'}
+
+请分析以下对话记录，提取8个维度的客户需求信息，严格按以下JSON格式返回（不要返回其他内容）：
+
+{
+  "products": "意向产品（客户提到的产品名称、型号、规格）",
+  "quantity": "需求规模（数量、频次、持续性）",
+  "priceSensitivity": "价格敏感度（高/中/低，以及对价格的表态）",
+  "deliveryRequirements": "交付要求（交货时间、物流方式、包装要求）",
+  "keyConcerns": "核心关注点（质量、认证、售后、付款方式等）",
+  "customerStyle": "客户风格（决策快慢、沟通偏好、专业程度）",
+  "nextActions": "下一步行动建议（具体可执行的跟进步骤）",
+  "intentionScore": 5
+}
+
+intentionScore 为意向度评分，1-10分（1=极低, 10=极高）。
+仅返回JSON，不要包含任何其他文字。`;
+
+  const result = await aiChatComplete(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: contextStr },
+    ],
+    { temperature: 0.3, max_tokens: 1024 }
+  );
+
+  try {
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        summary: {
+          products: parsed.products || '',
+          quantity: parsed.quantity || '',
+          priceSensitivity: parsed.priceSensitivity || '',
+          deliveryRequirements: parsed.deliveryRequirements || '',
+          keyConcerns: parsed.keyConcerns || '',
+          customerStyle: parsed.customerStyle || '',
+          nextActions: parsed.nextActions || '',
+          intentionScore: parseInt(parsed.intentionScore) || 0,
+        },
+        engine: 'active',
+      };
+    }
+  } catch (e) {
+    console.error('[AI Service] JSON parse error:', e.message);
+  }
+
+  return { summary: EMPTY_SUMMARY, engine: 'active', rawResult: result };
+}
+
+export async function getAvailableModels() {
+  // 动态从 providers 表读取所有已配置的 AI 模型
+  const { getProviders: getAllProviders } = await import('./ai-client.js');
+  let providers = [];
+  try {
+    providers = await getAllProviders();
+  } catch (e) {
+    console.error('[AI] getProviders failed:', e.message);
+  }
+
+  // 构建展示列表：每个 provider 作为一个可选模型
+  const providerLabels = {
+    doubao: '豆包',
+    deepseek: 'DeepSeek',
+    openai: 'OpenAI',
+    custom: '自定义',
+  };
+
+  const models = providers
+    .filter(p => p.apiKey && p.model)
+    .map(p => {
+      const label = providerLabels[p.provider] || p.provider || '自定义';
+      const isLite = p.model.includes('lite');
+      return {
+        key: p.id,
+        id: p.model,
+        name: `${p.name || label}`,
+        desc: p.baseUrl ? (p.baseUrl.includes('deepseek') ? 'DeepSeek，性价比高' : '') : '',
+        providerType: p.provider,
+      };
+    });
+
+  return models;
+}
+
+/**
+ * 同步版本（向后兼容，返回空数组，调用方应使用 async 版本）
+ */
+export function getAvailableModelsSync() {
+  return [];
+}
+
+// ═══════════════════════════════════════════
+// 4. EXTRACT CUSTOMER INFO FROM CHAT
+// ═══════════════════════════════════════════
+
+export async function extractCustomerInfo({ userId, accountId, jid, messages: directMessages }) {
+  let messages = directMessages || [];
+  if (messages.length === 0 && accountId && jid) {
+    messages = await getRecentMessages(accountId, jid, 50);
+  }
+  if (messages.length === 0) {
+    return { info: {}, error: '暂无消息记录' };
+  }
+
+  const contact = (accountId && jid) ? await getContactInfo(accountId, jid) : null;
+  const contextStr = buildConversationContext(messages, contact);
+
+  const systemPrompt = `你是一位外贸单证专家。请从以下聊天记录中提取客户信息，用于生成报价单/发票等单证。
+
+已知客户信息（如果有）：
+${contact ? `电话: ${contact.phone || '未知'}, 姓名: ${contact.name || '未知'}, 公司: ${contact.company || '未知'}` : '无'}
+
+请提取以下字段，如果聊天中没提到就返回空字符串。严格按JSON格式返回：
+
+{
+  contactName: 联系人姓名,
+  companyName: 公司名称,
+  phone: 电话号码,
+  email: 邮箱,
+  address: 地址,
+  country: 国家,
+  products: 意向产品,
+  quantity: 数量,
+  price: 价格
+}
+
+仅返回JSON。`;
+
+  const result = await aiChatComplete(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: contextStr },
+    ],
+    { temperature: 0.2, max_tokens: 512 }
+  );
+
+  try {
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return { info: parsed, source: 'ai' };
+    }
+  } catch (e) {
+    console.error('[AI Service] extractCustomerInfo parse error:', e.message);
+  }
+
+  return { info: {}, source: 'fallback' };
+}
+
+// ═══════════════════════════════════════════
+// 5. GENERATE DOCUMENT (Quotation/Invoice/Packing/Contract)
+// ═══════════════════════════════════════════
+
+export async function generateDocument({ userId, accountId, jid, messages: directMessages, docType, customerInfo }) {
+  let messages = directMessages || [];
+  if (messages.length === 0 && accountId && jid) {
+    messages = await getRecentMessages(accountId, jid, 50);
+  }
+  if (messages.length === 0) {
+    return { content: "", error: "暂无消息记录，无法生成单证" };
+  }
+
+  const contact = (accountId && jid) ? await getContactInfo(accountId, jid) : null;
+  const contextStr = buildConversationContext(messages, contact);
+
+  const infoStr = customerInfo ? `
+已确认的客户信息：
+- 联系人：${customerInfo.contactName || "未知"}
+- 公司：${customerInfo.companyName || "未知"}
+- 电话：${customerInfo.phone || "未知"}
+- 邮箱：${customerInfo.email || "未知"}
+- 地址：${customerInfo.address || "未知"}
+- 国家：${customerInfo.country || "未知"}
+- 产品：${customerInfo.products || "未知"}
+- 数量：${customerInfo.quantity || "未知"}
+- 价格：${customerInfo.price || "未知"}
+` : "";
+
+  const docPrompts = {
+    quotation: `请根据以下聊天记录和客户信息，生成一份专业的外贸报价单(Quotation)。
+要求：
+1. 包含：卖方信息(待填)、买方信息(从聊天提取)、产品明细表(产品名、规格、单价、数量、金额)、付款条件、交货期、报价有效期
+2. 用Markdown表格格式输出产品明细
+3. 底部留"备注"区域
+4. 格式专业、可直接用于实际业务`,
+    invoice: `请根据以下聊天记录和客户信息，生成一份形式发票(Proforma Invoice)。
+要求：
+1. 包含：发票编号(自动生成PI-xxx日期)、买卖双方信息、产品明细表(描述、数量、单价、金额)、总金额、付款条件、交货条款、银行信息(待填)
+2. 用Markdown表格格式输出产品明细
+3. 格式专业、符合国际贸易惯例`,
+    packing: `请根据以下聊天记录和客户信息，生成一份装箱单(Packing List)。
+要求：
+1. 包含：发货人/收货人信息、产品明细(品名、数量、毛重、净重、体积、包装方式)、总件数、总毛重、总体积
+2. 用Markdown表格格式输出
+3. 如聊天中没提到重量/体积，用占位符标注"待确认"`,
+    contract: `请根据以下聊天记录和客户信息，生成一份外贸销售合同模板。
+要求：
+1. 包含：合同编号、签约日期、买卖双方信息、产品描述及规格、数量、价格条款、付款方式、交货条款、质量保证、争议解决、不可抗力、合同生效条件
+2. 用标准合同条款格式（第X条）
+3. 关键待填项用[待填]标注`
+  };
+
+  const prompt = docPrompts[docType] || docPrompts.quotation;
+
+  const systemPrompt = `${prompt}
+
+${infoStr}
+
+以下是聊天记录内容：`;
+
+  const result = await aiChatComplete(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: contextStr },
+    ],
+    { temperature: 0.3, max_tokens: 2048 }
+  );
+
+  return { content: result, docType, engine: "active" };
+}
+// ═══════════════════════════════════════════
+// 6. AI CONVERSATION DEEP ANALYSIS (v2 - 仅返回3版话术)
+// ═══════════════════════════════════════════
+
+const ANALYZE_SYSTEM_PROMPT_V2 = `你是一个资深外贸业务员助手，精通英语、阿拉伯语、西班牙语、法语等多语种外贸沟通，正在帮一线外贸业务员（"我"）给海外客户写WhatsApp回复。
+
+基于最近的WhatsApp聊天记录原文，帮我：
+1. 分析客户当前状态和回复策略（场景分析）
+2. 给出3个不同风格的回复话术（推荐回复）
+3. 总结设计思路（客户心理 vs 应对策略）
+4. 给出补充建议
+
+严格只输出一个JSON对象，不要任何其他文字、解释、前言、后记，不要markdown代码块包裹（不要 \`\`\`json ... \`\`\` ）。
+JSON结构必须完全如下（所有字段都要输出）：
+{
+  "analysis": "场景分析段落，用中文，口语化，像老业务员给新人讲单一样。先点出客户表达的核心诉求、心理状态（如犹豫不决、比价、要女性销售、嫌贵、不懂产品等）和文化背景；再点出我作为回复者的身份/处境；最后用一句话总结核心策略（形如：先肯定客户想法→巧妙引导客户认识你的价值→最后留出灵活选择空间）。整体2-4句话，一段自然中文，不要分点，不要书面腔。",
+  "replies": [
+    {"name":"版本名","desc":"一句话特点和适用场景","foreign":"地道外文原文（客户用的语言）","chinese":"中文翻译参考"},
+    {"name":"版本名","desc":"一句话特点和适用场景","foreign":"地道外文原文（客户用的语言）","chinese":"中文翻译参考"},
+    {"name":"版本名","desc":"一句话特点和适用场景","foreign":"地道外文原文（客户用的语言）","chinese":"中文翻译参考"}
+  ],
+  "designThinking": [
+    {"customerPsych":"客户当下的心理/顾虑（一句话，中文）","strategy":"对应应对策略（一句话，中文，具体到话术里怎么体现）"},
+    {"customerPsych":"...","strategy":"..."},
+    {"customerPsych":"...","strategy":"..."}
+  ],
+  "suggestions": [
+    "发送后如果客户XXX，建议你XXX（中文，具体可操作）",
+    "把话术中的[X]替换为你的实际年限更有说服力",
+    "..."
+  ]
+}
+
+关键要求：
+- analysis 必须自然口语化，像老业务员跟你聊单，不要术语，不要用"该客户""上述""综上"这类书面语；直接说"客户现在是觉得…""你这边的难点是…"。结尾必须用"核心策略：A→B→C"一句话收束。
+- replies 必须刚好3个对象，每个都必须包含 name/desc/foreign/chinese 四个字段。
+- foreign 必须用客户使用的语言（客户用阿文就阿文，用英文就英文，用西语就西语），自然承接上下文，是地道商务表达，不要机翻感。
+- chinese 是 foreign 的准确中文翻译。
+- name 用中文，根据语境灵活命名（如"标准友好版""简洁专业版""热情推进版""客气试探版""价格谈判版""引导专业版""留台阶版"等），3个版本风格要有明显差异：比如一个稳、一个推进、一个留余地。
+- desc 一句话点明此版本的特点和适用场景，讲人话，不要营销腔。
+- designThinking 3-5条，每条紧扣话术中的具体处理，不要空泛。
+- suggestions 2-4条，是发送前后的实操提醒，比如"如果客户坚持要女性，大方介绍女同事""把[X]年替换为你的实际年限""报价前先确认MOQ"等。
+- 只输出JSON，绝对不要任何其他字符。`;
+
+const CHAT_SYSTEM_PROMPT = `你是一个资深外贸业务员助手，正在通过WhatsApp跟海外客户沟通。
+
+## 最近与客户的聊天记录
+{CONTEXT}
+
+## 你的角色
+- 帮我分析客户意图、起草回复、翻译、优化话术、推荐跟进策略。
+- 如果我让你修改之前的话术版本，请基于原文修改。
+- 如果我让你生成新话术，可以给多个版本（标注版本名、特点、外文原文、中文参考），但如果是简单问答/翻译请求直接给内容即可。
+- 回答简洁专业，直接给内容，不要多余的"好的""当然可以"之类的客套前缀。
+- 外文内容使用客户使用的语言（阿拉伯语/英语/西语等，与聊天记录中客户的语言一致）。`;
+
+/**
+ * 稳健JSON抽取：markdown代码块、首尾花括号兜底
+ */
+function safeParseJson(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  let text = raw.trim();
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) text = fenceMatch[1].trim();
+  try { return JSON.parse(text); } catch (_) {}
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) {
+    try { return JSON.parse(text.slice(first, last + 1)); } catch (_) {}
+  }
+  return null;
+}
+
+async function resolveProviderAndModel(modelKey) {
+  let callProvider = null;
+  let selectedModelId = null;
+  if (modelKey) {
+    callProvider = await getProviderById(modelKey);
+    if (callProvider) selectedModelId = callProvider.model;
+  }
+  if (!callProvider) {
+    callProvider = await getActiveProvider();
+    selectedModelId = callProvider?.model || DOUBAO_PRO_MODEL;
+  }
+  return { provider: callProvider, modelId: selectedModelId };
+}
+
+/**
+ * 深度分析会话 - 返回3版回复话术
+ */
+export async function analyzeConversation({ userId, accountId, jid, model: modelKey, messages: directMessages, targetLang: tLangOpt, feedback }) {
+  let messages = Array.isArray(directMessages) ? directMessages : [];
+  if (messages.length === 0 && accountId && jid) {
+    messages = await getRecentMessages(accountId, jid, 20);
+  }
+  if (!messages || messages.length === 0) {
+    return { success: false, error: "该会话暂无消息记录，请先与客户有过对话再使用AI分析" };
+  }
+  const contact = (accountId && jid) ? await getContactInfo(accountId, jid) : null;
+  const contextStr = buildConversationContext(messages, contact);
+
+  const { provider, modelId } = await resolveProviderAndModel(modelKey);
+  if (!provider?.apiKey) {
+    return { success: false, error: "未配置 AI 模型，请先在「设置-AI模型」添加 API Key" };
+  }
+
+  let systemPrompt = ANALYZE_SYSTEM_PROMPT_V2 + buildTargetLangDirective(tLangOpt);
+  const fb = typeof feedback === "string" ? feedback.trim() : "";
+  if (fb) {
+    systemPrompt += "\n\n【用户对上次生成的话术不满意，本次需要按以下要求重新生成。请保持上面的JSON结构完全不变（analysis/replies/designThinking/suggestions四个字段都必须输出），但要紧扣用户的调整方向改写内容，尤其是replies要明显体现用户要求：" + fb + "】";
+  }
+  let userContent = "以下是聊天记录：\n\n" + contextStr;
+  if (fb) {
+    userContent += "\n\n用户的优化要求：" + fb;
+  }
+
+  const callLLM = async (extraParams = {}) => aiChatComplete(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent },
+    ],
+    {
+      temperature: 0.7,
+      max_tokens: 4000,
+      model: modelId,
+      provider,
+      timeout: 90000,
+      ...extraParams,
+    }
+  );
+
+  let raw = "";
+  try {
+    raw = await callLLM({ response_format: { type: "json_object" } });
+  } catch (err) {
+    console.warn("[AI analyze] json_object mode failed, retry plain:", err.message);
+    try {
+      raw = await callLLM({});
+    } catch (err2) {
+      return { success: false, error: "AI响应超时或调用失败，请检查网络或换个模型重试" };
+    }
+  }
+
+  const parsed = safeParseJson(raw);
+  if (!parsed || !Array.isArray(parsed.replies)) {
+    return { success: false, error: "AI返回格式异常，请重试" };
+  }
+
+  const replies = parsed.replies
+    .filter(r => r && (r.foreign || r.chinese))
+    .slice(0, 3)
+    .map((r, i) => ({
+      name: typeof r.name === "string" && r.name.trim() ? r.name.trim() : ["标准友好版", "简洁专业版", "热情推进版"][i],
+      desc: typeof r.desc === "string" ? r.desc.trim() : "",
+      foreign: typeof r.foreign === "string" ? r.foreign.trim() : "",
+      chinese: typeof r.chinese === "string" ? r.chinese.trim() : "",
+    }));
+
+  if (replies.length === 0) {
+    return { success: false, error: "AI返回格式异常，请重试" };
+  }
+
+  // 新字段兼容：如果AI没返回就给空值
+  const analysis = typeof parsed.analysis === "string" ? parsed.analysis.trim() : "";
+  const designThinking = Array.isArray(parsed.designThinking)
+    ? parsed.designThinking
+        .filter(d => d && (typeof d.customerPsych === "string" || typeof d.strategy === "string"))
+        .slice(0, 6)
+        .map(d => ({
+          customerPsych: (typeof d.customerPsych === "string" ? d.customerPsych : "").trim(),
+          strategy: (typeof d.strategy === "string" ? d.strategy : "").trim(),
+        }))
+        .filter(d => d.customerPsych || d.strategy)
+    : [];
+  const suggestions = Array.isArray(parsed.suggestions)
+    ? parsed.suggestions
+        .filter(s => typeof s === "string" && s.trim())
+        .slice(0, 6)
+        .map(s => s.trim())
+    : [];
+
+  return {
+    success: true,
+    data: { replies, analysis, designThinking, suggestions },
+    provider: provider?.name || provider?.provider || "",
+    model: modelKey || "",
+  };
+}
+
+/**
+ * 多轮AI对话 - 把WhatsApp聊天记录作为system context，前端传对话历史
+ * @param {{userId:number, accountId:number, jid:string, model?:string, history?:Array<{role:string,content:string}>}} opts
+ */
+export async function chatWithContext({ userId, accountId, jid, model: modelKey, history = [], targetLang: tLangOpt }) {
+  // 获取context
+  let contextStr = "（暂无聊天记录）";
+  if (accountId && jid) {
+    const messages = await getRecentMessages(accountId, jid, 20);
+    if (messages && messages.length > 0) {
+      const contact = await getContactInfo(accountId, jid);
+      contextStr = buildConversationContext(messages, contact);
+    }
+  }
+
+  const chatSysBase = CHAT_SYSTEM_PROMPT.replace("{CONTEXT}", contextStr);
+  const targetDirective = buildTargetLangDirective(tLangOpt);
+  let systemPrompt = chatSysBase;
+  if (targetDirective) {
+    const langCn = LANG_CODE_TO_CN[tLangOpt] || tLangOpt;
+    // Replace the generic line with explicit target language directive
+    const replLine =
+      "- 【强制】外文回复必须使用【" + langCn + "】，无论客户用什么语言，都不要用英语或其他语言输出外文。" +
+      " 若用户只是在提问或让你分析（不是生成外文话术），正常中文回答即可；只有外文回复/话术部分必须是【" + langCn + "】。";
+    systemPrompt = chatSysBase.replace(
+      "- 外文内容使用客户使用的语言（阿拉伯语/英语/西语等，与聊天记录中客户的语言一致）。",
+      replLine
+    );
+  }
+
+  const msgs = [{ role: "system", content: systemPrompt }];
+  for (const m of history || []) {
+    if (m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string") {
+      msgs.push({ role: m.role, content: m.content });
+    }
+  }
+
+  const { provider, modelId } = await resolveProviderAndModel(modelKey);
+  if (!provider?.apiKey) {
+    return { success: false, error: "未配置 AI 模型，请先在「设置-AI模型」添加 API Key" };
+  }
+
+  try {
+    const reply = await aiChatComplete(msgs, {
+      temperature: 0.7,
+      max_tokens: 2048,
+      model: modelId,
+      provider,
+      timeout: 60000,
+    });
+    return {
+      success: true,
+      data: { reply: (reply || "").trim() },
+      provider: provider?.name || provider?.provider || "",
+      model: modelKey || "",
+    };
+  } catch (err) {
+    console.error("[AI chatWithContext] error:", err.message);
+    const isTimeout = /timeout|abort/i.test(err.message || "");
+    return {
+      success: false,
+      error: isTimeout ? "AI响应超时，请检查网络或换个模型重试" : ("AI调用失败: " + err.message),
+    };
+  }
+}

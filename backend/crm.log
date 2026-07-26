@@ -1,0 +1,2239 @@
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3001
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Automation Scheduler] Running check at 2026-07-24T10:38:28.562Z
+[Automation Scheduler] Running check at 2026-07-24T11:07:28.558Z
+[Automation Scheduler] Running check at 2026-07-24T11:37:28.584Z
+[Automation Scheduler] Running check at 2026-07-24T12:07:28.606Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 connected (socket: HIYsaOkV6DbWzJf6AAAh)
+[Socket] User 1 connected (socket: XorMN1-x964g8HGCAAAi)
+[WA Media Proxy] decrypted via Evolution id=5332 type=video size=4744932 ct=video/mp4
+[WA Media Proxy] decrypted via Evolution id=5336 type=image size=126814 ct=image/jpeg
+[WA Media Proxy] decrypted via Evolution id=5332 type=video size=4744932 ct=video/mp4
+[Socket] User 1 disconnected (socket: HIYsaOkV6DbWzJf6AAAh)
+[Socket] User 1 disconnected (socket: XorMN1-x964g8HGCAAAi)
+[Socket] User 1 connected (socket: xA_x06KXqX4BadPxAAAk)
+[Socket] User 1 connected (socket: cIAgqDjQshfR0XdCAAAm)
+[Socket] User 1 disconnected (socket: xA_x06KXqX4BadPxAAAk)
+[Socket] User 1 disconnected (socket: cIAgqDjQshfR0XdCAAAm)
+[Automation Scheduler] Running check at 2026-07-24T10:52:39.007Z
+[Socket] User 1 connected (socket: DXVmzMG7M1NGjwSNAAAo)
+[Socket] User 1 disconnected (socket: DXVmzMG7M1NGjwSNAAAo)
+[Socket] User 1 connected (socket: _EOCpmWcahJSzeKeAAAq)
+[Socket] User 1 connected (socket: UzcWv3WhAzzeV-9MAAAs)
+[Automation Scheduler] Running check at 2026-07-24T11:22:39.009Z
+[Automation Scheduler] Running check at 2026-07-24T11:52:39.010Z
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Socket] User 1 disconnected (socket: UzcWv3WhAzzeV-9MAAAs)
+[Socket] User 1 disconnected (socket: _EOCpmWcahJSzeKeAAAq)
+[Evolution Webhook] connection state: open
+[Socket] User 1 connected (socket: jtQzTvpAfZd6IWjkAAAv)
+[Socket] User 1 connected (socket: vuK-Gm4UcC3emPU9AAAw)
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] connection state: connecting
+[Socket] User 1 disconnected (socket: jtQzTvpAfZd6IWjkAAAv)
+[Socket] User 1 disconnected (socket: vuK-Gm4UcC3emPU9AAAw)
+[Socket] User 1 connected (socket: r-JGMeUMLWQHeEr3AAAz)
+[Socket] User 1 connected (socket: 1Vj_iQEDM6fann1pAAA0)
+[Backfill] run error: fetch failed
+[Evolution] fetchChats error: fetch failed
+[Evolution] fetchChats error: fetch failed
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 disconnected (socket: 1Vj_iQEDM6fann1pAAA0)
+[Socket] User 1 disconnected (socket: r-JGMeUMLWQHeEr3AAAz)
+[Socket] User 1 connected (socket: fYtso_k7zcETEojSAAA3)
+[Socket] User 1 connected (socket: MnntAB82jhUfONzWAAA4)
+[Socket] User 1 disconnected (socket: fYtso_k7zcETEojSAAA3)
+[Socket] User 1 disconnected (socket: MnntAB82jhUfONzWAAA4)
+[Socket] User 1 connected (socket: CWnUVz8EbCZNioFvAAA6)
+[Socket] User 1 disconnected (socket: CWnUVz8EbCZNioFvAAA6)
+[Socket] User 1 connected (socket: uahypa4n104QPIrMAAA8)
+[Automation Scheduler] Running check at 2026-07-24T12:22:39.014Z
+[Socket] User 1 disconnected (socket: uahypa4n104QPIrMAAA8)
+[Socket] User 1 connected (socket: qPW1GFP_3z5fhqG5AAA-)
+[Socket] User 1 disconnected (socket: qPW1GFP_3z5fhqG5AAA-)
+[Socket] User 1 connected (socket: ay53fkqG7wrVIUUFAABA)
+[Socket] User 1 disconnected (socket: ay53fkqG7wrVIUUFAABA)
+[Socket] User 1 connected (socket: e8ELMh1WcubeR16TAABC)
+[Socket] User 1 disconnected (socket: e8ELMh1WcubeR16TAABC)
+[Socket] User 1 connected (socket: MEYeuo-ytKixTc0BAABE)
+[Socket] User 1 disconnected (socket: MEYeuo-ytKixTc0BAABE)
+[Socket] User 1 connected (socket: 4Qv6PN7ua7yCgw3EAABG)
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 disconnected (socket: 4Qv6PN7ua7yCgw3EAABG)
+[Socket] User 1 connected (socket: OIDbBkuDrKnww2xsAABI)
+[Socket] User 1 disconnected (socket: OIDbBkuDrKnww2xsAABI)
+[Socket] User 1 connected (socket: J5sEPwTb510IHoxOAABK)
+[Socket] User 1 disconnected (socket: J5sEPwTb510IHoxOAABK)
+[Socket] User 1 connected (socket: mn4E2y5hHFhje_5cAABM)
+[Socket] User 1 disconnected (socket: mn4E2y5hHFhje_5cAABM)
+[Socket] User 1 connected (socket: yzdKsitheq06ILdQAABO)
+[Socket] User 1 disconnected (socket: yzdKsitheq06ILdQAABO)
+[Socket] User 1 connected (socket: F2tRlQaSrTNGUZyVAABQ)
+[Socket] User 1 connected (socket: ADpAc0qJ1bGYjcGVAABS)
+[Backfill] run error: fetch failed
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-24T12:52:39.053Z
+[Socket] User 1 disconnected (socket: ADpAc0qJ1bGYjcGVAABS)
+[Socket] User 1 connected (socket: UuD_kJFSupwNeTotAABU)
+[Socket] User 1 disconnected (socket: UuD_kJFSupwNeTotAABU)
+[Socket] User 1 connected (socket: YAAbzb6azEGqJmP8AABW)
+[Socket] User 1 disconnected (socket: YAAbzb6azEGqJmP8AABW)
+[Socket] User 1 connected (socket: ZT3LlbJy1CYK1sBfAABY)
+[Socket] User 1 disconnected (socket: ZT3LlbJy1CYK1sBfAABY)
+[Socket] User 1 connected (socket: Mfce6kKlh1StcLw3AABa)
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 disconnected (socket: Mfce6kKlh1StcLw3AABa)
+[Socket] User 1 connected (socket: N1SjBhcOIX5U2VWLAABc)
+[Socket] User 1 disconnected (socket: N1SjBhcOIX5U2VWLAABc)
+[Socket] User 1 connected (socket: jcCeXL8sFVt8Oe-zAABe)
+SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+    at JSON.parse (<anonymous>)
+    at parse (/opt/whatsapp-crm/backend/node_modules/body-parser/lib/types/json.js:91:21)
+    at /opt/whatsapp-crm/backend/node_modules/body-parser/lib/read.js:162:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:238:16)
+    at done (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+[Socket] User 1 disconnected (socket: jcCeXL8sFVt8Oe-zAABe)
+[Socket] User 1 connected (socket: bDIvtGBpS8wCJvtvAABg)
+[Socket] User 1 disconnected (socket: bDIvtGBpS8wCJvtvAABg)
+[Socket] User 1 connected (socket: AiDIIsTWjudjDE4XAABi)
+[Automation Scheduler] Running check at 2026-07-24T13:22:39.019Z
+[Socket] User 1 disconnected (socket: F2tRlQaSrTNGUZyVAABQ)
+[Socket] User 1 connected (socket: e5cOPP1etqnYNXDOAABk)
+[Automation Scheduler] Running check at 2026-07-24T13:52:39.020Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 5KHUSrNjOFLTI4APAAAB)
+[Socket] User 1 disconnected (socket: TTICiFXEo2ajdfYzAAAH)
+[Socket] User 1 disconnected (socket: AiDIIsTWjudjDE4XAABi)
+[Socket] User 1 disconnected (socket: e5cOPP1etqnYNXDOAABk)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: ZwhZ5NL5doYZDwnNAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: dDZ8H3pDTCyInzv3AAAD)
+[Socket] User 1 connected (socket: WaRTLNiGN4R6zr36AAAF)
+[Socket] User 1 connected (socket: uh-AAn6joBL2ei-uAAAH)
+[Automation Scheduler] Running check at 2026-07-24T14:04:01.473Z
+[Socket] User 1 disconnected (socket: dDZ8H3pDTCyInzv3AAAD)
+[Socket] User 1 connected (socket: FNNr_JaZPFKJsWj1AAAK)
+[Socket] User 1 connected (socket: DxeOTaAiHs8vhbS_AAAL)
+[Socket] User 1 disconnected (socket: FNNr_JaZPFKJsWj1AAAK)
+[Socket] User 1 disconnected (socket: DxeOTaAiHs8vhbS_AAAL)
+[Socket] User 1 connected (socket: a5gg04NebGfbAwbdAAAN)
+[Socket] User 1 disconnected (socket: a5gg04NebGfbAwbdAAAN)
+[Socket] User 1 connected (socket: yoa-ajLTkDWC4xJ6AAAP)
+[Socket] User 1 disconnected (socket: yoa-ajLTkDWC4xJ6AAAP)
+[Socket] User 1 connected (socket: cf2sx9P6BjhssdswAAAR)
+[Socket] User 1 disconnected (socket: cf2sx9P6BjhssdswAAAR)
+[Socket] User 1 connected (socket: F3hUUHt4NKszl5q4AAAT)
+[Socket] User 1 disconnected (socket: F3hUUHt4NKszl5q4AAAT)
+[Socket] User 1 connected (socket: vQk_O29XcorNjJ2dAAAV)
+[Automation Scheduler] Running check at 2026-07-24T14:33:01.473Z
+[Socket] User 1 connected (socket: M488PLIft7sbuNdGAAAX)
+[Socket] User 1 connected (socket: 1U6YBgEen7PCRgAvAAAZ)
+[Socket] User 1 disconnected (socket: 1U6YBgEen7PCRgAvAAAZ)
+[Socket] User 1 disconnected (socket: M488PLIft7sbuNdGAAAX)
+[Socket] User 1 connected (socket: PfqSWbSzRKiEZhPiAAAb)
+[Socket] User 1 disconnected (socket: PfqSWbSzRKiEZhPiAAAb)
+[Socket] User 1 connected (socket: 1jI_jdnybEzHiDy6AAAe)
+[Socket] User 1 disconnected (socket: 1jI_jdnybEzHiDy6AAAe)
+[Socket] User 1 connected (socket: f2S6olAVgRDzKBEjAAAg)
+[Socket] User 1 disconnected (socket: f2S6olAVgRDzKBEjAAAg)
+[Socket] User 1 disconnected (socket: vQk_O29XcorNjJ2dAAAV)
+[Socket] User 1 connected (socket: o4dht4hxX-93J2hFAAAi)
+[Automation Scheduler] Running check at 2026-07-24T15:03:01.474Z
+[Automation Scheduler] Running check at 2026-07-24T15:33:01.474Z
+[Automation Scheduler] Running check at 2026-07-24T16:03:01.475Z
+[Evolution Webhook] msg 3EB07DADD4 status=READ
+[Evolution Webhook] msg 3EB082AE25 status=READ
+[Evolution Webhook] msg 3EB0174593 status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="مااسمه"
+[AI Service] LLM translate (deepseek) failed: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[Translation] inbound async error: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="هذا الطبق"
+[AI Service] LLM translate (deepseek) failed: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[Translation] inbound async error: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-24T16:33:01.476Z
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-24T17:03:01.478Z
+[Automation Scheduler] Running check at 2026-07-24T17:33:01.478Z
+[AI analyze] json_object mode failed, retry plain: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[Socket] User 1 disconnected (socket: o4dht4hxX-93J2hFAAAi)
+[Automation Scheduler] Running check at 2026-07-24T18:03:01.480Z
+[Evolution Webhook] msg 3EB0C3203E status=READ
+[Evolution Webhook] msg 3EB0EFA79A status=READ
+[Evolution Webhook] msg 3EB09B2C45 status=READ
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 connected (socket: kZMwYwV-YXx3GvP9AAAk)
+[AI Reply Error] BadRequestError: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+    at APIError.generate (file:///opt/whatsapp-crm/backend/node_modules/openai/core/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:255:32)
+    at OpenAI.makeRequest (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:449:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async chatComplete (file:///opt/whatsapp-crm/backend/src/services/ai-client.js:126:20)
+    at async generateReply (file:///opt/whatsapp-crm/backend/src/services/ai.service.js:463:18)
+    at async file:///opt/whatsapp-crm/backend/src/routes/ai.js:107:20 {
+  status: 400,
+  headers: Headers {
+    'content-type': 'application/octet-stream',
+    'content-length': '200',
+    connection: 'keep-alive',
+    date: 'Fri, 24 Jul 2026 18:11:07 GMT',
+    server: 'elb',
+    vary: 'origin, access-control-request-method, access-control-request-headers',
+    'access-control-allow-credentials': 'true',
+    'x-ds-trace-id': 'a73f7d6d8351b7c38e1211b43d224aae',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    'x-cache': 'Error from cloudfront',
+    via: '1.1 d694eac03cd6dc48a34be10ef919bdd4.cloudfront.net (CloudFront)',
+    'x-amz-cf-pop': 'NRT12-P2',
+    'x-amz-cf-id': 'D-9ulzEo4374_9SJQNVKDennaev68P54HmOn3mP629xRd-H4Eknchw=='
+  },
+  requestID: null,
+  error: {
+    message: 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_request_error'
+  },
+  code: 'invalid_request_error',
+  param: null,
+  type: 'invalid_request_error'
+}
+[AI Reply Error] BadRequestError: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+    at APIError.generate (file:///opt/whatsapp-crm/backend/node_modules/openai/core/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:255:32)
+    at OpenAI.makeRequest (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:449:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async chatComplete (file:///opt/whatsapp-crm/backend/src/services/ai-client.js:126:20)
+    at async generateReply (file:///opt/whatsapp-crm/backend/src/services/ai.service.js:463:18)
+    at async file:///opt/whatsapp-crm/backend/src/routes/ai.js:107:20 {
+  status: 400,
+  headers: Headers {
+    'content-type': 'application/octet-stream',
+    'content-length': '200',
+    connection: 'keep-alive',
+    date: 'Fri, 24 Jul 2026 18:11:07 GMT',
+    server: 'elb',
+    vary: 'origin, access-control-request-method, access-control-request-headers',
+    'access-control-allow-credentials': 'true',
+    'x-ds-trace-id': 'b7c666e605039ab4576a0185375f5cfb',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    'x-cache': 'Error from cloudfront',
+    via: '1.1 193f392c116e27a3f195dc4d0ef3ff2e.cloudfront.net (CloudFront)',
+    'x-amz-cf-pop': 'NRT20-P8',
+    'x-amz-cf-id': 'GvjLwXXj2trBm_1hnm8dv8G5V98kxV958b60h-pq5nXzVjdc7wTO_w=='
+  },
+  requestID: null,
+  error: {
+    message: 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_request_error'
+  },
+  code: 'invalid_request_error',
+  param: null,
+  type: 'invalid_request_error'
+}
+[AI Reply Error] BadRequestError: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+    at APIError.generate (file:///opt/whatsapp-crm/backend/node_modules/openai/core/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:255:32)
+    at OpenAI.makeRequest (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:449:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async chatComplete (file:///opt/whatsapp-crm/backend/src/services/ai-client.js:126:20)
+    at async generateReply (file:///opt/whatsapp-crm/backend/src/services/ai.service.js:463:18)
+    at async file:///opt/whatsapp-crm/backend/src/routes/ai.js:107:20 {
+  status: 400,
+  headers: Headers {
+    'content-type': 'application/octet-stream',
+    'content-length': '200',
+    connection: 'keep-alive',
+    date: 'Fri, 24 Jul 2026 18:11:07 GMT',
+    server: 'elb',
+    vary: 'origin, access-control-request-method, access-control-request-headers',
+    'access-control-allow-credentials': 'true',
+    'x-ds-trace-id': '7165aa7742783bbda129b40d970ef5d6',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    'x-cache': 'Error from cloudfront',
+    via: '1.1 d694eac03cd6dc48a34be10ef919bdd4.cloudfront.net (CloudFront)',
+    'x-amz-cf-pop': 'NRT12-P2',
+    'x-amz-cf-id': 'de-1e3JNgjtwJlFZmuxe0hXLAYXHWPELZPYQ9JHDqk9-tLdWdLBejA=='
+  },
+  requestID: null,
+  error: {
+    message: 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_request_error'
+  },
+  code: 'invalid_request_error',
+  param: null,
+  type: 'invalid_request_error'
+}
+[Socket] User 1 disconnected (socket: kZMwYwV-YXx3GvP9AAAk)
+[Socket] User 1 connected (socket: MGPmZy0xofLaZyFIAAAm)
+[Socket] User 1 disconnected (socket: MGPmZy0xofLaZyFIAAAm)
+[Socket] User 1 connected (socket: avSwNbLLLpQlQuEqAAAo)
+[AI Reply Error] BadRequestError: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+    at APIError.generate (file:///opt/whatsapp-crm/backend/node_modules/openai/core/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:255:32)
+    at OpenAI.makeRequest (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:449:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async chatComplete (file:///opt/whatsapp-crm/backend/src/services/ai-client.js:126:20)
+    at async generateReply (file:///opt/whatsapp-crm/backend/src/services/ai.service.js:463:18)
+    at async file:///opt/whatsapp-crm/backend/src/routes/ai.js:107:20 {
+  status: 400,
+  headers: Headers {
+    'content-type': 'application/octet-stream',
+    'content-length': '200',
+    connection: 'keep-alive',
+    date: 'Fri, 24 Jul 2026 18:12:29 GMT',
+    server: 'elb',
+    vary: 'origin, access-control-request-method, access-control-request-headers',
+    'access-control-allow-credentials': 'true',
+    'x-ds-trace-id': '69a7c812d7f80b17c8a5f253601b9ad5',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    'x-cache': 'Error from cloudfront',
+    via: '1.1 23bc6d6a912d17773e1bf97197cbfc1e.cloudfront.net (CloudFront)',
+    'x-amz-cf-pop': 'NRT12-P1',
+    'x-amz-cf-id': 'UbVY4Q_HH2VgarYtEP-unfcSmmUDPyJhigso_TjIXMFIKsHLD7c8Vg=='
+  },
+  requestID: null,
+  error: {
+    message: 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_request_error'
+  },
+  code: 'invalid_request_error',
+  param: null,
+  type: 'invalid_request_error'
+}
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #405 jid=963981860908@s.whatsapp.net cust="هذا الطبق" → sales="لقد استيقظت للتو."
+[Evolution Webhook] msg 3EB0E65BEC status=SERVER_ACK
+[Evolution Webhook] msg 3EB0E65BEC status=DELIVERY_ACK
+[AI Service] LLM translate (deepseek) failed: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[WA Send] outgoing translate failed: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed deepseek-chat.
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #406 jid=963981860908@s.whatsapp.net cust="هذا الطبق" → sales="这道菜叫蒿菜饭"
+[Evolution Webhook] msg 3EB01BDDD6 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB01BDDD6 status=SERVER_ACK
+[Socket] User 1 disconnected (socket: avSwNbLLLpQlQuEqAAAo)
+[Evolution Webhook] msg 3EB01BDDD6 status=DELIVERY_ACK
+[Socket] User 1 connected (socket: V7XvtXZIQnxn0ov-AAAq)
+[Socket] User 1 disconnected (socket: V7XvtXZIQnxn0ov-AAAq)
+[Socket] User 1 connected (socket: xyLhgCdMKox6q7ubAAAs)
+[Socket] User 1 disconnected (socket: xyLhgCdMKox6q7ubAAAs)
+[Socket] User 1 connected (socket: wVFsXe7QOtk3wI1lAAAu)
+[Socket] User 1 disconnected (socket: wVFsXe7QOtk3wI1lAAAu)
+[Socket] User 1 connected (socket: nU4cKMbOAJNFmOkpAAAw)
+[Socket] User 1 disconnected (socket: nU4cKMbOAJNFmOkpAAAw)
+[Socket] User 1 connected (socket: _NC6o9uteQn-InELAAAy)
+[Socket] User 1 disconnected (socket: _NC6o9uteQn-InELAAAy)
+[Socket] User 1 connected (socket: _ZrmkOh6RuSmNMayAAA0)
+[Socket] User 1 disconnected (socket: _ZrmkOh6RuSmNMayAAA0)
+[Socket] User 1 connected (socket: 5eUmsxboZm073Om1AAA2)
+[Socket] User 1 disconnected (socket: 5eUmsxboZm073Om1AAA2)
+[Socket] User 1 connected (socket: gCVvILxpVAWT8asGAAA4)
+[Socket] User 1 disconnected (socket: gCVvILxpVAWT8asGAAA4)
+[Socket] User 1 connected (socket: Gm5Bzxkn30pmVdANAAA6)
+[Socket] User 1 disconnected (socket: Gm5Bzxkn30pmVdANAAA6)
+[Socket] User 1 connected (socket: XmjZHLbfFJk69hQeAAA8)
+[Socket] User 1 disconnected (socket: XmjZHLbfFJk69hQeAAA8)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: ZwhZ5NL5doYZDwnNAAAB)
+[Socket] User 1 disconnected (socket: WaRTLNiGN4R6zr36AAAF)
+[Socket] User 1 disconnected (socket: uh-AAn6joBL2ei-uAAAH)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: 0He5luuEJ3OD5b6fAAAB)
+[Socket] User 1 connected (socket: yBbGnvdFwAPNY1xpAAAD)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: Vi_7ClyrV65_gx97AAAF)
+[AI Service] LLM translate (doubao) failed: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed doubao-seed-2-0-lite-260215.
+[AI Translate Error] BadRequestError: 400 The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed doubao-seed-2-0-lite-260215.
+    at APIError.generate (file:///opt/whatsapp-crm/backend/node_modules/openai/core/error.mjs:41:20)
+    at OpenAI.makeStatusError (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:255:32)
+    at OpenAI.makeRequest (file:///opt/whatsapp-crm/backend/node_modules/openai/client.mjs:449:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async chatComplete (file:///opt/whatsapp-crm/backend/src/services/ai-client.js:126:20)
+    at async translateText (file:///opt/whatsapp-crm/backend/src/services/ai.service.js:277:22)
+    at async file:///opt/whatsapp-crm/backend/src/routes/ai.js:89:20 {
+  status: 400,
+  headers: Headers {
+    'content-type': 'application/octet-stream',
+    'content-length': '214',
+    connection: 'keep-alive',
+    date: 'Fri, 24 Jul 2026 18:29:28 GMT',
+    server: 'elb',
+    vary: 'origin, access-control-request-method, access-control-request-headers',
+    'access-control-allow-credentials': 'true',
+    'x-ds-trace-id': 'cacf8f8b597dc14de91f613b637f650e',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    'x-content-type-options': 'nosniff',
+    'x-cache': 'Error from cloudfront',
+    via: '1.1 2e8442432f9fb34efc88887665a2bb90.cloudfront.net (CloudFront)',
+    'x-amz-cf-pop': 'NRT57-P11',
+    'x-amz-cf-id': 's6x9kNjX084ODJQ-Timrz8GA9QK7W5bhYyvSHmb-p6qLZctQR0d2Lw=='
+  },
+  requestID: null,
+  error: {
+    message: 'The supported API model names are deepseek-v4-pro or deepseek-v4-flash, but you passed doubao-seed-2-0-lite-260215.',
+    type: 'invalid_request_error',
+    param: null,
+    code: 'invalid_request_error'
+  },
+  code: 'invalid_request_error',
+  param: null,
+  type: 'invalid_request_error'
+}
+[Automation Scheduler] Running check at 2026-07-24T18:30:15.140Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 0He5luuEJ3OD5b6fAAAB)
+[Socket] User 1 disconnected (socket: yBbGnvdFwAPNY1xpAAAD)
+[Socket] User 1 disconnected (socket: Vi_7ClyrV65_gx97AAAF)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: qxqbhr1wTT2OAeqEAAAB)
+[Socket] User 1 connected (socket: 6p_yDvvzfMMc7OSXAAAD)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: jvTv8WUthGLHX7SuAAAF)
+[Automation Scheduler] Running check at 2026-07-24T18:34:05.825Z
+[Socket] User 1 connected (socket: ElJFrzdQo5El8YISAAAH)
+[Socket] User 1 disconnected (socket: ElJFrzdQo5El8YISAAAH)
+[Socket] User 1 connected (socket: QRI7cckzK-cDcvkcAAAJ)
+[Socket] User 1 connected (socket: tVyPMjslxK3Tm0dEAAAL)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #407 jid=963981860908@s.whatsapp.net cust="هذا الطبق" → sales="هذا الطبق يسمى أرز الخبيزة"
+[Evolution Webhook] msg 3EB0E034F9 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB0E034F9 status=SERVER_ACK
+[Socket] User 1 disconnected (socket: tVyPMjslxK3Tm0dEAAAL)
+[Socket] User 1 disconnected (socket: QRI7cckzK-cDcvkcAAAJ)
+[Socket] User 1 connected (socket: x3hxI62rIU_NW5qSAAAN)
+[Socket] User 1 connected (socket: QriZbNpbt-xrdG8cAAAP)
+[Socket] User 1 disconnected (socket: QriZbNpbt-xrdG8cAAAP)
+[Socket] User 1 disconnected (socket: x3hxI62rIU_NW5qSAAAN)
+[Socket] User 1 connected (socket: zoqQKg4oDVOEfk_EAAAR)
+[Socket] User 1 disconnected (socket: zoqQKg4oDVOEfk_EAAAR)
+[Socket] User 1 connected (socket: zccYfFMpn1R2jJknAAAT)
+[Socket] User 1 disconnected (socket: zccYfFMpn1R2jJknAAAT)
+[Socket] User 1 connected (socket: lsG1bPSOB00H_-7sAAAV)
+[Socket] User 1 connected (socket: ShRcByN1YNNIOj4LAAAX)
+[Socket] User 1 disconnected (socket: lsG1bPSOB00H_-7sAAAV)
+[Socket] User 1 disconnected (socket: ShRcByN1YNNIOj4LAAAX)
+[Socket] User 1 connected (socket: _OWKi1019JdpEz9UAAAZ)
+[Socket] User 1 connected (socket: Ed7eQSxXauiHLb2IAAAb)
+[Socket] User 1 disconnected (socket: Ed7eQSxXauiHLb2IAAAb)
+[Socket] User 1 disconnected (socket: _OWKi1019JdpEz9UAAAZ)
+[Socket] User 1 connected (socket: vxk9S14uCBpLkxPJAAAd)
+[Socket] User 1 connected (socket: HpSoKjQVKtQf9PODAAAf)
+[Socket] User 1 disconnected (socket: HpSoKjQVKtQf9PODAAAf)
+[Socket] User 1 disconnected (socket: vxk9S14uCBpLkxPJAAAd)
+[Socket] User 1 connected (socket: C3uKa--UvBaF_VcvAAAh)
+[Socket] User 1 connected (socket: rETi0qjP-4FtDBaNAAAj)
+[Socket] User 1 disconnected (socket: rETi0qjP-4FtDBaNAAAj)
+[Socket] User 1 disconnected (socket: C3uKa--UvBaF_VcvAAAh)
+[Socket] User 1 connected (socket: 5r96GDhtG7ArLCwmAAAl)
+[Socket] User 1 connected (socket: 4HVfC4du4UIdbcNaAAAn)
+[Socket] User 1 disconnected (socket: 4HVfC4du4UIdbcNaAAAn)
+[Socket] User 1 disconnected (socket: 5r96GDhtG7ArLCwmAAAl)
+[Socket] User 1 connected (socket: NLdy9GBvC5txyTA4AAAp)
+[Socket] User 1 connected (socket: rTKYgCd8RHephX6_AAAr)
+[Socket] User 1 disconnected (socket: NLdy9GBvC5txyTA4AAAp)
+[Socket] User 1 disconnected (socket: rTKYgCd8RHephX6_AAAr)
+[Socket] User 1 connected (socket: ttTMj1_F-u2DevQTAAAt)
+[Socket] User 1 disconnected (socket: ttTMj1_F-u2DevQTAAAt)
+[Socket] User 1 connected (socket: 4G090xb3U5TYDLeyAAAv)
+[Socket] User 1 connected (socket: RYheZxYbIvI_34dcAAAx)
+[Socket] User 1 disconnected (socket: 4G090xb3U5TYDLeyAAAv)
+[Socket] User 1 disconnected (socket: RYheZxYbIvI_34dcAAAx)
+[Evolution Webhook] msg 3EB0E034F9 status=READ
+[Evolution Webhook] msg 3EB01BDDD6 status=READ
+[Evolution Webhook] msg 3EB0E65BEC status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="اوك"
+[Translation] inbound #5428 ar->zh: "اوك" => "好的"
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="يبدو لذيذا"
+[Translation] inbound #5429 ar->zh: "يبدو لذيذا" => "看起来很好吃"
+[Automation Scheduler] Running check at 2026-07-24T19:03:05.832Z
+[Socket] User 1 connected (socket: h7_aDeXDKqSnp0lTAAAz)
+[Socket] User 1 disconnected (socket: h7_aDeXDKqSnp0lTAAAz)
+[Socket] User 1 connected (socket: cHZ9nKf1PYsWtaRCAAA1)
+[Socket] User 1 connected (socket: xm02OdLpRZ2RbJElAAA3)
+[Socket] User 1 disconnected (socket: cHZ9nKf1PYsWtaRCAAA1)
+[Socket] User 1 disconnected (socket: xm02OdLpRZ2RbJElAAA3)
+[Socket] User 1 connected (socket: QZz7kQ61pmwr2WMlAAA5)
+[Socket] User 1 connected (socket: c4BHACiNm5zuxNLFAAA7)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #408 jid=963981860908@s.whatsapp.net cust="يبدو لذيذا" → sales="هذا طبق تقليدي صيني"
+[Evolution Webhook] msg 3EB0261B3E status=SERVER_ACK
+[Evolution Webhook] msg 3EB0261B3E status=DELIVERY_ACK
+[Socket] User 1 disconnected (socket: c4BHACiNm5zuxNLFAAA7)
+[Socket] User 1 disconnected (socket: QZz7kQ61pmwr2WMlAAA5)
+[Socket] User 1 connected (socket: bI0UREtZ3RGhtG1hAAA9)
+[Socket] User 1 connected (socket: fk9lVjFQYAoxsr72AAA_)
+[WA Media Proxy] decrypted via Evolution id=5332 type=video size=4744932 ct=video/mp4
+[Socket] User 1 disconnected (socket: fk9lVjFQYAoxsr72AAA_)
+[Socket] User 1 disconnected (socket: bI0UREtZ3RGhtG1hAAA9)
+[Evolution Webhook] msg 3EB0261B3E status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="♥️♥️"
+[Translation] inbound #5431 en->zh: "♥️♥️" => "♥️♥️"
+[Socket] User 1 disconnected (socket: 6p_yDvvzfMMc7OSXAAAD)
+[Socket] User 1 connected (socket: TAvP9KO9Pp4r-vSZAABB)
+[Socket] User 1 connected (socket: BoqG1jSW0Ili3EkfAABD)
+[Socket] User 1 connected (socket: LLyfA1VnbJmNVo3AAABF)
+[Socket] User 1 disconnected (socket: LLyfA1VnbJmNVo3AAABF)
+[Socket] User 1 disconnected (socket: BoqG1jSW0Ili3EkfAABD)
+[Socket] User 1 connected (socket: GRm8hgN1iOVmh4R7AABH)
+[Socket] User 1 connected (socket: _n-DGzU8_pxS0OAFAABJ)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #409 jid=963981860908@s.whatsapp.net cust="♥️♥️" → sales="سأواصل النوم 🛌"
+[Evolution Webhook] msg 3EB06BEBC7 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB06BEBC7 status=SERVER_ACK
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #410 jid=963981860908@s.whatsapp.net cust="♥️♥️" → sales="الساعة الآن الثالثة صباحًا"
+[Evolution Webhook] msg 3EB009A4BE status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB009A4BE status=SERVER_ACK
+[Socket] User 1 disconnected (socket: _n-DGzU8_pxS0OAFAABJ)
+[Socket] User 1 disconnected (socket: GRm8hgN1iOVmh4R7AABH)
+[Evolution Webhook] msg 3EB009A4BE status=DELIVERY_ACK
+[Socket] User 1 connected (socket: acCwkRDEM9-EFfPjAABL)
+[Socket] User 1 connected (socket: -7wrChTGA-i5d5vxAABN)
+[WA Media Proxy] decrypted via Evolution id=4440 type=image size=64560 ct=image/png
+[Socket] User 1 disconnected (socket: acCwkRDEM9-EFfPjAABL)
+[Socket] User 1 disconnected (socket: -7wrChTGA-i5d5vxAABN)
+[Socket] User 1 connected (socket: h_UYkGCevaW5akn8AABP)
+[Socket] User 1 connected (socket: 3Njf74KGLvtH0Aa4AABR)
+[Socket] User 1 disconnected (socket: h_UYkGCevaW5akn8AABP)
+[Socket] User 1 disconnected (socket: 3Njf74KGLvtH0Aa4AABR)
+[Socket] User 1 connected (socket: EoxCrvOBEZ1LO_nNAABT)
+[Socket] User 1 connected (socket: O26Cbld8F4j_CVpDAABV)
+[Socket] User 1 disconnected (socket: EoxCrvOBEZ1LO_nNAABT)
+[Socket] User 1 disconnected (socket: O26Cbld8F4j_CVpDAABV)
+[WA Media Proxy] decrypted via Evolution id=5332 type=video size=4744932 ct=video/mp4
+[Socket] User 1 connected (socket: Wn4DHsDf6dTGciHUAABX)
+[Socket] User 1 connected (socket: A4PAjcWFhAvjsMF_AABZ)
+[Socket] User 1 disconnected (socket: A4PAjcWFhAvjsMF_AABZ)
+[Socket] User 1 disconnected (socket: Wn4DHsDf6dTGciHUAABX)
+[Socket] User 1 connected (socket: oheQNCRFW7-eww1OAABb)
+[Socket] User 1 connected (socket: -QNjwtPP0bLeIINhAABd)
+[Socket] User 1 disconnected (socket: -QNjwtPP0bLeIINhAABd)
+[Socket] User 1 disconnected (socket: oheQNCRFW7-eww1OAABb)
+[Socket] User 1 disconnected (socket: TAvP9KO9Pp4r-vSZAABB)
+[Socket] User 1 connected (socket: uEQqITP_bhE5FoMiAABf)
+[Socket] User 1 connected (socket: OA_cJUcLDfx_55T8AABh)
+[Automation Scheduler] Running check at 2026-07-24T19:33:05.831Z
+[Socket] User 1 connected (socket: RaW_9GzHb-syAnzKAABj)
+[Socket] User 1 connected (socket: 1ZjvT1FFHrxS5eiTAABl)
+[Socket] User 1 disconnected (socket: 1ZjvT1FFHrxS5eiTAABl)
+[Socket] User 1 disconnected (socket: RaW_9GzHb-syAnzKAABj)
+[Socket] User 1 connected (socket: CGJlg3klkKSdn31dAABn)
+[Socket] User 1 connected (socket: xpyNRh8g79BzMS6uAABp)
+[Socket] User 1 disconnected (socket: xpyNRh8g79BzMS6uAABp)
+[Socket] User 1 disconnected (socket: CGJlg3klkKSdn31dAABn)
+[Socket] User 1 connected (socket: lC0w-Ngpp8R1UKx3AABr)
+[Socket] User 1 connected (socket: tU-uoBt9PvT-R07VAABt)
+[Socket] User 1 disconnected (socket: lC0w-Ngpp8R1UKx3AABr)
+[Socket] User 1 disconnected (socket: tU-uoBt9PvT-R07VAABt)
+[Socket] User 1 connected (socket: wTTvmVV66lWnN8uEAABv)
+[Socket] User 1 connected (socket: 4p10V63VMDZpDoICAABx)
+[Socket] User 1 disconnected (socket: wTTvmVV66lWnN8uEAABv)
+[Socket] User 1 disconnected (socket: 4p10V63VMDZpDoICAABx)
+[Socket] User 1 connected (socket: ZQtlzSNMB6780HrKAABz)
+[Socket] User 1 connected (socket: piMqE4JpXOSzrljbAAB1)
+[Socket] User 1 disconnected (socket: ZQtlzSNMB6780HrKAABz)
+[Socket] User 1 disconnected (socket: piMqE4JpXOSzrljbAAB1)
+[Socket] User 1 connected (socket: NYCmysI_4JP9SndwAAB3)
+[Socket] User 1 connected (socket: 1PuGHkCWbhWgWjTtAAB5)
+[Socket] User 1 disconnected (socket: 1PuGHkCWbhWgWjTtAAB5)
+[Socket] User 1 disconnected (socket: NYCmysI_4JP9SndwAAB3)
+[Socket] User 1 connected (socket: 1ouTrFR8mwp26hHlAAB7)
+[Socket] User 1 connected (socket: 6FrtSzIwFE_0NZ_SAAB9)
+[Socket] User 1 disconnected (socket: 1ouTrFR8mwp26hHlAAB7)
+[Socket] User 1 disconnected (socket: 6FrtSzIwFE_0NZ_SAAB9)
+[Socket] User 1 connected (socket: 2zfbO25bvpvCdPBtAAB_)
+[Socket] User 1 connected (socket: Y6pCZ2KqOF1ZU4m4AACB)
+[Socket] User 1 disconnected (socket: Y6pCZ2KqOF1ZU4m4AACB)
+[Socket] User 1 disconnected (socket: 2zfbO25bvpvCdPBtAAB_)
+[Socket] User 1 connected (socket: VZqWGw-AcEzRcEjcAACD)
+[Socket] User 1 connected (socket: CRYGladYjj1BmBzOAACF)
+[Socket] User 1 disconnected (socket: CRYGladYjj1BmBzOAACF)
+[Socket] User 1 disconnected (socket: VZqWGw-AcEzRcEjcAACD)
+[Socket] User 1 connected (socket: JKqcAtNDIQeh7iV7AACH)
+[Socket] User 1 connected (socket: 3AgtVOw-0IN4I3SUAACJ)
+[Socket] User 1 connected (socket: V7LO0aNy1cZegV5KAACL)
+[Socket] User 1 disconnected (socket: V7LO0aNy1cZegV5KAACL)
+[Socket] User 1 connected (socket: 6EieMA6pCwRtvdecAACN)
+[Socket] User 1 connected (socket: dpIAhD6WcKt-LL7UAACP)
+[Socket] User 1 disconnected (socket: dpIAhD6WcKt-LL7UAACP)
+[Socket] User 1 disconnected (socket: 6EieMA6pCwRtvdecAACN)
+[Socket] User 1 connected (socket: u_fsbN-CwnIqlPUJAACR)
+[Socket] User 1 connected (socket: wlCb3pRAMsJKuWU5AACT)
+[Socket] User 1 disconnected (socket: u_fsbN-CwnIqlPUJAACR)
+[Socket] User 1 disconnected (socket: wlCb3pRAMsJKuWU5AACT)
+[Socket] User 1 connected (socket: vZAV0bmYvFJqneMjAACV)
+[Socket] User 1 connected (socket: cCa6JpfrIe6xAw6DAACX)
+[Socket] User 1 disconnected (socket: cCa6JpfrIe6xAw6DAACX)
+[Socket] User 1 disconnected (socket: vZAV0bmYvFJqneMjAACV)
+[Evolution Webhook] msg 3EB009A4BE status=READ
+[Evolution Webhook] msg 3EB06BEBC7 status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="حسنا"
+[Translation] inbound #5434 ar->zh: "حسنا" => "好的"
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="احلام سعيده"
+[Translation] inbound #5435 ar->zh: "احلام سعيده" => "甜蜜的梦"
+[Automation Scheduler] Running check at 2026-07-24T20:03:05.832Z
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-24T20:33:05.835Z
+[Automation Scheduler] Running check at 2026-07-24T21:03:05.838Z
+[Automation Scheduler] Running check at 2026-07-24T21:33:05.843Z
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-24T22:03:05.847Z
+[Automation Scheduler] Running check at 2026-07-24T22:33:05.852Z
+[Automation Scheduler] Running check at 2026-07-24T23:03:05.852Z
+[Socket] User 1 connected (socket: HywS6V_RW65z8Nq8AACZ)
+[Automation Scheduler] Running check at 2026-07-24T23:33:05.852Z
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #411 jid=963981860908@s.whatsapp.net cust="احلام سعيده" → sales="لقد استيقظت بالفعل"
+[Evolution Webhook] msg 3EB0A3A07F status=SERVER_ACK
+[Evolution Webhook] msg 3EB0A3A07F status=DELIVERY_ACK
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #412 jid=963981860908@s.whatsapp.net cust="احلام سعيده" → sales="ربما لا تزال في الحلم"
+[Evolution Webhook] msg 3EB0A4BE87 status=SERVER_ACK
+[Evolution Webhook] msg 3EB0A4BE87 status=DELIVERY_ACK
+[Socket] User 1 disconnected (socket: HywS6V_RW65z8Nq8AACZ)
+[Socket] User 1 connected (socket: MutQ_NX6l04986S5AACb)
+[Automation Scheduler] Running check at 2026-07-25T00:03:05.853Z
+[Automation Scheduler] Running check at 2026-07-25T00:33:05.853Z
+[Socket] User 1 disconnected (socket: MutQ_NX6l04986S5AACb)
+[Socket] User 1 connected (socket: q6dLQzICyFbP4Hs3AACd)
+[Socket] User 1 disconnected (socket: 3AgtVOw-0IN4I3SUAACJ)
+[Socket] User 1 disconnected (socket: JKqcAtNDIQeh7iV7AACH)
+[Socket] User 1 connected (socket: 1H7GYkOI4kYf3yJQAACg)
+[Socket] User 1 connected (socket: bA-vGOnZSq74bHEZAACh)
+[Socket] User 1 connected (socket: pV0T6zmRoBYZ9P-6AACj)
+[Socket] User 1 disconnected (socket: pV0T6zmRoBYZ9P-6AACj)
+[Automation Scheduler] Running check at 2026-07-25T01:03:05.854Z
+[Socket] User 1 connected (socket: JCkouHLfBlBuUj_pAACl)
+[Socket] User 1 connected (socket: 77bfR7404ehPUTGGAACn)
+[Socket] User 1 connected (socket: 8nFhuOzyhRQRTCbWAACp)
+[Socket] User 1 disconnected (socket: 8nFhuOzyhRQRTCbWAACp)
+[Socket] User 1 disconnected (socket: 77bfR7404ehPUTGGAACn)
+[Socket] User 1 connected (socket: N1spgwlekwfsfrgFAACr)
+[Socket] User 1 disconnected (socket: JCkouHLfBlBuUj_pAACl)
+[Socket] User 1 disconnected (socket: N1spgwlekwfsfrgFAACr)
+[Automation Scheduler] Running check at 2026-07-25T01:33:05.856Z
+[Socket] User 1 disconnected (socket: bA-vGOnZSq74bHEZAACh)
+[Socket] User 1 disconnected (socket: 1H7GYkOI4kYf3yJQAACg)
+[Socket] User 1 connected (socket: 1NQJdVwGxjnytCSPAACt)
+[Socket] User 1 connected (socket: 16X0nmadHv1kcFPIAACv)
+[Socket] User 1 disconnected (socket: q6dLQzICyFbP4Hs3AACd)
+[Socket] User 1 connected (socket: Nj89fAwtYoqvM-HtAACy)
+[Socket] User 1 connected (socket: tuZ8YS1mbmhplKqVAACz)
+[Socket] User 1 connected (socket: zMII57lcGnVM138bAAC1)
+[Socket] User 1 connected (socket: 1FLPL6am5iKE0W6zAAC4)
+[Socket] User 1 disconnected (socket: zMII57lcGnVM138bAAC1)
+[Socket] User 1 disconnected (socket: Nj89fAwtYoqvM-HtAACy)
+[Socket] User 1 disconnected (socket: tuZ8YS1mbmhplKqVAACz)
+[Socket] User 1 connected (socket: MlL9L6lVBh7x0htrAAC7)
+[Socket] User 1 connected (socket: 8UsOccd9B273tAP2AAC8)
+[Socket] User 1 connected (socket: EiC_4kQaUYkaITLiAAC-)
+[Socket] User 1 disconnected (socket: EiC_4kQaUYkaITLiAAC-)
+[Socket] User 1 connected (socket: x60cYDgAlN-5UfnXAADA)
+[Socket] User 1 connected (socket: qnUzEVh9Cva_4ZG9AADC)
+[Socket] User 1 disconnected (socket: qnUzEVh9Cva_4ZG9AADC)
+[Socket] User 1 disconnected (socket: x60cYDgAlN-5UfnXAADA)
+[Socket] User 1 connected (socket: aNDpbtBAqQVeuAg7AADE)
+[Socket] User 1 connected (socket: YAHQv9X5sdxc6noeAADG)
+[Socket] User 1 disconnected (socket: YAHQv9X5sdxc6noeAADG)
+[Socket] User 1 disconnected (socket: aNDpbtBAqQVeuAg7AADE)
+[Socket] User 1 connected (socket: SXTeSi7p4sxvn4iYAADI)
+[Socket] User 1 connected (socket: QGNFOqy4YUE2Td1QAADK)
+[Socket] User 1 disconnected (socket: SXTeSi7p4sxvn4iYAADI)
+[Socket] User 1 disconnected (socket: QGNFOqy4YUE2Td1QAADK)
+[Automation Scheduler] Running check at 2026-07-25T02:03:05.858Z
+[Socket] User 1 connected (socket: SZ1nAK9wbJ0TN42qAADM)
+[Socket] User 1 connected (socket: Tz4SOptNrjuhnYjmAADO)
+[Socket] User 1 disconnected (socket: SZ1nAK9wbJ0TN42qAADM)
+[Socket] User 1 disconnected (socket: Tz4SOptNrjuhnYjmAADO)
+[Socket] User 1 connected (socket: YDG2HimuTwWIXFMPAADQ)
+[Socket] User 1 disconnected (socket: YDG2HimuTwWIXFMPAADQ)
+[Socket] User 1 connected (socket: ekc4xMWkORqhTYqFAADS)
+[Socket] User 1 disconnected (socket: ekc4xMWkORqhTYqFAADS)
+[Socket] User 1 connected (socket: R6Spnk06dLaaGS-MAADU)
+[Socket] User 1 connected (socket: GraMt6bPOxHoZtwvAADW)
+[Socket] User 1 disconnected (socket: GraMt6bPOxHoZtwvAADW)
+[Socket] User 1 disconnected (socket: R6Spnk06dLaaGS-MAADU)
+[Socket] User 1 connected (socket: t9aYg9hihMlN95QxAADY)
+[Socket] User 1 disconnected (socket: MlL9L6lVBh7x0htrAAC7)
+[Socket] User 1 disconnected (socket: 8UsOccd9B273tAP2AAC8)
+[Socket] User 1 connected (socket: _TNMkSqRuBehj3dzAADa)
+[Socket] User 1 disconnected (socket: t9aYg9hihMlN95QxAADY)
+[Socket] User 1 connected (socket: kp1QYUxJa9nBerQtAADc)
+[Socket] User 1 disconnected (socket: kp1QYUxJa9nBerQtAADc)
+[Socket] User 1 connected (socket: dfZyi3YiHcVh1X1LAADe)
+[Socket] User 1 disconnected (socket: _TNMkSqRuBehj3dzAADa)
+[Socket] User 1 connected (socket: AwNscJ-AQd5BxW8jAADg)
+[Socket] User 1 disconnected (socket: AwNscJ-AQd5BxW8jAADg)
+[Socket] User 1 connected (socket: R7X-FtqDtF84as3KAADi)
+[Automation Scheduler] Running check at 2026-07-25T02:33:05.858Z
+[Socket] User 1 disconnected (socket: R7X-FtqDtF84as3KAADi)
+[Socket] User 1 connected (socket: ADN5joi-_zHdk4VsAADk)
+[Socket] User 1 disconnected (socket: ADN5joi-_zHdk4VsAADk)
+[Socket] User 1 connected (socket: wNLclKlu9PT0Jyq5AADm)
+[Socket] User 1 disconnected (socket: dfZyi3YiHcVh1X1LAADe)
+[Socket] User 1 disconnected (socket: wNLclKlu9PT0Jyq5AADm)
+[Socket] User 1 connected (socket: dxrh3wXCtKoJjzNCAADo)
+[Socket] User 1 connected (socket: wBV4noFtk87Y8ydAAADq)
+[Socket] User 1 disconnected (socket: wBV4noFtk87Y8ydAAADq)
+[Socket] User 1 connected (socket: yzoMlWcRLXbegjvbAADs)
+[Socket] User 1 disconnected (socket: dxrh3wXCtKoJjzNCAADo)
+[Socket] User 1 connected (socket: fLUKh5N9bvlhBLjhAADu)
+[Socket] User 1 connected (socket: RCn8bPdIrbrkdO1ZAADw)
+[Automation Scheduler] Running check at 2026-07-25T03:03:05.859Z
+[Socket] User 1 disconnected (socket: yzoMlWcRLXbegjvbAADs)
+[Socket] User 1 connected (socket: 0PpLHdlT5934rUY9AADy)
+[Socket] User 1 disconnected (socket: 0PpLHdlT5934rUY9AADy)
+[Socket] User 1 connected (socket: 6aVvMtOUyPdDVWQWAAD0)
+[Socket] User 1 disconnected (socket: RCn8bPdIrbrkdO1ZAADw)
+[Socket] User 1 disconnected (socket: 6aVvMtOUyPdDVWQWAAD0)
+[Socket] User 1 connected (socket: 3biiW8qgtP4y5kzXAAD2)
+[Socket] User 1 connected (socket: QmoP89Df3sH0KGRKAAD4)
+[Socket] User 1 disconnected (socket: 3biiW8qgtP4y5kzXAAD2)
+[Socket] User 1 disconnected (socket: QmoP89Df3sH0KGRKAAD4)
+[Socket] User 1 connected (socket: vijTjtDswaFXjNYQAAD6)
+[Socket] User 1 disconnected (socket: vijTjtDswaFXjNYQAAD6)
+[Socket] User 1 connected (socket: HAI2FWqYOmroH0A8AAD8)
+[Socket] User 1 disconnected (socket: HAI2FWqYOmroH0A8AAD8)
+[Socket] User 1 connected (socket: dfnDq2vwAKXUQFWXAAD-)
+[Socket] User 1 disconnected (socket: dfnDq2vwAKXUQFWXAAD-)
+[Socket] User 1 connected (socket: FOuNNi4bjvJ02Hr5AAEA)
+[Socket] User 1 disconnected (socket: FOuNNi4bjvJ02Hr5AAEA)
+[Socket] User 1 connected (socket: DI2Ix2iCx7T45ORXAAED)
+[Socket] User 1 disconnected (socket: DI2Ix2iCx7T45ORXAAED)
+[Socket] User 1 connected (socket: GO5JHtT5DA9XAlT1AAEF)
+[Socket] User 1 disconnected (socket: GO5JHtT5DA9XAlT1AAEF)
+[Socket] User 1 connected (socket: i9Toty4Tk9oIxIUZAAEH)
+[Socket] User 1 disconnected (socket: i9Toty4Tk9oIxIUZAAEH)
+[Socket] User 1 connected (socket: 21jbeV9-0olUtHwqAAEJ)
+[Socket] User 1 disconnected (socket: 21jbeV9-0olUtHwqAAEJ)
+[Socket] User 1 connected (socket: Yxe8DHUF-c64RavzAAEL)
+[Socket] User 1 disconnected (socket: Yxe8DHUF-c64RavzAAEL)
+[Socket] User 1 connected (socket: jXpFq831xsESC9_OAAEO)
+[Socket] User 1 disconnected (socket: jXpFq831xsESC9_OAAEO)
+[Socket] User 1 disconnected (socket: uEQqITP_bhE5FoMiAABf)
+[Socket] User 1 connected (socket: SPiUtLGXu4HfzPl3AAEQ)
+[Socket] User 1 connected (socket: xQzWXiCJ1H_oGoBwAAES)
+[Socket] User 1 disconnected (socket: xQzWXiCJ1H_oGoBwAAES)
+[Socket] User 1 connected (socket: 9Dzz9FzzULAkCgQvAAEU)
+Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/index.html'
+[Automation Scheduler] Running check at 2026-07-25T03:33:05.861Z
+[Socket] User 1 connected (socket: U8xGfPq9iDwfTPHfAAEW)
+[Socket] User 1 disconnected (socket: U8xGfPq9iDwfTPHfAAEW)
+[Socket] User 1 connected (socket: iYFGCwNP6fKg1xDAAAEY)
+[Socket] User 1 disconnected (socket: iYFGCwNP6fKg1xDAAAEY)
+[Socket] User 1 connected (socket: 6bTqkQqwS9NF789FAAEa)
+[Socket] User 1 disconnected (socket: 6bTqkQqwS9NF789FAAEa)
+[Automation Scheduler] Running check at 2026-07-25T04:03:05.860Z
+[Socket] User 1 connected (socket: -8zRDI0re4WXFDseAAEd)
+[Socket] User 1 connected (socket: lhjUViOLvEtu5r8jAAEf)
+[Socket] User 1 disconnected (socket: lhjUViOLvEtu5r8jAAEf)
+[Socket] User 1 disconnected (socket: -8zRDI0re4WXFDseAAEd)
+[Socket] User 1 connected (socket: JV4ETeqlIr3MwtiRAAEh)
+[Socket] User 1 disconnected (socket: JV4ETeqlIr3MwtiRAAEh)
+[Socket] User 1 connected (socket: RYyWz9pv6SOp8aR-AAEj)
+[Socket] User 1 disconnected (socket: RYyWz9pv6SOp8aR-AAEj)
+[Socket] User 1 connected (socket: SWoOHB1EOlShD9vNAAEl)
+[Socket] User 1 disconnected (socket: SWoOHB1EOlShD9vNAAEl)
+[Automation Scheduler] Running check at 2026-07-25T04:33:05.860Z
+[Socket] User 1 connected (socket: fvfh8uECQ7KBMpM7AAEn)
+[Socket] User 1 disconnected (socket: fvfh8uECQ7KBMpM7AAEn)
+[Socket] User 1 connected (socket: _tpOHWg6dbNEXutDAAEp)
+[Socket] User 1 disconnected (socket: _tpOHWg6dbNEXutDAAEp)
+[Socket] User 1 connected (socket: cof8A30kmXfxUR9vAAEs)
+[Socket] User 1 disconnected (socket: cof8A30kmXfxUR9vAAEs)
+[Socket] User 1 connected (socket: C0jYe44-dCzzPaUjAAEu)
+[Socket] User 1 disconnected (socket: C0jYe44-dCzzPaUjAAEu)
+[Socket] User 1 connected (socket: f87W7VMtSj4wpU2iAAEw)
+[Socket] User 1 disconnected (socket: f87W7VMtSj4wpU2iAAEw)
+[Socket] User 1 connected (socket: 28zRhCaW04adk_c_AAEy)
+[Socket] User 1 disconnected (socket: 28zRhCaW04adk_c_AAEy)
+[Socket] User 1 connected (socket: QmPiOWNJYi-jL-EnAAE0)
+[Socket] User 1 disconnected (socket: QmPiOWNJYi-jL-EnAAE0)
+[Socket] User 1 connected (socket: lBg8BaVUUMo9vuHmAAE2)
+[Automation Scheduler] Running check at 2026-07-25T05:03:05.861Z
+[Socket] User 1 disconnected (socket: lBg8BaVUUMo9vuHmAAE2)
+[Socket] User 1 connected (socket: WxeL8NBWFnKsi5NLAAE4)
+[Socket] User 1 disconnected (socket: WxeL8NBWFnKsi5NLAAE4)
+[Socket] User 1 connected (socket: 55WLeqB_N9YNKNpcAAE6)
+[Socket] User 1 disconnected (socket: 55WLeqB_N9YNKNpcAAE6)
+[Socket] User 1 connected (socket: yYDgCP4xX2ol1KgRAAE8)
+[Socket] User 1 disconnected (socket: yYDgCP4xX2ol1KgRAAE8)
+[Socket] User 1 connected (socket: so7X3P6dLqLezDAHAAE-)
+[Socket] User 1 connected (socket: m3KkfdGch7315w9-AAFA)
+[Socket] User 1 disconnected (socket: so7X3P6dLqLezDAHAAE-)
+[Socket] User 1 disconnected (socket: m3KkfdGch7315w9-AAFA)
+[Socket] User 1 connected (socket: TXQzpnW1lpjaA57eAAFC)
+[Socket] User 1 disconnected (socket: TXQzpnW1lpjaA57eAAFC)
+[Socket] User 1 connected (socket: DWN-5RE0YelXuk7nAAFE)
+[Socket] User 1 disconnected (socket: DWN-5RE0YelXuk7nAAFE)
+[Socket] User 1 disconnected (socket: fLUKh5N9bvlhBLjhAADu)
+[Socket] User 1 connected (socket: 0zcczwX_oSWLTmGCAAFG)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #413 jid=963981860908@s.whatsapp.net cust="احلام سعيده" → sales="صباح الخير"
+[Evolution Webhook] msg 3EB0B71E5A status=SERVER_ACK
+[Evolution Webhook] msg 3EB0B71E5A status=DELIVERY_ACK
+[Automation Scheduler] Running check at 2026-07-25T05:33:05.862Z
+[Socket] User 1 disconnected (socket: qxqbhr1wTT2OAeqEAAAB)
+[Socket] User 1 connected (socket: Udh8WwpmSCISZAlDAAFI)
+[Automation Scheduler] Running check at 2026-07-25T06:03:05.863Z
+[Socket] User 1 connected (socket: N2PBxjc4nEsJo3Q_AAFK)
+[Socket] User 1 disconnected (socket: N2PBxjc4nEsJo3Q_AAFK)
+[Socket] User 1 connected (socket: qYLEQMvmoEnZgjOOAAFM)
+[Socket] User 1 disconnected (socket: qYLEQMvmoEnZgjOOAAFM)
+[Socket] User 1 connected (socket: Lm84feDSs4YOFVXvAAFO)
+[Socket] User 1 disconnected (socket: Lm84feDSs4YOFVXvAAFO)
+[Socket] User 1 connected (socket: NdWMMX-8-nJsCIoHAAFQ)
+[Socket] User 1 disconnected (socket: NdWMMX-8-nJsCIoHAAFQ)
+[Socket] User 1 connected (socket: 0P99eBISl8B4qPWOAAFS)
+[Socket] User 1 disconnected (socket: 0P99eBISl8B4qPWOAAFS)
+[Socket] User 1 connected (socket: zfPnG4ECSfoC4dRhAAFU)
+[Socket] User 1 disconnected (socket: zfPnG4ECSfoC4dRhAAFU)
+[Automation Scheduler] Running check at 2026-07-25T06:33:05.864Z
+[Socket] User 1 connected (socket: GbUQyV8yFrXcepQ4AAFW)
+[Socket] User 1 disconnected (socket: GbUQyV8yFrXcepQ4AAFW)
+[Automation Scheduler] Running check at 2026-07-25T07:03:05.866Z
+[Automation Scheduler] Running check at 2026-07-25T07:33:05.866Z
+[Evolution Webhook] msg 3EB0B71E5A status=READ
+[Evolution Webhook] msg 3EB0A4BE87 status=READ
+[Evolution Webhook] msg 3EB0A3A07F status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="كنت نائما"
+[Translation] inbound #5439 ar->zh: "كنت نائما" => "我睡着了"
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="كيف حالك"
+[Translation] inbound #5440 ar->zh: "كيف حالك" => "你好吗？"
+[Automation Scheduler] Running check at 2026-07-25T08:03:05.868Z
+[Socket] User 1 disconnected (socket: 9Dzz9FzzULAkCgQvAAEU)
+[Socket] User 1 disconnected (socket: 1FLPL6am5iKE0W6zAAC4)
+[Socket] User 1 disconnected (socket: 16X0nmadHv1kcFPIAACv)
+[Socket] User 1 disconnected (socket: OA_cJUcLDfx_55T8AABh)
+[Socket] User 1 disconnected (socket: SPiUtLGXu4HfzPl3AAEQ)
+[Socket] User 1 disconnected (socket: 1NQJdVwGxjnytCSPAACt)
+[Automation Scheduler] Running check at 2026-07-25T08:33:05.873Z
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #414 jid=963981860908@s.whatsapp.net cust="كيف حالك" → sales="سعيد برؤيتك"
+[Evolution Webhook] msg 3EB0849E80 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB0849E80 status=SERVER_ACK
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #415 jid=963981860908@s.whatsapp.net cust="كيف حالك" → sales="اليوم هو عطلة نهاية الأسبوع"
+[Evolution Webhook] msg 3EB05DC9F7 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB05DC9F7 status=SERVER_ACK
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #416 jid=963981860908@s.whatsapp.net cust="كيف حالك" → sales="يجب أن تستريح"
+[Evolution Webhook] msg 3EB0AA1584 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB0AA1584 status=SERVER_ACK
+[Socket] User 1 connected (socket: _a_RCDm81rGxynLWAAFZ)
+[Socket] User 1 disconnected (socket: _a_RCDm81rGxynLWAAFZ)
+[Socket] User 1 connected (socket: oV4tqAKu4UU3KZhGAAFb)
+[Socket] User 1 disconnected (socket: oV4tqAKu4UU3KZhGAAFb)
+[Socket] User 1 connected (socket: 8YienQ17QD8U9R7IAAFd)
+[Socket] User 1 disconnected (socket: 8YienQ17QD8U9R7IAAFd)
+[Socket] User 1 connected (socket: 6wIhLs8tqVZS-Vy4AAFf)
+[Socket] User 1 disconnected (socket: 6wIhLs8tqVZS-Vy4AAFf)
+[Socket] User 1 disconnected (socket: 0zcczwX_oSWLTmGCAAFG)
+[Socket] User 1 connected (socket: 1i8rIubOVmYUMq2VAAFh)
+[Socket] User 1 disconnected (socket: 1i8rIubOVmYUMq2VAAFh)
+[Socket] User 1 connected (socket: pwuFw1P9McfSRTUjAAFj)
+[Socket] User 1 connected (socket: sk-9a3g4O2Xojm7jAAFl)
+[Socket] User 1 disconnected (socket: sk-9a3g4O2Xojm7jAAFl)
+[Socket] User 1 connected (socket: Oc1le2A1-2hP9WvyAAFo)
+[Socket] User 1 disconnected (socket: Oc1le2A1-2hP9WvyAAFo)
+[Socket] User 1 connected (socket: c2jYOSMvBC6cOj_kAAFq)
+[Socket] User 1 disconnected (socket: pwuFw1P9McfSRTUjAAFj)
+[Socket] User 1 connected (socket: VMX0uXdzQbVADnS1AAFs)
+[Socket] User 1 disconnected (socket: VMX0uXdzQbVADnS1AAFs)
+[Socket] User 1 connected (socket: 9nmbSx9rrXTZo7B4AAFu)
+[Socket] User 1 disconnected (socket: c2jYOSMvBC6cOj_kAAFq)
+[Socket] User 1 connected (socket: DxE1DdAec5yFllp0AAFw)
+[Socket] User 1 disconnected (socket: DxE1DdAec5yFllp0AAFw)
+[Socket] User 1 connected (socket: H8CHNc96lbTpBsj-AAFz)
+[Socket] User 1 disconnected (socket: H8CHNc96lbTpBsj-AAFz)
+[Socket] User 1 connected (socket: J2RnkZYMI_pdSo4JAAF1)
+[Socket] User 1 disconnected (socket: J2RnkZYMI_pdSo4JAAF1)
+[Socket] User 1 connected (socket: nj4N3i-yuTGAkdSYAAF3)
+[Socket] User 1 disconnected (socket: nj4N3i-yuTGAkdSYAAF3)
+[Socket] User 1 connected (socket: _80nK8kuL6tstgd7AAF5)
+[Socket] User 1 disconnected (socket: _80nK8kuL6tstgd7AAF5)
+[Socket] User 1 connected (socket: GzGtaBjVvcHnIiTsAAF7)
+[Socket] User 1 disconnected (socket: GzGtaBjVvcHnIiTsAAF7)
+[Socket] User 1 connected (socket: A1t0mCPff990_rQQAAF9)
+[Socket] User 1 disconnected (socket: A1t0mCPff990_rQQAAF9)
+[Socket] User 1 connected (socket: AbfqHn5ePZBOa8T5AAF_)
+[Socket] User 1 disconnected (socket: AbfqHn5ePZBOa8T5AAF_)
+[Socket] User 1 connected (socket: Zmdtb0n5Ma54fbpKAAGB)
+[Socket] User 1 disconnected (socket: Zmdtb0n5Ma54fbpKAAGB)
+[Socket] User 1 connected (socket: c3J5WFzKosrcbYUBAAGD)
+[Socket] User 1 disconnected (socket: c3J5WFzKosrcbYUBAAGD)
+[Socket] User 1 connected (socket: S8v33l3G4B2RSGcqAAGF)
+[Socket] User 1 disconnected (socket: S8v33l3G4B2RSGcqAAGF)
+[Socket] User 1 connected (socket: 9I_jwOY3LXQpMoQQAAGH)
+[Socket] User 1 disconnected (socket: 9I_jwOY3LXQpMoQQAAGH)
+[Socket] User 1 connected (socket: 3wRp1xNzo5dczXzXAAGJ)
+[Automation Scheduler] Running check at 2026-07-25T09:03:05.874Z
+[Socket] User 1 disconnected (socket: 3wRp1xNzo5dczXzXAAGJ)
+[Socket] User 1 connected (socket: qJtemSLIRuW2L4VuAAGL)
+[Socket] User 1 disconnected (socket: qJtemSLIRuW2L4VuAAGL)
+[Socket] User 1 connected (socket: rYuC0P-LU6bUA3aEAAGN)
+[Socket] User 1 disconnected (socket: rYuC0P-LU6bUA3aEAAGN)
+[Socket] User 1 connected (socket: G9XxFotVkcO8Wje0AAGP)
+[Socket] User 1 disconnected (socket: G9XxFotVkcO8Wje0AAGP)
+[Socket] User 1 connected (socket: D_83kSKZTvZrreWEAAGR)
+[Socket] User 1 disconnected (socket: D_83kSKZTvZrreWEAAGR)
+[Socket] User 1 connected (socket: EmcTox4zs_OCImvkAAGT)
+[Socket] User 1 disconnected (socket: EmcTox4zs_OCImvkAAGT)
+[Socket] User 1 connected (socket: T6NZwIQ40iQvHMTQAAGV)
+[Socket] User 1 disconnected (socket: 9nmbSx9rrXTZo7B4AAFu)
+[Socket] User 1 connected (socket: mPf9mhSSauWNAfmTAAGX)
+[Socket] User 1 disconnected (socket: T6NZwIQ40iQvHMTQAAGV)
+[Socket] User 1 connected (socket: RGXcLgPe29tAo9oUAAGZ)
+[Socket] User 1 disconnected (socket: mPf9mhSSauWNAfmTAAGX)
+[Socket] User 1 connected (socket: hP2Z_zxvHuFOEM1VAAGb)
+[Socket] User 1 disconnected (socket: hP2Z_zxvHuFOEM1VAAGb)
+[Socket] User 1 connected (socket: gDEHT4yOpxV88OZYAAGd)
+[Socket] User 1 disconnected (socket: RGXcLgPe29tAo9oUAAGZ)
+[Socket] User 1 connected (socket: h7hV0b6ctJFZMoKNAAGf)
+[Socket] User 1 disconnected (socket: gDEHT4yOpxV88OZYAAGd)
+[Socket] User 1 connected (socket: 1PUNi0ujHC6CdhBfAAGh)
+[Socket] User 1 disconnected (socket: 1PUNi0ujHC6CdhBfAAGh)
+[Socket] User 1 connected (socket: xE6-y1uxYUeCACvtAAGj)
+[Socket] User 1 disconnected (socket: h7hV0b6ctJFZMoKNAAGf)
+[Socket] User 1 connected (socket: 46cZQnKytBq1r2ioAAGl)
+[Socket] User 1 connected (socket: vdDgoPQLaFw2gZv9AAGn)
+[Socket] User 1 disconnected (socket: 46cZQnKytBq1r2ioAAGl)
+[Socket] User 1 disconnected (socket: vdDgoPQLaFw2gZv9AAGn)
+[Socket] User 1 connected (socket: ZWq_pcDdUoBaqnFwAAGp)
+[Socket] User 1 disconnected (socket: ZWq_pcDdUoBaqnFwAAGp)
+[Socket] User 1 connected (socket: d6L3ssXKMMgjNVIxAAGr)
+[Socket] User 1 disconnected (socket: d6L3ssXKMMgjNVIxAAGr)
+[Socket] User 1 connected (socket: d19RQlx-IHH_S1PdAAGt)
+[Socket] User 1 disconnected (socket: d19RQlx-IHH_S1PdAAGt)
+[Socket] User 1 connected (socket: n3cSVKH9Q5uNfXXvAAGv)
+[Socket] User 1 disconnected (socket: n3cSVKH9Q5uNfXXvAAGv)
+[Socket] User 1 connected (socket: fpHGhe6pzzMli79SAAGy)
+[Socket] User 1 connected (socket: yWz1PJtFR0fCjZSbAAGz)
+[Automation Scheduler] Running check at 2026-07-25T09:33:05.874Z
+[Socket] User 1 connected (socket: Ws-3VH7FBRbFjwRmAAG2)
+[Socket] User 1 disconnected (socket: Ws-3VH7FBRbFjwRmAAG2)
+[Socket] User 1 connected (socket: r2orv2CbGrbCtetTAAG4)
+[Socket] User 1 disconnected (socket: r2orv2CbGrbCtetTAAG4)
+[Socket] User 1 connected (socket: ronyMx23z4yBNFL5AAG6)
+[Socket] User 1 disconnected (socket: ronyMx23z4yBNFL5AAG6)
+[Socket] User 1 connected (socket: g38hp8QcWelFNB2IAAG8)
+[Socket] User 1 disconnected (socket: g38hp8QcWelFNB2IAAG8)
+[Socket] User 1 connected (socket: 3rTQv6ozE189ftr_AAG-)
+[Socket] User 1 disconnected (socket: 3rTQv6ozE189ftr_AAG-)
+[Socket] User 1 connected (socket: 2s9vdkMWmmARWe1IAAHA)
+[Socket] User 1 disconnected (socket: 2s9vdkMWmmARWe1IAAHA)
+[Socket] User 1 connected (socket: tbG4JA_UigspLB7kAAHC)
+[Socket] User 1 disconnected (socket: tbG4JA_UigspLB7kAAHC)
+[Socket] User 1 connected (socket: J58NePie_5dqZ0jBAAHE)
+[Socket] User 1 disconnected (socket: J58NePie_5dqZ0jBAAHE)
+[Socket] User 1 connected (socket: _z2ZGvbuzl8FLWhPAAHG)
+[Socket] User 1 connected (socket: DOgL6YWMKC_QswNkAAHI)
+[Socket] User 1 disconnected (socket: _z2ZGvbuzl8FLWhPAAHG)
+[Socket] User 1 disconnected (socket: DOgL6YWMKC_QswNkAAHI)
+[Socket] User 1 connected (socket: A3DGFNJCuhAp2RHYAAHK)
+[Socket] User 1 connected (socket: KZCikwesWOqu1yUGAAHM)
+[Socket] User 1 disconnected (socket: A3DGFNJCuhAp2RHYAAHK)
+[Socket] User 1 disconnected (socket: KZCikwesWOqu1yUGAAHM)
+[Socket] User 1 connected (socket: qz4IG5c8dgt7In06AAHP)
+[Socket] User 1 connected (socket: J2KhoJB-eBC_BxKVAAHQ)
+[Socket] User 1 disconnected (socket: J2KhoJB-eBC_BxKVAAHQ)
+[Socket] User 1 disconnected (socket: qz4IG5c8dgt7In06AAHP)
+[Socket] User 1 connected (socket: YnwqrNh_Eriokhu2AAHS)
+[Socket] User 1 disconnected (socket: YnwqrNh_Eriokhu2AAHS)
+[Socket] User 1 connected (socket: BKhvMyLAe9cD3CzgAAHU)
+[Socket] User 1 connected (socket: vnk4U-zN7CYVJKPpAAHW)
+[Socket] User 1 disconnected (socket: vnk4U-zN7CYVJKPpAAHW)
+[Socket] User 1 disconnected (socket: BKhvMyLAe9cD3CzgAAHU)
+[Socket] User 1 connected (socket: jh8iptWKTk2r0eokAAHY)
+[Socket] User 1 connected (socket: rT63IxWPBrcPKRU7AAHa)
+[Socket] User 1 disconnected (socket: rT63IxWPBrcPKRU7AAHa)
+[Socket] User 1 disconnected (socket: jh8iptWKTk2r0eokAAHY)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: jvTv8WUthGLHX7SuAAAF)
+[Socket] User 1 disconnected (socket: Udh8WwpmSCISZAlDAAFI)
+[Socket] User 1 disconnected (socket: xE6-y1uxYUeCACvtAAGj)
+[Socket] User 1 disconnected (socket: fpHGhe6pzzMli79SAAGy)
+[Socket] User 1 disconnected (socket: yWz1PJtFR0fCjZSbAAGz)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: MG-8iocDu0k7J3j2AAAB)
+[Socket] User 1 connected (socket: cOpfy_Nee6MevEE0AAAD)
+[Socket] User 1 connected (socket: H61eXekxfz-xPxS2AAAF)
+[Socket] User 1 connected (socket: rDx97_UCUd-y_hrPAAAH)
+[Socket] User 1 connected (socket: kbHemCzIPsKYTYQmAAAJ)
+[Automation Scheduler] Running check at 2026-07-25T09:52:41.267Z
+[Socket] User 1 connected (socket: 4xQcDwzsUEvTFIvsAAAL)
+[Socket] User 1 disconnected (socket: 4xQcDwzsUEvTFIvsAAAL)
+[Socket] User 1 connected (socket: FJ6zOELYxbCpur2QAAAN)
+[Socket] User 1 connected (socket: LKONwsC5r197RdZtAAAP)
+[Socket] User 1 disconnected (socket: FJ6zOELYxbCpur2QAAAN)
+[Socket] User 1 disconnected (socket: LKONwsC5r197RdZtAAAP)
+[Socket] User 1 connected (socket: GbJ24mSQBbrkgXOhAAAR)
+[Socket] User 1 connected (socket: vn0ywvTxMV9NCLA5AAAT)
+[Socket] User 1 disconnected (socket: GbJ24mSQBbrkgXOhAAAR)
+[Socket] User 1 disconnected (socket: vn0ywvTxMV9NCLA5AAAT)
+[Socket] User 1 connected (socket: 2bUZ-Acr-tZZxr0IAAAV)
+[Socket] User 1 connected (socket: Drs10W8h_xQ_8MqMAAAX)
+[Socket] User 1 disconnected (socket: Drs10W8h_xQ_8MqMAAAX)
+[Socket] User 1 disconnected (socket: 2bUZ-Acr-tZZxr0IAAAV)
+[Socket] User 1 connected (socket: LlZJO5PF02IXMnSEAAAZ)
+[Socket] User 1 connected (socket: tjzixcknUaYv9lg1AAAb)
+[Socket] User 1 disconnected (socket: LlZJO5PF02IXMnSEAAAZ)
+[Socket] User 1 disconnected (socket: tjzixcknUaYv9lg1AAAb)
+[Socket] User 1 connected (socket: CH02xg_NOi4O_hOOAAAd)
+[Socket] User 1 connected (socket: avVSYBkFiK_nSRQyAAAf)
+[Socket] User 1 disconnected (socket: CH02xg_NOi4O_hOOAAAd)
+[Socket] User 1 disconnected (socket: avVSYBkFiK_nSRQyAAAf)
+[Socket] User 1 connected (socket: Hyxw4vMFTEKaz_CgAAAh)
+[Socket] User 1 connected (socket: 8QxukDsUBy107x58AAAj)
+[Socket] User 1 disconnected (socket: 8QxukDsUBy107x58AAAj)
+[Socket] User 1 disconnected (socket: Hyxw4vMFTEKaz_CgAAAh)
+[Socket] User 1 connected (socket: sUSPWzTjBjaCw65AAAAl)
+[Socket] User 1 connected (socket: xBcrknUHVZWyak1IAAAn)
+[Socket] User 1 disconnected (socket: xBcrknUHVZWyak1IAAAn)
+[Socket] User 1 disconnected (socket: sUSPWzTjBjaCw65AAAAl)
+[Socket] User 1 connected (socket: i3OcTH6zJa-8eT4hAAAp)
+[Socket] User 1 disconnected (socket: cOpfy_Nee6MevEE0AAAD)
+[Socket] User 1 disconnected (socket: kbHemCzIPsKYTYQmAAAJ)
+[Socket] User 1 disconnected (socket: i3OcTH6zJa-8eT4hAAAp)
+[Automation Scheduler] Running check at 2026-07-25T10:21:41.269Z
+[Socket] User 1 connected (socket: g3LP0p_nD3wCBgNMAAAr)
+[Socket] User 1 disconnected (socket: g3LP0p_nD3wCBgNMAAAr)
+[Socket] User 1 connected (socket: -4BAWE2PBUJxOvcQAAAt)
+[Socket] User 1 connected (socket: B7330k0aducS2d5IAAAv)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: ebJ5Gk4Th4aHvmjAAAAB)
+[Socket] User 1 connected (socket: FNoHnfle4NRPgtbRAAAD)
+[Socket] User 1 connected (socket: en6zYe2v2KFbhFh2AAAF)
+[Socket] User 1 connected (socket: WmEorb0wJ-iml66mAAAI)
+[Socket] User 1 connected (socket: 5nD9-nOV2LUvzaYGAAAJ)
+[Automation Scheduler] Running check at 2026-07-25T10:51:30.673Z
+[Socket] User 1 connected (socket: 5aiG9mhOkPAIOizKAAAL)
+[Socket] User 1 disconnected (socket: 5aiG9mhOkPAIOizKAAAL)
+[Socket] User 1 connected (socket: fLT5K_sXWZJ7CJ-qAAAN)
+[Socket] User 1 connected (socket: 6vaNrnEsrLyq10seAAAP)
+[Socket] User 1 disconnected (socket: fLT5K_sXWZJ7CJ-qAAAN)
+[Socket] User 1 disconnected (socket: 6vaNrnEsrLyq10seAAAP)
+[Socket] User 1 connected (socket: pnOtA_cgEPyCWi0zAAAR)
+[Socket] User 1 connected (socket: xfotANvLGoyJ6DXXAAAT)
+[Socket] User 1 disconnected (socket: xfotANvLGoyJ6DXXAAAT)
+[Socket] User 1 disconnected (socket: pnOtA_cgEPyCWi0zAAAR)
+[Socket] User 1 connected (socket: ouYerD5W2-_1y-LSAAAV)
+[Socket] User 1 connected (socket: DnYQippllTBv60sIAAAX)
+[Socket] User 1 disconnected (socket: DnYQippllTBv60sIAAAX)
+[Socket] User 1 disconnected (socket: ouYerD5W2-_1y-LSAAAV)
+[Socket] User 1 connected (socket: -wrCy_-ZKQ6MAHvrAAAZ)
+[Socket] User 1 disconnected (socket: -wrCy_-ZKQ6MAHvrAAAZ)
+[Socket] User 1 connected (socket: AptJh0eFHme_cP9_AAAb)
+[Socket] User 1 connected (socket: Wx0hoJr8IJZzuUoRAAAd)
+[Socket] User 1 disconnected (socket: Wx0hoJr8IJZzuUoRAAAd)
+[Socket] User 1 disconnected (socket: AptJh0eFHme_cP9_AAAb)
+[Socket] User 1 connected (socket: yKOKLUZEJ3tLNB8lAAAf)
+[Socket] User 1 disconnected (socket: yKOKLUZEJ3tLNB8lAAAf)
+[Socket] User 1 connected (socket: A-krSUMhL6IcsPXsAAAh)
+[Socket] User 1 disconnected (socket: A-krSUMhL6IcsPXsAAAh)
+[Socket] User 1 connected (socket: gVaB__DB1S5ZX_OoAAAj)
+[Socket] User 1 disconnected (socket: gVaB__DB1S5ZX_OoAAAj)
+[Socket] User 1 connected (socket: tqHKU_Lfi59UmRSMAAAl)
+[Socket] User 1 connected (socket: AzUJ9WMwAcXMpgpgAAAn)
+[Socket] User 1 disconnected (socket: AzUJ9WMwAcXMpgpgAAAn)
+[Socket] User 1 connected (socket: 1M9LRnLfX9iLZKS7AAAp)
+[Socket] User 1 disconnected (socket: 1M9LRnLfX9iLZKS7AAAp)
+[Socket] User 1 disconnected (socket: tqHKU_Lfi59UmRSMAAAl)
+[Socket] User 1 connected (socket: c1dpA0dZH0gvGNeqAAAr)
+[Socket] User 1 disconnected (socket: c1dpA0dZH0gvGNeqAAAr)
+[Socket] User 1 connected (socket: QpxKm9xa4WAS-v6hAAAt)
+[Socket] User 1 disconnected (socket: QpxKm9xa4WAS-v6hAAAt)
+[Socket] User 1 connected (socket: pAZo9A0y-WMjh9PsAAAv)
+[Socket] User 1 disconnected (socket: pAZo9A0y-WMjh9PsAAAv)
+[Socket] User 1 connected (socket: r03XWwoSkTv2N4GJAAAx)
+[Socket] User 1 disconnected (socket: r03XWwoSkTv2N4GJAAAx)
+[Automation Scheduler] Running check at 2026-07-25T11:20:30.677Z
+[Socket] User 1 connected (socket: 7lNzqtqtUm8Pjy07AAAz)
+[Socket] User 1 disconnected (socket: 7lNzqtqtUm8Pjy07AAAz)
+[Socket] User 1 connected (socket: XCK47DvhFMvyhfUWAAA1)
+[Socket] User 1 disconnected (socket: XCK47DvhFMvyhfUWAAA1)
+[Automation Scheduler] Running check at 2026-07-25T11:50:30.678Z
+[Automation Scheduler] Running check at 2026-07-25T12:20:30.683Z
+[Socket] User 1 disconnected (socket: FNoHnfle4NRPgtbRAAAD)
+[Socket] User 1 disconnected (socket: ebJ5Gk4Th4aHvmjAAAAB)
+[Automation Scheduler] Running check at 2026-07-25T12:50:30.684Z
+[Automation Scheduler] Running check at 2026-07-25T13:20:30.690Z
+[Socket] User 1 connected (socket: i5XAIVnOEBUOdIkqAAA4)
+[Socket] User 1 connected (socket: r39tV-HUYjXQqdEmAAA5)
+[Socket] User 1 disconnected (socket: r39tV-HUYjXQqdEmAAA5)
+[Socket] User 1 disconnected (socket: i5XAIVnOEBUOdIkqAAA4)
+[Socket] User 1 disconnected (socket: WmEorb0wJ-iml66mAAAI)
+[Socket] User 1 connected (socket: 6A6id8p-nftAtJgtAAA7)
+[Socket] User 1 disconnected (socket: 6A6id8p-nftAtJgtAAA7)
+[Socket] User 1 connected (socket: 2W7MWXpLi0D-OVw4AAA-)
+[Socket] User 1 connected (socket: wdt04s3Q-X8enGj3AAA_)
+[Automation Scheduler] Running check at 2026-07-25T13:50:30.692Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: en6zYe2v2KFbhFh2AAAF)
+[Socket] User 1 disconnected (socket: 5nD9-nOV2LUvzaYGAAAJ)
+[Socket] User 1 disconnected (socket: 2W7MWXpLi0D-OVw4AAA-)
+[Socket] User 1 disconnected (socket: wdt04s3Q-X8enGj3AAA_)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 9rOEHV7ErFx_HnmcAAAB)
+[Socket] User 1 connected (socket: 9EvURnMvFVBrc1sgAAAD)
+[Socket] User 1 connected (socket: A2NhH6mnshldMNs6AAAF)
+[Socket] User 1 connected (socket: yb1uWlAo2P5QpzviAAAH)
+[Automation Scheduler] Running check at 2026-07-25T14:03:33.174Z
+[Socket] User 1 connected (socket: Cyqph9ZL_9yOL9VeAAAJ)
+[Socket] User 1 disconnected (socket: Cyqph9ZL_9yOL9VeAAAJ)
+[Socket] User 1 connected (socket: _-TTuSxmsBiyXnPPAAAL)
+[Socket] User 1 disconnected (socket: _-TTuSxmsBiyXnPPAAAL)
+[Socket] User 1 connected (socket: 4lzKEgCPn2HAMSr8AAAN)
+[Socket] User 1 disconnected (socket: 4lzKEgCPn2HAMSr8AAAN)
+[Automation Scheduler] Running check at 2026-07-25T14:32:33.176Z
+[Socket] User 1 connected (socket: nUM_YNW5Smlh23U5AAAP)
+[Socket] User 1 disconnected (socket: nUM_YNW5Smlh23U5AAAP)
+[Automation Scheduler] Running check at 2026-07-25T15:02:33.177Z
+[Automation Scheduler] Running check at 2026-07-25T15:32:33.213Z
+[Automation Scheduler] Running check at 2026-07-25T16:02:33.237Z
+[Automation Scheduler] Running check at 2026-07-25T16:32:33.236Z
+[Automation Scheduler] Running check at 2026-07-25T17:02:33.246Z
+[Automation Scheduler] Running check at 2026-07-25T17:32:33.246Z
+[Automation Scheduler] Running check at 2026-07-25T18:02:33.249Z
+[Evolution Webhook] msg 3EB0AA1584 status=READ
+[Evolution Webhook] msg 3EB05DC9F7 status=READ
+[Evolution Webhook] msg 3EB0849E80 status=READ
+[Automation Scheduler] Running check at 2026-07-25T18:32:33.250Z
+[Automation Scheduler] Running check at 2026-07-25T19:02:33.250Z
+[Automation Scheduler] Running check at 2026-07-25T19:32:33.250Z
+[Automation Scheduler] Running check at 2026-07-25T20:02:33.250Z
+[Automation Scheduler] Running check at 2026-07-25T20:32:33.250Z
+[Automation Scheduler] Running check at 2026-07-25T21:02:33.250Z
+[Automation Scheduler] Running check at 2026-07-25T21:32:33.250Z
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-25T22:02:33.250Z
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 connected (socket: 83cuX7kmmMeNAxfAAAAR)
+[Socket] User 1 disconnected (socket: 83cuX7kmmMeNAxfAAAAR)
+[Automation Scheduler] Running check at 2026-07-25T22:32:33.250Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 9rOEHV7ErFx_HnmcAAAB)
+[Socket] User 1 disconnected (socket: 9EvURnMvFVBrc1sgAAAD)
+[Socket] User 1 disconnected (socket: A2NhH6mnshldMNs6AAAF)
+[Socket] User 1 disconnected (socket: yb1uWlAo2P5QpzviAAAH)
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/assistant.service.js:2
+import { chatComplete } from './automation.service.js';
+         ^^^^^^^^^^^^
+SyntaxError: The requested module './automation.service.js' does not provide an export named 'chatComplete'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/routes/assistant.js:2
+import { auth } from '../middleware/auth.js';
+         ^^^^
+SyntaxError: The requested module '../middleware/auth.js' does not provide an export named 'auth'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/routes/assistant.js:2
+import { auth } from '../middleware/auth.js';
+         ^^^^
+SyntaxError: The requested module '../middleware/auth.js' does not provide an export named 'auth'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: gbXwCP5Qb4l73sVwAAAB)
+[Socket] User 1 connected (socket: UpAJ4dgrKKgoPqa0AAAD)
+[Socket] User 1 connected (socket: WxBK8gzOsVeJv-YCAAAF)
+[Socket] User 1 connected (socket: fpZuI83GJIoLMO4SAAAH)
+[Automation Scheduler] Running check at 2026-07-25T22:40:30.403Z
+[Assistant] conversations error: TypeError: Cannot read properties of undefined (reading 'id')
+    at file:///opt/whatsapp-crm/backend/src/routes/assistant.js:27:29
+    at Layer.handleRequest (/opt/whatsapp-crm/backend/node_modules/router/lib/layer.js:152:17)
+    at next (/opt/whatsapp-crm/backend/node_modules/router/lib/route.js:157:13)
+    at authMiddleware (file:///opt/whatsapp-crm/backend/src/middleware/auth.js:16:5)
+    at Layer.handleRequest (/opt/whatsapp-crm/backend/node_modules/router/lib/layer.js:152:17)
+    at next (/opt/whatsapp-crm/backend/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/opt/whatsapp-crm/backend/node_modules/router/lib/route.js:117:3)
+    at handle (/opt/whatsapp-crm/backend/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (/opt/whatsapp-crm/backend/node_modules/router/lib/layer.js:152:17)
+    at /opt/whatsapp-crm/backend/node_modules/router/index.js:295:15
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: gbXwCP5Qb4l73sVwAAAB)
+[Socket] User 1 disconnected (socket: UpAJ4dgrKKgoPqa0AAAD)
+[Socket] User 1 disconnected (socket: WxBK8gzOsVeJv-YCAAAF)
+[Socket] User 1 disconnected (socket: fpZuI83GJIoLMO4SAAAH)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: UkYitaUYnVo9dYmNAAAB)
+[Socket] User 1 connected (socket: Qrlvw2ndGEFEPh75AAAD)
+[Socket] User 1 connected (socket: SdLvpdqX8nPOijsVAAAF)
+[Socket] User 1 connected (socket: iVrf5L0EZEN41FHnAAAH)
+[Automation Scheduler] Running check at 2026-07-25T22:42:27.877Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: UkYitaUYnVo9dYmNAAAB)
+[Socket] User 1 disconnected (socket: Qrlvw2ndGEFEPh75AAAD)
+[Socket] User 1 disconnected (socket: SdLvpdqX8nPOijsVAAAF)
+[Socket] User 1 disconnected (socket: iVrf5L0EZEN41FHnAAAH)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: Emu7w2lNizcULBv5AAAB)
+[Socket] User 1 connected (socket: ldfHKj5qOdD6TzD0AAAD)
+[Socket] User 1 connected (socket: bnhhUuPYuMosJkXVAAAF)
+[Socket] User 1 connected (socket: lY0j1DgtMnuzg6VeAAAH)
+[Automation Scheduler] Running check at 2026-07-25T22:46:29.316Z
+[Socket] User 1 connected (socket: ustt3kGmFKaOpVeRAAAJ)
+[Socket] User 1 disconnected (socket: ustt3kGmFKaOpVeRAAAJ)
+[Socket] User 1 connected (socket: uCzJMQSHYKk0ceZNAAAL)
+[Socket] User 1 disconnected (socket: uCzJMQSHYKk0ceZNAAAL)
+[Socket] User 1 connected (socket: 7rrJjtaFMV4NqF0PAAAN)
+[Socket] User 1 disconnected (socket: 7rrJjtaFMV4NqF0PAAAN)
+[Automation Scheduler] Running check at 2026-07-25T23:15:29.318Z
+[Socket] User 1 connected (socket: Z1fPoa7DSlW66fivAAAP)
+[Socket] User 1 disconnected (socket: Z1fPoa7DSlW66fivAAAP)
+[Automation Scheduler] Running check at 2026-07-25T23:45:29.325Z
+[Automation Scheduler] Running check at 2026-07-26T00:15:29.325Z
+[Socket] User 1 connected (socket: EiPCubHrPbB6dcl2AAAR)
+[Socket] User 1 disconnected (socket: EiPCubHrPbB6dcl2AAAR)
+[Socket] User 1 connected (socket: Z99DWVrLYTkIHBt3AAAU)
+[Socket] User 1 disconnected (socket: Z99DWVrLYTkIHBt3AAAU)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: Emu7w2lNizcULBv5AAAB)
+[Socket] User 1 disconnected (socket: ldfHKj5qOdD6TzD0AAAD)
+[Socket] User 1 disconnected (socket: bnhhUuPYuMosJkXVAAAF)
+[Socket] User 1 disconnected (socket: lY0j1DgtMnuzg6VeAAAH)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: LMVIuIhkWtQNmSigAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: eNDbyjWolMgVjbjnAAAD)
+[Socket] User 1 connected (socket: wK7QIAVXZlLuWTdDAAAF)
+[Socket] User 1 connected (socket: hA9GNwalBJoItjfdAAAH)
+[Automation Scheduler] Running check at 2026-07-26T00:32:55.701Z
+[Socket] User 1 connected (socket: pdhMSXyYVEdraZ-kAAAJ)
+[Socket] User 1 disconnected (socket: pdhMSXyYVEdraZ-kAAAJ)
+[Socket] User 1 connected (socket: qfVAHUXet4EvQDE-AAAL)
+[Socket] User 1 disconnected (socket: qfVAHUXet4EvQDE-AAAL)
+[Socket] User 1 connected (socket: C6w28GQ6IHQxUFDSAAAN)
+[Socket] User 1 disconnected (socket: C6w28GQ6IHQxUFDSAAAN)
+[Automation Scheduler] Running check at 2026-07-26T01:01:55.698Z
+[Socket] User 1 connected (socket: 1fyANDpEJ0aZrvnYAAAP)
+[Socket] User 1 disconnected (socket: 1fyANDpEJ0aZrvnYAAAP)
+[Socket] User 1 connected (socket: NTOtev1yR47xcfYtAAAR)
+[Socket] User 1 disconnected (socket: NTOtev1yR47xcfYtAAAR)
+[Socket] User 1 connected (socket: rWAHSxuegca4-9YYAAAT)
+[Socket] User 1 disconnected (socket: rWAHSxuegca4-9YYAAAT)
+[Socket] User 1 disconnected (socket: eNDbyjWolMgVjbjnAAAD)
+[Socket] User 1 disconnected (socket: wK7QIAVXZlLuWTdDAAAF)
+[Socket] User 1 connected (socket: Hj-BPq5VlcfQvRhfAAAV)
+[Socket] User 1 disconnected (socket: Hj-BPq5VlcfQvRhfAAAV)
+[Socket] User 1 connected (socket: ah4e0e7PNLwhCDGxAAAX)
+[Socket] User 1 disconnected (socket: ah4e0e7PNLwhCDGxAAAX)
+[Socket] User 1 connected (socket: BmlMoO-fCPu7uyxIAAAZ)
+[Socket] User 1 disconnected (socket: BmlMoO-fCPu7uyxIAAAZ)
+[Socket] User 1 connected (socket: lHcgi_5X4ilU76LVAAAb)
+[Socket] User 1 disconnected (socket: lHcgi_5X4ilU76LVAAAb)
+[Socket] User 1 connected (socket: qmsQ4xjPJqV54ZNyAAAd)
+[Socket] User 1 connected (socket: eKFBwsqGLreOeDOLAAAf)
+[Socket] User 1 disconnected (socket: eKFBwsqGLreOeDOLAAAf)
+[Socket] User 1 disconnected (socket: qmsQ4xjPJqV54ZNyAAAd)
+[Socket] User 1 connected (socket: Ql7KMa1A7lZgwXVFAAAh)
+[Socket] User 1 connected (socket: 3DLs2eRbkYYGxfCNAAAj)
+[Socket] User 1 disconnected (socket: 3DLs2eRbkYYGxfCNAAAj)
+[Socket] User 1 disconnected (socket: Ql7KMa1A7lZgwXVFAAAh)
+[Socket] User 1 connected (socket: ei4qRmEXcMWyLyOKAAAl)
+[Socket] User 1 disconnected (socket: ei4qRmEXcMWyLyOKAAAl)
+[Automation Scheduler] Running check at 2026-07-26T01:31:55.715Z
+[Socket] User 1 connected (socket: MrIJBgv4S7mQl3A5AAAn)
+[Socket] User 1 disconnected (socket: MrIJBgv4S7mQl3A5AAAn)
+[Socket] User 1 connected (socket: 1Ymku-OBTMbH_AbsAAAp)
+[Socket] User 1 disconnected (socket: 1Ymku-OBTMbH_AbsAAAp)
+[Socket] User 1 connected (socket: ajmnps4wcvHDAByIAAAs)
+[Socket] User 1 disconnected (socket: ajmnps4wcvHDAByIAAAs)
+[Socket] User 1 connected (socket: LA_wwKNaiUS2UfmEAAAu)
+[Socket] User 1 disconnected (socket: LA_wwKNaiUS2UfmEAAAu)
+[Socket] User 1 connected (socket: mwZmzeIcdb_uTCCvAAAw)
+[Socket] User 1 disconnected (socket: mwZmzeIcdb_uTCCvAAAw)
+[Socket] User 1 connected (socket: 4OXI0BPRPRwlj08-AAAy)
+[Socket] User 1 disconnected (socket: 4OXI0BPRPRwlj08-AAAy)
+[Socket] User 1 connected (socket: clAT_qWuDG6BjIkXAAA0)
+[Socket] User 1 connected (socket: UZP2-NE2Fj5eiaqtAAA2)
+[Socket] User 1 disconnected (socket: clAT_qWuDG6BjIkXAAA0)
+[Socket] User 1 disconnected (socket: UZP2-NE2Fj5eiaqtAAA2)
+[Automation Scheduler] Running check at 2026-07-26T02:01:55.718Z
+[Socket] User 1 connected (socket: 2ghZF0EJuvJ6EBAzAAA4)
+[Socket] User 1 disconnected (socket: 2ghZF0EJuvJ6EBAzAAA4)
+[Socket] User 1 connected (socket: dEGia-xaErTVfOEYAAA7)
+[Socket] User 1 disconnected (socket: dEGia-xaErTVfOEYAAA7)
+[Socket] User 1 connected (socket: S2F7aKEC3OxKFuF_AAA9)
+[Socket] User 1 disconnected (socket: S2F7aKEC3OxKFuF_AAA9)
+[Socket] User 1 connected (socket: ZAUEi4qaX4HhT4nrAAA_)
+[Socket] User 1 disconnected (socket: ZAUEi4qaX4HhT4nrAAA_)
+[Socket] User 1 connected (socket: qvoo4XHKCyWLnVEaAABB)
+[Socket] User 1 disconnected (socket: qvoo4XHKCyWLnVEaAABB)
+[Socket] User 1 connected (socket: MJQh_ynt4pK4dTQfAABD)
+[Socket] User 1 disconnected (socket: MJQh_ynt4pK4dTQfAABD)
+[Socket] User 1 connected (socket: 3MSq13jT-KOGhLlPAABF)
+[Socket] User 1 disconnected (socket: 3MSq13jT-KOGhLlPAABF)
+[Automation Scheduler] Running check at 2026-07-26T02:31:55.731Z
+[Socket] User 1 connected (socket: kz3A75tuUoPD33vTAABH)
+[Socket] User 1 disconnected (socket: kz3A75tuUoPD33vTAABH)
+[Socket] User 1 connected (socket: cJmiB0iyb62Mmf0VAABJ)
+[Socket] User 1 disconnected (socket: cJmiB0iyb62Mmf0VAABJ)
+[Socket] User 1 connected (socket: FegbgEtUP74ZqQrpAABL)
+[Socket] User 1 disconnected (socket: FegbgEtUP74ZqQrpAABL)
+[Socket] User 1 connected (socket: SnVYDwszwXJAoHXaAABN)
+[Assistant] chat error: TypeError: Cannot destructure property 'message' of 'req.body' as it is undefined.
+    at file:///opt/whatsapp-crm/backend/src/routes/assistant.js:10:13
+    at Layer.handleRequest (/opt/whatsapp-crm/backend/node_modules/router/lib/layer.js:152:17)
+    at next (/opt/whatsapp-crm/backend/node_modules/router/lib/route.js:157:13)
+    at authMiddleware (file:///opt/whatsapp-crm/backend/src/middleware/auth.js:16:5)
+    at Layer.handleRequest (/opt/whatsapp-crm/backend/node_modules/router/lib/layer.js:152:17)
+    at next (/opt/whatsapp-crm/backend/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/opt/whatsapp-crm/backend/node_modules/router/lib/route.js:117:3)
+    at handle (/opt/whatsapp-crm/backend/node_modules/router/index.js:435:11)
+    at Layer.handleRequest (/opt/whatsapp-crm/backend/node_modules/router/lib/layer.js:152:17)
+    at /opt/whatsapp-crm/backend/node_modules/router/index.js:295:15
+[Socket] User 1 disconnected (socket: SnVYDwszwXJAoHXaAABN)
+[Socket] User 1 disconnected (socket: hA9GNwalBJoItjfdAAAH)
+[Socket] User 1 disconnected (socket: LMVIuIhkWtQNmSigAAAB)
+[Socket] User 1 connected (socket: e_A7ThYRdrCvOkkhAABP)
+[Automation Scheduler] Running check at 2026-07-26T03:01:55.732Z
+SyntaxError: Unexpected token 'u', "username:admin" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at createStrictSyntaxError (/opt/whatsapp-crm/backend/node_modules/body-parser/lib/types/json.js:137:10)
+    at parse (/opt/whatsapp-crm/backend/node_modules/body-parser/lib/types/json.js:86:15)
+    at /opt/whatsapp-crm/backend/node_modules/body-parser/lib/read.js:162:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:238:16)
+    at done (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+SyntaxError: Unexpected token 'p', "password:admin123" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at createStrictSyntaxError (/opt/whatsapp-crm/backend/node_modules/body-parser/lib/types/json.js:137:10)
+    at parse (/opt/whatsapp-crm/backend/node_modules/body-parser/lib/types/json.js:86:15)
+    at /opt/whatsapp-crm/backend/node_modules/body-parser/lib/read.js:162:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:238:16)
+    at done (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/opt/whatsapp-crm/backend/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: e_A7ThYRdrCvOkkhAABP)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=close
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 connected (socket: tVg6LrJMQwkgTKfsAAAB)
+[Automation Scheduler] Running check at 2026-07-26T03:08:42.988Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=close
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: SoK7JSGG_xYTLQhnAAAB)
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Automation Scheduler] Running check at 2026-07-26T03:10:42.569Z
+[Socket] User 1 disconnected (socket: SoK7JSGG_xYTLQhnAAAB)
+[Socket] User 1 connected (socket: 3nyrVo97K96xE776AAAD)
+[Socket] User 1 connected (socket: kAbi4DO_fFyxLIy9AAAF)
+[Socket] User 1 disconnected (socket: kAbi4DO_fFyxLIy9AAAF)
+[Socket] User 1 connected (socket: yvrg6YybnNOfctJeAAAH)
+[Socket] User 1 disconnected (socket: yvrg6YybnNOfctJeAAAH)
+[Socket] User 1 connected (socket: hZF6NsvXyUJeqJcgAAAJ)
+[Socket] User 1 disconnected (socket: hZF6NsvXyUJeqJcgAAAJ)
+[Socket] User 1 connected (socket: 546z2-_C2_s1hC_jAAAL)
+[Socket] User 1 disconnected (socket: 546z2-_C2_s1hC_jAAAL)
+[Socket] User 1 connected (socket: xL1pe1zKJzqi5OSLAAAN)
+[Socket] User 1 disconnected (socket: xL1pe1zKJzqi5OSLAAAN)
+[Socket] User 1 connected (socket: zM5mjETc8Q_23TLTAAAP)
+[Socket] User 1 disconnected (socket: zM5mjETc8Q_23TLTAAAP)
+[Socket] User 1 connected (socket: aEDSBXIxL5BzrGmwAAAR)
+[Socket] User 1 disconnected (socket: aEDSBXIxL5BzrGmwAAAR)
+[Socket] User 1 connected (socket: CAXOY639v_x6Rvj3AAAT)
+[Socket] User 1 disconnected (socket: CAXOY639v_x6Rvj3AAAT)
+[Automation Scheduler] Running check at 2026-07-26T03:39:42.574Z
+Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/index.html'
+Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/index.html'
+Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/index.html'
+[Socket] User 1 connected (socket: LHr-4avsbC5Zm5YTAAAV)
+[Socket] User 1 disconnected (socket: LHr-4avsbC5Zm5YTAAAV)
+[Socket] User 1 connected (socket: EEOaoRD5zrqkA6_0AAAX)
+[Socket] User 1 disconnected (socket: EEOaoRD5zrqkA6_0AAAX)
+[Socket] User 1 connected (socket: fszBFq3XwvCsgR5sAAAZ)
+[Socket] User 1 disconnected (socket: fszBFq3XwvCsgR5sAAAZ)
+[Socket] User 1 connected (socket: l6xAIrCZgVuIi5WzAAAb)
+[Socket] User 1 disconnected (socket: l6xAIrCZgVuIi5WzAAAb)
+[Socket] User 1 connected (socket: sTGEDVJAgVc5aVgvAAAd)
+[Socket] User 1 disconnected (socket: sTGEDVJAgVc5aVgvAAAd)
+[Socket] User 1 connected (socket: 3Hce52rPaevzBIT0AAAf)
+[Socket] User 1 disconnected (socket: 3Hce52rPaevzBIT0AAAf)
+[Socket] User 1 connected (socket: UMRUSTjGno3kYeTLAAAh)
+[Socket] User 1 disconnected (socket: UMRUSTjGno3kYeTLAAAh)
+[Automation Scheduler] Running check at 2026-07-26T04:09:42.582Z
+[Automation Scheduler] Running check at 2026-07-26T04:39:42.584Z
+[Socket] User 1 connected (socket: BQYHK2WfbX0tgd7eAAAj)
+[Socket] User 1 disconnected (socket: BQYHK2WfbX0tgd7eAAAj)
+[Socket] User 1 connected (socket: zfcx3xZcu-BIUjwwAAAl)
+[Socket] User 1 disconnected (socket: zfcx3xZcu-BIUjwwAAAl)
+[Socket] User 1 connected (socket: ag4XajSmxusSgKKvAAAn)
+[Socket] User 1 disconnected (socket: ag4XajSmxusSgKKvAAAn)
+[Socket] User 1 connected (socket: D50WXvvfKOKGSiN5AAAp)
+[Socket] User 1 disconnected (socket: D50WXvvfKOKGSiN5AAAp)
+[Socket] User 1 connected (socket: N7qSgCL0O_IZMF69AAAr)
+[Socket] User 1 disconnected (socket: N7qSgCL0O_IZMF69AAAr)
+[Automation Scheduler] Running check at 2026-07-26T05:09:42.585Z
+[Automation Scheduler] Running check at 2026-07-26T05:39:42.595Z
+[Socket] User 1 connected (socket: jHEq1QErjgkUls8AAAAt)
+[Socket] User 1 disconnected (socket: jHEq1QErjgkUls8AAAAt)
+[Automation Scheduler] Running check at 2026-07-26T06:09:42.601Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: gYiRCfMcmdqALFJAAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: SY_AVVvGhJmHIcIjAAAB)
+[Automation Scheduler] Running check at 2026-07-26T06:11:40.710Z
+[Socket] User 1 connected (socket: V8S5SF2AFL_1c02JAAAD)
+[Socket] User 1 disconnected (socket: V8S5SF2AFL_1c02JAAAD)
+[Socket] User 1 connected (socket: JlCEf0frVTWVSFE8AAAF)
+[Socket] User 1 disconnected (socket: JlCEf0frVTWVSFE8AAAF)
+[Socket] User 1 connected (socket: wM8Z-a5PnZQgk_T7AAAH)
+[Socket] User 1 disconnected (socket: wM8Z-a5PnZQgk_T7AAAH)
+[Socket] User 1 connected (socket: 5ib73rljX8wkEKp2AAAJ)
+[Socket] User 1 disconnected (socket: 5ib73rljX8wkEKp2AAAJ)
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: hL5G3pmrq8PFj5xXAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: ceoHHtqIBdriqIkKAAAB)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: ceoHHtqIBdriqIkKAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: yOvXehsYsRbOupKhAAAB)
+[Automation Scheduler] Running check at 2026-07-26T06:26:04.039Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: yOvXehsYsRbOupKhAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+
+[SIGTERM] Shutting down gracefully...
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: USgZM4LV9f3Al4e1AAAB)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: USgZM4LV9f3Al4e1AAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: fS3Z1ylFL8KrdVpkAAAB)
+[Automation Scheduler] Running check at 2026-07-26T06:29:01.256Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: BZ7qEhy_WjUx4FtUAAAB)
+[Automation Scheduler] Running check at 2026-07-26T06:31:39.330Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: kaWYQUeSNxL-3TmUAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: Fkk50b7Dx-6zMHNJAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 0IIcK5HooLyJ9G_GAAAB)
+[Automation Scheduler] Running check at 2026-07-26T06:36:46.915Z
+[Automation Scheduler] Running check at 2026-07-26T07:05:46.922Z
+[Socket] User 1 connected (socket: c04G52L_6wukcKIdAAAD)
+[Socket] User 1 connected (socket: NGFi1u3vrh46fG7wAAAF)
+[Socket] User 1 disconnected (socket: NGFi1u3vrh46fG7wAAAF)
+[Socket] User 1 connected (socket: wurl743xUgDJxMLzAAAH)
+[Socket] User 1 disconnected (socket: wurl743xUgDJxMLzAAAH)
+[Socket] User 1 connected (socket: qSR4oGlQ5RaZ3CqJAAAJ)
+[Automation Scheduler] Running check at 2026-07-26T07:35:46.922Z
+[Socket] User 1 disconnected (socket: qSR4oGlQ5RaZ3CqJAAAJ)
+[Socket] User 1 connected (socket: iUavFCMHEk_nisClAAAL)
+[Socket] User 1 disconnected (socket: iUavFCMHEk_nisClAAAL)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: vi_g76DCZQiJEDcZAAAB)
+[Socket] User 1 connected (socket: mPkge8ReFIc018bzAAAD)
+[Automation Scheduler] Running check at 2026-07-26T07:54:53.179Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 2o6qlJkITiZ7cD8fAAAB)
+[Socket] User 1 connected (socket: F3uzBWH_BkAIyEWVAAAD)
+[Automation Scheduler] Running check at 2026-07-26T07:57:37.249Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: PaXXpt3bejo6TMoeAAAB)
+[Socket] User 1 connected (socket: fPQlKFFtb3klYaS1AAAD)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 31Sxsdfzlq35Sow0AAAB)
+[Socket] User 1 connected (socket: S8xh0wh1GnHrB7mUAAAD)
+[Automation Scheduler] Running check at 2026-07-26T07:59:42.956Z
+[Socket] User 1 connected (socket: SeSENH-cNATLAUm0AAAF)
+[Socket] User 1 disconnected (socket: SeSENH-cNATLAUm0AAAF)
+[Socket] User 1 connected (socket: 8iufFqsed5Mmp9-KAAAH)
+[Socket] User 1 disconnected (socket: 8iufFqsed5Mmp9-KAAAH)
+[Socket] User 1 connected (socket: x0A55mw8AunMJqV1AAAJ)
+[Socket] User 1 disconnected (socket: x0A55mw8AunMJqV1AAAJ)
+[Socket] User 1 connected (socket: cUp_0KHeqqMy5e_7AAAL)
+[Socket] User 1 disconnected (socket: cUp_0KHeqqMy5e_7AAAL)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 2LIGfPnhYtdFAG0XAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 9GHEFf7aAn1uhn5DAAAB)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: DFMlTzmekHlOtX08AAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: mvv4dNZscxdQlNEdAAAD)
+[Automation Scheduler] Running check at 2026-07-26T08:30:20.928Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: PzrGZLEXNLYvCbR9AAAB)
+[Socket] User 1 connected (socket: 14_0VYmE6q7S5YHUAAAD)
+[Automation Scheduler] Running check at 2026-07-26T08:36:20.967Z
+[Socket] User 1 disconnected (socket: 14_0VYmE6q7S5YHUAAAD)
+[Socket] User 1 connected (socket: AGmocyMkQs0nGzeyAAAF)
+[Assistant] AI raw response: "好的，我刚查了最新数据。\n\n现在系统里一共8个客户：\n\n1. **印度客户** - ID: 1，阶段：未设置，无公司名\n2. **Jeremy 1** - ID: 2，阶段：未设置，无公司名，JID: 853xxx94909\n3. **Jeremy 2** - ID: 3，阶段：未设置，无公司名，JID: 853xxx94909\n4. **Jeremy 3** - ID: 4，阶段：未设置，无公司名，JID: 853xxx94909\n5. **Jeremy 4** - ID: 5，阶段：未设置，无公司名，无JID\n6. **吉娜** - ID: 6，阶段：未设置，无公司名，无JID\n7. **Eric** - ID: 7，阶段：未设置，无公司名，无JID\n8. **陈先生** - ID: 8，阶段：未设置，无公司名，无JID\n\n这里有个明显的重复问题：ID 2、3、4这三个Jeremy用的是同一个WhatsApp号，很明显是重复录入。建议先合并或删掉多余的，否则分析会失真。\n\n另外，吉娜、Eric、陈先生这3个没有WhatsApp JID，我查不到他们的
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] Backend intent detected: {"tool":"query_customer","params":{}}
+[Assistant] AI raw response: "{\"tool\": \"query_messages\", \"params\": {\"jid\": \"919427348953@s.whatsapp.net\", \"limit\": 20}}"
+[Assistant] Parsed toolCall from AI JSON: {"tool":"query_messages","params":{"jid":"919427348953@s.whatsapp.net","limit":20}}
+[Socket] User 1 disconnected (socket: AGmocyMkQs0nGzeyAAAF)
+[Socket] User 1 connected (socket: W38TdeCYay_zV9PGAAAH)
+[Socket] User 1 connected (socket: pFWf3SmJbPHqj8taAAAJ)
+[Socket] User 1 disconnected (socket: pFWf3SmJbPHqj8taAAAJ)
+[Socket] User 1 connected (socket: k7_ctnaygCd7yi2wAAAL)
+[Socket] User 1 disconnected (socket: k7_ctnaygCd7yi2wAAAL)
+[Socket] User 1 connected (socket: GUmwvyCMGSb20PI7AAAO)
+[Socket] User 1 disconnected (socket: GUmwvyCMGSb20PI7AAAO)
+[Socket] User 1 connected (socket: SMhN7I8pQ64J6iqKAAAQ)
+[Assistant] AI raw response: "吉娜这个客户系统里没有WhatsApp JID，我没办法直接发消息给她。\n\n你看看有没有她别的联系方式？比如电话、邮件或者微信？如果你有她的WhatsApp号，给我一下，我来帮你联系。"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] No CRM task detected for: 帮我问候一下吉娜
+[Socket] User 1 disconnected (socket: SMhN7I8pQ64J6iqKAAAQ)
+[Socket] User 1 connected (socket: EX71jqncf4ynkO2EAAAS)
+[Socket] User 1 connected (socket: XwUtdrVI4RR3iHIrAAAU)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid@lid
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 disconnected (socket: EX71jqncf4ynkO2EAAAS)
+[Socket] User 1 disconnected (socket: XwUtdrVI4RR3iHIrAAAU)
+[Socket] User 1 connected (socket: MpzJiiYVsDGf9UbiAAAW)
+[Socket] User 1 connected (socket: 0oSIfefgw_CUytORAAAY)
+[Socket] User 1 disconnected (socket: MpzJiiYVsDGf9UbiAAAW)
+[Socket] User 1 disconnected (socket: 0oSIfefgw_CUytORAAAY)
+[Socket] User 1 connected (socket: yFxP3iJvSQ_d2gigAAAa)
+[Socket] User 1 connected (socket: 4D5m-fm-QDSWnVswAAAc)
+[Socket] User 1 disconnected (socket: yFxP3iJvSQ_d2gigAAAa)
+[Socket] User 1 disconnected (socket: 4D5m-fm-QDSWnVswAAAc)
+[Socket] User 1 connected (socket: 1BuqRYfZusAV69blAAAe)
+[Socket] User 1 connected (socket: i9RiOj3Y-hdEm658AAAg)
+[Evolution] send target: 8618038118960@s.whatsapp.net -> 182927472218210@lid
+[SpeechCollector] sample #417 jid=8618038118960@s.whatsapp.net cust="送料はかかりますか？" → sales="エリックさん、もちろんすべて無料ですよ！サンプルも送料も当社持ちで、ご心配は無用"
+[Evolution Webhook] msg 3EB06E16B1 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB06E16B1 status=SERVER_ACK
+[Socket] User 1 disconnected (socket: i9RiOj3Y-hdEm658AAAg)
+[Socket] User 1 disconnected (socket: 1BuqRYfZusAV69blAAAe)
+[Socket] User 1 connected (socket: AMUqAb3tWbq8OknvAAAi)
+[Socket] User 1 connected (socket: x9VKsl3xT_7ZD0MxAAAk)
+[Socket] User 1 disconnected (socket: x9VKsl3xT_7ZD0MxAAAk)
+[Socket] User 1 disconnected (socket: AMUqAb3tWbq8OknvAAAi)
+[Socket] User 1 connected (socket: pQfErPTi_Ruk-c5JAAAm)
+[Socket] User 1 connected (socket: TgcYzdf07SkSAC1uAAAo)
+[Socket] User 1 disconnected (socket: TgcYzdf07SkSAC1uAAAo)
+[Socket] User 1 disconnected (socket: pQfErPTi_Ruk-c5JAAAm)
+[Evolution Webhook] msg 3EB06E16B1 status=DELIVERY_ACK
+[Evolution Webhook] inbound jid=8618038118960@s.whatsapp.net me=false type=text dup=false text="はい"
+[Translation] inbound #5446 ja->zh: "はい" => "是"
+[Evolution Webhook] msg 3EB06E16B1 status=READ
+[Socket] User 1 connected (socket: oBOwNECnzP7cAZTfAAAq)
+[Socket] User 1 connected (socket: F52e_51PSZg8G2-yAAAs)
+[Socket] User 1 disconnected (socket: oBOwNECnzP7cAZTfAAAq)
+[Socket] User 1 disconnected (socket: F52e_51PSZg8G2-yAAAs)
+[Automation Scheduler] Running check at 2026-07-26T09:05:20.975Z
+[Evolution Webhook] connection state: close
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: close
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: close
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: close
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Evolution Webhook] inbound jid=8618038118960@s.whatsapp.net me=false type=text dup=false text="来週から仕事が始まるので、その後で住所をお伝えします"
+[Translation] inbound #5447 ja->zh: "来週から仕事が始まるので、その後で住所をお伝えします" => "下周开始工作，所以之后会告诉你地址。"
+[Socket] User 1 disconnected (socket: PzrGZLEXNLYvCbR9AAAB)
+[Socket] User 1 connected (socket: K1ScrEWIK1CMJK7WAAAu)
+[Evolution] send target: 8618038118960@s.whatsapp.net -> 182927472218210@lid
+[SpeechCollector] sample #418 jid=8618038118960@s.whatsapp.net cust="来週から仕事が始まるので、その後で住所をお伝えします" → sales="承知しました。お仕事開始後にご連絡いただければ、すぐにサンプルを発送いたします。"
+[Evolution Webhook] msg 3EB00509DE status=SERVER_ACK
+[Evolution Webhook] msg 3EB00509DE status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB00509DE status=READ
+[Automation Scheduler] Running check at 2026-07-26T09:35:20.977Z
+[Socket] User 1 connected (socket: OaD64hJyjCl5-2gFAAAw)
+[Assistant] AI raw response: "好的，我现在把有聊天记录的客户全部拉出来分析。之前查到的客户情况是：\n\n有JID可查的：\n1. 印度客户 - 919427348953@s.whatsapp.net\n2-4. 三个Jeremy（853xxx94909）—— 大概率是同一人，我先查一次\n5. 还有一个Jeremy无JID\n\n无JID查不到的：吉娜、Eric、陈先生\n\n我先查聊天记录。"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] Backend intent detected: {"tool":"query_customer","params":{}}
+[Assistant] AI raw response: "好的，我先查一下有WhatsApp JID的客户的聊天记录。\n\n印度客户的记录我刚刚已经看过了，现在来查几个Jeremy的。\n\n不过我看这几个Jeremy的JID都是一样的（853xxx94909），他们其实是同一个人吧？如果是同一个客户的话，我就按一个人来分析。\n\n我先查这个JID的聊天记录。"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] Backend intent detected: {"tool":"add_follow_up","params":{}}
+[Socket] User 1 disconnected (socket: OaD64hJyjCl5-2gFAAAw)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: cTro7pBYF21oIWkaAAAB)
+[Socket] User 1 connected (socket: CKRWj8UIIAjOGmG0AAAD)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: vO4Vh6tl3HMNJspOAAAB)
+[Socket] User 1 connected (socket: UZwWFwGduxLig0eqAAAD)
+[Automation Scheduler] Running check at 2026-07-26T10:04:47.965Z
+[Socket] User 1 connected (socket: uuR2j8RlpWubT85FAAAF)
+[Socket] User 1 disconnected (socket: uuR2j8RlpWubT85FAAAF)
+[Socket] User 1 connected (socket: jXLodY-m3dr0dfU_AAAH)
+[Socket] User 1 connected (socket: An6uzMYKEvpDnLhxAAAJ)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid@lid
+[Evolution Webhook] connection state: connecting
+[Evolution Webhook] connection state: open
+[Socket] User 1 disconnected (socket: jXLodY-m3dr0dfU_AAAH)
+[Socket] User 1 disconnected (socket: An6uzMYKEvpDnLhxAAAJ)
+[Socket] User 1 connected (socket: pmgKC3ye0tgV7freAAAL)
+[Socket] User 1 connected (socket: v4fCJchXfLkkRXd1AAAN)
+[Socket] User 1 disconnected (socket: v4fCJchXfLkkRXd1AAAN)
+[Socket] User 1 disconnected (socket: pmgKC3ye0tgV7freAAAL)
+[Socket] User 1 connected (socket: ZZCpyK9DRtKFUj9zAAAP)
+[Socket] User 1 connected (socket: ybEPEgCB9O27pWNvAAAR)
+[Evolution] send target: 12132858559@s.whatsapp.net -> 130554288701581@lid
+[SpeechCollector] sample #419 jid=12132858559@s.whatsapp.net cust="1 US dollar" → sales="Thank you again for your time. I underst"
+[Evolution Webhook] msg 3EB059CEF6 status=SERVER_ACK
+[Evolution Webhook] msg 3EB059CEF6 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB059CEF6 status=READ
+[Evolution Webhook] inbound jid=12132858559@s.whatsapp.net me=false type=text dup=false text="good"
+[Translation] inbound #5451 en->zh: "good" => "好"
+[Assistant] AI raw response: "好的，我先把所有有JID的客户聊天记录都拉出来分析。\n\n先查客户列表，看看每个客户的JID情况。\n\n（查询客户列表中...）"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] Backend intent detected: {"tool":"query_messages","params":{"customerName":"看一下","limit":30}}
+[Socket] User 1 disconnected (socket: ybEPEgCB9O27pWNvAAAR)
+[Socket] User 1 disconnected (socket: ZZCpyK9DRtKFUj9zAAAP)
+[Socket] User 1 connected (socket: HT-VqMqqYLYhZ-YTAAAT)
+[Assistant] AI raw response: "好的，我来查有几个JID的客户聊天记录。先查印度客户和Jeremy们的消息。\n\n{\"tool\": \"query_messages\", \"params\": {\"jid\": \"919427348953@s.whatsapp.net\", \"limit\": 20}}\n\n{\"tool\": \"query_messages\", \"params\": {\"jid\": \"85357094909@s.whatsapp.net\", \"limit\": 20}}"
+[Assistant] JSON parse failed: Unexpected non-whitespace character after JSON at position 91 (line 3 column 1)
+[Assistant] Backend intent detected: {"tool":"query_messages","params":{"customerName":"看一下","limit":30}}
+[Socket] User 1 disconnected (socket: HT-VqMqqYLYhZ-YTAAAT)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: YUE92nHSK7WwQCkZAAAB)
+[Socket] User 1 connected (socket: 1OcDm9Sft2BXpEEeAAAD)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: xUGnQ38-fvtfOtY-AAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: Rdbq5WXgKKGhLYS0AAAD)
+[Automation Scheduler] Running check at 2026-07-26T10:23:24.968Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: x2dglbcKgvXCp2q5AAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: XLAoOHvhr9baLPCgAAAD)
+[Automation Scheduler] Running check at 2026-07-26T10:24:46.423Z
+[Socket] User 1 connected (socket: xm3vKAHyOkkgfHV-AAAF)
+[Socket] User 1 disconnected (socket: xm3vKAHyOkkgfHV-AAAF)
+[Socket] User 1 connected (socket: 44xEoijS0cDsawHEAAAH)
+[Socket] User 1 disconnected (socket: 44xEoijS0cDsawHEAAAH)
+[Socket] User 1 connected (socket: pI9EM2qehILJC5R6AAAJ)
+[Socket] User 1 disconnected (socket: pI9EM2qehILJC5R6AAAJ)
+[Socket] User 1 connected (socket: O_o_lGIoujIoW-xoAAAL)
+[Assistant] AI raw response: "好的，我来查所有有WhatsApp JID的客户聊天记录。先从印度客户开始。\n\n{\"tool\": \"query_messages\", \"params\": {\"jid\": \"919427348953@s.whatsapp.net\", \"limit\": 20}}"
+[Assistant] Parsed toolCall from AI JSON: {"tool":"query_messages","params":{"jid":"919427348953@s.whatsapp.net","limit":20}}
+[Assistant] AI raw response: "明白，0.5美金确实太低，这个价格连成本都cover不住，硬接就是亏本买卖。\n\n我的建议：别直接说\"做不了\"就结束，要有策略地往回拉。你可以这样回复客户：\n\n1. 先肯定他的需求，表示我们认真核算过了\n2. 给出一个你能做的合理价格，比如20 micron报$0.62-0.65，15 micron报$0.58-0.60\n3. 强调你们的质量优势，比如用料足、拉力好、不容易断\n4. 可以给个阶梯价的选项——如果他一次拿5000卷以上，能给个更好的价\n\n另外，印度客户对价格敏感，但也看重长期合作。你可以试探一下他能不能接受调整规格，比如厚度做到17 micron而不是20，这样价格能接近一些。\n\n要不要我帮你拟一段具体的话术发给他？"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] No CRM task detected for: 0.5美金我们做不到
+[Socket] User 1 disconnected (socket: O_o_lGIoujIoW-xoAAAL)

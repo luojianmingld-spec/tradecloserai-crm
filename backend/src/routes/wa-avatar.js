@@ -1,0 +1,130 @@
+/**
+ * WhatsApp 头像代理路由
+ * GET /api/wa/avatar?jid=xxx
+ * 优先从Evolution DB缓存(findContacts)取profilePicUrl，fetchProfilePictureUrl作为兜底。
+ * 新session后缓存null会快速过期（首次null仅缓存30s），允许重试。
+ */
+
+import { Router } from 'express';
+
+const EVO_API_URL = process.env.EVOLUTION_API_URL || 'http://127.0.0.1:8081';
+const EVO_API_KEY = process.env.EVOLUTION_API_KEY || 'B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1';
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'jeremy-main';
+
+// urlCache: key -> { url: string|null, ts: number }
+// 有URL的缓存1小时；null（未获取到）只缓存30秒，方便Baileys同步后重试
+const urlCache = new Map();
+const URL_TTL_OK = 5 * 60 * 1000;       // 5min for successful hits
+const URL_TTL_NULL = 30 * 1000;         // 30s for null misses (new session sync)
+
+const router = Router();
+
+async function fetchAvatarUrlFromDB(jid, instance) {
+  try {
+    const r = await fetch(
+      EVO_API_URL + '/chat/findContacts/' + encodeURIComponent(instance),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: EVO_API_KEY },
+        body: JSON.stringify({ where: { remoteJid: jid }, page: 1, offset: 1 }),
+      },
+    );
+    if (r.ok) {
+      const arr = await r.json().catch(() => []);
+      if (Array.isArray(arr) && arr.length) {
+        const hit = arr.find((c) => c.remoteJid === jid);
+        if (hit && hit.profilePicUrl) return hit.profilePicUrl;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function fetchAvatarUrlFromPictureApi(jid, instance) {
+  // Evolution v2.3.7 正确接口：POST /chat/fetchProfilePictureUrl/{instance} {number}
+  const number = jid.split('@')[0];
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const r = await fetch(
+      EVO_API_URL + '/chat/fetchProfilePictureUrl/' + encodeURIComponent(instance),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: EVO_API_KEY },
+        body: JSON.stringify({ number }),
+        signal: controller.signal,
+      },
+    );
+    clearTimeout(timer);
+    if (r.ok) {
+      const d = await r.json().catch(() => ({}));
+      const u = d && (d.profilePictureUrl || d.pictureUrl || d.picture || d.url);
+      if (u && typeof u === 'string' && u.startsWith('http')) return u;
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function fetchAvatarUrl(jid, instance) {
+  const key = instance + ':' + jid;
+  const cached = urlCache.get(key);
+  const now = Date.now();
+  if (cached) {
+    const ttl = cached.url ? URL_TTL_OK : URL_TTL_NULL;
+    if (now - cached.ts < ttl) {
+      return cached.url;
+    }
+  }
+
+  // 缓存过期后，优先调用Evolution API获取最新头像
+  let url = await fetchAvatarUrlFromPictureApi(jid, instance);
+  if (!url) {
+    url = await fetchAvatarUrlFromDB(jid, instance);
+  }
+
+  urlCache.set(key, { url: url || null, ts: now });
+  return url;
+}
+
+router.get('/api/wa/avatar', async (req, res) => {
+  const jid = (req.query.jid || '').toString().trim();
+  if (!jid) {
+    return res.status(400).set('Content-Type', 'text/plain').send('Missing jid parameter');
+  }
+  if (!/^[\d.+-]+@(s\.whatsapp\.net|g\.us|lid|broadcast)$/.test(jid)) {
+    return res.status(400).set('Content-Type', 'text/plain').send('Invalid jid format');
+  }
+  const instance = (req.query.instance || DEFAULT_INSTANCE).toString().trim();
+
+  try {
+    const picUrl = await fetchAvatarUrl(jid, instance);
+    if (!picUrl) {
+      return res.status(404).set('Content-Type', 'text/plain').send('No avatar');
+    }
+
+    const upRes = await fetch(picUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (WhatsApp-CRM-Proxy)' },
+      redirect: 'follow',
+    });
+    if (!upRes.ok || !upRes.body) {
+      urlCache.delete(instance + ':' + jid);
+      return res.status(404).set('Content-Type', 'text/plain').send('Avatar fetch failed');
+    }
+
+    const ct = upRes.headers.get('content-type') || 'image/jpeg';
+    const imgBuf = Buffer.from(await upRes.arrayBuffer());
+    res.set('Content-Type', ct);
+    res.set('Content-Length', imgBuf.length);
+    res.set('Cache-Control', 'public, max-age=300');
+    res.status(200).send(imgBuf);
+  } catch (err) {
+    console.error('[avatar proxy] error for jid', jid, err && err.message);
+    if (!res.headersSent) {
+      res.status(404).set('Content-Type', 'text/plain').send('No avatar');
+    } else {
+      try { res.end(); } catch (_) {}
+    }
+  }
+});
+
+export default router;
