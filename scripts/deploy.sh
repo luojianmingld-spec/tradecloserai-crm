@@ -18,7 +18,7 @@ deploy_staging() {
     git pull origin develop 2>/dev/null || true
     
     # 构建前端到staging专用目录
-    cd frontend && NODE_OPTIONS="--max-old-space-size=256" npm run build && cd ..
+    cd frontend && NODE_OPTIONS="--max-old-space-size=512" npm run build && cd ..
     
     # 重启staging服务
     systemctl restart whatsapp-crm-staging
