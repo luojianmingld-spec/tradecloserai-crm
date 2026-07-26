@@ -5366,21 +5366,7 @@ function startTgUnreadPolling() {
 async function loadTgConversations() {
   try {
     const { data } = await api.get('/whatsapp/conversations', { params: { platform: 'telegram' } });
-    // 获取 UserBot 自身信息，用于过滤自己给自己的会话
-    const selfJids = new Set();
-    if (tgAccounts.value.length) {
-      for (const acc of tgAccounts.value) {
-        if (!acc.telegramBotUsername && acc.phone) {
-          // UserBot 账号：phone 是手机号，但 self-chat 的 JID 是 TG user ID
-          // 通过名称匹配过滤（self-chat 的 name 通常等于账号名）
-          if (acc.pushName) selfJids.add(acc.pushName);
-          if (acc.name) selfJids.add(acc.name);
-        }
-      }
-    }
-    tgConversations.value = (data || [])
-      .filter(c => !selfJids.has(c.name)) // 过滤掉自己给自己的会话
-      .map(c => ({
+    tgConversations.value = (data || []).map(c => ({
       ...c,
       id: c.jid,
       color: avatarColor(c.name || c.phone || c.jid),

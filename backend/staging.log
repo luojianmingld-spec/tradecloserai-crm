@@ -163,3 +163,703 @@ WhatsApp：+8610308625
 [Evolution Connector] state=open
 [Socket] User 1 connected (socket: Hr2BECCX9uTbPF6FAAAB)
 [TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:32:43.927] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:32:43.947] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[33m[2026-07-26T14:32:44.024] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:32:44.024] [INFO] - [Using LAYER 198 for initial connect][0m
+[Evolution Connector] state=open
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: dqz5Qtej6m7SV7-6AAAB)
+[Socket] User 1 connected (socket: MG-VlbrChvmrf3nuAAAE)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: DU1boPJ_0M9i-kE5AAAF)
+[Automation Scheduler] Running check at 2026-07-26T14:33:43.952Z
+[Socket] User 1 disconnected (socket: DU1boPJ_0M9i-kE5AAAF)
+[Socket] User 1 connected (socket: etdXyEKr0sRtRgp4AAAI)
+[Socket] User 1 connected (socket: 8O-tusAvh9bDu4X1AAAJ)
+[Socket] User 1 disconnected (socket: etdXyEKr0sRtRgp4AAAI)
+[Socket] User 1 disconnected (socket: 8O-tusAvh9bDu4X1AAAJ)
+[Socket] User 1 connected (socket: 8vbi775y2XVa8H-bAAAM)
+[Socket] User 1 connected (socket: DqrpjUM8kFx6dVqLAAAN)
+[Socket] User 1 disconnected (socket: 8vbi775y2XVa8H-bAAAM)
+[Socket] User 1 disconnected (socket: DqrpjUM8kFx6dVqLAAAN)
+[Socket] User 1 connected (socket: XhjF1-18MQlgi4_NAAAQ)
+[Socket] User 1 connected (socket: kItDh0FqVpvl32zyAAAR)
+[TG-UB] Syncing 113 contacts to CRM...
+[TG-UB] Sync complete: 113 new, 0 updated
+[Socket] User 1 disconnected (socket: XhjF1-18MQlgi4_NAAAQ)
+[Socket] User 1 disconnected (socket: kItDh0FqVpvl32zyAAAR)
+[Socket] User 1 connected (socket: 6EkA2L-Gq6b9B4M7AAAU)
+[Socket] User 1 connected (socket: fKi0Su1evh24PpPtAAAV)
+[Socket] User 1 disconnected (socket: fKi0Su1evh24PpPtAAAV)
+[Socket] User 1 disconnected (socket: 6EkA2L-Gq6b9B4M7AAAU)
+[Socket] User 1 connected (socket: TmJeeTn0RqqaaGG1AAAY)
+[Socket] User 1 connected (socket: qbBTji-dBmg-WbLGAAAZ)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: dqz5Qtej6m7SV7-6AAAB)
+[Socket] User 1 disconnected (socket: MG-VlbrChvmrf3nuAAAE)
+[Socket] User 1 disconnected (socket: TmJeeTn0RqqaaGG1AAAY)
+[Socket] User 1 disconnected (socket: qbBTji-dBmg-WbLGAAAZ)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:45:03.992] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:45:04.008] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T14:45:04.080] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:45:04.081] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: LYnm1CYNaC-T7CSqAAAC)
+[Socket] User 1 connected (socket: xDLt3V8Txfc48je4AAAD)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 7GckVsZkMI7f7-6LAAAF)
+[Socket] User 1 connected (socket: Cua_AtuWLyjjLdzpAAAH)
+[TG-UB] Syncing 113 contacts to CRM...
+[TG-UB] Sync complete: 0 new, 113 updated
+[Automation Scheduler] Running check at 2026-07-26T14:46:04.010Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: LYnm1CYNaC-T7CSqAAAC)
+[Socket] User 1 disconnected (socket: xDLt3V8Txfc48je4AAAD)
+[Socket] User 1 disconnected (socket: 7GckVsZkMI7f7-6LAAAF)
+[Socket] User 1 disconnected (socket: Cua_AtuWLyjjLdzpAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:48:06.831] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:48:06.849] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T14:48:06.922] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:48:06.922] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 06PZZT64ZolmNacLAAAC)
+[Socket] User 1 connected (socket: _9-t-HpQSflyRa2AAAAD)
+[TG-UB] Syncing 113 contacts to CRM...
+[TG-UB] Sync complete: 0 new, 113 updated
+[Socket] User 1 connected (socket: QINJZpY_fkB7ELpMAAAF)
+[Socket] User 1 connected (socket: YMcNbiJNZAKPRZXCAAAH)
+[Automation Scheduler] Running check at 2026-07-26T14:49:06.853Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 06PZZT64ZolmNacLAAAC)
+[Socket] User 1 disconnected (socket: _9-t-HpQSflyRa2AAAAD)
+[Socket] User 1 disconnected (socket: QINJZpY_fkB7ELpMAAAF)
+[Socket] User 1 disconnected (socket: YMcNbiJNZAKPRZXCAAAH)
+file:///opt/whatsapp-crm/backend/src/routes/tg-userbot.js:329
+          console.log(\`[TG-UB] Auto-created contact for dialog: \${d.name || d.id} (\${dialogJid})\`);
+                      ^
+
+SyntaxError: Invalid or unexpected token
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/routes/tg-userbot.js:329
+          console.log(\`[TG-UB] Auto-created contact for dialog: \${d.name || d.id} (\${dialogJid})\`);
+                      ^
+
+SyntaxError: Invalid or unexpected token
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/routes/tg-userbot.js:329
+          console.log(\`[TG-UB] Auto-created contact for dialog: \${d.name || d.id} (\${dialogJid})\`);
+                      ^
+
+SyntaxError: Invalid or unexpected token
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/routes/tg-userbot.js:329
+          console.log(\`[TG-UB] Auto-created contact for dialog: \${d.name || d.id} (\${dialogJid})\`);
+                      ^
+
+SyntaxError: Invalid or unexpected token
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+
+Node.js v22.23.0
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:50:53.584] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:50:53.596] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T14:50:53.670] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:50:53.671] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: K3DFrZWa5sOyQIFjAAAB)
+[Socket] User 1 connected (socket: Y01UnPRh4SqJJfheAAAD)
+[Socket] User 1 connected (socket: CxXxUbnTkkQ109sJAAAF)
+[Socket] User 1 connected (socket: frUcLBNuWNkm2KNlAAAH)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: K3DFrZWa5sOyQIFjAAAB)
+[Socket] User 1 disconnected (socket: Y01UnPRh4SqJJfheAAAD)
+[Socket] User 1 disconnected (socket: CxXxUbnTkkQ109sJAAAF)
+[Socket] User 1 disconnected (socket: frUcLBNuWNkm2KNlAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:51:25.781] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:51:25.794] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T14:51:25.866] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:51:25.866] [INFO] - [Using LAYER 198 for initial connect][0m
+[Socket] User 1 connected (socket: ML9WM02lPLDTc9gTAAAB)
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: kfGWBc0nDqIiasyLAAAE)
+[Socket] User 1 connected (socket: szBUrqMU70CqXi43AAAF)
+[Socket] User 1 connected (socket: rTekVH1q9h2XjeitAAAH)
+[TG-UB] Syncing 113 contacts to CRM...
+[TG-UB] Sync complete: 0 new, 113 updated
+[TG-UB] Auto-created contact for dialog: Jeremy 8724857885@telegram
+[TG-UB] Auto-created contact for dialog: Telegram 777000@telegram
+[TG-UB] Auto-created contact for dialog: BotFather 93372553@telegram
+[TG-UB] Auto-created contact for dialog: Alena Campbell 5473976511@telegram
+[TG-UB] Auto-created contact for dialog: EPN 6756720750@telegram
+[TG-UB] Auto-created contact for dialog: vmcardio_cs官方客服机器人 8143302985@telegram
+[TG-UB] Auto-created contact for dialog: EPN Exchange 7325119927@telegram
+[TG-UB] Auto-created contact for dialog: Spam Info Bot 178220800@telegram
+[TG-UB] Auto-created contact for dialog: ChatKnow官方客服-小爱 6268534752@telegram
+[TG-UB] Auto-created contact for dialog: Lion （KAM） 7592759599@telegram
+[TG-UB] Auto-created contact for dialog: 皮卡宝客服 8626053771@telegram
+[TG-UB] Auto-created contact for dialog: D X 6642993774@telegram
+[TG-UB] Auto-created contact for dialog: 阿德 1363058613@telegram
+[TG-UB] Auto-created contact for dialog: 奶昔 Bot 5698628219@telegram
+[TG-UB] Auto-created contact for dialog: IPFoxy全球代理-中文客服-切勿线下交易 6420556353@telegram
+[TG-UB] Auto-created contact for dialog: Swiftproxy_Support 7042076107@telegram
+[TG-UB] Auto-created contact for dialog: 7KF唯一售后客服 6675301564@telegram
+[TG-UB] Auto-created contact for dialog: BitBrowser Customer Service 阿浩 5351587303@telegram
+[TG-UB] Auto-created contact for dialog: 海风 浪人 5656035416@telegram
+[TG-UB] Auto-created contact for dialog: 6654818061 6654818061@telegram
+[TG-UB] Auto-created contact for dialog: 6951564196 6951564196@telegram
+[TG-UB] Auto-created contact for dialog: MoreLogin support 5314206097@telegram
+[TG-UB] Auto-created contact for dialog: 6999434823 6999434823@telegram
+[TG-UB] Auto-created contact for dialog: 7678931035 7678931035@telegram
+[TG-UB] Auto-created contact for dialog: 7368741431 7368741431@telegram
+[TG-UB] Auto-created contact for dialog: 全球获客 （唯一账号nnn918） 5989261059@telegram
+[TG-UB] Auto-created contact for dialog: 7977212022 7977212022@telegram
+[TG-UB] Auto-created contact for dialog: 7972038231 7972038231@telegram
+[TG-UB] Auto-created contact for dialog: 6894327468 6894327468@telegram
+[TG-UB] Auto-created contact for dialog: 7419714499 7419714499@telegram
+[TG-UB] Auto-created contact for dialog: 蓝胖子 6976182311@telegram
+[TG-UB] Auto-created contact for dialog: 7313766196 7313766196@telegram
+[TG-UB] Auto-created contact for dialog: 7356385463 7356385463@telegram
+[TG-UB] Auto-created contact for dialog: 6069780933 6069780933@telegram
+[TG-UB] Auto-created contact for dialog: 高 启强 7239637670@telegram
+[Automation Scheduler] Running check at 2026-07-26T14:52:25.797Z
+[Socket] User 1 disconnected (socket: szBUrqMU70CqXi43AAAF)
+[Socket] User 1 disconnected (socket: kfGWBc0nDqIiasyLAAAE)
+[Socket] User 1 connected (socket: UWOhBBlC-g1voUYpAAAK)
+[Socket] User 1 connected (socket: CqWPzcm1U3CE6VdDAAAL)
+[TG send] error: Error: Telegram API sendMessage failed: Not Found
+    at TelegramConnector._call (file:///opt/whatsapp-crm/backend/src/services/telegram-connector.js:33:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async file:///opt/whatsapp-crm/backend/src/server.js:584:22 {
+  code: 404,
+  parameters: undefined
+}
+[TG send] error: Error: Telegram API sendMessage failed: Not Found
+    at TelegramConnector._call (file:///opt/whatsapp-crm/backend/src/services/telegram-connector.js:33:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async file:///opt/whatsapp-crm/backend/src/server.js:584:22 {
+  code: 404,
+  parameters: undefined
+}
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: ML9WM02lPLDTc9gTAAAB)
+[Socket] User 1 disconnected (socket: rTekVH1q9h2XjeitAAAH)
+[Socket] User 1 disconnected (socket: UWOhBBlC-g1voUYpAAAK)
+[Socket] User 1 disconnected (socket: CqWPzcm1U3CE6VdDAAAL)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:04:23.173] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:04:23.189] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[33m[2026-07-26T15:04:23.268] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:04:23.269] [INFO] - [Using LAYER 198 for initial connect][0m
+[Evolution Connector] state=open
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: pbceWGYCs9Z77NZDAAAD)
+[Socket] User 1 connected (socket: amTFjn91PDHWsdFcAAAE)
+[Socket] User 1 connected (socket: GSb1UvXxWFW55fnFAAAF)
+[Socket] User 1 connected (socket: OccMFVnWFQJqv5xzAAAH)
+[Automation Scheduler] Running check at 2026-07-26T15:05:23.195Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: pbceWGYCs9Z77NZDAAAD)
+[Socket] User 1 disconnected (socket: amTFjn91PDHWsdFcAAAE)
+[Socket] User 1 disconnected (socket: GSb1UvXxWFW55fnFAAAF)
+[Socket] User 1 disconnected (socket: OccMFVnWFQJqv5xzAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:06:19.449] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:06:19.462] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:06:19.535] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:06:19.535] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: JDaIAjs-YDKIKQz0AAAD)
+[Socket] User 1 connected (socket: 8SxS5-ngkHNGH0HPAAAE)
+[Socket] User 1 connected (socket: SVOmO_kGMxQcH_jsAAAF)
+[Socket] User 1 connected (socket: NzvTc8kgwEt8RnzGAAAH)
+[TG send] error: PrismaClientKnownRequestError: 
+Invalid `prisma.wAMessage.create()` invocation:
+
+
+Foreign key constraint violated on the foreign key
+    at Zn.handleRequestError (/opt/whatsapp-crm/backend/node_modules/@prisma/client/runtime/library.js:121:7459)
+    at Zn.handleAndLogRequestError (/opt/whatsapp-crm/backend/node_modules/@prisma/client/runtime/library.js:121:6784)
+    at Zn.request (/opt/whatsapp-crm/backend/node_modules/@prisma/client/runtime/library.js:121:6491)
+    at async l (/opt/whatsapp-crm/backend/node_modules/@prisma/client/runtime/library.js:130:9778)
+    at async file:///opt/whatsapp-crm/backend/src/server.js:610:25 {
+  code: 'P2003',
+  meta: { modelName: 'WAMessage', constraint: null },
+  clientVersion: '6.8.2'
+}
+[Automation Scheduler] Running check at 2026-07-26T15:07:19.466Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: JDaIAjs-YDKIKQz0AAAD)
+[Socket] User 1 disconnected (socket: 8SxS5-ngkHNGH0HPAAAE)
+[Socket] User 1 disconnected (socket: SVOmO_kGMxQcH_jsAAAF)
+[Socket] User 1 disconnected (socket: NzvTc8kgwEt8RnzGAAAH)
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+Error [ERR_UNSUPPORTED_DIR_IMPORT]: Directory import '/opt/whatsapp-crm/backend/node_modules/telegram/events' is not supported resolving ES modules imported from /opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js
+Did you mean to import "telegram/events/index.js"?
+    at finalizeResolution (node:internal/modules/esm/resolve:263:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_UNSUPPORTED_DIR_IMPORT',
+  url: 'file:///opt/whatsapp-crm/backend/node_modules/telegram/events'
+}
+
+Node.js v22.23.0
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+Error [ERR_UNSUPPORTED_DIR_IMPORT]: Directory import '/opt/whatsapp-crm/backend/node_modules/telegram/events' is not supported resolving ES modules imported from /opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js
+Did you mean to import "telegram/events/index.js"?
+    at finalizeResolution (node:internal/modules/esm/resolve:263:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_UNSUPPORTED_DIR_IMPORT',
+  url: 'file:///opt/whatsapp-crm/backend/node_modules/telegram/events'
+}
+
+Node.js v22.23.0
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+Error [ERR_UNSUPPORTED_DIR_IMPORT]: Directory import '/opt/whatsapp-crm/backend/node_modules/telegram/events' is not supported resolving ES modules imported from /opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js
+Did you mean to import "telegram/events/index.js"?
+    at finalizeResolution (node:internal/modules/esm/resolve:263:11)
+    at moduleResolve (node:internal/modules/esm/resolve:861:10)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_UNSUPPORTED_DIR_IMPORT',
+  url: 'file:///opt/whatsapp-crm/backend/node_modules/telegram/events'
+}
+
+Node.js v22.23.0
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:12:04.893] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:12:04.907] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:12:04.981] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:12:04.982] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: ET03GYntl0aqX8utAAAC)
+[Socket] User 1 connected (socket: uKigX_1atQbmbeAZAAAE)
+[Socket] User 1 connected (socket: 4JtIT5cVPJNqViCbAAAF)
+[Socket] User 1 connected (socket: LWMHvHYhoMYee3UvAAAH)
+[Automation Scheduler] Running check at 2026-07-26T15:13:04.910Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: ET03GYntl0aqX8utAAAC)
+[Socket] User 1 disconnected (socket: uKigX_1atQbmbeAZAAAE)
+[Socket] User 1 disconnected (socket: 4JtIT5cVPJNqViCbAAAF)
+[Socket] User 1 disconnected (socket: LWMHvHYhoMYee3UvAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:13:52.507] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:13:52.521] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:13:52.594] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:13:52.595] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: KYABrkS-qGFUZZfYAAAD)
+[Socket] User 1 connected (socket: TbuTQZ-hWP5ipuEAAAAE)
+[Socket] User 1 connected (socket: v-_zdqRpe2CApKX_AAAF)
+[Socket] User 1 connected (socket: 9qy5oISu8BDhptK5AAAH)
+[TG-UB] Update #1: undefined
+[TG-UB] Update #2: undefined
+[TG-UB] Update #3: undefined
+[TG-UB] Update #4: undefined
+[TG-UB] Update #5: undefined
+[Automation Scheduler] Running check at 2026-07-26T15:14:52.523Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: KYABrkS-qGFUZZfYAAAD)
+[Socket] User 1 disconnected (socket: TbuTQZ-hWP5ipuEAAAAE)
+[Socket] User 1 disconnected (socket: v-_zdqRpe2CApKX_AAAF)
+[Socket] User 1 disconnected (socket: 9qy5oISu8BDhptK5AAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:16:53.446] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:16:53.460] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:16:53.534] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:16:53.534] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: dMrmc6JzmoWp6mP3AAAC)
+[Socket] User 1 connected (socket: k88gDCWmSiNcY9OFAAAD)
+[Socket] User 1 connected (socket: 6sS7VvlCNCV2wnNNAAAF)
+[Socket] User 1 connected (socket: n1ge_cnL0QjRwGm2AAAH)
+[TG-UB] Update #1: undefined
+[TG] Backfilled 10 messages for 8668956536@telegram from GramJS history
+[TG-UB] Update #2: undefined
+[TG-UB] Update #3: undefined
+[TG] Backfilled 50 messages for 8668956536@telegram from GramJS history
+[TG-UB] Update #4: undefined
+[TG] Backfilled 20 messages for 8668956536@telegram from GramJS history
+[TG-UB] Update #5: undefined
+[Automation Scheduler] Running check at 2026-07-26T15:17:53.463Z
+[TG] Backfilled 50 messages for 8668956536@telegram from GramJS history
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: dMrmc6JzmoWp6mP3AAAC)
+[Socket] User 1 disconnected (socket: k88gDCWmSiNcY9OFAAAD)
+[Socket] User 1 disconnected (socket: 6sS7VvlCNCV2wnNNAAAF)
+[Socket] User 1 disconnected (socket: n1ge_cnL0QjRwGm2AAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:18:36.773] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:18:36.787] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:18:36.859] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:18:36.859] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: Im_Er1p4xaH47oVpAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: jN5hYkcEVQPNaQ8UAAAE)
+[Socket] User 1 connected (socket: lzZGT_ip71V2QNwRAAAF)
+[Socket] User 1 connected (socket: ZaxXHydMuIhwmdgVAAAH)
+[TG-UB] Update #1: undefined
+[TG] Backfilled 20 messages for 8668956536@telegram from GramJS history
+[TG-UB] Update #2: undefined
+[TG-UB] Update #3: undefined
+[TG-UB] Update #4: undefined
+[TG-UB] Update #5: undefined
+[Automation Scheduler] Running check at 2026-07-26T15:19:36.790Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: Im_Er1p4xaH47oVpAAAB)
+[Socket] User 1 disconnected (socket: jN5hYkcEVQPNaQ8UAAAE)
+[Socket] User 1 disconnected (socket: lzZGT_ip71V2QNwRAAAF)
+[Socket] User 1 disconnected (socket: ZaxXHydMuIhwmdgVAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:19:46.318] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:19:46.333] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:19:46.406] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:19:46.407] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: a9_Ioi49ENB9o2KdAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: sdPtAYo5Jv9jGt4PAAAD)
+[Socket] User 1 connected (socket: 2Hrqj7-ilb339WnPAAAF)
+[Socket] User 1 connected (socket: xHGs2O7Lld3aDeC-AAAH)
+[TG-UB] Update #1: className=undefined CONSTRUCTOR=undefined keys=["state","_client"]
+[TG-UB] Update #2: className=undefined CONSTRUCTOR=undefined keys=["state","_client"]
+[TG-UB] Update #3: className=undefined CONSTRUCTOR=undefined keys=["state","_client"]
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: a9_Ioi49ENB9o2KdAAAB)
+[Socket] User 1 disconnected (socket: sdPtAYo5Jv9jGt4PAAAD)
+[Socket] User 1 disconnected (socket: 2Hrqj7-ilb339WnPAAAF)
+[Socket] User 1 disconnected (socket: xHGs2O7Lld3aDeC-AAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:20:30.350] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:20:30.364] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:20:30.439] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:20:30.439] [INFO] - [Using LAYER 198 for initial connect][0m
+[Socket] User 1 connected (socket: xH3adpUAtC8n-x31AAAC)
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: PVrqsiZ81hooJ_lfAAAD)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: mha7sj6nPR-p-lnxAAAF)
+[Socket] User 1 connected (socket: LIWkAUjaJ-p0Ma_uAAAH)
+TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'TelegramClient'
+    |     property '_eventBuilders' -> object with constructor 'Array'
+    |     index 0 -> object with constructor 'Array'
+    |     index 0 -> object with constructor 'Raw'
+    --- property 'client' closes the circle
+    at JSON.stringify (<anonymous>)
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:163:227
+    at _dispatchUpdate (/opt/whatsapp-crm/backend/node_modules/telegram/client/updates.js:146:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'TelegramClient'
+    |     property '_eventBuilders' -> object with constructor 'Array'
+    |     index 0 -> object with constructor 'Array'
+    |     index 0 -> object with constructor 'Raw'
+    --- property 'client' closes the circle
+    at JSON.stringify (<anonymous>)
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:163:227
+    at _dispatchUpdate (/opt/whatsapp-crm/backend/node_modules/telegram/client/updates.js:146:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: xH3adpUAtC8n-x31AAAC)
+[Socket] User 1 disconnected (socket: PVrqsiZ81hooJ_lfAAAD)
+[Socket] User 1 disconnected (socket: mha7sj6nPR-p-lnxAAAF)
+[Socket] User 1 disconnected (socket: LIWkAUjaJ-p0Ma_uAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:21:04.856] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:21:04.870] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:21:04.943] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:21:04.943] [INFO] - [Using LAYER 198 for initial connect][0m
+[Socket] User 1 connected (socket: h0bmiNpDMEcnAVHBAAAB)
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: kZ55_rtWbuljvbk9AAAD)
+[Socket] User 1 connected (socket: cyr3pjwalWTEBdXuAAAF)
+[Socket] User 1 connected (socket: E0p6zBADMiXWyD32AAAH)
+[TG-UB] Update #1: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #2: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #3: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: h0bmiNpDMEcnAVHBAAAB)
+[Socket] User 1 disconnected (socket: kZ55_rtWbuljvbk9AAAD)
+[Socket] User 1 disconnected (socket: cyr3pjwalWTEBdXuAAAF)
+[Socket] User 1 disconnected (socket: E0p6zBADMiXWyD32AAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:21:48.740] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:21:48.753] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:21:48.824] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:21:48.825] [INFO] - [Using LAYER 198 for initial connect][0m
+[Socket] User 1 connected (socket: HsCyb9qRXGX8DJyRAAAB)
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: 3T9FAQYXaBPLhhRhAAAD)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: RGL4ukzZ4_wVne4PAAAG)
+[Socket] User 1 connected (socket: IVKhsrygMSc5vHY_AAAH)
+[TG-UB] Update #1: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #2: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #3: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #4: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #5: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Automation Scheduler] Running check at 2026-07-26T15:22:48.755Z
+[TG-UB] Update #6: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #7: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #8: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #9: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #10: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #11: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #12: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Socket] User 1 disconnected (socket: IVKhsrygMSc5vHY_AAAH)
+[Socket] User 1 disconnected (socket: RGL4ukzZ4_wVne4PAAAG)
+[TG-UB] Update #13: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Socket] User 1 connected (socket: vzpHzJkEGEPExs6hAAAK)
+[Socket] User 1 connected (socket: fWPxpjkrZvHRW7zPAAAL)
+[TG-UB] Update #14: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Socket] User 1 disconnected (socket: vzpHzJkEGEPExs6hAAAK)
+[Socket] User 1 disconnected (socket: fWPxpjkrZvHRW7zPAAAL)
+[Socket] User 1 connected (socket: M9-K57fV2fwITlMdAAAN)
+[Socket] User 1 connected (socket: nC_ohdRclA1FNAglAAAP)
+[TG-UB] Update #15: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #16: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #17: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #18: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #19: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #20: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #21: type1=UpdateUserStatus type2=undefined type3=VirtualClass state=undefined
+[TG-UB] Update #22: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #23: type1=UpdateDeleteMessages type2=undefined type3=VirtualClass state=undefined
+[TG-UB] Update #24: type1=UpdateDeleteMessages type2=undefined type3=VirtualClass state=undefined
+[TG-UB] Update #25: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #26: type1=UpdateUserStatus type2=undefined type3=VirtualClass state=undefined
+[TG-UB] Update #27: type1=undefined type2=undefined type3=UpdateConnectionState state=1

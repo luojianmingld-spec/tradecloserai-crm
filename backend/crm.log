@@ -2254,3 +2254,58 @@ Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/
 [Automation Scheduler] Running check at 2026-07-26T11:53:46.457Z
 [Evolution Webhook] outbound jid=963981860908@s.whatsapp.net me=true type=text dup=false text="كيف حالك اليوم؟"
 [Evolution Webhook] msg AC62F78FA5 status=DELIVERY_ACK
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:03:37.096] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:03:37.113] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[33m[2026-07-26T14:03:37.194] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:03:37.195] [INFO] - [Using LAYER 198 for initial connect][0m
+[Evolution Connector] state=open
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: SapobeqvQvsIDzxUAAAB)
+[Socket] User 1 connected (socket: gJoyZqi4EhJFcrzPAAAD)
+[Automation Scheduler] Running check at 2026-07-26T14:04:37.120Z
+[Socket] User 1 disconnected (socket: SapobeqvQvsIDzxUAAAB)
+[Socket] User 1 connected (socket: AGUTQe0SEoByaprxAAAG)
+[Socket] User 1 connected (socket: 3JDc0aCUQ9M2YBKcAAAH)
+[Socket] User 1 disconnected (socket: gJoyZqi4EhJFcrzPAAAD)
+[Automation Scheduler] Running check at 2026-07-26T14:33:37.122Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: AGUTQe0SEoByaprxAAAG)
+[Socket] User 1 disconnected (socket: 3JDc0aCUQ9M2YBKcAAAH)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T14:34:04.215] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T14:34:04.232] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T14:34:04.304] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T14:34:04.305] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: CQEPAIhnoxyaReGpAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: XPD_E6eumKIidyiCAAAD)
+[Automation Scheduler] Running check at 2026-07-26T14:35:04.234Z
+[Socket] User 1 disconnected (socket: CQEPAIhnoxyaReGpAAAB)
+[Socket] User 1 disconnected (socket: XPD_E6eumKIidyiCAAAD)
+[Socket] User 1 connected (socket: ITxzbQ1sfXz5TJ0xAAAG)
+[Socket] User 1 connected (socket: _seFdrAkAlzGHnR2AAAH)
+[Translation][TG] inbound #44 en->zh: "Hello" => "你好"
+[Automation Scheduler] Running check at 2026-07-26T15:04:04.242Z

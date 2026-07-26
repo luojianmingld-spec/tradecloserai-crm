@@ -571,32 +571,17 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     if (toJid.endsWith("@telegram")) {
       try {
         const tgChatId = toJid.split("@")[0];
-        // 优先找 UserBot 账号（无 telegramBotToken），其次找 Bot 账号
-        let tgAccount = await prisma.whatsAppAccount.findFirst({
-          where: { userId: req.userId, platform: "telegram", telegramBotToken: null, status: "connected" },
+        // 找用户连接的TG bot账号（用第一个；MVP只支持单TG bot）
+        const tgAccount = await prisma.whatsAppAccount.findFirst({
+          where: { userId: req.userId, platform: "telegram" },
           orderBy: { createdAt: "desc" },
         });
-        const isUserBot = !!tgAccount;
         if (!tgAccount) {
-          tgAccount = await prisma.whatsAppAccount.findFirst({
-            where: { userId: req.userId, platform: "telegram", telegramBotToken: { not: null }, status: "connected" },
-            orderBy: { createdAt: "desc" },
-          });
+          return res.status(400).json({ error: "未连接Telegram Bot，请先在账号栏连接" });
         }
-        if (!tgAccount) {
-          return res.status(400).json({ error: "未连接Telegram，请先在账号栏连接" });
-        }
+        const connector = getTelegramConnector(tgAccount.telegramBotToken);
         const textMsg = originalText;
-        let sent;
-        if (isUserBot) {
-          // 使用 GramJS UserBot 发送
-          const ubConnector = await import('./services/tg-userbot-connector.js');
-          sent = await ubConnector.sendMessage(tgChatId, textMsg);
-        } else {
-          // 使用 Bot API 发送
-          const connector = getTelegramConnector(tgAccount.telegramBotToken);
-          sent = await connector.sendMessage(tgChatId, textMsg);
-        }
+        const sent = await connector.sendMessage(tgChatId, textMsg);
         // 写入/复用 contact + conversation
         let contact = await prisma.contact.findUnique({ where: { accountId_platform_jid: { accountId: tgAccount.id, platform: "telegram", jid: toJid } } });
         if (!contact) {
@@ -1419,19 +1404,9 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: jids } },
       }) : [];
       const ctMap = new Map(ctRecs.map(c => [c.jid, c]));
-      // 获取 UserBot 自身 ID 用于过滤自聊天
-      let selfJid = null;
-      try {
-        const ubModule = await import('./services/tg-userbot-connector.js');
-        const selfInfo = ubModule.getMe();
-        if (selfInfo && selfInfo.id) {
-          selfJid = selfInfo.id.toString() + '@telegram';
-        }
-      } catch {}
       const out = [];
       for (const cv of convRecs) {
         if (cv.blocked && !showBlocked) continue;
-        if (selfJid && cv.jid === selfJid) continue; // 跳过自聊天
         const chatId = cv.jid.replace("@telegram", "");
         const ct = ctMap.get(cv.jid);
         // 尝试从 Message 表获取最新消息（比 Conversation.lastMessage 更准确）
@@ -1719,7 +1694,7 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
           data: { read: true },
         });
       } catch (_) {}
-      let messages = dbMsgs.map(m => ({
+      const messages = dbMsgs.map(m => ({
         id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
         body: m.body || m.content || "", type: m.type || "text",
         direction: m.direction, fromMe: m.direction === "outbound",
@@ -1727,70 +1702,6 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
         translation: m.translation ? (typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation) : null,
         sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "telegram",
       }));
-
-      // Fallback: 如果 DB 消息为空或很少，从 GramJS 拉取历史消息
-      if (messages.length < 5 && targetJid.endsWith("@telegram")) {
-        try {
-          const peerId = targetJid.replace("@telegram", "");
-          const ubModule = await import('./services/tg-userbot-connector.js');
-          if (ubModule.isConnected()) {
-            const history = await ubModule.getHistory(peerId, parseInt(limit) || 20);
-            if (history && history.length > messages.length) {
-              // 找到 userbot 账号
-              const ubAccount = tgAccounts.find(a => !a.telegramBotToken) || tgAccounts[0];
-              const ubSessionId = `tg_${ubAccount.telegramBotUsername || ubAccount.id}`;
-              // 查找/创建联系人
-              let contact = await prisma.contact.findFirst({ where: { accountId: ubAccount.id, platform: "telegram", jid: targetJid } });
-              if (!contact) {
-                try {
-                  const userInfo = await ubModule.getUserInfo(peerId);
-                  contact = await prisma.contact.create({ data: { accountId: ubAccount.id, platform: "telegram", jid: targetJid, name: userInfo?.displayName || peerId } });
-                } catch { contact = await prisma.contact.create({ data: { accountId: ubAccount.id, platform: "telegram", jid: targetJid, name: peerId } }); }
-              }
-              // 查找/创建对话
-              let conv = await prisma.conversation.findFirst({ where: { accountId: ubAccount.id, platform: "telegram", jid: targetJid } });
-              if (!conv) {
-                conv = await prisma.conversation.create({ data: { accountId: ubAccount.id, platform: "telegram", contactId: contact.id, jid: targetJid } });
-              }
-              // 批量插入 DB 并构建返回结果
-              const existingWaIds = new Set(dbMsgs.map(m => m.waMessageId).filter(Boolean));
-              for (const hm of history) {
-                const waMsgId = `tg_${ubAccount.id}_${hm.id}_${hm.fromMe ? 'out' : 'in'}`;
-                if (existingWaIds.has(waMsgId)) continue;
-                const fromJid = hm.fromMe ? (ubModule.getMe()?.id?.toString() + '@telegram' || 'me@telegram') : targetJid;
-                const toJid = hm.fromMe ? targetJid : (ubModule.getMe()?.id?.toString() + '@telegram' || 'me@telegram');
-                try {
-                  await prisma.wAMessage.create({ data: { sessionId: ubSessionId, from: fromJid, to: toJid, body: (hm.text || '').slice(0, 500), type: hm.mediaType || 'text', direction: hm.fromMe ? 'outbound' : 'inbound', timestamp: new Date(hm.timestamp), read: hm.fromMe, waMessageId: waMsgId } });
-                  await prisma.message.create({ data: { accountId: ubAccount.id, platform: 'telegram', contactId: contact.id, jid: targetJid, fromMe: hm.fromMe, content: (hm.text || '').slice(0, 500), messageType: hm.mediaType || 'text', timestamp: new Date(hm.timestamp) } });
-                } catch {}
-                existingWaIds.add(waMsgId);
-              }
-              // 更新对话最新消息
-              if (history.length > 0) {
-                const latest = history[0];
-                await prisma.conversation.update({ where: { id: conv.id }, data: { lastMessage: (latest.text || '').slice(0, 200), lastMessageAt: new Date(latest.timestamp) } });
-              }
-              // 重新从 DB 读取完整消息列表
-              const freshMsgs = await prisma.wAMessage.findMany({
-                where: { sessionId: ubSessionId, OR: [{ from: targetJid }, { to: targetJid }] },
-                orderBy: { timestamp: "desc" }, take: parseInt(limit),
-              });
-              messages = freshMsgs.map(m => ({
-                id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
-                body: m.body || m.content || "", type: m.type || "text",
-                direction: m.direction, fromMe: m.direction === "outbound",
-                timestamp: m.timestamp,
-                translation: m.translation ? (typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation) : null,
-                sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "telegram",
-              }));
-              console.log(`[TG] Backfilled ${history.length} messages for ${targetJid} from GramJS history`);
-            }
-          }
-        } catch (e) {
-          console.warn('[TG] History fallback error:', e.message);
-        }
-      }
-
       return res.json(messages);
     }
 
@@ -2024,17 +1935,10 @@ async function startServer() {
         onMessage: async (msg) => {
           console.log('[TG-UB] Incoming message:', msg.chatId, msg.text?.substring(0, 50));
           try {
-            // 优先使用 UserBot 账号（incoming messages come from userbot context）
-            let tgAccount = await prisma.whatsAppAccount.findFirst({
-              where: { platform: 'telegram', telegramBotToken: null, status: 'connected' },
+            const tgAccount = await prisma.whatsAppAccount.findFirst({
+              where: { platform: 'telegram', status: 'connected' },
               orderBy: { createdAt: 'desc' },
             });
-            if (!tgAccount) {
-              tgAccount = await prisma.whatsAppAccount.findFirst({
-                where: { platform: 'telegram', status: 'connected' },
-                orderBy: { createdAt: 'desc' },
-              });
-            }
             if (!tgAccount) return;
             const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
             const jid = `${msg.chatId}@telegram`;
