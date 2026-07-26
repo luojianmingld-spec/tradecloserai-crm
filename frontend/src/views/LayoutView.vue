@@ -106,11 +106,12 @@
     <div
       class="mobile-overlay"
       v-if="isMobile && (mobileAccountsOpen || mobilePanel)"
-      @click="mobilePanel = null; mobileAccountsOpen = false; mhMenuOpen = null;"
+      @click="mobilePanel = null; mobileAccountsOpen = false; mhMenuOpen = null; tgMenuOpen = null;"
     ></div>
 
     <!-- 下拉菜单透明点击层（不黑屏，点外部关菜单） -->
     <div class="mh-menu-mask" v-if="isMobile && mhMenuOpen" @click="mhMenuOpen=null"></div>
+    <div class="mh-menu-mask" v-if="isMobile && tgMenuOpen" @click="tgMenuOpen=null"></div>
     <div class="mh-menu-mask" v-if="isMobile && mobileFilterMenuOpen" @click="mobileFilterMenuOpen=false"></div>
 
     <!-- 渠道/账号切换 ActionSheet（手机端顶栏标题点击弹出） -->
@@ -165,7 +166,7 @@
 
     <!-- 移动端顶部栏 -->
     <!-- 移动端全局顶部栏 -->
-    <header class="mobile-header" v-if="isMobile">
+    <header class="mobile-header" v-if="isMobile && !(activeChannel === 'telegram' && mobileInConv && tgActiveJid)">
       <!-- 聊天列表/其他平台：☰栏目 -->
       <button type="button" class="mh-btn" v-if="!mobileInConv" @click="mobileDrawerOpen = !mobileDrawerOpen" style="touch-action:manipulation;">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
@@ -378,7 +379,7 @@
 
         <!-- ④ 聊天列表栏 -->
         <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }">
-          <div class="col-header" v-if="activeChannel === 'telegram'">
+          <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
               <span class="wa-col-title">Telegram</span>
@@ -577,7 +578,7 @@
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
           <!-- TG tab 且未选中会话：直接显示TG空状态 -->
-          <div v-if="activeChannel === 'telegram' && !tgActiveJid" class="conv-placeholder" style="background:var(--chat-bg,#0b141a);">
+          <div v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile" class="conv-placeholder" style="background:var(--chat-bg,#0b141a);">
             <div class="ph-icon" style="background:#E3F2FD;">✈️</div>
             <div class="ph-title">Telegram Bot 已连接</div>
             <div class="ph-desc" style="text-align:center;line-height:1.6;">
@@ -597,18 +598,18 @@
                 <div style="font-size:12px;color:var(--text-secondary,#8696a0);">✈️ Telegram</div>
               </div>
               <div style="display:flex;gap:4px;margin-left:auto;align-items:center;">
-                <button @click="switchPanel('translate')" :title="activePanel==='translate'?'关闭翻译':'翻译设置'"
-                  style="background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:18px;"
-                  :style="activePanel==='translate'?'background:#2AABEE33;color:#2AABEE;':''">🌐</button>
-                <button @click="switchPanel('aitalk')" :title="activePanel==='aitalk'?'关闭话术':'沟通话术'"
-                  style="background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:18px;"
-                  :style="activePanel==='aitalk'?'background:#2AABEE33;color:#2AABEE;':''">💬</button>
-                <button @click="switchPanel('worldclock')" :title="activePanel==='worldclock'?'关闭时间':'时间与文化'"
-                  style="background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:18px;"
-                  :style="activePanel==='worldclock'?'background:#2AABEE33;color:#2AABEE;':''">🕰️</button>
-                <button @click="switchPanel('customer')" :title="activePanel==='customer'?'关闭画像':'客户画像'"
-                  style="background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:18px;"
-                  :style="activePanel==='customer'?'background:#2AABEE33;color:#2AABEE;':''">👤</button>
+                <div class="mh-menu-wrap" v-for="g in MH_GROUPS" :key="g.key">
+                  <button type="button" class="mh-btn mh-group-btn" :class="{active: tgMenuOpen===g.key || g.items.some(i=>i.key===activePanel)}" @click.stop="tgMenuOpen=tgMenuOpen===g.key?null:g.key" :title="g.label" style="touch-action:manipulation;background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:16px;">
+                    <span class="mh-g-icon">{{ g.icon }}</span><span class="mh-g-caret" :class="{open: tgMenuOpen===g.key}">▾</span>
+                  </button>
+                  <div class="mh-dropdown" v-if="tgMenuOpen===g.key" @click.stop>
+                    <div class="mh-dd-item" v-for="it in g.items" :key="it.key" :class="{active: activePanel===it.key}" @click="tgMenuOpen=null; switchPanel(it.key)">
+                      <span class="mh-dd-icon">{{ it.icon }}</span>
+                      <span class="mh-dd-label">{{ it.label }}</span>
+                      <span class="mh-dd-check" v-if="activePanel===it.key">✓</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;">
@@ -616,7 +617,7 @@
                 <div :style="{background:m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)',color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word'}">
                   <template v-if="m.translationObj">
                     <div style="color:inherit;">{{ m.text }}</div>
-                    <div style="fontSize:12px;color:var(--text-secondary,#8696a0);marginTop:4px;fontStyle:italic;border-top:1px solid var(--border-color,#2a3942);paddingTop:4px;">翻译：{{ m.translationObj.translated }}</div>
+                    <div :style="{fontSize:'12px',color:'rgba(255,255,255,0.85)',marginTop:'4px',fontStyle:'italic',borderTop:'1px solid rgba(255,255,255,0.25)',paddingTop:'4px'}">翻译：{{ m.translationObj.translated }}</div>
                   </template>
                   <template v-else>{{ m.text }}</template>
                 </div>
@@ -4676,6 +4677,7 @@ function openMhProfile() {
 }
 const mobilePanel = ref(null); // 'aitalk'|'customer'|'translate'|'ai'|null
 const mhMenuOpen = ref(null);
+const tgMenuOpen = ref(null);
 const MH_GROUPS = [
   { key:'ai', icon:'🤖', items:[
     {key:'translate', icon:'🌐', label:'翻译设置'},
@@ -4707,7 +4709,7 @@ const mobileDrawerItems = [
   { key: 'skills', label: '技能商店', icon: '🧩' },
 ];
 const mobileHeaderTitle = computed(() => {
-  if (mobileInConv.value && activeChannel.value === 'telegram') return 'Telegram';
+  if (mobileInConv.value && activeChannel.value === 'telegram' && tgActiveJid.value) { const c = tgConversations.value.find(x => x.jid === tgActiveJid.value); return c?.name || 'Telegram'; }
   if (mobileInConv.value && activeChannel.value === 'email') return '邮箱';
   if (mobileInConv.value && chatStore.activeConversation?.name) return chatStore.activeConversation.name;
   if (activePlatform.value === 'dashboard') return '工作台';
