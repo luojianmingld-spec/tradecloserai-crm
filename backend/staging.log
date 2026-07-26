@@ -863,3 +863,246 @@ TypeError: Converting circular structure to JSON
 [TG-UB] Update #25: type1=undefined type2=undefined type3=UpdateConnectionState state=1
 [TG-UB] Update #26: type1=UpdateUserStatus type2=undefined type3=VirtualClass state=undefined
 [TG-UB] Update #27: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #28: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #29: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #30: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #31: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #32: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #33: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #34: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #35: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #36: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #37: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #38: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #39: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #40: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #41: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #42: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #43: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #44: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #45: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #46: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #47: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #48: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #49: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #50: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #51: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #52: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #53: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #54: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #55: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #56: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #57: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #58: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #59: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: HsCyb9qRXGX8DJyRAAAB)
+[Socket] User 1 disconnected (socket: 3T9FAQYXaBPLhhRhAAAD)
+[Socket] User 1 disconnected (socket: M9-K57fV2fwITlMdAAAN)
+[Socket] User 1 disconnected (socket: nC_ohdRclA1FNAglAAAP)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:30:28.148] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:30:28.165] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:30:28.239] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:30:28.239] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: xjZ5EN8V2L64pY6AAAAC)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: WvsX9lBKFVlvgzNtAAAD)
+[Socket] User 1 connected (socket: ZFGDpPEOdAUIULm6AAAF)
+[Socket] User 1 connected (socket: DuRCdds95DC0HpcJAAAH)
+[TG-UB] Update #1: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #2: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #3: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #4: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #5: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Automation Scheduler] Running check at 2026-07-26T15:31:28.169Z
+[TG-UB] Update #6: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #7: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #8: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #9: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #10: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #11: type1=UpdateUserStatus type2=undefined type3=VirtualClass state=undefined
+[TG-UB] Update #12: type1=UpdateUserStatus type2=undefined type3=VirtualClass state=undefined
+[TG-UB] Update #13: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #14: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #15: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #16: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #17: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #18: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #19: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #20: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #21: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #22: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #23: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #24: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #25: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #26: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #27: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #28: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #29: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #30: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #31: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #32: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #33: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #34: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: xjZ5EN8V2L64pY6AAAAC)
+[Socket] User 1 disconnected (socket: WvsX9lBKFVlvgzNtAAAD)
+[Socket] User 1 disconnected (socket: ZFGDpPEOdAUIULm6AAAF)
+[Socket] User 1 disconnected (socket: DuRCdds95DC0HpcJAAAH)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:35:30.991] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:35:31.008] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[33m[2026-07-26T15:35:31.085] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:35:31.086] [INFO] - [Using LAYER 198 for initial connect][0m
+[Evolution Connector] state=open
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: mJ7xDZ88vkdv-dtYAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: xyVjCSlYm46klNHBAAAD)
+[Socket] User 1 connected (socket: p-za64iGg5nSd7qjAAAG)
+[Socket] User 1 connected (socket: VlAMm0EsqTT2fg5nAAAH)
+[TG-UB] Update #1: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #2: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #3: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #4: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #5: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Automation Scheduler] Running check at 2026-07-26T15:36:31.014Z
+[TG-UB] Update #6: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #7: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #8: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #9: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #10: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #11: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #12: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #13: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Socket] User 1 connected (socket: Ll1OqkWkVnIMRDyQAAAJ)
+[TG-UB] Update #14: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #15: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #16: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #17: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #422 jid=963981860908@s.whatsapp.net cust="بخير" → sales="أنا على وشك النوم"
+[TG-UB] Update #18: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #19: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #20: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Socket] User 1 disconnected (socket: Ll1OqkWkVnIMRDyQAAAJ)
+[Socket] User 1 connected (socket: shTjw-iQEXpsABKtAAAL)
+[Socket] User 1 connected (socket: nmpx5tr702yDscxoAAAN)
+[TG-UB] Update #21: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #22: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #23: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #24: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #25: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #26: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: mJ7xDZ88vkdv-dtYAAAB)
+[Socket] User 1 disconnected (socket: xyVjCSlYm46klNHBAAAD)
+[Socket] User 1 disconnected (socket: p-za64iGg5nSd7qjAAAG)
+[Socket] User 1 disconnected (socket: VlAMm0EsqTT2fg5nAAAH)
+[Socket] User 1 disconnected (socket: shTjw-iQEXpsABKtAAAL)
+[Socket] User 1 disconnected (socket: nmpx5tr702yDscxoAAAN)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:39:44.563] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:39:44.583] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:39:44.656] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:39:44.657] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: claGPnqSI1_TpUtbAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: XhZ-NgjHiv7wjhw6AAAE)
+[Socket] User 1 connected (socket: aurvDMrewRh8Nft6AAAF)
+[Socket] User 1 connected (socket: sHBVoBBfyU8qQvWRAAAH)
+[Socket] User 1 connected (socket: 8RH0S9HPw3LgpB2hAAAJ)
+[Socket] User 1 connected (socket: PIy5nmrBamEV0H5JAAAL)
+[Socket] User 1 disconnected (socket: claGPnqSI1_TpUtbAAAB)
+[Socket] User 1 disconnected (socket: PIy5nmrBamEV0H5JAAAL)
+[TG-UB] Update #1: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #2: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #3: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #4: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #5: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[Automation Scheduler] Running check at 2026-07-26T15:40:44.588Z
+[TG-UB] Update #6: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #7: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #8: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #9: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #10: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #11: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #12: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #13: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #14: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #15: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #16: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #17: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #18: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #19: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #20: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #21: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #22: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: XhZ-NgjHiv7wjhw6AAAE)
+[Socket] User 1 disconnected (socket: aurvDMrewRh8Nft6AAAF)
+[Socket] User 1 disconnected (socket: sHBVoBBfyU8qQvWRAAAH)
+[Socket] User 1 disconnected (socket: 8RH0S9HPw3LgpB2hAAAJ)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T15:43:20.551] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T15:43:20.569] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T15:43:20.643] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T15:43:20.644] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler (raw mode)...
+[TG-UB] Update handler registered. Client connected: true
+[TG-UB] Auto-connected: LuoFeng28
+[Socket] User 1 connected (socket: NUutsypYyryKtaNdAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 2C2b_dslNPoEE5XqAAAD)
+[Socket] User 1 connected (socket: UefYchvnv146VKhUAAAF)
+[Socket] User 1 connected (socket: z4TjepxTT2CxnROpAAAH)
+[TG-UB] Update #1: type1=undefined type2=undefined type3=UpdateConnectionState state=1
+[TG-UB] Update #2: type1=undefined type2=undefined type3=UpdateConnectionState state=1

@@ -2309,3 +2309,19 @@ Error: ENOENT: no such file or directory, stat '/opt/whatsapp-crm/frontend/dist/
 [Socket] User 1 connected (socket: _seFdrAkAlzGHnR2AAAH)
 [Translation][TG] inbound #44 en->zh: "Hello" => "你好"
 [Automation Scheduler] Running check at 2026-07-26T15:04:04.242Z
+[Automation Scheduler] Running check at 2026-07-26T15:34:04.244Z
+[Evolution Webhook] msg 3EB0BC758A status=READ
+[Evolution Webhook] msg 3EB0A537D5 status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="بخير"
+[Translation] inbound #5480 ar->zh: "بخير" => "好"
+[Unattended] Auto-replying to 963981860908@s.whatsapp.net (message: "بخير...")
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[Unattended] ❌ Failed to send auto-reply: 
+Invalid `prisma.wAMessage.create()` invocation:
+
+
+Foreign key constraint violated on the foreign key
+[Evolution Webhook] msg 3EB06462E4 status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB06462E4 status=SERVER_ACK
+[Evolution Webhook] msg 3EB0A8357D status=DELIVERY_ACK
+[Evolution Webhook] msg 3EB0A8357D status=SERVER_ACK

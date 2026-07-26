@@ -586,7 +586,64 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
         if (!tgAccount) {
           return res.status(400).json({ error: "未连接Telegram，请先在账号栏连接" });
         }
-        const textMsg = originalText;
+        // ── TG 出站翻译（同 WA 逻辑） ──
+        const tSettings = await getTranslationSettings(toJid, req.userId);
+        let textMsg = originalText;
+        let translationObj = null;
+        const hasChinese = /[\u4e00-\u9fff]/.test(originalText);
+        if (tSettings.blockChinese && !tSettings.sendEnabled && hasChinese) {
+          return res.status(400).json({ error: "请先开启发送翻译或输入英文消息", code: "BLOCK_CHINESE" });
+        }
+        const tgtLang = tSettings.sendTargetLang || "en";
+        if (tSettings.sendEnabled && tgtLang && tgtLang !== "auto") {
+          try {
+            const engine = tSettings.sendEngine || "google";
+            let srcLang = "auto";
+            try {
+              const det = await _detectLangForSend(originalText, engine);
+              if (det && det !== "unknown") srcLang = det;
+            } catch (_) { srcLang = "auto"; }
+            // 检测是否已是目标语言
+            const hasJa = /[\u3040-\u309f\u30a0-\u30ff]/.test(originalText);
+            const hasKo = /[\uac00-\ud7af]/.test(originalText);
+            const hasZh = /[\u4e00-\u9fff]/.test(originalText);
+            const hasAr = /[\u0600-\u06ff]/.test(originalText);
+            const hasRu = /[\u0400-\u04ff]/.test(originalText);
+            let alreadyInTarget = false;
+            if (tgtLang === "ja") alreadyInTarget = hasJa;
+            else if (tgtLang === "ko") alreadyInTarget = hasKo;
+            else if (tgtLang === "zh") alreadyInTarget = hasZh && !hasJa && !hasKo;
+            else if (tgtLang === "ar") alreadyInTarget = hasAr;
+            else if (tgtLang === "ru") alreadyInTarget = hasRu;
+            else if (["en","es","fr","de","pt","it","nl","tr","id","vi"].includes(tgtLang)) {
+              if (hasZh || hasAr || hasRu || hasJa || hasKo) alreadyInTarget = false;
+              else { const latin = (originalText.slice(0,500).match(/[A-Za-zÀ-ÿ]/g) || []).length; const total = originalText.replace(/\s+/g,"").length; alreadyInTarget = total > 0 && latin / total > 0.5; }
+            }
+            if (!alreadyInTarget && srcLang !== tgtLang) {
+              const r = await _translateTextForSend(originalText, srcLang, tgtLang, engine, req.userId || 1);
+              const translated = (r && (r.translated || r.text)) || "";
+              if (translated && translated !== originalText) {
+                textMsg = translated;
+                // 虚线：先翻译成中文
+                try {
+                  const zhR = await _translateTextForSend(originalText, srcLang, "zh", engine, req.userId || 1);
+                  const zhText = (zhR && (zhR.translated || zhR.text)) || originalText;
+                  translationObj = { original: zhText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
+                } catch (_) {
+                  translationObj = { original: originalText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
+                }
+              }
+            } else if (tgtLang !== "zh") {
+              try {
+                const zhR = await _translateTextForSend(originalText, srcLang === "auto" ? tgtLang : srcLang, "zh", engine, req.userId || 1);
+                const zhText = (zhR && (zhR.translated || zhR.text)) || "";
+                if (zhText && zhText !== originalText) {
+                  translationObj = { original: zhText, translated: originalText, sourceLang: srcLang === "auto" ? tgtLang : srcLang, targetLang: tgtLang };
+                }
+              } catch (_) {}
+            }
+          } catch (te) { console.warn("[TG Send] outgoing translate failed:", te.message); }
+        }
         let sent;
         if (isUserBot) {
           // 使用 GramJS UserBot 发送
@@ -617,6 +674,8 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
             direction: "outbound",
             timestamp: new Date(),
             read: true,
+            translation: translationObj ? JSON.stringify(translationObj) : null,
+            sourceLang: translationObj ? (translationObj.sourceLang || "auto") : null,
             waMessageId: `tg_${tgAccount.id}_${sent.message_id}_out`,
           },
         });
@@ -635,7 +694,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
         if (io) {
           io.emit("telegram:message", {
             accountId: tgAccount.id, contactId: contact.id, jid: toJid,
-            message: { id: savedWa.id, fromMe: true, content: textMsg, body: textMsg, messageType: "text", timestamp: savedWa.timestamp, platform: "telegram", waMessageId: savedWa.waMessageId, jid: toJid },
+            message: { id: savedWa.id, fromMe: true, content: textMsg, body: textMsg, messageType: "text", timestamp: savedWa.timestamp, translation: translationObj, platform: "telegram", waMessageId: savedWa.waMessageId, jid: toJid },
           });
           io.emit("whatsapp:message_sent", {
             jid: toJid,

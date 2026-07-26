@@ -309,10 +309,10 @@
 
             <!-- Telegram账号区 -->
             <div v-if="activeChannel === 'telegram'" class="wa-account-list">
-              <template v-if="tgAccounts.filter(a=>!a.telegramBotToken).length">
-                <div v-for="tg in tgAccounts.filter(a => !a.telegramBotToken)" :key="tg.id" class="wa-account-item active">
-                  <div class="acc-avatar" style="background:#2AABEE;overflow:hidden;">
-                    <img src="/tg_avatar.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+              <template v-if="tgAccounts.length">
+                <div v-for="tg in tgAccounts" :key="tg.id" class="wa-account-item active">
+                  <div class="acc-avatar" style="background:#2AABEE;">
+                    <span style="font-size:18px;">✈️</span>
                     <span class="acc-online-dot"></span>
                   </div>
                   <div class="acc-info">
@@ -496,8 +496,8 @@
                   在 Telegram 中找到你的 Bot<br/>
                   发送 /start 或任意消息即可开始对话
                 </div>
-                <div v-if="tgAccounts.filter(a=>!a.telegramBotToken).length > 0" style="margin-top:12px;font-size:11px;color:#2AABEE;background:#E3F2FD;padding:6px 12px;border-radius:12px;display:inline-block;">
-                  ✅ @{{ (tgAccounts.find(a=>!a.telegramBotToken)||{}).name || "UserBot" }}
+                <div v-if="tgAccounts.length > 0" style="margin-top:12px;font-size:11px;color:#2AABEE;background:#E3F2FD;padding:6px 12px;border-radius:12px;display:inline-block;">
+                  ✅ @{{ tgAccounts[0].telegramBotUsername }}
                 </div>
               </div>
             </template>
@@ -583,8 +583,8 @@
             <div class="ph-desc" style="text-align:center;line-height:1.6;">
               在 Telegram 中找到你的 Bot<br/>发送 /start 或任意消息即可开始对话
             </div>
-            <div v-if="tgAccounts.filter(a=>!a.telegramBotToken).length > 0" style="margin-top:12px;padding:8px 16px;background:#E3F2FD;border-radius:16px;font-size:12px;color:#2AABEE;font-weight:500;">
-              ✅ @{{ (tgAccounts.find(a=>!a.telegramBotToken)||{}).name || "UserBot" }} · 在线
+            <div v-if="tgAccounts.length > 0" style="margin-top:12px;padding:8px 16px;background:#E3F2FD;border-radius:16px;font-size:12px;color:#2AABEE;font-weight:500;">
+              ✅ @{{ tgAccounts[0].telegramBotUsername }} · 在线
             </div>
           </div>
           <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
@@ -614,7 +614,7 @@
             <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;">
               <div v-for="m in tgMessages" :key="m.id" :style="{alignSelf:m.fromMe?'flex-end':'flex-start',maxWidth:'75%'}">
                 <div :style="{background:m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)',color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word'}">
-                  <template v-if="m.translationObj">
+                  <template v-if="m.translationObj && !m.fromMe">
                     <div style="color:inherit;">{{ m.text }}</div>
                     <div style="fontSize:12px;color:var(--text-secondary,#8696a0);marginTop:4px;fontStyle:italic;border-top:1px solid var(--border-color,#2a3942);paddingTop:4px;">翻译：{{ m.translationObj.translated }}</div>
                   </template>
@@ -5028,8 +5028,6 @@ function selectConv(conv) {
     chatStore.activePlatform = 'telegram';
     // Load customer data for TG contact
     loadCustomerByJid(conv.jid);
-    // Load per-customer translation settings
-    chatStore.loadCustomerTranslation(conv.jid);
     if (isMobile.value) {
       mobileInConv.value = true;
       mobileAccountsOpen.value = false;
