@@ -1936,6 +1936,118 @@ async function startServer() {
       onEvent: {
         onMessage: async (msg) => {
           console.log('[TG-UB] Incoming message:', msg.chatId, msg.text?.substring(0, 50));
+          try {
+            const tgAccount = await prisma.whatsAppAccount.findFirst({
+              where: { platform: 'telegram', status: 'connected' },
+              orderBy: { createdAt: 'desc' },
+            });
+            if (!tgAccount) return;
+            const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
+            const jid = `${msg.chatId}@telegram`;
+            // Find or create contact
+            let contact = await prisma.contact.findFirst({
+              where: { accountId: tgAccount.id, platform: 'telegram', jid },
+            });
+            if (!contact) {
+              try {
+                const { getUserInfo: _gui } = await import('./services/tg-userbot-connector.js');
+                const userInfo = await _gui(msg.chatId);
+                contact = await prisma.contact.create({
+                  data: {
+                    accountId: tgAccount.id,
+                    platform: 'telegram',
+                    jid,
+                    name: userInfo?.displayName || userInfo?.username || msg.chatId,
+                    phone: userInfo?.phone || null,
+                  },
+                });
+              } catch {
+                contact = await prisma.contact.create({
+                  data: { accountId: tgAccount.id, platform: 'telegram', jid, name: msg.chatId },
+                });
+              }
+            }
+            // Find or create conversation
+            let conv = await prisma.conversation.findFirst({
+              where: { accountId: tgAccount.id, platform: 'telegram', jid },
+            });
+            if (!conv) {
+              conv = await prisma.conversation.create({
+                data: {
+                  accountId: tgAccount.id,
+                  platform: 'telegram',
+                  contactId: contact.id,
+                  jid,
+                },
+              });
+            }
+            // Save to WAMessage table (for frontend message list)
+            const waMsg = await prisma.wAMessage.create({
+              data: {
+                sessionId: tgSessionId,
+                from: jid,
+                to: 'me',
+                body: msg.text || '',
+                type: msg.mediaType || 'text',
+                direction: 'inbound',
+                timestamp: new Date(msg.timestamp),
+                waMessageId: `tg_${tgAccount.id}_${msg.messageId}_in`,
+              },
+            });
+            // Save to Message table (CRM data model)
+            await prisma.message.create({
+              data: {
+                accountId: tgAccount.id,
+                platform: 'telegram',
+                contactId: contact.id,
+                jid,
+                fromMe: false,
+                content: msg.text || '',
+                messageType: msg.mediaType || 'text',
+                timestamp: new Date(msg.timestamp),
+              },
+            });
+            // Update conversation
+            await prisma.conversation.update({
+              where: { id: conv.id },
+              data: {
+                lastMessage: (msg.text || '').slice(0, 200),
+                lastMessageAt: new Date(msg.timestamp),
+                unreadCount: { increment: 1 },
+              },
+            });
+            // Emit socket events for real-time frontend update
+            if (io) {
+              io.emit('telegram:message', {
+                accountId: tgAccount.id,
+                contactId: contact.id,
+                jid,
+                message: {
+                  id: waMsg.id,
+                  fromMe: false,
+                  content: msg.text || '',
+                  body: msg.text || '',
+                  messageType: msg.mediaType || 'text',
+                  timestamp: new Date(msg.timestamp),
+                  platform: 'telegram',
+                  waMessageId: waMsg.waMessageId,
+                  jid,
+                },
+              });
+              io.emit('conversation:update', {
+                accountId: tgAccount.id,
+                conversation: {
+                  id: conv.id,
+                  jid,
+                  platform: 'telegram',
+                  lastMessage: (msg.text || '').slice(0, 200),
+                  lastMessageAt: new Date(msg.timestamp),
+                },
+              });
+            }
+          } catch (e) {
+            console.error('[TG-UB] onMessage save error:', e.message);
+          }
         },
         onReady: (me) => {
           console.log('[TG-UB] Auto-connected:', me.username || me.id);
