@@ -119,3 +119,18 @@ WhatsApp：+8610308625
 [Socket] User 1 connected (socket: zEf-dL96xuvLazM3AAAT)
 [Socket] User 1 disconnected (socket: NC8cJKtDemkBibUhAAAP)
 [Socket] User 1 disconnected (socket: zEf-dL96xuvLazM3AAAT)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: mR_TvOKNaH5dWA6pAAAB)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[Socket] User 1 connected (socket: zJc3gP-sfmy5f1OWAAAB)
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Automation Scheduler] Running check at 2026-07-26T12:11:08.713Z
