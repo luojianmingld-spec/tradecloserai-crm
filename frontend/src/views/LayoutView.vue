@@ -590,7 +590,7 @@
           </div>
           <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
           <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
-            <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);">
+            <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:2;">
               <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
               <div class="tg-avatar" style="width:40px;height:40px;border-radius:50%;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;">{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</div>
               <div style="flex:1;">
@@ -612,7 +612,7 @@
                 </div>
               </div>
             </div>
-            <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;">
+            <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;">
               <div v-for="m in tgMessages" :key="m.id" :style="{alignSelf:m.fromMe?'flex-end':'flex-start',maxWidth:'75%'}">
                 <div :style="{background:m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)',color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word'}">
                   <template v-if="m.translationObj">
@@ -11159,8 +11159,8 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
   .mh-btn.active { background: #00a88430; color: var(--accent); border-radius: 50%; }
 /* 手机端三下拉分组菜单 */
 .mh-right { display:flex; align-items:center; gap:4px; }
-.mh-menu-wrap { position: relative; overflow: visible; }
-.mh-group-btn { display:flex; align-items:center; gap:2px; padding:0 8px !important; width:auto !important; min-width:44px !important; min-height:44px !important; height:44px; border-radius:8px !important; touch-action:manipulation; -webkit-tap-highlight-color:rgba(0,0,0,0.2); cursor:pointer; position:relative; z-index:1; }
+.mh-menu-wrap { position: relative; overflow: visible; z-index: 10; }
+.mh-group-btn { display:flex; align-items:center; gap:2px; padding:0 8px !important; width:auto !important; min-width:44px !important; min-height:44px !important; height:44px; border-radius:8px !important; touch-action:manipulation; -webkit-tap-highlight-color:rgba(0,0,0,0.2); cursor:pointer; position:relative; z-index:1; pointer-events:auto; }
 .mh-g-icon { font-size:18px; line-height:1; }
 .mh-g-caret { font-size:10px; color:var(--text-secondary,#888); margin-left:2px; transition:transform .15s; line-height:1; }
 .mh-g-caret.open { transform:rotate(180deg); color:var(--accent,#00a884); }
