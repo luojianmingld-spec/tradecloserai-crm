@@ -381,11 +381,24 @@ ${rawSummary}
           
           const reply = this._stripMarkdown(analysisReply || rawSummary);
           
+          // 提取文件附件信息（generate_document 产出）
+          const attachments = [];
+          if (funcName === 'generate_document' && result && result.url) {
+            const host = process.env.BASE_URL || 'https://ai.jzjglass.com';
+            const fileUrl = result.url.startsWith('http') ? result.url : host + result.url;
+            attachments.push({
+              name: result.filename || (args.title || 'Document') + '.pdf',
+              url: fileUrl,
+              type: 'application/pdf',
+              docId: result.docId || null
+            });
+          }
+          
           await prisma.assistantConversation.create({
-            data: { userId, role: 'assistant', content: reply }
+            data: { userId, role: 'assistant', content: reply, attachments: attachments.length ? JSON.stringify(attachments) : null }
           });
           
-          return { reply, tasks: [] };
+          return { reply, tasks: [], attachments };
         } catch (err) {
           const reply = `❌ 执行失败：${err.message}`;
           await prisma.assistantConversation.create({
