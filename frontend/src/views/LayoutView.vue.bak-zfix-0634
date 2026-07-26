@@ -590,7 +590,7 @@
           </div>
           <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
           <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
-            <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:50;">
+            <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:2;">
               <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
               <div class="tg-avatar" style="width:40px;height:40px;border-radius:50%;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;">{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</div>
               <div style="flex:1;">
@@ -10055,7 +10055,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
     box-sizing: border-box;
   }
   .col-chatlist.collapsed { width: 0 !important; overflow: hidden; }
-  .col-chatlist.m-hidden { transform: translateX(-100%); pointer-events: none; display: none; }
+  .col-chatlist.m-hidden { transform: translateX(-100%); }
 
   /* ⑤ 对话主区 - 右侧滑入 */
   .col-conversation {
@@ -11211,7 +11211,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
   /* 聊天列表：默认显示，进入对话时隐藏 */
   .col-chatlist { width: 100% !important; position: absolute; inset: 0; }
-  .col-chatlist.m-hidden { transform: translateX(-100%); pointer-events: none; display: none; }
+  .col-chatlist.m-hidden { transform: translateX(-100%); pointer-events: none; }
 
   /* 会话条目触摸高度 */
   .conv-item { min-height: 68px; padding: 10px 14px; }

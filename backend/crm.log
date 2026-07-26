@@ -2735,3 +2735,28 @@ Unique constraint failed on the fields: (`waMessageId`)
 [TG-UB] Raw update #6: UpdateConnectionState
 [TG-UB] Raw update #7: UpdateConnectionState
 [TG-UB] Raw update #8: UpdateConnectionState
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-26T22:26:20.157] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-26T22:26:20.170] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-26T22:26:20.242] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-26T22:26:20.243] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9471 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: v4JFK-BK-QNlfOaEAAAC)
+[Socket] User 1 connected (socket: iaPbJ9AsN-yRZuRdAAAD)
+[33m[2026-07-26T22:26:23.773] [INFO] - [Sleeping for 14s on flood wait (Caused by messages.GetHistory)][0m
+[TG-UB] Raw update #1: UpdateConnectionState
