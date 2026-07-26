@@ -258,14 +258,15 @@ router.post('/sync-contacts', async (req, res) => {
     for (const c of contacts) {
       if (c.bot) continue; // Skip bots
       
+      const contactJid = c.id + '@telegram';
       const existing = await prisma.contact.findFirst({
-        where: { accountId: account.id, platform: 'telegram', jid: c.id }
+        where: { accountId: account.id, platform: 'telegram', jid: contactJid }
       });
       
       const contactData = {
         accountId: account.id,
         platform: 'telegram',
-        jid: c.id,
+        jid: contactJid,
         name: c.displayName || c.username || null,
         phone: c.phone || null,
         pushName: c.firstName || null,
@@ -309,10 +310,28 @@ router.post('/sync-dialogs', async (req, res) => {
     
     for (const d of dialogs) {
       const dialogJid = d.id + '@telegram';
-      const contact = await prisma.contact.findFirst({
+      let contact = await prisma.contact.findFirst({
         where: { accountId: account.id, platform: 'telegram', jid: dialogJid }
       });
-      if (!contact) continue;
+      // Auto-create contact for dialog partners not in contact list
+      if (!contact) {
+        try {
+          contact = await prisma.contact.create({
+            data: {
+              accountId: account.id,
+              platform: 'telegram',
+              jid: dialogJid,
+              name: d.name || d.username || d.id,
+              phone: d.phone || null,
+              pushName: d.name || null,
+            }
+          });
+          console.log('[TG-UB] Auto-created contact for dialog:', d.name || d.id, dialogJid);
+        } catch (e) {
+          console.warn('[TG-UB] Failed to create contact for ' + dialogJid + ':', e.message);
+          continue;
+        }
+      }
       
       const convData = {
         accountId: account.id,
