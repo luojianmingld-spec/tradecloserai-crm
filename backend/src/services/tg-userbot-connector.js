@@ -209,6 +209,39 @@ async function handleIncomingUpdate(update) {
     };
 
     if (eventHandlers.onMessage) eventHandlers.onMessage(incoming);
+    return;
+  }
+
+  // UpdateShortMessage - 新私聊消息（短格式）
+  if (ctorName === 'UpdateShortMessage' || update.className === 'UpdateShortMessage') {
+    // 跳过自己发的
+    if (update.out) return;
+
+    const peerId = update.userId?.toString();
+    if (!peerId) return;
+    const text = update.message || '';
+    const msgId = update.id;
+    const timestamp = update.date ? (update.date * 1000) : Date.now();
+
+    const incoming = {
+      chatId: peerId,
+      messageId: msgId,
+      text: text || '',
+      timestamp,
+      mediaType: null,
+      fromMe: false,
+      raw: update,
+    };
+
+    console.log('[TG-UB] UpdateShortMessage from', peerId, 'text:', text?.substring(0, 50));
+    if (eventHandlers.onMessage) eventHandlers.onMessage(incoming);
+    return;
+  }
+
+  // UpdateShortChatMessage - 群组短消息
+  if (ctorName === 'UpdateShortChatMessage' || update.className === 'UpdateShortChatMessage') {
+    // 群组消息暂不处理（CRM只做私聊）
+    return;
   }
 }
 

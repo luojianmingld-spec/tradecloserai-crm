@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth.js';
 import whatsappProvider from '../services/whatsapp-provider.js';
+import { sendMessage as sendTgMsg, isConnected as isTgConnected } from '../services/tg-userbot-connector.js';
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
@@ -125,20 +126,37 @@ router.post('/send', async (req, res) => {
     }
 
     // 2. 通过 provider 发送（可能是已翻译文本）
-    const result = await whatsappProvider.sendMessage(sessionId, toJid, outgoingText);
+    let result;
+    const isTg = toJid.endsWith('@telegram');
+    if (isTg) {
+      // TG UserBot 走专用发送
+      if (!isTgConnected()) return res.status(400).json({ error: 'TG UserBot 未连接' });
+      const tgResult = await sendTgMsg(toJid.replace('@telegram', ''), outgoingText);
+      result = { messageId: 'tg_' + (tgResult?.id || Date.now()) };
+    } else {
+      result = await whatsappProvider.sendMessage(sessionId, toJid, outgoingText);
+    }
 
 
 
     // 2. 查出我方连接信息
-    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
-    const meFrom = conn?.phone ? `${conn.phone}@s.whatsapp.net` : 'me';
+    let meFrom, saveSessionId;
+    if (isTg) {
+      const tgAcc = await prisma.whatsAppAccount.findFirst({ where: { userId: req.userId, platform: 'telegram', status: 'connected' } });
+      saveSessionId = tgAcc ? `tg_${tgAcc.telegramBotUsername || tgAcc.id}` : sessionId;
+      meFrom = tgAcc ? `${tgAcc.id}@telegram` : 'me';
+    } else {
+      const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+      meFrom = conn?.phone ? `${conn.phone}@s.whatsapp.net` : 'me';
+      saveSessionId = sessionId;
+    }
 
     // 3. 落库保存消息
     let saved = null;
     try {
       saved = await prisma.wAMessage.create({
         data: {
-          sessionId,
+          sessionId: saveSessionId,
           from: meFrom,
           to: toJid,
           body: outgoingText,
