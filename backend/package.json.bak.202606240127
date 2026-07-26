@@ -1,0 +1,38 @@
+{
+  "name": "whatsapp-crm-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "NODE_ENV=production node src/server.js",
+    "db:push": "npx prisma db push",
+    "db:migrate": "npx prisma migrate dev",
+    "db:studio": "npx prisma studio",
+    "db:generate": "npx prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "6.8.2",
+    "@whiskeysockets/baileys": "^6.7.22",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "coze-coding-dev-sdk": "^0.7.24",
+    "duck-duck-scrape": "^2.2.7",
+    "express": "^5.1.0",
+    "imapflow": "^1.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.9.11",
+    "multer": "^1.4.5-lts.2",
+    "nodemailer": "^9.0.1",
+    "pino": "^8.21.0",
+    "prisma": "6.8.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "libsignal": "file:./vendor/libsignal",
+      "@whiskeysockets/eslint-config": "file:./vendor/eslint-config-dummy"
+    }
+  }
+}

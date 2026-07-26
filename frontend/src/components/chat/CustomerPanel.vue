@@ -211,6 +211,55 @@
               <el-option label="俄语" value="ru" />
               <el-option label="阿拉伯语" value="ar" />
               <el-option label="印尼语" value="id" />
+              <el-option label="越南语" value="vi" />
+              <el-option label="意大利语" value="it" />
+              <el-option label="荷兰语" value="nl" />
+              <el-option label="土耳其语" value="tr" />
+              <el-option label="泰语" value="th" />
+            </el-select>
+          </div>
+
+          <!-- Send Toggle -->
+          <div class="setting-row">
+            <div class="setting-label">
+              <span class="setting-name">发送自动翻译</span>
+              <span class="setting-desc">发送时自动翻译成对方语言</span>
+            </div>
+            <el-switch
+              v-model="settings.sendEnabled"
+              active-color="#00a884"
+              @change="saveSettings"
+            />
+          </div>
+
+          <!-- Send Target Language -->
+          <div class="setting-row vertical">
+            <div class="setting-label">
+              <span class="setting-name">发送翻译语言</span>
+              <span class="setting-desc">发送消息时翻译成的语言</span>
+            </div>
+            <el-select
+              v-model="settings.sendTargetLanguage"
+              size="small"
+              style="width: 100%"
+              @change="saveSettings"
+            >
+              <el-option label="英语" value="en" />
+              <el-option label="中文" value="zh" />
+              <el-option label="日语" value="ja" />
+              <el-option label="韩语" value="ko" />
+              <el-option label="西班牙语" value="es" />
+              <el-option label="法语" value="fr" />
+              <el-option label="德语" value="de" />
+              <el-option label="葡萄牙语" value="pt" />
+              <el-option label="俄语" value="ru" />
+              <el-option label="阿拉伯语" value="ar" />
+              <el-option label="印尼语" value="id" />
+              <el-option label="越南语" value="vi" />
+              <el-option label="意大利语" value="it" />
+              <el-option label="荷兰语" value="nl" />
+              <el-option label="土耳其语" value="tr" />
+              <el-option label="泰语" value="th" />
             </el-select>
           </div>
         </div>
@@ -530,6 +579,8 @@ const settings = reactive({
   translationEnabled: true,
   translationEngine: 'doubao',
   targetLanguage: 'zh',
+  sendEnabled: true,
+  sendTargetLanguage: 'en',
   doubaoApiKey: '',
   deepseekApiKey: '',
 });
@@ -546,19 +597,33 @@ const daysSinceContact = computed(() => {
   return Math.floor(diff / 86400000);
 });
 
-// Load settings from store on mount
+// Load global settings on mount; per-customer settings loaded when contact changes
 onMounted(async () => {
   await chatStore.fetchTranslationSettings();
   syncSettingsFromStore();
 });
 
+// Per-customer settings loading when switching contact
+async function loadCustomerSettings() {
+  // Store.loadCustomerTranslation already fetches per-customer settings into chatStore.translationSettings
+  // (called from setActiveConversation when switching chats). Just sync from store.
+  if (props.jid) {
+    await chatStore.loadCustomerTranslation(props.jid);
+  } else {
+    await chatStore.fetchTranslationSettings();
+  }
+  syncSettingsFromStore();
+}
+
 function syncSettingsFromStore() {
   const s = chatStore.translationSettings;
-  settings.translationEnabled = s.translationEnabled;
-  settings.translationEngine = s.translationEngine;
-  settings.targetLanguage = s.targetLanguage;
-  settings.doubaoApiKey = s.doubaoApiKey;
-  settings.deepseekApiKey = s.deepseekApiKey;
+  settings.translationEnabled = s.receiveEnabled !== undefined ? s.receiveEnabled : (s.translationEnabled !== undefined ? s.translationEnabled : true);
+  settings.translationEngine = s.receiveEngine || s.translationEngine || 'doubao';
+  settings.targetLanguage = s.receiveTargetLang || s.targetLanguage || 'zh';
+  settings.sendEnabled = s.sendEnabled !== undefined ? s.sendEnabled : true;
+  settings.sendTargetLanguage = s.sendTargetLang || s.sendTargetLanguage || 'en';
+  settings.doubaoApiKey = s.doubaoApiKey || '';
+  settings.deepseekApiKey = s.deepseekApiKey || '';
 }
 
 watch(
@@ -582,6 +647,10 @@ watch(
         editForm.tags = [];
       }
       editForm.notes = contact.notes || '';
+      // Load this customer's translation settings
+      loadCustomerSettings();
+    } else {
+      syncSettingsFromStore();
     }
   },
   { immediate: true }
@@ -605,7 +674,16 @@ async function saveContact() {
 
 async function saveSettings() {
   try {
-    await chatStore.updateTranslationSettings({ ...settings });
+    if (props.jid) {
+      // Save per-customer
+      const encodedJid = encodeURIComponent(props.jid);
+      await api.put(`/translation/settings/customer/${encodedJid}`, { ...settings });
+      // Immediately reload this customer's settings into store so ChatView send logic picks them up
+      await chatStore.loadCustomerTranslation(props.jid);
+    } else {
+      // Fallback to global
+      await chatStore.updateTranslationSettings({ ...settings });
+    }
   } catch (err) {
     console.error('Failed to save translation settings:', err);
     ElMessage.error('保存翻译设置失败');

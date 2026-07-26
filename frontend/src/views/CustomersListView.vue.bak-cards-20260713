@@ -1,0 +1,360 @@
+<template>
+  <div class="cust-list-page">
+    <!-- Header -->
+    <div class="cust-header">
+      <button class="back-btn" @click="$router.push('/chat')" title="返回聊天">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        <span>返回聊天</span>
+      </button>
+      <h2 class="page-title">👥 客户管理</h2>
+      <div class="spacer"></div>
+      <el-button type="primary" @click="showAddDialog = true" class="add-btn">
+        <span style="margin-right:4px">➕</span>添加客户
+      </el-button>
+    </div>
+
+    <!-- KPI Bar -->
+    <div class="kpi-bar">
+      <div class="kpi-item"><span class="kpi-num">{{ stats.total || 0 }}</span><span class="kpi-label">👥 客户</span></div>
+      <div class="kpi-item"><span class="kpi-num" style="color:#00a884">{{ stats.active || 0 }}</span><span class="kpi-label">🔥 活跃</span></div>
+      <div class="kpi-item"><span class="kpi-num" style="color:#f59e0b">{{ stats.aLevel || 0 }}</span><span class="kpi-label">⭐ A级</span></div>
+      <div class="kpi-item"><span class="kpi-num" style="color:#f87171">{{ stats.pending || 0 }}</span><span class="kpi-label">📋 待跟进</span></div>
+      <div class="kpi-item"><span class="kpi-num" style="color:#7c3aed">{{ stats.newThisMonth || 0 }}</span><span class="kpi-label">🆕 本月</span></div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-bar">
+      <div class="filter-tabs">
+        <button v-for="t in tabs" :key="t.key" class="filter-tab"
+                :class="{active: activeTab === t.key}"
+                @click="switchTab(t.key)">{{ t.label }}</button>
+      </div>
+      <div class="filter-right">
+        <el-input v-model="search" placeholder="🔍 搜索公司/联系人/邮箱/电话"
+                  class="search-input" clearable @keyup.enter="loadList" @clear="loadList" />
+        <el-dropdown trigger="click" @command="onFilterCmd">
+          <button class="filter-btn">筛选 ▾</button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="clear">清除筛选</el-dropdown-item>
+              <el-dropdown-item divided disabled>按等级</el-dropdown-item>
+              <el-dropdown-item v-for="l in ['A','B','C']" :key="l" :command="'level:'+l">{{ l }}级客户</el-dropdown-item>
+              <el-dropdown-item divided disabled>按状态</el-dropdown-item>
+              <el-dropdown-item command="status:active">活跃</el-dropdown-item>
+              <el-dropdown-item command="status:potential">待跟进</el-dropdown-item>
+              <el-dropdown-item command="status:dormant">沉睡</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+    </div>
+
+    <!-- Customer cards -->
+    <div class="cust-body">
+      <div v-if="loading" class="empty-state"><div class="loading">加载中...</div></div>
+      <div v-else-if="!items.length" class="empty-state">
+        <div style="font-size:48px;opacity:0.3">👥</div>
+        <div class="empty-desc">还没有客户，点击右上角➕添加第一个客户</div>
+        <el-button type="primary" @click="showAddDialog = true" style="margin-top:12px">添加客户</el-button>
+      </div>
+      <div v-else class="cust-list">
+        <div v-for="c in items" :key="c.id" class="cust-card" @click="goDetail(c)">
+          <div class="cust-avatar" :style="{background: avatarColor(c.companyName || c.name)}">
+            {{ (c.companyName || c.contactName || c.name || '?')[0].toUpperCase() }}
+            <span class="status-dot" :class="statusDotClass(c.status)"></span>
+          </div>
+          <div class="cust-main">
+            <div class="cust-row-1">
+              <span class="cust-name">{{ c.companyName || c.name || '(未命名)' }}</span>
+              <span class="level-tag" :class="'level-'+(c.customerLevel||'C').toLowerCase()">{{ (c.customerLevel||'C') }}级</span>
+              <span class="status-tag" :class="'status-'+(c.status||'new')">{{ statusLabel(c.status) }}</span>
+              <span v-if="c.country" class="cust-flag">{{ countryFlag(c.country) }}</span>
+            </div>
+            <div class="cust-row-2">
+              <span v-if="c.contactName">{{ c.contactName }}</span>
+              <span v-if="c.contactName && (c.country || c.email)" class="sep">·</span>
+              <span v-if="c.country">{{ c.country }}</span>
+              <span v-if="c.country && c.email" class="sep">·</span>
+              <span v-if="c.email">{{ c.email }}</span>
+            </div>
+            <div class="cust-row-3">
+              <span class="cust-meta">
+                <span v-if="c.lastContactAt">💬 最后联系: {{ relTime(c.lastContactAt) }}</span>
+                <span v-else-if="c.jid" class="wa-jid">📱 WhatsApp</span>
+                <span v-else>📝 手动添加</span>
+              </span>
+              <span v-if="c._docCount > 0" class="doc-hint">📄 {{ c._docCount }}份单证</span>
+              <span v-if="c._pendingDoc" class="doc-pending">📋 {{ c._pendingDoc.docNumber }}待确认</span>
+            </div>
+          </div>
+          <div class="cust-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Customer Dialog -->
+    <el-dialog v-model="showAddDialog" title="添加新客户" width="520px" class="cust-dialog" :append-to-body="true">
+      <el-form :model="addForm" label-width="90px" label-position="right">
+        <el-form-item label="公司名称*">
+          <el-input v-model="addForm.companyName" placeholder="客户公司名（必填）" />
+        </el-form-item>
+        <el-form-item label="联系人">
+          <el-input v-model="addForm.contactName" placeholder="联系人姓名" />
+        </el-form-item>
+        <el-form-item label="职位">
+          <el-input v-model="addForm.title" placeholder="职位/头衔" />
+        </el-form-item>
+        <div class="form-row">
+          <el-form-item label="国家" style="flex:1">
+            <el-input v-model="addForm.country" placeholder="国家" />
+          </el-form-item>
+          <el-form-item label="等级" style="width:180px">
+            <el-select v-model="addForm.customerLevel" style="width:100%">
+              <el-option label="A级 重点" value="A" />
+              <el-option label="B级 普通" value="B" />
+              <el-option label="C级 潜在" value="C" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <el-form-item label="邮箱">
+          <el-input v-model="addForm.email" placeholder="email@example.com" />
+        </el-form-item>
+        <el-form-item label="电话/WhatsApp">
+          <el-input v-model="addForm.phone" placeholder="如 97150xxxxxxx" />
+        </el-form-item>
+        <el-form-item label="网站">
+          <el-input v-model="addForm.website" placeholder="https://..." />
+        </el-form-item>
+        <el-form-item label="来源">
+          <el-select v-model="addForm.source" style="width:100%">
+            <el-option label="WhatsApp" value="whatsapp" />
+            <el-option label="展会" value="展会" />
+            <el-option label="独立站询盘" value="独立站询盘" />
+            <el-option label="主动开发" value="主动开发" />
+            <el-option label="客户介绍" value="老客户推荐" />
+            <el-option label="手动添加" value="manual" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addForm.notes" type="textarea" :rows="3" placeholder="备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button type="primary" :loading="adding" @click="doAdd">添加</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import api from '../utils/api.js';
+
+const router = useRouter();
+const loading = ref(false);
+const items = ref([]);
+const stats = ref({});
+const search = ref('');
+const activeTab = ref('all');
+const filters = reactive({ level: null, status: null });
+const showAddDialog = ref(false);
+const adding = ref(false);
+const addForm = reactive({ companyName:'', contactName:'', title:'', country:'', email:'', phone:'', website:'', source:'manual', customerLevel:'C', notes:'' });
+
+const tabs = [
+  { key: 'all', label: '全部' },
+  { key: 'A', label: 'A级' },
+  { key: 'B', label: 'B级' },
+  { key: 'C', label: 'C级' },
+  { key: 'pending', label: '待跟进' },
+  { key: 'recent', label: '最近联系' },
+];
+
+function avatarColor(name) {
+  if (!name) return '#00a884';
+  const palette = ['#00a884','#4FC3F7','#AB47BC','#FF7043','#66BB6A','#FFA726','#EC407A','#26A69A','#EF5350','#5C6BC0'];
+  let hash = 0;
+  for (let i=0;i<name.length;i++) hash = name.charCodeAt(i) + ((hash<<5) - hash);
+  return palette[Math.abs(hash) % palette.length];
+}
+function statusDotClass(s) {
+  if (s === 'active') return 'online';
+  if (s === 'following') return 'following';
+  if (s === 'dormant') return 'offline';
+  return 'idle';
+}
+function statusLabel(s) {
+  return ({active:'活跃', following:'跟进中', dormant:'沉睡', potential:'待跟进', new:'新客户'})[s] || s || '新';
+}
+function countryFlag(c) {
+  if (!c) return '🌍';
+  const map = {UAE:'🇦🇪','阿联酋':'🇦🇪','China':'🇨🇳','中国':'🇨🇳','USA':'🇺🇸','美国':'🇺🇸','UK':'🇬🇧','英国':'🇬🇧','India':'🇮🇳','印度':'🇮🇳','Saudi':'🇸🇦','沙特':'🇸🇦','Germany':'🇩🇪','德国':'🇩🇪','France':'🇫🇷','法国':'🇫🇷','Turkey':'🇹🇷','土耳其':'🇹🇷','Egypt':'🇪🇬','埃及':'🇪🇬','Brazil':'🇧🇷','巴西':'🇧🇷','Russia':'🇷🇺','俄罗斯':'🇷🇺','Japan':'🇯🇵','日本':'🇯🇵','Korea':'🇰🇷','韩国':'🇰🇷','Italy':'🇮🇹','意大利':'🇮🇹','Spain':'🇪🇸','西班牙':'🇪🇸','Mexico':'🇲🇽','墨西哥':'🇲🇽','Canada':'🇨🇦','加拿大':'🇨🇦','Australia':'🇦🇺','澳大利亚':'🇦🇺','Pakistan':'🇵🇰','巴基斯坦':'🇵🇰','Bangladesh':'🇧🇩','孟加拉':'🇧🇩','Nigeria':'🇳🇬','尼日利亚':'🇳🇬','South Africa':'🇿🇦','南非':'🇿🇦','Kenya':'🇰🇪','肯尼亚':'🇰🇪'};
+  for (const k in map) if (c.toLowerCase().includes(k.toLowerCase())) return map[k];
+  return '🌍';
+}
+function relTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso); const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff/60)+'分钟前';
+  if (diff < 86400) return Math.floor(diff/3600)+'小时前';
+  const days = Math.floor(diff/86400);
+  if (days === 0) return '今天';
+  if (days === 1) return '昨天';
+  if (days < 7) return days+'天前';
+  if (days < 30) return Math.floor(days/7)+'周前';
+  return d.toISOString().slice(0,10);
+}
+
+async function loadList() {
+  loading.value = true;
+  try {
+    const params = { pageSize: 100 };
+    if (search.value) params.search = search.value;
+    if (activeTab.value === 'A' || activeTab.value === 'B' || activeTab.value === 'C') params.level = activeTab.value;
+    if (activeTab.value === 'pending') params.status = 'potential';
+    if (activeTab.value === 'recent') params.recent = '1';
+    if (filters.level) params.level = filters.level;
+    if (filters.status) params.status = filters.status;
+    const qs = new URLSearchParams(params).toString();
+    const { data } = await api.get('/customers?' + qs);
+    items.value = data.items || [];
+    stats.value = data.stats || {};
+    // For each, load a pending doc hint (best effort, skip errors)
+    // Use the list's _docCount already; fetch pending docs per item cheaply via /customers/:id/documents?status=DRAFT - simplified: skip extra call
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('加载客户列表失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+function switchTab(key) {
+  activeTab.value = key;
+  filters.level = null;
+  filters.status = null;
+  if (key === 'A' || key === 'B' || key === 'C') filters.level = key;
+  if (key === 'pending') filters.status = 'potential';
+  loadList();
+}
+function onFilterCmd(cmd) {
+  if (cmd === 'clear') { filters.level=null; filters.status=null; activeTab.value='all'; loadList(); return; }
+  const [k,v] = cmd.split(':');
+  if (k === 'level') { filters.level = v; filters.status=null; activeTab.value='all'; }
+  if (k === 'status') { filters.status = v; filters.level=null; activeTab.value='all'; }
+  loadList();
+}
+function goDetail(c) { router.push(`/customers/${c.id}`); }
+
+async function doAdd() {
+  if (!addForm.companyName) { ElMessage.warning('请填写公司名称'); return; }
+  adding.value = true;
+  try {
+    await api.post('/customers', addForm);
+    ElMessage.success('添加成功');
+    showAddDialog.value = false;
+    Object.assign(addForm, { companyName:'', contactName:'', title:'', country:'', email:'', phone:'', website:'', source:'manual', customerLevel:'C', notes:'' });
+    loadList();
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.error || '添加失败');
+  } finally { adding.value = false; }
+}
+
+onMounted(loadList);
+</script>
+
+<style scoped>
+.cust-list-page { flex: 1; display: flex; flex-direction: column; background: #111b21; color: #e9edef; height: 100%; overflow: hidden; }
+.cust-header {
+  display: flex; align-items: center; padding: 14px 20px;
+  background: #202c33; border-bottom: 1px solid #222d34; gap: 12px; flex-shrink: 0;
+}
+.back-btn { display:flex; align-items:center; gap:6px; background:transparent; border:1px solid #3b4a54; color:#e9edef; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:14px; }
+.back-btn:hover { background:#2a3942; }
+.page-title { margin:0; font-size:18px; font-weight:600; }
+.spacer { flex:1; }
+.add-btn { background:#00a884 !important; border-color:#00a884 !important; }
+.add-btn:hover { background:#06cf9c !important; }
+
+.kpi-bar { display:flex; gap:12px; padding:14px 20px; flex-wrap:wrap; border-bottom:1px solid #222d34; flex-shrink:0; }
+.kpi-item { background:#202c33; padding:10px 16px; border-radius:10px; display:flex; align-items:center; gap:8px; }
+.kpi-num { font-size:20px; font-weight:700; color:#e9edef; }
+.kpi-label { color:#8696a0; font-size:13px; }
+
+.filter-bar { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid #222d34; gap:12px; flex-shrink:0; flex-wrap:wrap; }
+.filter-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.filter-tab { background:transparent; border:1px solid #3b4a54; color:#8696a0; padding:6px 14px; border-radius:16px; cursor:pointer; font-size:13px; }
+.filter-tab.active { background:#00a884; color:#fff; border-color:#00a884; }
+.filter-tab:hover:not(.active) { background:#2a3942; color:#e9edef; }
+.filter-right { display:flex; gap:8px; align-items:center; }
+.search-input { width:280px; }
+.search-input :deep(.el-input__wrapper) { background:#2a3942; box-shadow:none; border-radius:8px; }
+.search-input :deep(.el-input__inner) { color:#e9edef; }
+.filter-btn { background:#2a3942; border:1px solid #3b4a54; color:#e9edef; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; }
+.filter-btn:hover { background:#3b4a54; }
+
+.cust-body { flex:1; overflow-y:auto; padding:10px 20px 24px; }
+.cust-list { display:flex; flex-direction:column; gap:6px; }
+.cust-card { display:flex; align-items:center; gap:14px; padding:12px 14px; background:#202c33; border-radius:10px; cursor:pointer; border:1px solid transparent; transition:background .15s; }
+.cust-card:hover { background:#2a3942; border-color:#3b4a54; }
+.cust-avatar { position:relative; width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; font-size:18px; flex-shrink:0; }
+.status-dot { position:absolute; right:2px; bottom:2px; width:12px; height:12px; border-radius:50%; border:2px solid #202c33; }
+.status-dot.online { background:#00a884; }
+.status-dot.following { background:#f59e0b; }
+.status-dot.offline { background:#8696a0; }
+.status-dot.idle { background:#8696a0; }
+
+.cust-main { flex:1; min-width:0; }
+.cust-row-1 { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cust-name { font-weight:600; font-size:15px; color:#e9edef; }
+.level-tag { padding:1px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.level-tag.level-a { background:rgba(0,168,132,0.2); color:#00d9a8; }
+.level-tag.level-b { background:rgba(79,195,247,0.2); color:#4FC3F7; }
+.level-tag.level-c { background:rgba(134,150,160,0.2); color:#8696a0; }
+.status-tag { padding:1px 8px; border-radius:10px; font-size:11px; }
+.status-tag.status-active { background:rgba(0,168,132,0.15); color:#00a884; }
+.status-tag.status-following { background:rgba(245,158,11,0.15); color:#f59e0b; }
+.status-tag.status-dormant { background:rgba(134,150,160,0.15); color:#8696a0; }
+.status-tag.status-potential { background:rgba(248,113,113,0.15); color:#f87171; }
+.status-tag.status-new { background:rgba(124,58,237,0.15); color:#a78bfa; }
+.cust-flag { font-size:16px; }
+
+.cust-row-2 { font-size:13px; color:#8696a0; margin-top:3px; display:flex; gap:6px; flex-wrap:wrap; }
+.cust-row-2 .sep { color:#3b4a54; }
+.cust-row-3 { font-size:12px; color:#8696a0; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap; }
+.doc-hint { color:#7c3aed; }
+.doc-pending { color:#f59e0b; }
+.cust-arrow { color:#8696a0; font-size:24px; margin-left:8px; }
+
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; color:#8696a0; }
+.empty-desc { margin-top:12px; text-align:center; }
+.loading { text-align:center; padding:60px; color:#8696a0; }
+
+.form-row { display:flex; gap:12px; }
+.form-row .el-form-item { margin-bottom:18px; }
+.cust-dialog :deep(.el-dialog) { background:#202c33; color:#e9edef; }
+.cust-dialog :deep(.el-dialog__title) { color:#e9edef; }
+.cust-dialog :deep(.el-form-item__label) { color:#8696a0; }
+.cust-dialog :deep(.el-input__wrapper) { background:#2a3942; box-shadow:none; }
+.cust-dialog :deep(.el-input__inner) { color:#e9edef; }
+.cust-dialog :deep(.el-textarea__inner) { background:#2a3942; color:#e9edef; }
+.cust-dialog :deep(.el-select) { background:#2a3942; }
+
+@media (max-width: 768px) {
+  .cust-header { padding:10px 12px; }
+  .kpi-bar { padding:10px 12px; gap:8px; }
+  .kpi-item { padding:8px 10px; }
+  .kpi-num { font-size:16px; }
+  .filter-bar { padding:8px 12px; }
+  .search-input { width:160px; }
+  .cust-body { padding:8px 10px; }
+  .cust-card { padding:10px; gap:10px; }
+  .cust-avatar { width:40px; height:40px; font-size:16px; }
+}
+</style>

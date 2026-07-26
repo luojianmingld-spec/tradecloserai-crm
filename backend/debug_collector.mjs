@@ -1,0 +1,12 @@
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+const msg = await prisma.wAMessage.findUnique({ where: { id: 3664 } });
+console.log('body:', JSON.stringify(msg.body));
+console.log('sourceLang:', JSON.stringify(msg.sourceLang));
+console.log('translation:', msg.translation);
+const t = msg.translation ? JSON.parse(msg.translation) : null;
+console.log('parsed:', t);
+console.log('original === body?', t?.original === msg.body);
+console.log('translated === body?', t?.translated === msg.body);
+console.log('original !== translated?', t?.original !== t?.translated);
+await prisma.$disconnect();

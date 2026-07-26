@@ -1,0 +1,728 @@
+/**
+ * customers.js - Append new customer-management routes to existing file.
+ * Strategy: rewrite customers.js keeping all existing by-jid / legacy logic,
+ * and override the generic GET '/', GET '/:id', POST '/', PUT '/:id', DELETE '/:id'
+ * with richer versions that include KPIs/documents/followUps. We keep the by-jid
+ * routes BEFORE these wildcard routes (Express matches in declaration order),
+ * and make '/:id' numeric-only to avoid clashing with by-jid.
+ */
+
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { chatComplete, resolveModelId } from '../services/ai.service.js';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// ─── Allowed fields & helpers ───
+const JID_WRITABLE_FIELDS = [
+  'name', 'companyName', 'contactName', 'title', 'email', 'website',
+  'country', 'phone', 'notes', 'tags', 'source', 'customerLevel',
+  'firstContactAt', 'lastContactAt', 'address', 'industry', 'status',
+];
+
+// Fields allowed for :id CRUD (wider set)
+const ID_WRITABLE_FIELDS = [
+  'name', 'companyName', 'contactName', 'title', 'email', 'website',
+  'country', 'phone', 'notes', 'tags', 'source', 'customerLevel',
+  'firstContactAt', 'lastContactAt', 'address', 'industry', 'status',
+  'jid', 'company',
+];
+
+function safeParseJSON(str, fallback) {
+  if (str == null) return fallback;
+  try { return JSON.parse(str); } catch { return fallback; }
+}
+
+function serializeCustomer(c) {
+  if (!c) return null;
+  return {
+    ...c,
+    tags: typeof c.tags === 'string' ? safeParseJSON(c.tags, []) : (c.tags || []),
+  };
+}
+
+function decodeJid(param) {
+  if (!param) return null;
+  return decodeURIComponent(param);
+}
+
+// ============ 按 JID 的接口（客户背调 V1 - 保持原样） ============
+
+router.get('/by-jid/:jid', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    if (!jid) return res.status(400).json({ error: 'jid required' });
+    const userId = req.userId;
+
+    let customer = await prisma.customer.findFirst({ where: { userId, jid } });
+
+    if (!customer) {
+      const firstMsg = await prisma.wAMessage.findFirst({
+        where: { OR: [{ from: jid }, { to: jid }] },
+        orderBy: { timestamp: 'asc' },
+      });
+      const lastMsg = await prisma.wAMessage.findFirst({
+        where: { OR: [{ from: jid }, { to: jid }] },
+        orderBy: { timestamp: 'desc' },
+      });
+      const phone = jid.split('@')[0] || null;
+      let defaultName = phone || '';
+      try {
+        const contact = await prisma.contact?.findFirst?.({ where: { jid } });
+        if (contact?.name || contact?.pushName) defaultName = contact.name || contact.pushName || defaultName;
+      } catch {}
+
+      customer = await prisma.customer.create({
+        data: {
+          userId, jid, name: defaultName, phone, customerLevel: 'C',
+          source: 'whatsapp', status: 'potential', intentLevel: 5, assignedTo: userId,
+          firstContactAt: firstMsg?.timestamp || new Date(),
+          lastContactAt: lastMsg?.timestamp || new Date(),
+        },
+      });
+    } else {
+      const patch = {};
+      if (!customer.firstContactAt || !customer.lastContactAt) {
+        const firstMsg = await prisma.wAMessage.findFirst({
+          where: { OR: [{ from: jid }, { to: jid }] },
+          orderBy: { timestamp: 'asc' },
+        });
+        const lastMsg = await prisma.wAMessage.findFirst({
+          where: { OR: [{ from: jid }, { to: jid }] },
+          orderBy: { timestamp: 'desc' },
+        });
+        if (!customer.firstContactAt && firstMsg) patch.firstContactAt = firstMsg.timestamp;
+        if (!customer.lastContactAt && lastMsg) patch.lastContactAt = lastMsg.timestamp;
+        if (Object.keys(patch).length) {
+          customer = await prisma.customer.update({ where: { id: customer.id }, data: patch });
+        }
+      }
+    }
+
+    res.json(serializeCustomer(customer));
+  } catch (err) {
+    console.error('[Customers] by-jid GET error:', err);
+    res.status(500).json({ error: 'Failed to get customer' });
+  }
+});
+
+router.put('/by-jid/:jid', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    if (!jid) return res.status(400).json({ error: 'jid required' });
+    const userId = req.userId;
+
+    let customer = await prisma.customer.findFirst({ where: { userId, jid } });
+    if (!customer) {
+      const phone = jid.split('@')[0] || null;
+      customer = await prisma.customer.create({
+        data: {
+          userId, jid, name: phone || '', phone, customerLevel: 'C', source: 'whatsapp',
+          status: 'potential', intentLevel: 5, assignedTo: userId,
+          firstContactAt: new Date(), lastContactAt: new Date(),
+        },
+      });
+    }
+
+    const data = {};
+    for (const field of JID_WRITABLE_FIELDS) {
+      if (req.body[field] !== undefined) {
+        if (field === 'tags') {
+          const v = req.body[field];
+          data[field] = Array.isArray(v) ? JSON.stringify(v) : String(v);
+        } else {
+          data[field] = req.body[field];
+        }
+      }
+    }
+    if (data.companyName !== undefined) data.company = data.companyName;
+
+    const updated = await prisma.customer.update({ where: { id: customer.id }, data });
+    res.json(serializeCustomer(updated));
+  } catch (err) {
+    console.error('[Customers] by-jid PUT error:', err);
+    res.status(500).json({ error: 'Failed to update customer' });
+  }
+});
+
+router.post('/by-jid/:jid/extract-ai', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    if (!jid) return res.status(400).json({ error: 'jid required' });
+    const userId = req.userId;
+    const limit = Math.min(parseInt(req.body.limit) || 20, 50);
+
+    const messages = await prisma.wAMessage.findMany({
+      where: { OR: [{ from: jid }, { to: jid }] },
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    });
+    const context = messages.slice().reverse().map(m => {
+      const who = (m.direction === 'outbound' || m.direction === 'outgoing') ? '我(业务员)' : '客户';
+      const ts = m.timestamp ? new Date(m.timestamp).toISOString().slice(0, 16).replace('T', ' ') : '';
+      return `[${ts}] ${who}: ${m.body || ''}`;
+    }).join('\n');
+
+    if (!context.trim()) {
+      return res.json({
+        companyName: null, contactName: null, country: null, title: null,
+        email: null, website: null, source: '未知', notes: '暂无聊天记录', address: null, industry: null,
+      });
+    }
+
+    const modelId = await resolveModelId();
+    const systemPrompt = `你是一个外贸客户信息抽取助手。根据以下WhatsApp聊天记录，抽取客户关键信息。
+
+## 抽取字段
+- companyName: 客户公司名（英文/原文），没有则null
+- contactName: 客户联系人名/称呼，没有则null
+- country: 客户国家/地区，没有则null
+- title: 客户职位/头衔，没有则null
+- email: 邮箱地址，没有则null
+- website: 网址，没有则null
+- address: 客户地址，没有则null
+- industry: 行业，没有则null
+- source: 客户来源推测（展会/独立站询盘/主动开发/老客户推荐/其他/未知）
+- notes: 其他关键信息摘要（一句话，中文）
+
+要求：
+- 严格只输出JSON，不要markdown代码块，不要其他文字
+- 不确定的字段设null，不要瞎猜
+- 格式：{"companyName":"...","contactName":"...","country":"...","title":"...","email":"...","website":"...","address":"...","industry":"...","source":"...","notes":"..."}`;
+
+    const userPrompt = `聊天记录（最近${messages.length}条）：\n${context}\n\n请抽取：`;
+    const raw = await chatComplete(modelId, systemPrompt, userPrompt, { temperature: 0.2, maxTokens: 900 });
+
+    let parsed = null;
+    try {
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) parsed = JSON.parse(m[0]);
+    } catch (e) {
+      console.error('[Customers] extract-ai JSON parse error:', e.message, raw);
+    }
+    if (!parsed || typeof parsed !== 'object') {
+      parsed = { companyName: null, contactName: null, country: null, title: null, email: null, website: null, address: null, industry: null, source: '未知', notes: 'AI解析失败' };
+    }
+    const safe = {
+      companyName: parsed.companyName || null,
+      contactName: parsed.contactName || null,
+      country: parsed.country || null,
+      title: parsed.title || null,
+      email: parsed.email || null,
+      website: parsed.website || null,
+      address: parsed.address || null,
+      industry: parsed.industry || null,
+      source: parsed.source || '未知',
+      notes: parsed.notes || null,
+    };
+    await prisma.customer.updateMany({ where: { userId, jid }, data: { aiExtractedAt: new Date() } });
+    res.json(safe);
+  } catch (err) {
+    console.error('[Customers] extract-ai error:', err);
+    res.status(500).json({ error: 'AI抽取失败' });
+  }
+});
+
+router.post('/by-jid/:jid/ask-company', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    const userId = req.userId;
+    const limit = Math.min(parseInt(req.body.limit) || 20, 50);
+    const messages = await prisma.wAMessage.findMany({
+      where: { OR: [{ from: jid }, { to: jid }] },
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    });
+    const context = messages.slice().reverse().map(m => {
+      const who = (m.direction === 'outbound' || m.direction === 'outgoing') ? '我' : '客户';
+      return `${who}: ${m.body || ''}`;
+    }).join('\n');
+
+    const modelId = await resolveModelId();
+    const systemPrompt = `你是外贸业务员助手。我还不知道客户的公司名，请根据聊天记录生成2句自然的询问话术，礼貌地了解对方公司信息。
+
+要求：
+- 用客户当前使用的语言（从聊天记录判断，英语/阿语/西语/法语等）
+- 自然不生硬，不要像问卷
+- 给2个版本："自然随意版"、"礼貌正式版"
+- 严格只输出JSON，不要markdown：{"replies":[{"name":"自然随意版","foreign":"外文原文","chinese":"中文翻译"},{"name":"礼貌正式版","foreign":"外文原文","chinese":"中文翻译"}]}`;
+    const userPrompt = `聊天记录：\n${context || '(暂无)'}\n\n请生成话术。`;
+    const raw = await chatComplete(modelId, systemPrompt, userPrompt, { temperature: 0.8, maxTokens: 600 });
+
+    let parsed = null;
+    try { const m = raw.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
+    if (!parsed || !Array.isArray(parsed.replies)) {
+      parsed = { replies: [
+        { name: '自然随意版', foreign: 'By the way, may I know which company you are from?', chinese: '顺便问一下，您是哪家公司的？' },
+        { name: '礼貌正式版', foreign: 'Could you please let me know your company name so I can better assist you?', chinese: '请问您能告诉我贵公司名称吗，以便我更好地为您服务？' },
+      ]};
+    }
+    res.json(parsed);
+  } catch (err) {
+    console.error('[Customers] ask-company error:', err);
+    res.status(500).json({ error: '生成失败' });
+  }
+});
+
+router.post('/by-jid/:jid/sync-business-profile', async (req, res) => {
+  try {
+    res.json({ success: false, message: 'Evolution API Business Profile同步开发中' });
+  } catch (err) {
+    console.error('[Customers] sync-business-profile error:', err);
+    res.status(500).json({ error: '同步失败' });
+  }
+});
+
+// ─── Find customer id by jid (used by chat → customer jump) ───
+router.get('/id-by-jid/:jid', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    if (!jid) return res.status(400).json({ error: 'jid required' });
+    const cust = await prisma.customer.findFirst({ where: { userId: req.userId, jid } });
+    if (!cust) return res.status(404).json({ error: 'not found' });
+    res.json({ id: cust.id });
+  } catch (err) {
+    console.error('[Customers] id-by-jid error:', err);
+    res.status(500).json({ error: 'query failed' });
+  }
+});
+
+// ============ 新客户管理模块 API（数字 ID 路由） ============
+
+// Helper: compute KPIs
+async function computeKPIs(userId) {
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [total, active, aLevel, pending, newThisMonth] = await Promise.all([
+    prisma.customer.count({ where: { userId } }),
+    prisma.customer.count({ where: { userId, status: { in: ['active', 'following'] }, lastContactAt: { gte: thirtyDaysAgo } } }),
+    prisma.customer.count({ where: { userId, customerLevel: 'A' } }),
+    prisma.customer.count({ where: { userId, status: 'potential' } }),
+    prisma.customer.count({ where: { userId, createdAt: { gte: firstDayOfMonth } } }),
+  ]);
+  return { total, active, aLevel, pending, newThisMonth };
+}
+
+// List customers with filter/search/pagination + KPI
+router.get('/', async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { level, status: statusQ, source, country, search, page, pageSize, sort, order } = req.query;
+    const where = { userId };
+    if (level && ['A', 'B', 'C'].includes(level.toUpperCase())) where.customerLevel = level.toUpperCase();
+    if (statusQ) where.status = statusQ;
+    if (source) where.source = source;
+    if (country) where.country = { contains: country, mode: 'insensitive' };
+    if (search) {
+      where.OR = [
+        { name: { contains: search } }, { phone: { contains: search } },
+        { email: { contains: search } }, { company: { contains: search } },
+        { companyName: { contains: search } }, { country: { contains: search } },
+        { contactName: { contains: search } }, { jid: { contains: search } },
+      ];
+    }
+
+    // "最近联系"快捷筛选
+    if (req.query.recent === '1') {
+      where.lastContactAt = { not: null };
+    }
+
+    const _page = Math.max(parseInt(page) || 1, 1);
+    const _size = Math.min(parseInt(pageSize) || 50, 200);
+    const orderBy = sort ? { [sort]: order === 'asc' ? 'asc' : 'desc' } : { updatedAt: 'desc' };
+
+    const [customers, total, kpis] = await Promise.all([
+      prisma.customer.findMany({
+        where, orderBy, skip: (_page - 1) * _size, take: _size,
+        include: {
+          _count: { select: { documents: true, followUps: true } },
+        },
+      }),
+      prisma.customer.count({ where }),
+      computeKPIs(userId),
+    ]);
+
+    // Enrich with last message preview / pending doc / follow-up counts
+    const jidSet = [...new Set(customers.map(c=>c.jid).filter(Boolean))];
+    const lastMsgMap = new Map();
+    // For performance: one query per 20 jids batched via findFirst in Promise.all (limited concurrency)
+    async function fetchLastForJid(jid) {
+      try {
+        return await prisma.wAMessage.findFirst({
+          where: { OR: [{ from: jid }, { to: jid }] },
+          orderBy: { timestamp: 'desc' },
+          select: { body: true, timestamp: true, direction: true },
+        });
+      } catch { return null; }
+    }
+    // batch to avoid N+1 blowup but still simple; cap if more than 80 customers we skip
+    if (jidSet.length && jidSet.length <= 120) {
+      const concurrency = 8;
+      const results = [];
+      let idx = 0;
+      async function worker() {
+        while (true) {
+          const cur = idx++;
+          if (cur >= jidSet.length) return;
+          const r = await fetchLastForJid(jidSet[cur]);
+          if (r) lastMsgMap.set(jidSet[cur], r);
+        }
+      }
+      await Promise.all(Array.from({length: concurrency}, () => worker()));
+    }
+
+    // Pending doc counts (per customer)
+    const idList = customers.map(c=>c.id);
+    const pendingMap = new Map();
+    try {
+      const docs = await prisma.document.findMany({
+        where: { customerId: { in: idList } },
+        select: { customerId: true, status: true },
+      });
+      for (const d of docs) {
+        const ent = pendingMap.get(d.customerId) || { count:0, pending:0 };
+        ent.count++;
+        if (d.status === 'DRAFT') ent.pending++;
+        pendingMap.set(d.customerId, ent);
+      }
+    } catch(e) { console.error('docAgg err', e.message); }
+
+    const list = customers.map(c => serializeCustomer(c)).map(c => {
+      const docEnt = pendingMap.get(c.id) || { count: c._count?.documents||0, pending:0 };
+      const lastMsg = c.jid ? lastMsgMap.get(c.jid) : null;
+      let lastMessage = null;
+      if (lastMsg && lastMsg.body) {
+        const b = String(lastMsg.body).replace(/\s+/g,' ').trim();
+        lastMessage = b.length > 40 ? b.slice(0,40)+'…' : b;
+      }
+      return {
+        ...c,
+        _docCount: Number(docEnt.count || 0),
+        _pendingDocCount: Number(docEnt.pending || 0),
+        _followUpCount: Number(c._count?.followUps || 0),
+        _lastMessage: lastMessage,
+        _lastMessageAt: lastMsg?.timestamp || c.lastContactAt || null,
+        _lastMessageDir: lastMsg?.direction || null,
+      };
+    });
+
+    res.json({
+      items: list,
+      total,
+      page: _page,
+      pageSize: _size,
+      stats: kpis,
+    });
+  } catch (err) {
+    console.error('[Customers] List error:', err);
+    res.status(500).json({ error: 'Failed to list customers' });
+  }
+});
+
+// Get single customer by numeric id (with stats) - must come AFTER /by-jid & /by-phone etc.
+router.get('/:id', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const customer = await prisma.customer.findUnique({ where: { id } });
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const [docCount, followUpCount, messageCount, lastMessages] = await Promise.all([
+      prisma.document.count({ where: { customerId: id } }),
+      prisma.customerFollowUp.count({ where: { customerId: id } }),
+      customer.jid ? prisma.wAMessage.count({ where: { OR: [{ from: customer.jid }, { to: customer.jid }] } }) : 0,
+      customer.jid ? prisma.wAMessage.findMany({
+        where: { OR: [{ from: customer.jid }, { to: customer.jid }] },
+        orderBy: { timestamp: 'desc' }, take: 20,
+      }) : [],
+    ]);
+
+    // Latest pending doc hint
+    const pendingDoc = await prisma.document.findFirst({
+      where: { customerId: id, status: 'DRAFT' },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true, docNumber: true, type: true, updatedAt: true, totalAmount: true },
+    });
+
+    res.json({
+      ...serializeCustomer(customer),
+      _stats: { documentCount: docCount, followUpCount, messageCount },
+      _pendingDoc: pendingDoc,
+      _lastMessages: lastMessages.map(m => ({
+        id: m.id, direction: m.direction, body: m.body, timestamp: m.timestamp, type: m.type,
+      })),
+    });
+  } catch (err) {
+    console.error('[Customers] Get error:', err);
+    res.status(500).json({ error: 'Failed to get customer' });
+  }
+});
+
+// Create customer (manual)
+router.post('/', async (req, res) => {
+  try {
+    const userId = req.userId;
+    const b = req.body || {};
+    const displayName = b.companyName || b.name || b.contactName;
+    if (!displayName) return res.status(400).json({ error: '请填写公司名或联系人姓名' });
+
+    const data = {
+      userId,
+      name: b.name || displayName,
+      jid: b.jid || null,
+      phone: b.phone || null,
+      email: b.email || null,
+      company: b.company || b.companyName || null,
+      companyName: b.companyName || b.company || null,
+      contactName: b.contactName || null,
+      title: b.title || null,
+      website: b.website || null,
+      country: b.country || null,
+      address: b.address || null,
+      industry: b.industry || null,
+      tags: Array.isArray(b.tags) ? JSON.stringify(b.tags) : (b.tags || '[]'),
+      notes: b.notes || null,
+      source: b.source || 'manual',
+      customerLevel: b.customerLevel || 'C',
+      status: b.status || 'new',
+      intentLevel: b.intentLevel || 5,
+      assignedTo: userId,
+      firstContactAt: b.firstContactAt ? new Date(b.firstContactAt) : new Date(),
+      lastContactAt: b.lastContactAt ? new Date(b.lastContactAt) : new Date(),
+    };
+
+    const customer = await prisma.customer.create({ data });
+    res.status(201).json(serializeCustomer(customer));
+  } catch (err) {
+    console.error('[Customers] Create error:', err);
+    res.status(500).json({ error: 'Failed to create customer: ' + err.message });
+  }
+});
+
+// Update customer by numeric id
+router.put('/:id', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const existing = await prisma.customer.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Customer not found' });
+
+    const data = {};
+    for (const field of ID_WRITABLE_FIELDS) {
+      if (req.body[field] !== undefined) {
+        if (field === 'tags') {
+          const v = req.body[field];
+          data[field] = Array.isArray(v) ? JSON.stringify(v) : String(v);
+        } else if (['firstContactAt', 'lastContactAt'].includes(field)) {
+          data[field] = req.body[field] ? new Date(req.body[field]) : null;
+        } else {
+          data[field] = req.body[field];
+        }
+      }
+    }
+    if (data.companyName && !data.company) data.company = data.companyName;
+
+    const customer = await prisma.customer.update({ where: { id }, data });
+    res.json(serializeCustomer(customer));
+  } catch (err) {
+    console.error('[Customers] Update error:', err);
+    res.status(500).json({ error: 'Failed to update customer: ' + err.message });
+  }
+});
+
+// Delete customer
+router.delete('/:id', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const existing = await prisma.customer.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Customer not found' });
+    await prisma.customer.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Customers] Delete error:', err);
+    res.status(500).json({ error: 'Failed to delete customer' });
+  }
+});
+
+// ─── Documents for a customer ───
+router.get('/:id/documents', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const { type } = req.query;
+    const where = { customerId: id };
+    if (type) where.type = type.toUpperCase();
+    const docs = await prisma.document.findMany({
+      where,
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Stats
+    const [total, totalAmt, pending] = await Promise.all([
+      prisma.document.count({ where: { customerId: id } }),
+      prisma.document.aggregate({ where: { customerId: id, status: { not: 'DRAFT' } }, _sum: { totalAmount: true } }),
+      prisma.document.count({ where: { customerId: id, status: 'DRAFT' } }),
+    ]);
+    res.json({
+      items: docs.map(d => ({
+        ...d,
+        sellerInfo: typeof d.sellerInfo === 'string' ? JSON.parse(d.sellerInfo) : d.sellerInfo,
+        buyerInfo: typeof d.buyerInfo === 'string' ? JSON.parse(d.buyerInfo) : d.buyerInfo,
+      })),
+      stats: { total, totalAmount: totalAmt._sum.totalAmount || 0, pending },
+    });
+  } catch (err) {
+    console.error('[Customers] documents error:', err);
+    res.status(500).json({ error: 'Failed to load documents' });
+  }
+});
+
+// ─── Follow-ups ───
+router.get('/:id/follow-ups', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const items = await prisma.customerFollowUp.findMany({
+      where: { customerId: id }, orderBy: { createdAt: 'desc' },
+    });
+    res.json(items.map(it => ({
+      ...it,
+      metadata: it.metadata ? safeParseJSON(it.metadata, {}) : {},
+    })));
+  } catch (err) {
+    console.error('[Customers] follow-ups GET error:', err);
+    res.status(500).json({ error: 'Failed to load follow-ups' });
+  }
+});
+
+router.post('/:id/follow-ups', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const { content, source, metadata } = req.body || {};
+    if (!content) return res.status(400).json({ error: 'content required' });
+    const fu = await prisma.customerFollowUp.create({
+      data: {
+        customerId: id,
+        content,
+        source: source || 'manual',
+        metadata: metadata ? JSON.stringify(metadata) : null,
+      },
+    });
+    res.status(201).json({ ...fu, metadata: fu.metadata ? safeParseJSON(fu.metadata, {}) : {} });
+  } catch (err) {
+    console.error('[Customers] follow-ups POST error:', err);
+    res.status(500).json({ error: 'Failed to add follow-up' });
+  }
+});
+
+router.delete('/follow-ups/:fid', async (req, res) => {
+  try {
+    await prisma.customerFollowUp.delete({ where: { id: req.params.fid } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Customers] follow-up DELETE error:', err);
+    res.status(500).json({ error: 'delete failed' });
+  }
+});
+
+// ─── AI follow-up generation ───
+router.post('/:id/generate-followups', async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return next('route');
+    const id = parseInt(req.params.id);
+    const customer = await prisma.customer.findUnique({ where: { id } });
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    if (!customer.jid) return res.status(400).json({ error: '该客户无WhatsApp JID，无法生成' });
+
+    const limit = Math.min(parseInt(req.body.limit) || 300, 800);
+    const messages = await prisma.wAMessage.findMany({
+      where: { OR: [{ from: customer.jid }, { to: customer.jid }] },
+      orderBy: { timestamp: 'asc' },
+      take: limit,
+    });
+    if (!messages.length) {
+      return res.status(400).json({ error: '暂无聊天记录，无法生成跟进' });
+    }
+
+    // Group into daily segments
+    const segments = []; // { date: YYYY-MM-DD, msgs: [] }
+    for (const m of messages) {
+      if (!m.body || !m.timestamp) continue;
+      const d = new Date(m.timestamp);
+      const key = d.toISOString().slice(0, 10);
+      let seg = segments.find(s => s.date === key);
+      if (!seg) { seg = { date: key, msgs: [] }; segments.push(seg); }
+      seg.msgs.push(m);
+    }
+
+    const modelId = await resolveModelId();
+    const systemPrompt = `你是一个外贸业务跟进记录总结助手。根据与客户的WhatsApp聊天记录（按天分段），用中文总结当天的关键沟通要点，100字以内，包含：客户需求/询盘内容、报价情况、异议/问题、承诺的下一步动作。只输出中文总结文本，不要任何JSON/格式。如果当天无实质沟通内容，回复"无实质沟通"。`;
+
+    const generated = [];
+    for (const seg of segments) {
+      const context = seg.msgs.slice(-30).map(m => {
+        const who = (m.direction === 'outbound' || m.direction === 'outgoing') ? '我' : '客户';
+        const ts = new Date(m.timestamp).toISOString().slice(11, 16);
+        return `[${ts}] ${who}: ${(m.body || '').slice(0, 500)}`;
+      }).join('\n');
+      let summary = '';
+      try {
+        summary = await chatComplete(modelId, systemPrompt,
+          `日期：${seg.date}，共${seg.msgs.length}条消息\n聊天记录：\n${context}\n\n请总结：`,
+          { temperature: 0.3, maxTokens: 220 });
+        summary = (summary || '').trim();
+      } catch (e) {
+        console.error('[Customers] generate-followups segment error:', e.message);
+        summary = '（AI总结失败）';
+      }
+      if (summary && !/无实质沟通/.test(summary)) {
+        const content = `${seg.date}：${summary.replace(/^["""]|["""]$/g, '')}`;
+        generated.push({
+          date: seg.date,
+          content,
+          msgCount: seg.msgs.length,
+        });
+      }
+    }
+
+    // Replace existing ai_summary entries for this customer
+    await prisma.customerFollowUp.deleteMany({ where: { customerId: id, source: 'ai_summary' } });
+    const created = [];
+    for (const g of generated) {
+      const fu = await prisma.customerFollowUp.create({
+        data: {
+          customerId: id,
+          content: g.content,
+          source: 'ai_summary',
+          metadata: JSON.stringify({ date: g.date, msgCount: g.msgCount, generatedAt: new Date().toISOString() }),
+          createdAt: new Date(g.date + 'T12:00:00Z'),
+        },
+      });
+      created.push(fu);
+    }
+
+    res.json({ success: true, generated: created.length, items: created });
+  } catch (err) {
+    console.error('[Customers] generate-followups error:', err);
+    res.status(500).json({ error: 'AI总结失败: ' + err.message });
+  }
+});
+
+// Legacy by-phone
+router.get('/by-phone/:phone', async (req, res) => {
+  try {
+    const customer = await prisma.customer.findFirst({ where: { phone: req.params.phone } });
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+    res.json(serializeCustomer(customer));
+  } catch (err) {
+    console.error('[Customers] By-phone error:', err);
+    res.status(500).json({ error: 'Failed to find customer' });
+  }
+});
+
+export default router;

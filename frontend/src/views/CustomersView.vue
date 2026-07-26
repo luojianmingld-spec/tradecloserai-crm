@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="page-header">
       <div class="header-left">
-        <router-link to="/" class="back-link" title="返回聊天">
+        <router-link to="/" class="back-link" title="返回沟通">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         </router-link>
         <h1>客户管理</h1>
@@ -21,6 +21,10 @@
           <option value="inactive">不活跃</option>
           <option value="lost">已流失</option>
         </select>
+        <button class="btn-secondary" @click="showAutoDialog = true" title="自动化接待">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 4v6l4 2"/></svg>
+          自动接待
+        </button>
         <button class="btn-primary" @click="showAddDialog = true">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           新增客户
@@ -131,6 +135,9 @@
             <span class="intent-num">{{ c.intentLevel || 5 }}</span>
           </div>
           <div class="card-actions">
+            <button v-if="c.phone" class="btn-icon btn-whatsapp" @click.stop="sendWhatsApp(c)" title="发送WhatsApp">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </button>
             <button class="btn-icon" @click.stop="editCustomer(c)" title="编辑">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
@@ -217,6 +224,87 @@
         <div class="dialog-footer">
           <button class="btn-secondary" @click="closeDialog">取消</button>
           <button class="btn-primary" @click="saveCustomer">{{ showEditDialog ? '保存' : '创建' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick WhatsApp Send Dialog -->
+    <div v-if="showWhatsAppDialog" class="dialog-overlay" @click.self="showWhatsAppDialog = false">
+      <div class="dialog-box" style="width: 480px;">
+        <div class="dialog-header">
+          <h3>发送WhatsApp消息</h3>
+          <button class="btn-icon" @click="showWhatsAppDialog = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-group">
+            <label>收件人</label>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#202c33;border-radius:6px;border:1px solid #2a3942;">
+              <div class="avatar-sm" style="width:28px;height:28px;font-size:11px;">{{ (waTarget.name || '?')[0] }}</div>
+              <div>
+                <div style="font-size:13px;color:#e9edef;">{{ waTarget.name }}</div>
+                <div style="font-size:11px;color:#8696a0;">{{ waTarget.phone }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>消息内容</label>
+            <textarea v-model="waMessage" rows="4" placeholder="输入消息内容..." style="width:100%;background:#202c33;border:1px solid #2a3942;border-radius:6px;padding:10px 12px;color:#e9edef;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+          </div>
+          <div v-if="waTemplates.length > 0" class="form-group">
+            <label>快捷模板</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <button v-for="(t, i) in waTemplates" :key="i" class="template-btn" @click="waMessage = t.text">{{ t.label }}</button>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-secondary" @click="showWhatsAppDialog = false">取消</button>
+          <button class="btn-primary" @click="doSendWhatsApp" :disabled="!waMessage.trim() || waSending">
+            <span v-if="waSending">发送中...</span>
+            <span v-else>发送</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation Settings Dialog -->
+    <div v-if="showAutoDialog" class="dialog-overlay" @click.self="showAutoDialog = false">
+      <div class="dialog-box" style="width: 560px;">
+        <div class="dialog-header">
+          <h3>自动化接待设置</h3>
+          <button class="btn-icon" @click="showAutoDialog = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13px;color:#e9edef;">
+              <input type="checkbox" v-model="autoConfig.enabled" style="width:auto;" />
+              启用自动回复
+            </label>
+          </div>
+          <div class="form-group">
+            <label>欢迎消息</label>
+            <textarea v-model="autoConfig.welcomeMessage" rows="3" placeholder="新客户首次发消息时自动回复..." style="width:100%;background:#202c33;border:1px solid #2a3942;border-radius:6px;padding:10px 12px;color:#e9edef;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+          </div>
+          <div class="form-group">
+            <label>离线回复</label>
+            <textarea v-model="autoConfig.offlineMessage" rows="3" placeholder="非工作时间自动回复..." style="width:100%;background:#202c33;border:1px solid #2a3942;border-radius:6px;padding:10px 12px;color:#e9edef;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+          </div>
+          <div class="form-group">
+            <label>工作时段</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input v-model="autoConfig.workStart" type="time" style="flex:1;background:#202c33;border:1px solid #2a3942;border-radius:6px;padding:8px 12px;color:#e9edef;font-size:13px;outline:none;" />
+              <span style="color:#8696a0;">至</span>
+              <input v-model="autoConfig.workEnd" type="time" style="flex:1;background:#202c33;border:1px solid #2a3942;border-radius:6px;padding:8px 12px;color:#e9edef;font-size:13px;outline:none;" />
+            </div>
+          </div>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn-secondary" @click="showAutoDialog = false">取消</button>
+          <button class="btn-primary" @click="saveAutomation">保存设置</button>
         </div>
       </div>
     </div>
@@ -390,17 +478,100 @@ async function deleteCustomer(c) {
   }
 }
 
+// WhatsApp quick send state
+const showWhatsAppDialog = ref(false);
+const waTarget = reactive({ name: '', phone: '' });
+const waMessage = ref('');
+const waSending = ref(false);
+const waTemplates = [
+  { label: '产品报价', text: 'Hi! Thank you for your interest in our products. Please find our quotation attached. Let us know if you have any questions.' },
+  { label: '发货通知', text: 'Hi! Your order has been shipped. Tracking number will be provided shortly. Thank you for your patience.' },
+  { label: '售后跟进', text: 'Hi! We wanted to follow up on your recent order. Is everything satisfactory? Please let us know if there is anything we can help with.' },
+  { label: '节日问候', text: 'Greetings! Wishing you and your team a wonderful holiday season. We look forward to continuing our partnership in the new year.' },
+];
+
+// Automation state
+const showAutoDialog = ref(false);
+const autoConfig = reactive({
+  enabled: false,
+  welcomeMessage: '',
+  offlineMessage: '',
+  workStart: '09:00',
+  workEnd: '18:00',
+});
+
+function sendWhatsApp(c) {
+  waTarget.name = c.name || '';
+  waTarget.phone = c.phone || '';
+  waMessage.value = '';
+  showWhatsAppDialog.value = true;
+}
+
+async function doSendWhatsApp() {
+  if (!waMessage.value.trim() || !waTarget.phone) return;
+  waSending.value = true;
+  try {
+    await api.post('/whatsapp/send', {
+      to: waTarget.phone,
+      message: waMessage.value.trim(),
+    });
+    showWhatsAppDialog.value = false;
+    alert('消息已发送');
+  } catch (err) {
+    console.error('Failed to send WhatsApp:', err);
+    alert('发送失败: ' + (err.response?.data?.error || err.message));
+  } finally {
+    waSending.value = false;
+  }
+}
+
+async function loadAutomation() {
+  try {
+    const { data } = await api.get('/settings');
+    const autoSetting = data.find(s => s.key === 'automation');
+    if (autoSetting) {
+      const val = typeof autoSetting.value === 'string' ? JSON.parse(autoSetting.value) : autoSetting.value;
+      Object.assign(autoConfig, val);
+    }
+  } catch (err) {
+    console.error('Failed to load automation settings:', err);
+  }
+}
+
+async function saveAutomation() {
+  try {
+    await api.put('/settings', {
+      key: 'automation',
+      value: JSON.stringify({
+        enabled: autoConfig.enabled,
+        welcomeMessage: autoConfig.welcomeMessage,
+        offlineMessage: autoConfig.offlineMessage,
+        workStart: autoConfig.workStart,
+        workEnd: autoConfig.workEnd,
+      }),
+    });
+    showAutoDialog.value = false;
+    alert('自动接待设置已保存');
+  } catch (err) {
+    console.error('Failed to save automation:', err);
+    alert('保存失败: ' + (err.response?.data?.error || err.message));
+  }
+}
+
 onMounted(() => {
   loadCustomers();
+  loadAutomation();
 });
 </script>
 
 <style scoped>
 .customers-page {
-  min-height: 100vh;
-  background: #0b141a;
-  color: #e9edef;
+  min-height: 100%;
+  background: var(--panel-bg);
+  color: var(--text-primary);
   padding: 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -425,12 +596,12 @@ onMounted(() => {
 }
 
 .back-link {
-  color: #8696a0;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   transition: color 0.15s;
 }
-.back-link:hover { color: #00a884; }
+.back-link:hover { color: var(--accent); }
 
 .header-actions {
   display: flex;
@@ -443,25 +614,25 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #202c33;
+  background: var(--panel-header-bg);
   border-radius: 8px;
   padding: 6px 12px;
-  border: 1px solid #2a3942;
+  border: 1px solid var(--sidebar-active);
 }
 .search-box input {
   background: none;
   border: none;
-  color: #e9edef;
+  color: var(--text-primary);
   outline: none;
   font-size: 13px;
   width: 180px;
 }
-.search-box input::placeholder { color: #667781; }
+.search-box input::placeholder { color: var(--text-muted); }
 
 .filter-select {
-  background: #202c33;
-  color: #e9edef;
-  border: 1px solid #2a3942;
+  background: var(--panel-header-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--sidebar-active);
   border-radius: 8px;
   padding: 7px 12px;
   font-size: 13px;
@@ -470,8 +641,8 @@ onMounted(() => {
 }
 
 .btn-primary {
-  background: #00a884;
-  color: #111b21;
+  background: var(--accent);
+  color: var(--accent-text);
   border: none;
   border-radius: 8px;
   padding: 7px 16px;
@@ -483,24 +654,24 @@ onMounted(() => {
   gap: 6px;
   transition: background 0.15s;
 }
-.btn-primary:hover { background: #06cf9c; }
+.btn-primary:hover { background: var(--accent-hover); }
 
 .btn-secondary {
-  background: #202c33;
-  color: #e9edef;
-  border: 1px solid #2a3942;
+  background: var(--panel-header-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--sidebar-active);
   border-radius: 8px;
   padding: 7px 16px;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.15s;
 }
-.btn-secondary:hover { background: #2a3942; }
+.btn-secondary:hover { background: var(--sidebar-active); }
 
 .btn-icon {
   background: none;
   border: none;
-  color: #8696a0;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -508,18 +679,19 @@ onMounted(() => {
   align-items: center;
   transition: color 0.15s, background 0.15s;
 }
-.btn-icon:hover { color: #e9edef; background: #2a3942; }
-.btn-icon.btn-danger:hover { color: #ea4335; }
+.btn-icon:hover { color: var(--text-primary); background: var(--sidebar-active); }
+.btn-icon.btn-danger:hover { color: var(--danger); }
 
 .stats-row {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .stat-card {
-  background: #111b21;
-  border: 1px solid #2a3942;
+  background: var(--panel-bg);
+  border: 1px solid var(--sidebar-active);
   border-radius: 10px;
   padding: 16px 24px;
   display: flex;
@@ -530,21 +702,23 @@ onMounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #00a884;
+  color: var(--accent);
 }
 .stat-label {
   font-size: 12px;
-  color: #8696a0;
+  color: var(--text-secondary);
   margin-top: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .table-container {
-  background: #111b21;
-  border: 1px solid #2a3942;
+  background: var(--panel-bg);
+  border: 1px solid var(--sidebar-active);
   border-radius: 12px;
   overflow: hidden;
+  display: block;
+  overflow-x: auto;
 }
 
 .customer-table {
@@ -552,32 +726,41 @@ onMounted(() => {
   border-collapse: collapse;
   font-size: 13px;
 }
+.customer-table th:nth-child(1) { width: 200px; }
+.customer-table th:nth-child(2) { width: 140px; }
+.customer-table th:nth-child(3) { width: 160px; }
+.customer-table th:nth-child(4) { width: 100px; }
+.customer-table th:nth-child(6) { width: 120px; }
+.customer-table th:nth-child(7) { width: 90px; }
+.customer-table th:nth-child(8) { width: 130px; }
+.customer-table th:nth-child(9) { width: 90px; }
 .customer-table th {
   text-align: left;
   padding: 12px 16px;
-  background: #202c33;
-  color: #8696a0;
+  background: var(--panel-header-bg);
+  color: var(--text-secondary);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
-  border-bottom: 1px solid #2a3942;
+  border-bottom: 1px solid var(--sidebar-active);
 }
 .customer-table td {
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--row-divider, rgba(255,255,255,0.08));
   vertical-align: middle;
 }
+.customer-table tbody tr:last-child td { border-bottom:none; }
 
 .customer-row {
   cursor: pointer;
   transition: background 0.15s;
 }
-.customer-row:hover { background: #202c33; }
+.customer-row:hover { background: var(--panel-header-bg); }
 
 .empty-cell {
   text-align: center;
-  color: #667781;
+  color: var(--text-muted);
   padding: 40px 16px !important;
 }
 
@@ -592,8 +775,8 @@ onMounted(() => {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #00a884;
-  color: #111b21;
+  background: var(--accent);
+  color: var(--accent-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -610,7 +793,7 @@ onMounted(() => {
 
 .tag-badge {
   background: rgba(0,168,132,0.15);
-  color: #00a884;
+  color: var(--accent);
   font-size: 10px;
   padding: 2px 8px;
   border-radius: 10px;
@@ -625,19 +808,19 @@ onMounted(() => {
   height: 4px;
   border-radius: 2px;
   width: 60px;
-  background: #2a3942;
+  background: var(--sidebar-active);
   position: relative;
 }
 .intent-fill {
   height: 100%;
   border-radius: 2px;
 }
-.intent-high { background: #00a884; }
+.intent-high { background: var(--accent); }
 .intent-medium { background: #f5a623; }
-.intent-low { background: #ea4335; }
+.intent-low { background: var(--danger); }
 .intent-num {
   font-size: 11px;
-  color: #8696a0;
+  color: var(--text-secondary);
 }
 
 .status-badge {
@@ -647,12 +830,12 @@ onMounted(() => {
   font-weight: 500;
 }
 .status-potential { background: rgba(245,166,35,0.15); color: #f5a623; }
-.status-active { background: rgba(0,168,132,0.15); color: #00a884; }
+.status-active { background: rgba(0,168,132,0.15); color: var(--accent); }
 .status-vip { background: rgba(168,130,255,0.15); color: #a882ff; }
-.status-inactive { background: rgba(134,150,160,0.15); color: #8696a0; }
-.status-lost { background: rgba(234,67,53,0.15); color: #ea4335; }
+.status-inactive { background: rgba(134,150,160,0.15); color: var(--text-secondary); }
+.status-lost { background: rgba(234,67,53,0.15); color: var(--danger); }
 
-.text-muted { color: #667781; }
+.text-muted { color: var(--text-muted); }
 
 .actions-cell {
   display: flex;
@@ -670,8 +853,8 @@ onMounted(() => {
   z-index: 100;
 }
 .dialog-box {
-  background: #111b21;
-  border: 1px solid #2a3942;
+  background: var(--panel-bg);
+  border: 1px solid var(--sidebar-active);
   border-radius: 12px;
   width: 560px;
   max-width: 95vw;
@@ -683,7 +866,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #2a3942;
+  border-bottom: 1px solid var(--sidebar-active);
 }
 .dialog-header h3 {
   margin: 0;
@@ -697,7 +880,7 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 10px;
   padding: 16px 20px;
-  border-top: 1px solid #2a3942;
+  border-top: 1px solid var(--sidebar-active);
 }
 
 .form-row {
@@ -715,7 +898,7 @@ onMounted(() => {
 .form-group label {
   display: block;
   font-size: 12px;
-  color: #8696a0;
+  color: var(--text-secondary);
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -724,11 +907,11 @@ onMounted(() => {
 .form-group select,
 .form-group textarea {
   width: 100%;
-  background: #202c33;
-  border: 1px solid #2a3942;
+  background: var(--panel-header-bg);
+  border: 1px solid var(--sidebar-active);
   border-radius: 6px;
   padding: 8px 12px;
-  color: #e9edef;
+  color: var(--text-primary);
   font-size: 13px;
   outline: none;
   transition: border-color 0.15s;
@@ -737,7 +920,7 @@ onMounted(() => {
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #00a884;
+  border-color: var(--accent);
 }
 .form-group textarea {
   resize: vertical;
@@ -749,8 +932,8 @@ onMounted(() => {
 }
 
 .customer-card {
-  background: #111b21;
-  border: 1px solid #2a3942;
+  background: var(--panel-bg);
+  border: 1px solid var(--sidebar-active);
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 10px;
@@ -758,7 +941,7 @@ onMounted(() => {
   transition: background 0.15s;
 }
 .customer-card:active {
-  background: #202c33;
+  background: var(--panel-header-bg);
 }
 .card-top {
   display: flex;
@@ -770,8 +953,8 @@ onMounted(() => {
   height: 40px;
   min-width: 40px;
   border-radius: 50%;
-  background: #005c4b;
-  color: #e9edef;
+  background: var(--msg-outgoing);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -785,14 +968,14 @@ onMounted(() => {
 .card-name {
   font-size: 15px;
   font-weight: 500;
-  color: #e9edef;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .card-phone {
   font-size: 12px;
-  color: #8696a0;
+  color: var(--text-secondary);
   margin-top: 2px;
 }
 .card-meta {
@@ -804,7 +987,7 @@ onMounted(() => {
 }
 .meta-item {
   font-size: 12px;
-  color: #8696a0;
+  color: var(--text-secondary);
   background: rgba(255,255,255,0.04);
   padding: 2px 8px;
   border-radius: 10px;
@@ -826,9 +1009,9 @@ onMounted(() => {
 }
 
 /* ========== Mobile Responsive ========== */
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .customers-page {
-    padding: 0 12px 20px;
+    padding: 0 12px calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Header */
@@ -901,7 +1084,7 @@ onMounted(() => {
     width: 100%;
     max-width: 100%;
     border-radius: 0;
-    min-height: 100vh;
+    min-height: 100%;
   }
   .dialog-body {
     padding: 16px 12px;
@@ -938,4 +1121,28 @@ onMounted(() => {
     width: 100%;
   }
 }
+/* WhatsApp button */
+.btn-whatsapp {
+  color: #25D366 !important;
+}
+.btn-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.15) !important;
+  color: #25D366 !important;
+}
+
+/* Template buttons */
+.template-btn {
+  background: rgba(0, 168, 132, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(0, 168, 132, 0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.template-btn:hover {
+  background: rgba(0, 168, 132, 0.2);
+}
+
 </style>

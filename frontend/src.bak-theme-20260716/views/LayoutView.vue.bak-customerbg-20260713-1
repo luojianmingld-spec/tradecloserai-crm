@@ -1,0 +1,3433 @@
+<template>
+  <div class="crm-layout" :class="{ 'platform-collapsed': platformCollapsed, 'mobile-view': isMobile }">
+    <!-- ① 平台导航栏 -->
+    <aside class="platform-nav">
+      <div class="platform-nav-top">
+        <div class="logo-wrap" @click="router.push('/')">
+          <span class="logo-icon">🤖</span>
+          <transition name="fade">
+            <span v-if="!platformCollapsed" class="logo-text">TradeAgent</span>
+          </transition>
+        </div>
+        <nav class="platform-menu">
+          <div
+            v-for="item in platformItems"
+            :key="item.key"
+            class="platform-item"
+            :class="{ active: isPlatformActive(item.key) }"
+            @click="switchPlatform(item)"
+          >
+            <span class="p-icon" v-html="item.icon"></span>
+            <transition name="fade">
+              <span v-if="!platformCollapsed" class="p-label">{{ item.label }}</span>
+            </transition>
+            <span v-if="item.badge && !platformCollapsed" class="p-badge">{{ item.badge }}</span>
+            <div v-if="platformCollapsed" class="p-tooltip">{{ item.label }}</div>
+          </div>
+        </nav>
+      </div>
+
+      <div class="platform-nav-bottom">
+        <div class="wa-status-mini" :class="waStatus">
+          <span class="status-dot"></span>
+          <transition name="fade">
+            <span v-if="!platformCollapsed" class="status-label">{{ waStatusText }}</span>
+          </transition>
+          <div v-if="platformCollapsed" class="p-tooltip">{{ waStatusText }}</div>
+        </div>
+        <button class="p-setting" @click="showSettings = true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+          </svg>
+          <transition name="fade">
+            <span v-if="!platformCollapsed">设置</span>
+          </transition>
+          <div v-if="platformCollapsed" class="p-tooltip">设置</div>
+        </button>
+        <button class="p-collapse" @click="togglePlatform">
+          <svg v-if="!platformCollapsed" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+          </svg>
+        </button>
+        <button class="p-logout" @click="handleLogout">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+          </svg>
+          <transition name="fade">
+            <span v-if="!platformCollapsed">退出</span>
+          </transition>
+          <div v-if="platformCollapsed" class="p-tooltip">退出登录</div>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 移动端遮罩（账号抽屉打开、进入对话、AI面板打开时显示） -->
+    <div
+      class="mobile-overlay"
+      v-if="isMobile && (mobileAccountsOpen || mobileInConv || mobileAIOpen)"
+      @click="mobileAccountsOpen = false; mobileInConv = false; mobileAIOpen = false;"
+    ></div>
+
+    <!-- 移动端顶部栏 -->
+    <header class="mobile-header" v-if="isMobile && activePlatform === 'communication'">
+      <button class="mh-btn" v-if="!mobileInConv" @click="mobileAccountsOpen = !mobileAccountsOpen">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <button class="mh-btn" v-else @click="mobileInConv = false">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+      <div class="mh-title">
+        <template v-if="mobileInConv">
+          {{ chatStore.activeConversation?.name || '对话' }}
+        </template>
+        <template v-else>{{ currentChannel.name }}</template>
+      </div>
+      <button class="mh-btn" v-if="mobileInConv" @click="mobileAIOpen = !mobileAIOpen">
+        🤖
+      </button>
+    </header>
+
+    <!-- 工作区 -->
+    <div class="workspace" :class="{ 'has-mheader': isMobile && activePlatform === 'communication' }">
+      <!-- 沟通模块 -->
+      <div v-if="activePlatform === 'communication'" class="comm-module">
+        <!-- ② 账号/渠道栏 -->
+        <aside class="col-accounts" :class="{ collapsed: !isMobile && accountsCollapsed, 'm-open': isMobile && mobileAccountsOpen }">
+          <div class="wa-col-header">
+            <div class="wa-col-brand">
+              <svg viewBox="0 0 32 32" width="24" height="24" fill="#00a884"><path d="M16.003 3C9.385 3 4 8.384 4 15.002c0 2.416.719 4.669 1.956 6.542L4 27l5.567-1.874a11.94 11.94 0 006.436 1.878c6.617 0 12.002-5.384 12.002-12.001C28.005 8.384 22.62 3 16.003 3z"/></svg>
+              <span class="wa-col-title" v-if="!accountsCollapsed">WhatsApp</span>
+            </div>
+            <div class="wa-col-actions" v-if="!accountsCollapsed">
+              <button class="wa-col-btn" @click="doConnectWA" title="新连接" :disabled="chatStore.connectionStatus === 'connecting' || chatStore.connectionStatus === 'waiting_qr'">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>
+              </button>
+              <button class="wa-col-btn" @click="refreshWA" title="刷新">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+              </button>
+              <button v-if="chatStore.isConnected" class="wa-col-btn" @click="disconnectWA" title="断开">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.01 11H4v2h12.01v3L20 12l-3.99-4z"/></svg>
+              </button>
+            </div>
+            <button class="col-toggle" @click="accountsCollapsed = !accountsCollapsed" :title="accountsCollapsed ? '展开' : '收起'">
+              <svg v-if="accountsCollapsed" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+              <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+          </div>
+
+          <template v-if="!accountsCollapsed">
+            <!-- 单账号模型：极简 WhatsApp 账号卡 -->
+            <div class="wa-account-list">
+              <!-- 未连接：显示引导卡 -->
+              <div v-if="!chatStore.isConnected" class="wa-empty-card" @click="doConnectWA">
+                <div class="wa-empty-avatar">
+                  <svg viewBox="0 0 32 32" width="28" height="28" fill="#8696a0"><path d="M16.003 3C9.385 3 4 8.384 4 15.002c0 2.416.719 4.669 1.956 6.542L4 27l5.567-1.874a11.94 11.94 0 006.436 1.878c6.617 0 12.002-5.384 12.002-12.001C28.005 8.384 22.62 3 16.003 3zm6.953 15.79c-.291-.146-1.724-.849-1.992-.945-.268-.097-.464-.146-.659.147-.194.292-.752.945-.922 1.138-.17.195-.34.22-.632.073-.292-.147-1.233-.455-2.348-1.448-.866-.772-1.452-1.727-1.623-2.018-.17-.292-.018-.45.128-.597.132-.132.293-.342.439-.513.146-.17.195-.293.292-.488.098-.195.049-.366-.024-.513-.073-.147-.658-1.586-.904-2.172-.239-.567-.483-.49-.658-.498-.17-.008-.365-.01-.56-.01-.195 0-.513.073-.782.366-.269.293-1.026 1.002-1.026 2.443 0 1.442 1.05 2.834 1.197 3.03.146.194 2.058 3.14 4.987 4.397.697.301 1.24.48 1.665.614.699.223 1.335.192 1.837.116.56-.085 1.725-.705 1.968-1.387.243-.681.243-1.264.17-1.386-.072-.122-.268-.195-.56-.34z"/></svg>
+                </div>
+                <div class="wa-empty-info">
+                  <div class="wa-empty-name">WhatsApp</div>
+                  <div class="wa-empty-meta">
+                    <span v-if="chatStore.connectionStatus === 'connecting' || chatStore.connectionStatus === 'waiting_qr'" class="status-text connecting">等待扫码...</span>
+                    <span v-else-if="chatStore.connectionStatus === 'error'" class="status-text error">{{ chatStore.waError || '连接错误' }}</span>
+                    <span v-else class="status-text">点击扫码登录</span>
+                  </div>
+                </div>
+              </div>
+              <!-- 已连接：账号卡 -->
+              <div v-else class="wa-account-item active">
+                <div class="acc-avatar">
+                  {{ (chatStore.connectedPhone || 'W')[0] }}
+                  <span class="acc-online-dot"></span>
+                </div>
+                <div class="acc-info">
+                  <div class="acc-name">{{ chatStore.connectedPhone || 'WhatsApp' }}</div>
+                  <div class="acc-meta online-text">在线</div>
+                </div>
+              </div>
+              <!-- 其他渠道占位（本次只做 WhatsApp，邮箱不处理） -->
+              <div v-if="activeChannel === 'email'" class="wa-connect-card">
+                <div class="wa-connect-icon">📧</div>
+                <div class="wa-connect-title">邮箱</div>
+                <div class="wa-connect-desc">邮箱渠道功能开发中</div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 折叠态：图标竖排 -->
+          <div class="channel-icons" v-else>
+            <div
+              v-for="ch in channels"
+              :key="ch.id"
+              class="ch-icon-btn"
+              :class="{ active: activeChannel === ch.id, [ch.status]: true }"
+              @click="switchChannel(ch)"
+              :title="ch.name"
+            >
+              <span v-html="ch.icon"></span>
+              <span v-if="ch.unread" class="ch-icon-badge">{{ ch.unread }}</span>
+              <div class="p-tooltip">{{ ch.name }}</div>
+            </div>
+            <button class="ch-icon-add" title="添加渠道">+</button>
+          </div>
+        </aside>
+
+        <!-- ④ 聊天列表栏 -->
+        <aside class="col-chatlist" :class="{ collapsed: !isMobile && chatlistCollapsed, 'm-hidden': isMobile && mobileInConv }">
+          <div class="col-header">
+            <button v-if="chatlistCollapsed" class="col-toggle" @click="chatlistCollapsed = false">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            </button>
+            <template v-else>
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" v-model="searchKeyword" placeholder="搜索客户/消息..." @input="onSearchInput" />
+              </div>
+              <button class="col-toggle" @click="chatlistCollapsed = true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+              </button>
+            </template>
+          </div>
+          <!-- 会话分类筛选胶囊 tab -->
+          <div class="chat-filters">
+            <div class="filter-tabs">
+              <button v-for="f in filters" :key="f.key"
+                      class="filter-tab"
+                      :class="{active: activeFilter === f.key}"
+                      @click="activeFilter = f.key">
+                <span v-if="f.icon" style="margin-right:3px">{{ f.icon }}</span>
+                {{ f.label }}
+                <span v-if="f.badge" class="filter-tab-badge">{{ f.badge }}</span>
+              </button>
+              <button class="filter-tab filter-tab-more" title="更多标签">⌄</button>
+            </div>
+          </div>
+          <div class="chatlist-body" v-if="!chatlistCollapsed">
+            <template v-if="activeChannel === 'whatsapp' && !chatStore.isConnected">
+              <div class="empty-list-hint">
+                <div style="font-size:32px;opacity:0.3">📱</div>
+                <div style="font-size:13px;color:#8696a0;margin-top:8px;text-align:center;padding:0 16px;">请先连接 WhatsApp 账号</div>
+              </div>
+            </template>
+            <template v-else-if="activeChannel === 'whatsapp' && conversations.length === 0">
+              <div class="empty-list-hint">
+                <div style="font-size:32px;opacity:0.3">💬</div>
+                <div style="font-size:13px;color:#8696a0;margin-top:8px;text-align:center;padding:0 16px;">{{ chatStore.connectionStatus === 'connected' ? '暂无会话' : '加载中...' }}</div>
+              </div>
+            </template>
+            <div
+              v-for="conv in conversations"
+              :key="conv.jid"
+              class="conv-item"
+              :class="{ active: activeConv === conv.jid }"
+              @click="selectConv(conv)"
+            >
+              <div class="conv-avatar" :style="{background: conv.color}">
+                {{ (conv.name || '?')[0] }}
+                <span class="conv-status-dot" :class="conv.status || 'offline'"></span>
+              </div>
+              <div class="conv-main">
+                <div class="conv-row">
+                  <span class="conv-name">{{ conv.name }}</span>
+                  <span class="conv-time">{{ conv.time }}</span>
+                </div>
+                <div class="conv-row">
+                  <span class="conv-preview">{{ conv.preview || '点击开始对话' }}</span>
+                  <span v-if="conv.unread" class="conv-unread">{{ conv.unread }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <main class="col-conversation" :class="{ 'm-in': isMobile && mobileInConv && activeConv }">
+          <router-view v-slot="{ Component }">
+            <component ref="chatViewRef" :is="Component" v-if="Component" @go-back="handleGoBack" @open-ai-panel="onOpenAIPanel" @open-translate-panel="onOpenTranslatePanel" />
+            <div v-else class="conv-placeholder" :class="{'wa-empty-bg': !chatStore.isConnected}">
+              <template v-if="!chatStore.isConnected">
+                <div class="ph-icon wa-green">💚</div>
+                <div class="ph-title">WhatsApp Web</div>
+                <div class="ph-desc">发送私密消息，免费体验简单可靠的通话</div>
+                <button class="connect-btn-big" @click="doConnectWA">扫码连接</button>
+              </template>
+              <template v-else>
+                <div class="ph-icon">💬</div>
+                <div class="ph-title">从左侧列表选择一个会话开始聊天</div>
+              </template>
+            </div>
+          </router-view>
+        </main>
+
+        <!-- ⑥ 功能面板（AI助手 / 翻译设置） -->
+        <aside class="col-function-panel" :class="{ collapsed: !isMobile && panelCollapsed, mini: !isMobile && aiMiniMode && activePanel === 'ai', translating: !isMobile && activePanel === 'translate', aitalking: !isMobile && activePanel === 'aitalk', 'm-panel': isMobile, show: isMobile && mobileAIOpen }" :style="!isMobile && !panelCollapsed ? 'width:' + panelWidth + 'px' : ''">
+          <div v-if="!isMobile && !panelCollapsed && activePanel" class="ai-resize-handle" @mousedown="startPanelDrag"></div>
+          <div class="col-header panel-col-header" :class="{ 'ai-col-header': activePanel === 'ai' }">
+            <template v-if="!panelCollapsed">
+              <div class="ai-title" v-if="activePanel === 'ai'">
+                <span class="ai-title-icon">🤖</span>
+                <span v-if="!aiMiniMode" class="ai-title-text">AI 助手</span>
+              </div>
+              <div class="ai-title" v-else-if="activePanel === 'translate'">
+                <span class="ai-title-icon">🌐</span>
+                <span class="ai-title-text">翻译设置</span>
+              </div>
+              <div class="ai-title" v-else-if="activePanel === 'aitalk'">
+                <span class="ai-title-icon">💬</span>
+                <span class="ai-title-text">AI 话术</span>
+              </div>
+              <button v-if="activePanel === 'ai'" class="col-toggle ai-mini-toggle" @click="aiMiniMode = !aiMiniMode" :title="aiMiniMode ? '展开AI' : '迷你模式'">
+                <svg v-if="aiMiniMode" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              </button>
+              <button class="col-toggle" @click="closePanel" title="收起面板">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12l-4.58 4.59z"/></svg>
+              </button>
+            </template>
+            <button v-else class="col-toggle" @click="switchPanel(lastActivePanel || 'ai')" :title="lastActivePanel === 'translate' ? '翻译设置' : (lastActivePanel === 'aitalk' ? 'AI话术' : 'AI助手')">
+              <span style="font-size:18px">{{ lastActivePanel === 'translate' ? '🌐' : (lastActivePanel === 'aitalk' ? '💬' : '🤖') }}</span>
+            </button>
+          </div>
+          <!-- AI 助手面板 -->
+          <div class="ai-body" v-if="!panelCollapsed && activePanel === 'ai'">
+            <!-- AI 模式选择 -->
+            <div class="ai-actions">
+              <button
+                v-for="b in aiActions"
+                :key="b.key"
+                class="ai-action-btn"
+                :class="{ active: chatStore.aiMode === b.key, hot: b.hot, disabled: !chatStore.activeJid }"
+                :disabled="!chatStore.activeJid || chatStore.aiLoading"
+                :title="b.label + '：' + b.desc"
+                @click="handleAiActionClick(b.key)"
+              >
+                <span style="margin-right:4px">{{ b.icon }}</span>{{ b.label }}
+              </button>
+            </div>
+            <!-- 窄版豆包聊天框（结果区） -->
+            <div class="ai-chat-wrap">
+              <div class="ai-chat-header" v-if="chatStore.aiMode">
+                <span class="ai-chat-title">{{ aiModeTitle }}</span>
+                <div class="ai-chat-actions">
+                  <button class="ai-chat-icon-btn" :disabled="chatStore.aiLoading || !chatStore.aiChat.length" @click="chatStore.regenerateLastAi()" title="重新生成">🔄</button>
+                  <button class="ai-chat-icon-btn" @click="chatStore.clearAiChat()" title="清空">🗑️</button>
+                </div>
+              </div>
+              <div ref="aiResultRef" class="ai-result-area ai-chat-messages">
+                <div v-if="!chatStore.activeJid" class="ai-empty">
+                  <div class="ai-empty-icon">💬</div>
+                  <div class="ai-empty-text">请先从左侧选择一个会话</div>
+                </div>
+                <template v-else-if="!chatStore.aiMode">
+                  <div class="ai-welcome">
+                    <div class="ai-welcome-icon">🤖</div>
+                    <div class="ai-welcome-title">选择一个 AI 功能开始</div>
+                    <div class="ai-welcome-desc">AI 会自动读取当前会话上下文<br/>点击消息旁的 🤖 可快速生成回复</div>
+                  </div>
+                </template>
+
+                <!-- AI话术：专用UI -->
+                <template v-else-if="chatStore.aiMode === 'reply'">
+                  <div class="ai-reply-panel">
+                    <div class="ai-reply-styles">
+                      <div class="ai-section-title">回复风格</div>
+                      <div class="ai-style-row">
+                        <div
+                          v-for="st in replyStyles"
+                          :key="st.key"
+                          class="ai-style-card"
+                          :class="{ active: chatStore.replyStyle === st.key }"
+                          @click="chatStore.setReplyStyle(st.key)"
+                        >
+                          <span class="ai-style-icon">{{ st.icon }}</span>
+                          <span>{{ st.label }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      class="ai-gen-btn"
+                      :disabled="chatStore.aiLoading || chatStore.aiGenerating || !chatStore.activeJid"
+                      @click="handleGenerateReplies"
+                    >
+                      <template v-if="chatStore.aiGenerating"><span class="ai-dots-inline"><span></span><span></span><span></span></span></template>
+                      <template v-else>⚡ 生成AI回复</template>
+                    </button>
+                    <div v-if="chatStore.aiReplyResults.length" class="ai-reply-list">
+                      <div
+                        v-for="r in chatStore.aiReplyResults"
+                        :key="r.id"
+                        class="ai-reply-card"
+                        :class="{ 'ai-error-card': r.error }"
+                      >
+                        <div class="ai-reply-text">{{ r.content }}</div>
+                        <div class="ai-reply-footer">
+                          <div class="ai-reply-meta">
+                            <span class="ai-reply-meta-tag">{{ r.styleIcon }} {{ r.styleName }}</span>
+                          </div>
+                          <button v-if="!r.error" class="ai-insert-btn" @click="fillAiInput(r.content)">📝 插入</button>
+                        </div>
+                      </div>
+                      <button
+                        class="ai-regen-btn"
+                        :disabled="chatStore.aiGenerating || chatStore.aiLoading"
+                        @click="handleGenerateReplies"
+                      >🔄 换一批</button>
+                    </div>
+                    <!-- 追问气泡（user消息） -->
+                    <div
+                      v-for="m in chatStore.aiChat.filter(x => x.role === 'user')"
+                      :key="m.id"
+                      class="ai-chat-msg ai-user"
+                    >
+                      <div class="ai-chat-bubble">{{ m.content }}</div>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 需求总结：专用UI -->
+                <template v-else-if="chatStore.aiMode === 'summary'">
+                  <div class="ai-summary-panel">
+                    <button
+                      class="ai-gen-btn"
+                      :disabled="chatStore.aiLoading || !chatStore.activeJid"
+                      @click="handleGenerateSummary"
+                    >
+                      <template v-if="chatStore.aiLoading"><span class="ai-dots-inline"><span></span><span></span><span></span></span></template>
+                      <template v-else>📋 分析客户需求</template>
+                    </button>
+                    <div v-if="chatStore.aiSummaryResult" class="ai-summary-result">
+                      <!-- 意向度 -->
+                      <div v-if="chatStore.aiSummaryResult.score != null" class="ai-score-block">
+                        <div class="ai-score-header">
+                          <span class="ai-section-title">意向度评分</span>
+                          <span class="ai-score-num">{{ chatStore.aiSummaryResult.score }}/10</span>
+                        </div>
+                        <div class="ai-score-bar">
+                          <div class="ai-score-fill" :style="{ width: (chatStore.aiSummaryResult.score * 10) + '%' }"></div>
+                        </div>
+                      </div>
+                      <!-- 决策阶段 -->
+                      <div v-if="chatStore.aiSummaryResult.stage" class="ai-stage-block">
+                        <div class="ai-section-title">决策阶段</div>
+                        <div class="ai-stage-text">{{ chatStore.aiSummaryResult.stage }}</div>
+                      </div>
+                      <!-- 字段卡片 -->
+                      <div v-if="chatStore.aiSummaryResult.fields" class="ai-fields-grid">
+                        <div
+                          v-for="(val, key) in chatStore.aiSummaryResult.fields"
+                          :key="key"
+                          class="ai-field-card"
+                          v-if="val"
+                        >
+                          <div class="ai-field-label">{{ summaryFieldLabels[key] || key }}</div>
+                          <div class="ai-field-value">{{ val }}</div>
+                        </div>
+                      </div>
+                      <!-- AI总结 -->
+                      <div v-if="chatStore.aiSummaryResult.summary" class="ai-summary-block">
+                        <div class="ai-summary-title">AI总结</div>
+                        <div class="ai-summary-text">{{ chatStore.aiSummaryResult.summary }}</div>
+                      </div>
+                    </div>
+                    <!-- 追问消息气泡 -->
+                    <template v-if="chatStore.aiChat.length">
+                      <div
+                        v-for="m in chatStore.aiChat.slice(1)"
+                        :key="m.id"
+                        class="ai-chat-msg"
+                        :class="{ 'ai-user': m.role === 'user', 'ai-assistant': m.role === 'assistant', 'ai-error': m.error }"
+                      >
+                        <div class="ai-chat-bubble">
+                          <div class="ai-chat-content">{{ m.content }}</div>
+                          <div v-if="m.role === 'assistant' && !m.error" class="ai-insert-row">
+                            <button class="ai-insert-btn" @click="fillAiInput(m.content)">📝 一键插入</button>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+
+                <!-- 翻译模式：专用双区块卡片（已有） -->
+                <template v-else-if="chatStore.aiMode === 'translate'">
+                  <div
+                    v-for="m in chatStore.aiChat"
+                    :key="m.id"
+                    class="ai-chat-msg"
+                    :class="{ 'ai-user': m.role === 'user', 'ai-assistant': m.role === 'assistant', 'ai-error': m.error }"
+                  >
+                    <div class="ai-chat-bubble">
+                      <template v-if="m.role === 'assistant' && m.translateData">
+                        <div class="ai-translate-card">
+                          <div class="ai-trans-section">
+                            <div class="ai-trans-label">ORIGINAL</div>
+                            <div class="ai-trans-text">{{ m.translateData.original }}</div>
+                            <div class="ai-trans-actions">
+                              <button class="ai-insert-btn ai-insert-btn-secondary" @click="copyText(m.translateData.original)">📋 复制原文</button>
+                              <button class="ai-insert-btn ai-insert-btn-secondary" @click="fillAiInput(m.translateData.original)">📝 插入原文</button>
+                            </div>
+                          </div>
+                          <div class="ai-trans-section">
+                            <div class="ai-trans-label">TRANSLATION</div>
+                            <div class="ai-trans-text ai-trans-result">{{ m.translateData.translated }}</div>
+                            <div class="ai-trans-actions">
+                              <button class="ai-insert-btn" @click="copyText(m.translateData.translated)">📋 复制译文</button>
+                              <button class="ai-insert-btn" @click="fillAiInput(m.translateData.translated)">📝 插入译文</button>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div class="ai-chat-content">{{ m.content }}</div>
+                      </template>
+                    </div>
+                  </div>
+                  <div v-if="chatStore.aiLoading" class="ai-chat-msg ai-assistant">
+                    <div class="ai-chat-bubble ai-loading-bubble">
+                      <div class="ai-dots"><span></span><span></span><span></span></div>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 其他模式（profile/空）：通用气泡 -->
+                <template v-else>
+                  <!-- profile 欢迎 + 生成按钮 -->
+                  <template v-if="chatStore.aiMode === 'profile' && !chatStore.aiChat.length">
+                    <div class="ai-welcome">
+                      <div class="ai-welcome-icon">👤</div>
+                      <div class="ai-welcome-text">点击"🔍 分析客户"开始分析</div>
+                    </div>
+                    <button
+                      class="ai-gen-btn ai-profile-gen-btn"
+                      :disabled="chatStore.aiLoading || !chatStore.activeJid"
+                      @click="handleGenerateProfile"
+                    >
+                      <template v-if="chatStore.aiLoading"><span class="ai-dots-inline"><span></span><span></span><span></span></span></template>
+                      <template v-else>🔍 分析客户</template>
+                    </button>
+                  </template>
+                  <div
+                    v-for="m in chatStore.aiChat"
+                    :key="m.id"
+                    class="ai-chat-msg"
+                    :class="{ 'ai-user': m.role === 'user', 'ai-assistant': m.role === 'assistant', 'ai-error': m.error }"
+                  >
+                    <div class="ai-chat-bubble">
+                      <div v-if="m.loading" class="ai-dots"><span></span><span></span><span></span></div>
+                      <template v-else>
+                        <div class="ai-chat-content">{{ m.content }}</div>
+                        <div v-if="m.role === 'assistant' && !m.error" class="ai-insert-row">
+                          <button class="ai-insert-btn" @click="fillAiInput(m.content)">📝 一键插入</button>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div v-if="chatStore.aiLoading && !chatStore.aiChat.some(m => m.role === 'assistant' && !m.content)" class="ai-chat-msg ai-assistant">
+                    <div class="ai-chat-bubble ai-loading-bubble">
+                      <div class="ai-dots"><span></span><span></span><span></span></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <!-- 底部迷你输入框 -->
+              <div v-if="chatStore.aiMode && chatStore.activeJid" class="ai-chat-input-wrap">
+                <input
+                  ref="aiInputEl"
+                  v-model="aiInputText"
+                  class="ai-chat-input"
+                  :placeholder="aiModePlaceholder"
+                  :disabled="chatStore.aiLoading || chatStore.aiGenerating"
+                  @keydown.enter="sendAiChat"
+                />
+                <button class="ai-chat-send" :disabled="chatStore.aiLoading || chatStore.aiGenerating || !aiInputText.trim()" @click="sendAiChat">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div v-if="aiMiniMode && !chatStore.activeJid" class="ai-mini-tip">请先选择会话</div>
+            <button v-if="aiMiniMode" class="ai-mini-expand" @click="aiMiniMode = false">⤢ 展开完整面板</button>
+          </div>
+          <!-- AI 话术面板 v2 -->
+          <div v-if="!panelCollapsed && activePanel === 'aitalk'" class="aitalk-panel-body">
+            <!-- 顶部：模型选择 + 模式切换 + 清空 -->
+            <div class="aitalk-top-bar">
+              <div class="aitalk-top-first-row">
+                <el-select v-model="aitalkModel" class="sub-select aitalk-model-select aitalk-top-first-select" popper-class="crm-dark-popper" placeholder="选择模型">
+                  <el-option v-for="m in aiModels" :key="m.key" :label="m.name" :value="m.key">
+                    <div style="display:flex;flex-direction:column;line-height:1.3">
+                      <span style="color:#e9edef;font-size:13px">{{ m.name }}</span>
+                      <span v-if="m.desc" style="color:#8696a0;font-size:11px">{{ m.desc }}</span>
+                    </div>
+                  </el-option>
+                </el-select>
+                <div class="aitalk-top-actions">
+                <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'quick'}" @click="aitalkMode = 'quick'" title="快捷生成模式">⚡</button>
+                <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'chat'}" @click="switchToChatMode" title="AI对话模式">💬</button>
+                <button v-if="aiMessages.length" class="aitalk-clear-btn" @click="clearAiMessages" title="清空对话">🗑️</button>
+                </div>
+              </div>
+              <div class="aitalk-select-row aitalk-lang-row">
+                <span class="aitalk-select-label">生成语言</span>
+                <el-select v-model="aitalkTargetLang" class="sub-select aitalk-lang-select" popper-class="crm-dark-popper" placeholder="跟随翻译设置">
+                  <el-option label="🔍 跟随翻译设置" value="follow" />
+                  <el-option label="العربية (阿拉伯语)" value="ar" />
+                  <el-option label="English (英语)" value="en" />
+                  <el-option label="中文" value="zh" />
+                </el-select>
+              </div>
+            </div>
+
+            <!-- 中间对话/结果区 -->
+            <div ref="aitalkScrollRef" class="aitalk-scroll" @scroll="onAitalkScroll">
+              <!-- 空状态欢迎 -->
+              <div v-if="aiMessages.length === 0 && !aitalkLoading" class="aitalk-welcome">
+                <div class="aitalk-welcome-icon">🤖</div>
+                <div class="aitalk-welcome-title">AI助手，帮你搞定外贸客户沟通</div>
+                <div class="aitalk-chips">
+                  <button class="aitalk-chip" @click="triggerQuickGenerate">✉️ 生成回复</button>
+                  <button class="aitalk-chip" @click="sendQuickPrompt('请把客户最新消息翻译成中文')">📝 翻译客户消息</button>
+                  <button class="aitalk-chip" @click="sendQuickPrompt('请分析客户意图和关键信号')">💡 分析客户意图</button>
+                  <button class="aitalk-chip" @click="sendQuickPrompt('基于聊天记录推荐下一步跟进策略')">📋 推荐跟进策略</button>
+                </div>
+              </div>
+
+              <!-- 消息列表 -->
+              <template v-for="(msg, mi) in aiMessages" :key="msg.id">
+                <!-- 用户消息 -->
+                <div v-if="msg.role === 'user'" class="aitalk-msg aitalk-msg-user">
+                  <div class="aitalk-bubble aitalk-bubble-user" v-html="renderMarkdown(msg.content)"></div>
+                  <div class="aitalk-msg-time">{{ formatMsgTime(msg.ts) }}</div>
+                </div>
+                <!-- AI 回复 -->
+                <div v-else class="aitalk-msg aitalk-msg-ai">
+                  <div v-if="msg.loading" class="aitalk-bubble aitalk-bubble-ai aitalk-typing">
+                    <span class="aitalk-dot"></span><span class="aitalk-dot"></span><span class="aitalk-dot"></span>
+                  </div>
+                  <div v-else-if="msg.error" class="aitalk-error-block">
+                    <div class="aitalk-error-text">❌ {{ msg.content }}</div>
+                    <button class="aitalk-retry-btn" @click="retryLastRequest">重试</button>
+                  </div>
+                  <template v-else-if="msg.type === 'replies' && Array.isArray(msg.content)">
+                    <div v-for="(r, idx) in msg.content" :key="idx" class="aitalk-reply-card-v2">
+                      <div class="aitalk-reply-num">#{{ idx + 1 }}</div>
+                      <div class="aitalk-reply-head">
+                        <span class="aitalk-reply-name">{{ r.name }}</span>
+                        <span class="aitalk-reply-sep"> — </span>
+                        <span class="aitalk-reply-desc">{{ r.desc }}</span>
+                      </div>
+                      <div class="aitalk-reply-foreign" :dir="autoDir(r.foreign)">{{ r.foreign }}</div>
+                      <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
+                      <div class="aitalk-reply-actions">
+                        <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制</button>
+                      </div>
+                      <button class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
+                        {{ r._applied ? '✓ 已填入输入框' : '✏️ 使用这条回复' }}
+                      </button>
+                    </div>
+                  </template>
+                  <div v-else class="aitalk-bubble aitalk-bubble-ai" v-html="renderMarkdown(msg.content)"></div>
+                  <div v-if="!msg.loading && !msg.error" class="aitalk-msg-time">{{ formatMsgTime(msg.ts) }}</div>
+                </div>
+              </template>
+            </div>
+
+            <button v-if="showScrollDownBtn" class="aitalk-scroll-down" @click="scrollAitalkToBottom(true)">↓</button>
+
+            <div v-if="aitalkError" class="aitalk-error-global">⚠️ {{ aitalkError }}</div>
+
+            <!-- 底部区域 -->
+            <div class="aitalk-footer">
+              <template v-if="aitalkMode === 'quick'">
+                <button
+                  class="aitalk-gen-btn"
+                  :disabled="aitalkLoading || !chatStore.activeJid"
+                  @click="triggerQuickGenerate"
+                >
+                  <span v-if="aitalkLoading" class="aitalk-spinner">⏳</span>
+                  <span v-else>✨</span>
+                  <span>{{ aitalkLoading ? 'AI分析中...' : (aiMessages.length ? '✨ 重新生成' : '✨ 生成AI回复') }}</span>
+                </button>
+                <button class="aitalk-switch-mode-link" @click="switchToChatMode">💬 切换到对话模式</button>
+              </template>
+              <template v-else>
+                <div class="aitalk-quick-chips">
+                  <button class="aitalk-mini-chip" @click="appendInput('更正式')">更正式</button>
+                  <button class="aitalk-mini-chip" @click="appendInput('更简洁')">更简洁</button>
+                  <button class="aitalk-mini-chip" @click="appendInput('更热情')">更热情</button>
+                  <button class="aitalk-mini-chip" @click="appendInput('翻译成阿拉伯语')">翻译成阿拉伯语</button>
+                  <button class="aitalk-mini-chip" @click="appendInput('翻译成英语')">翻译成英语</button>
+                </div>
+                <div class="aitalk-input-row">
+                  <textarea
+                    ref="aitalkInputRef"
+                    v-model="aitalkInputText"
+                    class="aitalk-textarea"
+                    placeholder="和AI对话，让它帮你分析/翻译/优化话术..."
+                    rows="1"
+                    @keydown="onAitalkInputKeydown"
+                    @input="autoGrowAitalkInput"
+                  ></textarea>
+                  <button class="aitalk-send-btn" :disabled="!aitalkInputText.trim() || aitalkLoading || !chatStore.activeJid" @click="sendAitalkChat">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                  </button>
+                </div>
+                <button class="aitalk-switch-mode-link" @click="aitalkMode = 'quick'">⚡ 切换到快捷生成</button>
+              </template>
+            </div>
+          </div>
+          <!-- 翻译设置面板 -->
+          <div v-if="!panelCollapsed && activePanel === 'translate'" class="trans-panel-body">
+            <div class="trans-panel">
+              <!-- 发送翻译设置块 -->
+              <div class="trans-block">
+                <div class="switch-row">
+                  <span class="switch-label">发送翻译设置</span>
+                  <el-switch v-model="transForm.sendEnabled" active-color="#00a884" />
+                </div>
+                <template v-if="transForm.sendEnabled">
+                  <div class="sub-row">
+                    <span class="sub-label">翻译线路</span>
+                    <el-select v-model="transForm.sendEngine" class="sub-select" popper-class="crm-dark-popper" placeholder="选择翻译线路">
+                      <el-option label="谷歌翻译(推荐/免费)" value="google" />
+                      <el-option label="豆包AI" value="doubao" />
+                    </el-select>
+                  </div>
+                  <div class="sub-row">
+                    <span class="sub-label">源语言</span>
+                    <el-tooltip content="消息源语言，默认自动检测" placement="top" effect="dark">
+                      <el-icon class="sub-help"><QuestionFilled /></el-icon>
+                    </el-tooltip>
+                    <el-select v-model="transForm.sendSourceLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择源语言">
+                      <el-option v-for="lang in LANG_OPTIONS_WITH_AUTO" :key="lang.value" :label="lang.label" :value="lang.value" />
+                    </el-select>
+                  </div>
+                  <div class="sub-row">
+                    <span class="sub-label">目标语言</span>
+                    <el-tooltip content="消息将被翻译成该语言发送" placement="top" effect="dark">
+                      <el-icon class="sub-help"><QuestionFilled /></el-icon>
+                    </el-tooltip>
+                    <el-select v-model="transForm.sendTargetLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择目标语言">
+                      <el-option v-for="lang in LANG_OPTIONS" :key="lang.value" :label="lang.label" :value="lang.value" />
+                    </el-select>
+                  </div>
+                </template>
+              </div>
+              <!-- 三个开关 -->
+              <div class="trans-block">
+                <div class="switch-row">
+                  <span class="switch-label">群组自动翻译</span>
+                  <el-switch v-model="transForm.groupAutoTranslate" active-color="#00a884" />
+                </div>
+                <div class="switch-row">
+                  <span class="switch-label">禁发中文</span>
+                  <el-tooltip content="开启后，发送消息时若检测到中文且未开启发送翻译，将拦截并提示" placement="top" effect="dark">
+                    <el-icon class="sub-help switch-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                  <el-switch v-model="transForm.blockChinese" active-color="#00a884" />
+                </div>
+                <div class="switch-row">
+                  <span class="switch-label">翻译确认</span>
+                  <el-tooltip content="开启后，发送中文消息前会在输入框上方显示译文对照" placement="top" effect="dark">
+                    <el-icon class="sub-help switch-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                  <el-switch v-model="transForm.translateConfirm" active-color="#00a884" />
+                </div>
+              </div>
+              <!-- 全局配置分隔线 -->
+              <div class="trans-divider"><span class="trans-divider-text">全局配置</span></div>
+              <!-- 全局配置 -->
+              <div class="trans-block">
+                <div class="cfg-row">
+                  <span class="sub-label">文字颜色</span>
+                  <el-tooltip content="设置译文显示的文字颜色" placement="top" effect="dark">
+                    <el-icon class="sub-help cfg-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                  <div class="cfg-color-wrap">
+                    <input class="cfg-color-input" v-model="transForm.translationColor" maxlength="7" />
+                    <el-color-picker v-model="transForm.translationColor" class="cfg-color-picker" />
+                  </div>
+                </div>
+                <div class="cfg-row">
+                  <span class="sub-label">文字大小</span>
+                  <el-tooltip content="设置译文显示的文字大小" placement="top" effect="dark">
+                    <el-icon class="sub-help cfg-help"><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                  <el-select v-model="transForm.translationSize" class="sub-select" popper-class="crm-dark-popper" placeholder="选择字号">
+                    <el-option v-for="s in SIZE_OPTIONS" :key="s" :label="s" :value="s" />
+                  </el-select>
+                </div>
+              </div>
+              <button class="trans-save-btn" :disabled="transSaving" @click="saveTransSettings">{{ transSaving ? '保存中...' : '保存' }}</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ⑦ 图标列（常驻） -->
+        <aside class="col-iconbar" :class="{ collapsed: iconbarCollapsed }">
+          <div class="ib-items">
+            <button class="ib-item" :class="{ active: activePanel === 'translate' }" @click="switchPanel('translate')" :title="iconbarCollapsed ? '翻译设置' : ''">
+              <span class="ib-icon">🌐</span>
+              <span class="ib-label">翻译设置</span>
+            </button>
+            <button class="ib-item" :class="{ active: activePanel === 'aitalk' }" @click="switchPanel('aitalk')" :title="iconbarCollapsed ? 'AI话术' : ''">
+              <span class="ib-icon">💬</span>
+              <span class="ib-label">AI话术</span>
+            </button>
+            <button class="ib-item" :class="{ active: activePanel === 'ai' }" @click="switchPanel('ai')" :title="iconbarCollapsed ? 'AI助手' : ''">
+              <span class="ib-icon">🤖</span>
+              <span class="ib-label">AI助手</span>
+            </button>
+          </div>
+          <button class="ib-toggle" :class="{ expanded: !iconbarCollapsed }" @click="iconbarCollapsed = !iconbarCollapsed" :title="iconbarCollapsed ? '展开' : '收起'">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6z"/></svg>
+          </button>
+        </aside>
+
+      </div>
+
+      <!-- 其他模块占位：由 router-view 填充 -->
+      <div v-else class="module-full">
+        <router-view />
+      </div>
+    </div>
+
+    <!-- 设置全屏弹窗 -->
+    <div class="settings-modal" v-if="showSettings" @click.self="showSettings = false">
+      <div class="settings-dialog">
+        <div class="settings-sidebar">
+          <div class="settings-title">设置</div>
+          <div
+            v-for="s in settingsTabs"
+            :key="s.key"
+            class="settings-nav-item"
+            :class="{ active: activeSettingsTab === s.key }"
+            @click="activeSettingsTab = s.key"
+          >
+            <span v-html="s.icon"></span>
+            <span>{{ s.label }}</span>
+          </div>
+          <button class="settings-close" @click="showSettings = false">✕ 关闭</button>
+        </div>
+        <div class="settings-content">
+          <div class="settings-placeholder">
+            <h2>{{ currentSettingsName }}</h2>
+            <p>设置模块开发中...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动端底部Tab Bar -->
+    <nav class="mobile-tabbar" v-if="isMobile">
+      <button
+        v-for="tab in mobileTabs"
+        :key="tab.key"
+        class="m-tab"
+        :class="{ active: (tab.key === 'settings' ? showSettings : activePlatform === tab.key) }"
+        @click="handleMobileTab(tab)"
+      >
+        <span v-html="tab.icon"></span>
+        <span>{{ tab.label }}</span>
+      </button>
+    </nav>
+
+    <!-- 移动端AI悬浮按钮 -->
+    <button class="mobile-ai-fab" v-if="isMobile && activePlatform === 'communication'" @click="onMobileAIFab">
+      🤖
+    </button>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '../stores/auth.js';
+import { useChatStore } from '../stores/chat.js';
+import { initSocket } from '../utils/socket.js';
+import api from '../utils/api.js';
+import { ElMessage } from 'element-plus';
+import { QuestionFilled } from '@element-plus/icons-vue';
+
+const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+const chatStore = useChatStore();
+
+// ========== 折叠状态 ==========
+const platformCollapsed = ref(localStorage.getItem('platform-collapsed') === 'true');
+const accountsCollapsed = ref(localStorage.getItem('accounts-collapsed') === 'true');
+const chatlistCollapsed = ref(false);
+// ── 功能面板状态 ──
+const activePanel = ref(null); // 默认收起，点图标再展开
+const lastActivePanel = ref('ai');
+const panelWidth = ref((() => {
+  const v = parseInt(localStorage.getItem('crm-function-panel-width') || localStorage.getItem('panel-width') || '360');
+  if (isNaN(v) || v < 280 || v > 600) return 360;
+  return v;
+})());
+const iconbarCollapsed = ref(localStorage.getItem('iconbar-collapsed') ? localStorage.getItem('iconbar-collapsed') === '1' : true);
+const aiMiniMode = ref(false);
+const chatViewRef = ref(null);
+// ── AI 话术面板 v2 状态 ──
+const aitalkModel = ref('');
+const aiModels = ref([]);
+const aitalkLoading = ref(false);
+const aitalkError = ref('');
+const aitalkMode = ref('quick');
+const aitalkTargetLang = ref('follow');
+const TARGET_LABEL = { follow: '🔍 跟随翻译设置', ar: 'العربية (阿拉伯语)', en: 'English (英语)', zh: '中文' };
+
+function resolveTargetLang() {
+  if (aitalkTargetLang.value && aitalkTargetLang.value !== 'follow') {
+    return aitalkTargetLang.value;
+  }
+  const ts = chatStore.translationSettings || {};
+  const t = ts.sendTargetLang;
+  if (t && t !== 'auto' && ['ar','en','zh','es','fr','de','ja','ko','pt','ru','it','tr','th','vi','id','hi','nl'].includes(t)) {
+    return t;
+  }
+  return 'auto';
+}
+const aiMessages = ref([]);
+const aitalkInputText = ref('');
+const aitalkScrollRef = ref(null);
+const aitalkInputRef = ref(null);
+const showScrollDownBtn = ref(false);
+let aitalkLastRequest = null;
+let aitalkMsgIdSeq = 0;
+const nextAitalkMsgId = () => `aim-${++aitalkMsgIdSeq}-${Date.now()}`;
+
+async function loadAiModels() {
+  try {
+    const { data } = await api.get('/ai/models');
+    const list = Array.isArray(data?.models) ? data.models : [];
+    aiModels.value = list;
+    if (list.length && !list.find(m => m.key === aitalkModel.value)) {
+      const lite = list.find(m => (m.name || '').toLowerCase().includes('lite') || (m.name || '').includes('快速'));
+      aitalkModel.value = (lite || list[0]).key;
+    }
+  } catch (e) {
+    aiModels.value = [];
+  }
+}
+loadAiModels();
+
+function autoDir(text) {
+  if (!text) return 'auto';
+  return /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]/.test(text) ? 'rtl' : 'auto';
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function renderMarkdown(raw) {
+  if (!raw) return '';
+  let html = escapeHtml(raw);
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+  html = html.replace(/(^|\s)\*([^*\n]+)\*/g, '$1<i>$2</i>');
+  html = html.replace(/\n/g, '<br>');
+  html = html.replace(/(?:^|<br>)\s*[-•]\s+/g, '<br>• ');
+  return html;
+}
+function formatMsgTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function scrollAitalkToBottom(force = false) {
+  nextTick(() => {
+    const el = aitalkScrollRef.value;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    if (force) showScrollDownBtn.value = false;
+  });
+}
+function onAitalkScroll() {
+  const el = aitalkScrollRef.value;
+  if (!el) return;
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  showScrollDownBtn.value = !nearBottom;
+}
+function switchToChatMode() {
+  aitalkMode.value = 'chat';
+  nextTick(() => aitalkInputRef.value?.focus());
+}
+function clearAiMessages() {
+  aiMessages.value = [];
+  aitalkError.value = '';
+  showScrollDownBtn.value = false;
+}
+function appendInput(text) {
+  if (aitalkMode.value !== 'chat') switchToChatMode();
+  const cur = aitalkInputText.value;
+  aitalkInputText.value = cur ? (cur.endsWith(' ') ? cur + text : cur + ' ' + text) : text;
+  nextTick(() => { autoGrowAitalkInput(); aitalkInputRef.value?.focus(); });
+}
+function autoGrowAitalkInput() {
+  const ta = aitalkInputRef.value;
+  if (!ta) return;
+  ta.style.height = 'auto';
+  const h = Math.min(ta.scrollHeight, 120);
+  ta.style.height = h + 'px';
+}
+function onAitalkInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAitalkChat();
+  }
+}
+
+async function copyForeign(text, ev) {
+  try {
+    await navigator.clipboard.writeText(text || '');
+    const btn = ev?.currentTarget;
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ 已复制';
+      setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    }
+    ElMessage.success('已复制');
+  } catch (e) {
+    ElMessage.error('复制失败');
+  }
+}
+
+function applyForeignToInput(text) {
+  activePanel.value = null;
+  nextTick(() => {
+    let inst = chatViewRef.value;
+    if (inst && inst.$ && typeof inst.applyAiReply !== 'function') {
+      inst = inst.$.exposed || inst;
+    }
+    if (inst && typeof inst.applyAiReply === 'function') {
+      inst.applyAiReply(text);
+    } else {
+      console.warn('[aitalk] ChatView applyAiReply not found');
+    }
+  });
+}
+function useForeignReply(r, ev) {
+  if (!r?.foreign) return;
+  applyForeignToInput(r.foreign);
+  r._applied = true;
+  setTimeout(() => { r._applied = false; }, 1500);
+}
+
+function pushLoadingMsg() {
+  const msg = { id: nextAitalkMsgId(), role: 'assistant', type: 'text', content: '', loading: true, ts: Date.now() };
+  aiMessages.value.push(msg);
+  scrollAitalkToBottom(true);
+  return msg;
+}
+function replaceMsg(id, patch) {
+  const idx = aiMessages.value.findIndex(m => m.id === id);
+  if (idx === -1) return;
+  aiMessages.value[idx] = { ...aiMessages.value[idx], ...patch, loading: false };
+  scrollAitalkToBottom(true);
+}
+
+async function triggerQuickGenerate() {
+  if (aitalkLoading.value) return;
+  if (!chatStore.activeJid) {
+    aitalkError.value = '请先选择一个客户会话';
+    ElMessage.warning('请先选择一个客户会话');
+    return;
+  }
+  aitalkLoading.value = true;
+  aitalkError.value = '';
+  const loadingMsg = pushLoadingMsg();
+  const model = aitalkModel.value || null;
+  aitalkLastRequest = { type: 'analyze', jid: chatStore.activeJid, model };
+  try {
+    const { data } = await api.post('/ai/analyze', { jid: chatStore.activeJid, accountId: 1, model, targetLang: resolveTargetLang() });
+    if (data?.success && Array.isArray(data.data?.replies) && data.data.replies.length) {
+      replaceMsg(loadingMsg.id, { role: 'assistant', type: 'replies', content: data.data.replies, ts: Date.now() });
+    } else {
+      replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: data?.error || '未生成回复，请重试', error: true, ts: Date.now() });
+    }
+  } catch (err) {
+    const msg = err?.response?.data?.error || err?.message || '生成失败，请重试';
+    replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: msg, error: true, ts: Date.now() });
+  } finally {
+    aitalkLoading.value = false;
+  }
+}
+
+function buildHistoryForApi() {
+  const out = [];
+  for (const m of aiMessages.value) {
+    if (m.loading || m.error) continue;
+    if (m.role === 'user' && typeof m.content === 'string') {
+      out.push({ role: 'user', content: m.content });
+    } else if (m.role === 'assistant' && m.type === 'text' && typeof m.content === 'string') {
+      out.push({ role: 'assistant', content: m.content });
+    }
+  }
+  return out;
+}
+
+async function sendAitalkChat() {
+  const text = (aitalkInputText.value || '').trim();
+  if (!text || aitalkLoading.value) return;
+  if (!chatStore.activeJid) {
+    ElMessage.warning('请先选择一个客户会话');
+    return;
+  }
+  aiMessages.value.push({ id: nextAitalkMsgId(), role: 'user', type: 'text', content: text, ts: Date.now() });
+  aitalkInputText.value = '';
+  nextTick(() => autoGrowAitalkInput());
+  aitalkLoading.value = true;
+  aitalkError.value = '';
+  const loadingMsg = pushLoadingMsg();
+  const history = buildHistoryForApi();
+  const model = aitalkModel.value || null;
+  aitalkLastRequest = { type: 'chat', jid: chatStore.activeJid, model, text };
+  try {
+    const { data } = await api.post('/ai/chat', { jid: chatStore.activeJid, accountId: 1, model, targetLang: resolveTargetLang(), messages: history });
+    if (data?.success && typeof data.data?.reply === 'string') {
+      const reply = data.data.reply;
+      const parsed = tryParseRepliesInText(reply);
+      if (parsed && parsed.length) {
+        replaceMsg(loadingMsg.id, { role: 'assistant', type: 'replies', content: parsed, ts: Date.now() });
+      } else {
+        replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: reply, ts: Date.now() });
+      }
+    } else {
+      replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: data?.error || 'AI没有返回内容', error: true, ts: Date.now() });
+    }
+  } catch (err) {
+    const msg = err?.response?.data?.error || err?.message || '请求失败，请重试';
+    replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: msg, error: true, ts: Date.now() });
+  } finally {
+    aitalkLoading.value = false;
+    nextTick(() => aitalkInputRef.value?.focus());
+  }
+}
+
+function tryParseRepliesInText(text) {
+  if (!text) return null;
+  const m = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  let cand = m ? m[1] : null;
+  if (!cand) {
+    const f = text.indexOf('{');
+    const l = text.lastIndexOf('}');
+    if (f !== -1 && l !== -1 && l > f) {
+      const s2 = text.slice(f, l + 1);
+      if (/"replies"\s*:/.test(s2)) cand = s2;
+    }
+  }
+  if (!cand) return null;
+  try {
+    const obj = JSON.parse(cand);
+    if (Array.isArray(obj.replies)) {
+      return obj.replies.filter(r => r && (r.foreign || r.chinese)).slice(0,3).map((r,i) => ({
+        name: typeof r.name === 'string' && r.name.trim() ? r.name.trim() : ['版本一','版本二','版本三'][i],
+        desc: typeof r.desc === 'string' ? r.desc.trim() : '',
+        foreign: typeof r.foreign === 'string' ? r.foreign.trim() : '',
+        chinese: typeof r.chinese === 'string' ? r.chinese.trim() : '',
+      }));
+    }
+  } catch (_) {}
+  return null;
+}
+
+function sendQuickPrompt(prompt) {
+  if (aitalkLoading.value) return;
+  if (!chatStore.activeJid) {
+    ElMessage.warning('请先选择一个客户会话');
+    return;
+  }
+  if (aitalkMode.value !== 'chat') switchToChatMode();
+  aitalkInputText.value = prompt;
+  nextTick(() => sendAitalkChat());
+}
+
+async function retryLastRequest() {
+  const req = aitalkLastRequest;
+  if (!req) return;
+  if (req.type === 'analyze') {
+    await triggerQuickGenerate();
+  } else {
+    aitalkInputText.value = req.text || '';
+    await sendAitalkChat();
+  }
+}
+
+watch(() => chatStore.activeJid, () => {
+  aiMessages.value = [];
+  aitalkError.value = '';
+  showScrollDownBtn.value = false;
+});
+
+const aiWidth = computed(() => panelWidth.value);
+const aiCollapsed = computed(() => activePanel.value !== 'ai');
+const panelCollapsed = computed(() => activePanel.value === null);
+const channelDropdown = ref(false);
+const activeFilter = ref('all');
+const filters = [
+  { key: 'all',     label: '所有',     icon: '' },
+  { key: 'unread',  label: '未读',     icon: '' },
+  { key: 'starred', label: '特别关注', icon: '⭐' },
+  { key: 'groups',  label: '群组',     icon: '' },
+  { key: 'glass',   label: '玻璃',     icon: '' },
+];
+
+
+// 会话搜索
+const searchKeyword = ref('');
+let searchTimer = null;
+function onSearchInput() {
+  if (searchTimer) clearTimeout(searchTimer);
+  const kw = searchKeyword.value.trim();
+  searchTimer = setTimeout(() => {
+    chatStore.searchConversations(kw);
+  }, 250);
+}
+
+// 功能面板拖拽
+let panelDragStartX = 0;
+let panelDragStartWidth = 0;
+function startPanelDrag(e) {
+  panelDragStartX = e.clientX;
+  panelDragStartWidth = panelWidth.value;
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  document.addEventListener('mousemove', onPanelDrag);
+  document.addEventListener('mouseup', stopPanelDrag);
+}
+function onPanelDrag(e) {
+  const dx = panelDragStartX - e.clientX;
+  let w = panelDragStartWidth + dx;
+  if (w < 280) w = 280;
+  if (w > 600) w = 600;
+  panelWidth.value = w;
+  aiMiniMode.value = false;
+}
+function stopPanelDrag() {
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+  document.removeEventListener('mousemove', onPanelDrag);
+  document.removeEventListener('mouseup', stopPanelDrag);
+  localStorage.setItem('crm-function-panel-width', panelWidth.value);
+}
+
+watch(platformCollapsed, v => localStorage.setItem('platform-collapsed', v));
+watch(accountsCollapsed, v => localStorage.setItem('accounts-collapsed', v));
+watch(activePanel, (v) => {
+  // 不持久化activePanel，每次进入默认收起
+  if (v) lastActivePanel.value = v;
+});
+watch(panelWidth, (v) => localStorage.setItem('crm-function-panel-width', v));
+watch(iconbarCollapsed, (v) => localStorage.setItem('iconbar-collapsed', v ? '1' : '0'));
+
+// ── 翻译设置（原 ChatView 中的配置，已迁到功能面板） ──
+const LANG_OPTIONS = [
+  { label: '中文简体', value: 'zh' },
+  { label: '中文繁体', value: 'zh-TW' },
+  { label: '英语', value: 'en' },
+  { label: '日语', value: 'ja' },
+  { label: '韩语', value: 'ko' },
+  { label: '法语', value: 'fr' },
+  { label: '德语', value: 'de' },
+  { label: '西班牙语', value: 'es' },
+  { label: '葡萄牙语', value: 'pt' },
+  { label: '俄语', value: 'ru' },
+  { label: '阿拉伯语', value: 'ar' },
+  { label: '意大利语', value: 'it' },
+  { label: '荷兰语', value: 'nl' },
+  { label: '泰语', value: 'th' },
+  { label: '越南语', value: 'vi' },
+  { label: '印尼语', value: 'id' },
+  { label: '马来语', value: 'ms' },
+  { label: '印地语', value: 'hi' },
+  { label: '土耳其语', value: 'tr' },
+  { label: '波兰语', value: 'pl' },
+];
+const LANG_OPTIONS_WITH_AUTO = [{ label: '自动检测', value: 'auto' }, ...LANG_OPTIONS];
+const SIZE_OPTIONS = ['12px', '13px', '14px', '15px', '16px', '18px', '20px'];
+
+const transSaving = ref(false);
+const transForm = reactive({
+  receiveEnabled: true,
+  receiveEngine: 'google',
+  receiveSourceLang: 'auto',
+  receiveTargetLang: 'zh',
+  sendEnabled: true,
+  sendEngine: 'google',
+  sendSourceLang: 'auto',
+  sendTargetLang: 'en',
+  groupAutoTranslate: false,
+  blockChinese: true,
+  translateConfirm: false,
+  translationColor: '#8696a0',
+  translationSize: '14px',
+});
+
+function syncTransFormFromStore() {
+  const s = chatStore.translationSettings || {};
+  Object.assign(transForm, {
+    receiveEnabled: s.receiveEnabled !== false,
+    receiveEngine: s.receiveEngine || 'google',
+    receiveSourceLang: s.receiveSourceLang || 'auto',
+    receiveTargetLang: s.receiveTargetLang || 'zh',
+    sendEnabled: s.sendEnabled !== false,
+    sendEngine: s.sendEngine || 'google',
+    sendSourceLang: s.sendSourceLang || 'auto',
+    sendTargetLang: s.sendTargetLang || 'en',
+    groupAutoTranslate: !!s.groupAutoTranslate,
+    blockChinese: s.blockChinese !== false,
+    translateConfirm: !!s.translateConfirm,
+    translationColor: s.translationColor || '#8696a0',
+    translationSize: s.translationSize || '14px',
+  });
+}
+
+async function saveTransSettings() {
+  transSaving.value = true;
+  try {
+    const payload = {
+      ...transForm,
+    };
+    const ok = await chatStore.updateTranslationSettings(payload);
+    if (ok) {
+      ElMessage.success('翻译设置已保存');
+    } else {
+      ElMessage.error('保存失败');
+    }
+  } finally {
+    transSaving.value = false;
+  }
+}
+
+// ── 面板切换 ──
+function switchPanel(key) {
+  // 点已激活的图标 → 收起
+  if (activePanel.value === key) {
+    activePanel.value = null;
+    return;
+  }
+  activePanel.value = key;
+  aiMiniMode.value = false;
+  if (key === 'translate') syncTransFormFromStore();
+  if (key === 'aitalk') {
+    aitalkError.value = '';
+  }
+}
+function closePanel() {
+  activePanel.value = null;
+}
+function onOpenTranslatePanel() {
+  switchPanel('translate');
+}
+
+function togglePlatform() { platformCollapsed.value = !platformCollapsed.value; }
+function closeAllPanels() { channelDropdown.value = false; }
+
+// 点击外部关闭下拉
+function handleDocClick(e) {
+  if (!e.target.closest('.channel-selector')) channelDropdown.value = false;
+}
+// 切换会话时重置AI话术生成语言为"跟随翻译设置"
+watch(() => chatStore.activeJid, () => {
+  aitalkTargetLang.value = 'follow';
+});
+
+onMounted(async () => {
+  document.addEventListener('click', handleDocClick);
+  window.addEventListener('resize', checkMobile);
+  checkMobile();
+  try { initSocket(); } catch(e) { console.warn('initSocket failed', e); }
+  try { await chatStore.fetchTranslationSettings(); syncTransFormFromStore(); } catch(e) { console.warn('translation settings load failed:', e); }
+  try {
+    await chatStore.fetchConnectionStatus();
+    if (chatStore.isConnected) {
+      await chatStore.fetchConversations();
+    }
+  } catch(e) { console.warn('fetchStatus failed', e); }
+});
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocClick);
+  window.removeEventListener('resize', checkMobile);
+});
+
+// ========== 平台导航 ==========
+const activePlatform = ref('communication');
+const showSettings = ref(false);
+const activeSettingsTab = ref('account');
+
+const platformItems = [
+  { key: 'dashboard', label: '工作台', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
+  { key: 'communication', label: '沟通', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
+  { key: 'customers', label: '客户', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
+  { key: 'automation', label: '营销自动化', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>' },
+  { key: 'data', label: '数据', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>' },
+  { key: 'skills', label: '技能', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>' },
+];
+
+const settingsTabs = [
+  { key: 'account', label: '账号设置', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' },
+  { key: 'channels', label: '渠道管理', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
+  { key: 'ai', label: 'AI设置', icon: '🤖' },
+  { key: 'automation', label: '自动化规则', icon: '⚡' },
+  { key: 'team', label: '团队成员', icon: '👥' },
+  { key: 'system', label: '系统设置', icon: '⚙️' },
+];
+
+const mobileTabs = [
+  { key: 'communication', label: '聊天', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
+  { key: 'accounts', label: '账号', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 2c.83 0 1.5.67 1.5 1.5S12.83 7 12 7s-1.5-.67-1.5-1.5S11.17 4 12 4zm0 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/></svg>' },
+  { key: 'customers', label: '客户', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z"/></svg>' },
+  { key: 'data', label: '数据', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>' },
+  { key: 'settings', label: '我的', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' },
+];
+
+const isMobile = ref(false);
+const mobileAccountsOpen = ref(false);
+const mobileInConv = ref(false);
+const mobileAIOpen = ref(false);
+function checkMobile() {
+  const wasMobile = isMobile.value;
+  isMobile.value = window.innerWidth <= 768;
+  if (isMobile.value) {
+    accountsCollapsed.value = false;
+    chatlistCollapsed.value = false;
+    mobileAccountsOpen.value = false;
+    mobileInConv.value = false;
+    mobileAIOpen.value = false;
+  } else if (wasMobile) {
+    mobileAccountsOpen.value = false;
+    mobileInConv.value = false;
+    mobileAIOpen.value = false;
+  }
+}
+
+function isPlatformActive(key) { return activePlatform.value === key; }
+
+function switchPlatform(item) {
+  if (item.key === 'settings') { showSettings.value = true; return; }
+  activePlatform.value = item.key;
+  showSettings.value = false;
+  const routeMap = {
+    dashboard: '/',
+    communication: '/chat',
+    customers: '/customers',
+    automation: '/automation',
+    data: '/',
+    skills: '/skill-store',
+  };
+  const target = routeMap[item.key] || '/';
+  if (route.path !== target) router.push(target);
+}
+
+function onMobileAIFab() {
+      if (!mobileAIOpen.value) {
+        activePanel.value = 'ai';
+        syncTransFormFromStore();
+      }
+      mobileAIOpen.value = !mobileAIOpen.value;
+    }
+function handleMobileTab(tab) {
+  if (tab.key === 'settings') {
+    showSettings.value = true;
+    return;
+  }
+  if (tab.key === 'accounts') {
+    accountsCollapsed.value = false;
+    activePlatform.value = 'communication';
+    return;
+  }
+  showSettings.value = false;
+  switchPlatform(tab);
+}
+
+watch(() => route.path, (p) => {
+  if (p === '/' || p === '/dashboard') activePlatform.value = 'dashboard';
+  else if (p.startsWith('/chat') || p.startsWith('/emails')) activePlatform.value = 'communication';
+  else if (p.startsWith('/customers')) activePlatform.value = 'customers';
+  else if (p.startsWith('/automation')) activePlatform.value = 'automation';
+  else if (p.startsWith('/skill-store')) activePlatform.value = 'skills';
+  else if (p.startsWith('/settings')) { activePlatform.value = 'dashboard'; showSettings.value = true; }
+}, { immediate: true });
+
+// ========== 沟通模块状态 ==========
+const activeChannel = ref('whatsapp');
+const activeAccount = ref('wa-1');
+const activeConv = ref(null); // jid
+
+const totalUnread = computed(() => {
+  let n = 0;
+  for (const c of chatStore.sortedConversations) n += (c.unreadCount || 0);
+  return n > 0 ? n : '';
+});
+platformItems[1].badge = totalUnread;
+
+function avatarColor(name) {
+  if (!name) return '#00a884';
+  const palette = ['#00a884', '#4FC3F7', '#AB47BC', '#FF7043', '#66BB6A', '#FFA726', '#EC407A', '#26A69A', '#EF5350', '#5C6BC0'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return palette[Math.abs(hash) % palette.length];
+}
+
+function formatConvTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((today - msgDay) / (1000*60*60*24));
+  if (diff === 0) {
+    return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+  if (diff === 1) return '昨天';
+  if (diff < 7) {
+    const days = ['周日','周一','周二','周三','周四','周五','周六'];
+    return days[d.getDay()];
+  }
+  return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function selectConv(conv) {
+  activeConv.value = conv.jid;
+  chatStore.setActiveConversation(conv.jid);
+  if (isMobile.value) {
+    mobileInConv.value = true;
+    mobileAccountsOpen.value = false;
+  }
+}
+
+function handleGoBack() {
+  mobileInConv.value = false;
+}
+
+const waStatus = computed(() => {
+  const s = chatStore.connectionStatus;
+  if (s === 'connected') return 'connected';
+  if (s === 'error') return 'error';
+  return 'disconnected';
+});
+const waStatusText = computed(() => {
+  const map = {
+    connected: 'WhatsApp 已连接',
+    connecting: 'WhatsApp 连接中...',
+    waiting_qr: '等待扫码',
+    error: 'WhatsApp 连接错误',
+    disconnected: 'WhatsApp 未连接',
+    reconnecting: '重新连接中...',
+  };
+  return map[chatStore.connectionStatus] || 'WhatsApp 未连接';
+});
+
+const waAccountCard = computed(() => {
+  if (!chatStore.isConnected) return null;
+  return {
+    id: 'wa-1',
+    name: chatStore.connectedPhone || 'WhatsApp',
+    phone: chatStore.connectedPhone || '已连接',
+    color: '#00a884',
+    status: 'online',
+  };
+});
+
+const showQrInline = ref(false);
+
+function disconnectWA() {
+  if (!confirm('确定要断开 WhatsApp 连接吗？')) return;
+  chatStore.disconnectWhatsApp();
+  showQrInline.value = false;
+}
+
+function refreshWA() {
+  chatStore.fetchConnectionStatus();
+  if (chatStore.isConnected) {
+    chatStore.fetchConversations();
+  } else {
+    chatStore.requestQR();
+    if (route.path !== '/chat') router.push('/chat');
+    setTimeout(() => window.dispatchEvent(new CustomEvent('wa:open-qr')), 300);
+  }
+}
+
+function openQrFromAccount() {
+  chatStore.requestQR();
+}
+
+function doConnectWA() {
+  chatStore.requestQR();
+  // Navigate to chat page so user sees QR dialog
+  if (route.path !== '/chat') router.push('/chat');
+  // Dispatch event for ChatView to open its QR dialog
+  setTimeout(() => window.dispatchEvent(new CustomEvent('wa:open-qr')), 300);
+}
+
+const channels = [
+  { id: 'whatsapp', name: 'WhatsApp', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>', status: 'online', unread: 8 },
+  { id: 'email', name: '邮箱', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>', status: 'online', unread: 4 },
+  { id: 'facebook', name: 'Facebook', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>', status: 'offline', unread: 0 },
+];
+
+const currentChannel = computed(() => channels.find(c => c.id === activeChannel.value) || channels[0]);
+
+function switchChannel(ch) {
+  if (ch.id === "email") {
+    router.push("/emails");
+    channelDropdown.value = false;
+    return;
+  }
+  activeChannel.value = ch.id;
+  channelDropdown.value = false;
+}
+
+function selectChannel(id) {
+  if (id === "email") {
+    router.push("/emails");
+    channelDropdown.value = false;
+    return;
+  }
+  activeChannel.value = id;
+  channelDropdown.value = false;
+}
+
+const currentChannelAccounts = computed(() => {
+  if (activeChannel.value === 'whatsapp') {
+    // Real WA account - only one account supported currently
+    if (chatStore.isConnected && waAccountCard.value) {
+      return [waAccountCard.value];
+    }
+    return [];
+  }
+  if (activeChannel.value === 'email') {
+    return [
+      { id: 'em-1', name: 'Sales', email: 'sales@jzjglass.com', color: '#EA4335', status: 'online' },
+    ];
+  }
+  return [];
+});
+
+
+// Conversations from chatStore - mapped via computed
+const conversations = computed(() => {
+  return chatStore.sortedConversations.map(c => ({
+    jid: c.jid,
+    id: c.jid,
+    name: c.name || (c.phone || c.jid),
+    phone: c.phone,
+    preview: c.lastMessage || '',
+    time: formatConvTime(c.lastMessageTime),
+    unread: c.unreadCount || 0,
+    color: avatarColor(c.name || c.phone || ''),
+    status: 'offline',
+  }));
+});
+
+
+
+
+// ========== AI 面板（窄版豆包聊天框） ==========
+const aiResultRef = ref(null);
+const aiInputEl = ref(null);
+const aiInputText = ref('');
+
+const aiActions = [
+  { key: 'reply',     label: 'AI话术',   miniLabel: '💬 话术', desc: '生成可直接发送的回复',  icon: '💬', hot: true },
+  { key: 'summary',   label: '需求总结', miniLabel: '📋 总结', desc: '提取客户需求要点',      icon: '📋' },
+  { key: 'profile',   label: '客户背调', miniLabel: '👤 背调', desc: '分析客户类型/风格/意向度', icon: '👤' },
+  { key: 'translate', label: '翻译消息', miniLabel: '🌐 翻译', desc: '翻译客户最近一条消息',  icon: '🌐' },
+];
+
+const AI_META = {
+  reply:     { title: '💬 AI 话术',   placeholder: '对回复有补充要求？如「更简短一些」…' },
+  summary:   { title: '📋 需求总结', placeholder: '追问某个要点，如「价格需求是什么？」' },
+  profile:   { title: '👤 客户背调', placeholder: '追问客户特征，如「他的意向度？」' },
+  translate: { title: '🌐 翻译消息', placeholder: '输入要翻译的文字…' },
+};
+const aiModeTitle = computed(() => (AI_META[chatStore.aiMode] && AI_META[chatStore.aiMode].title) || 'AI 助手');
+const aiModePlaceholder = computed(() => (AI_META[chatStore.aiMode] && AI_META[chatStore.aiMode].placeholder) || '继续和 AI 对话...');
+
+// ── AI 话术风格 ──
+const replyStyles = [
+  { key: 'formal',   label: '正式商务', icon: '🤵' },
+  { key: 'friendly', label: '友好亲切', icon: '😊' },
+  { key: 'concise',  label: '简洁高效', icon: '⚡' },
+];
+
+const summaryFieldLabels = {
+  productNeed: '产品需求',
+  quantity: '数量/规格',
+  budget: '预算/价格',
+  delivery: '交付时间',
+  scenario: '应用场景/客户风格',
+  concerns: '关注点/顾虑',
+};
+
+async function handleGenerateReplies() {
+  if (!chatStore.activeJid) return;
+  await chatStore.generateAiReplies();
+  scrollAiChatBottom();
+}
+async function handleGenerateSummary() {
+  if (!chatStore.activeJid) return;
+  await chatStore.generateAiSummary();
+  scrollAiChatBottom();
+}
+async function handleGenerateProfile() {
+  if (!chatStore.activeJid) return;
+  await chatStore.generateAiProfile();
+  scrollAiChatBottom();
+}
+
+async function generateReplies() {
+  const extra = (aiInputText.value || '').trim();
+  if (extra) aiInputText.value = '';
+  await chatStore.generateAiReplies(extra || null);
+  scrollAiChatBottom();
+  nextTick(() => { aiInputEl.value && aiInputEl.value.focus(); });
+}
+
+function scrollAiChatBottom() {
+  nextTick(() => {
+    const el = aiResultRef.value;
+    if (el) el.scrollTop = el.scrollHeight;
+  });
+}
+
+function handleAiActionClick(key) {
+  if (!chatStore.activeJid || chatStore.aiLoading || chatStore.aiGenerating) return;
+  aiInputText.value = '';
+  chatStore.startAIMode(key);
+  activePanel.value = 'ai';
+  aiMiniMode.value = false;
+  scrollAiChatBottom();
+  nextTick(() => { aiInputEl.value && aiInputEl.value.focus(); });
+}
+
+async function sendAiChat() {
+  const text = aiInputText.value.trim();
+  if (!text || chatStore.aiLoading || chatStore.aiGenerating) return;
+  aiInputText.value = '';
+  await chatStore.sendAiChat(text);
+  scrollAiChatBottom();
+  nextTick(() => { aiInputEl.value && aiInputEl.value.focus(); });
+}
+
+function fillAiInput(text) {
+  if (!text) return;
+  chatStore.insertToInput(text);
+}
+
+function onOpenAIPanel() {
+  activePanel.value = 'ai';
+  aiMiniMode.value = false;
+  nextTick(scrollAiChatBottom);
+}
+
+watch(() => chatStore.aiChat.length, () => scrollAiChatBottom());
+watch(() => chatStore.aiReplyResults.length, () => scrollAiChatBottom());
+watch(() => chatStore.aiSummaryResult, () => scrollAiChatBottom());
+watch(() => chatStore.aiMode, (m) => {
+  if (m) {
+    activePanel.value = 'ai';
+    aiMiniMode.value = false;
+    scrollAiChatBottom();
+  }
+});
+watch(() => chatStore.activeJid, () => {
+  aiInputText.value = '';
+});
+
+function starText(n) {
+  const v = parseInt(n) || 0;
+  if (v <= 0) return '—';
+  return '⭐'.repeat(Math.min(v, 10)) + ' ' + v + '/10';
+}
+
+// When connected, hide inline QR
+watch(() => chatStore.connectionStatus, (s) => {
+  if (s === 'connected') showQrInline.value = false;
+});
+
+function handleLogout() {
+  authStore.logout();
+  router.push('/login');
+}
+
+const currentSettingsName = computed(() => {
+  const m = { account:'账号设置', channels:'渠道管理', ai:'AI设置', automation:'自动化规则', team:'团队成员', system:'系统设置' };
+  return m[activeSettingsTab.value] || '设置';
+});
+</script>
+
+<style scoped>
+/* ========== 基础 ========== */
+.crm-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #0b141a;
+  color: #e9edef;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+}
+
+/* ========== ① 平台导航栏 ========== */
+.platform-nav {
+  width: 200px;
+  background: #111b21;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid #222d34;
+  transition: width 0.2s ease;
+  z-index: 50;
+}
+.platform-nav.platform-collapsed { width: 56px; }
+.platform-nav-top { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.logo-wrap {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 14px 10px;
+  cursor: pointer; height: 56px;
+}
+.logo-icon { font-size: 22px; }
+.logo-text { font-size: 16px; font-weight: 700; white-space: nowrap; color: #00a884; }
+
+.platform-menu { flex: 1; padding: 4px 6px; overflow-y: auto; }
+.platform-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px; margin: 2px 0;
+  border-radius: 8px; color: #8696a0;
+  cursor: pointer; transition: all 0.15s;
+  position: relative; white-space: nowrap;
+}
+.platform-item:hover { background: #202c33; color: #e9edef; }
+.platform-item.active { background: #00a88420; color: #00a884; }
+.platform-collapsed .platform-item { justify-content: center; padding: 10px 0; }
+.p-icon { display: flex; flex-shrink: 0; }
+.p-label { font-size: 13px; font-weight: 500; }
+.p-badge {
+  margin-left: auto; background: #00a884; color: #fff;
+  font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600;
+}
+
+.platform-nav-bottom {
+  border-top: 1px solid #222d34; padding: 8px 6px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.wa-status-mini {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; font-size: 12px; color: #8696a0;
+  border-radius: 6px; cursor: pointer; position: relative;
+}
+.platform-collapsed .wa-status-mini { justify-content: center; padding: 8px 0; }
+.wa-status-mini .status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #8696a0;
+}
+.wa-status-mini.connected .status-dot { background: #00a884; box-shadow: 0 0 6px #00a88480; }
+.wa-status-mini.error .status-dot { background: #ea4335; }
+
+.p-setting, .p-collapse, .p-logout {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 9px 10px;
+  background: none; border: none; color: #8696a0;
+  cursor: pointer; border-radius: 6px; font-size: 13px; transition: all 0.15s;
+}
+.p-setting:hover, .p-collapse:hover { background: #202c33; color: #e9edef; }
+.p-logout:hover { background: #ea433520; color: #ea4335; }
+.platform-collapsed .p-setting, .platform-collapsed .p-collapse, .platform-collapsed .p-logout {
+  justify-content: center; padding: 9px 0;
+}
+
+/* tooltip */
+.p-tooltip {
+  position: absolute; left: calc(100% + 8px); top: 50%;
+  transform: translateY(-50%);
+  background: #233138; color: #e9edef;
+  padding: 5px 10px; border-radius: 6px; font-size: 12px;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 0.15s; z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.p-tooltip::before {
+  content: ''; position: absolute; left: -4px; top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent; border-right-color: #233138;
+}
+.p-tooltip.right { left: auto; right: calc(100% + 8px); }
+.p-tooltip.right::before {
+  left: auto; right: -4px;
+  border-right-color: transparent; border-left-color: #233138;
+}
+.platform-item:hover > .p-tooltip,
+.wa-status-mini:hover > .p-tooltip,
+.p-setting:hover > .p-tooltip,
+.p-logout:hover > .p-tooltip,
+
+.ch-icon-btn:hover > .p-tooltip { opacity: 1; }
+.platform-nav:not(.platform-collapsed) .p-tooltip { display: none; }
+
+/* ========== 工作区 ========== */
+.workspace { flex: 1; display: flex; overflow: hidden; min-width: 0; }
+.comm-module { flex: 1; display: flex; overflow: hidden; min-width: 0; }
+.module-full { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ② 账号/渠道栏 */
+.col-accounts {
+  width: 240px; background: #111b21;
+  border-right: 1px solid #222d34;
+  display: flex; flex-direction: column;
+  flex-shrink: 0; transition: width 0.2s; overflow: hidden;
+}
+.col-accounts.collapsed { width: 54px; }
+
+.col-header {
+  height: 48px; display: flex; align-items: center;
+  padding: 0 10px; border-bottom: 1px solid #222d34;
+  gap: 6px; flex-shrink: 0; background: #202c33;
+}
+.col-title {
+  flex: 1; font-size: 13px; font-weight: 600;
+  color: #e9edef; white-space: nowrap;
+}
+.col-toggle {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #8696a0; cursor: pointer;
+  border-radius: 6px;
+}
+.col-toggle:hover { background: #364147; color: #e9edef; }
+
+/* 渠道下拉选择器 */
+.channel-selector { padding: 10px; position: relative; }
+.ch-select-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; background: #202c33; border: 1.5px solid transparent;
+  border-radius: 10px; color: #e9edef; cursor: pointer;
+  font-size: 13px; font-weight: 500; transition: all 0.15s;
+}
+.ch-select-btn:hover { background: #2a3942; border-color: #00a88450; }
+.ch-select-icon { display: flex; color: #00a884; }
+.ch-select-name { flex: 1; text-align: left; }
+.ch-select-arrow {
+  color: #8696a0; transition: transform 0.2s;
+}
+.ch-select-arrow.open { transform: rotate(180deg); }
+.ch-unread {
+  background: #00a884; color: #fff; font-size: 10px;
+  padding: 1px 6px; border-radius: 8px; font-weight: 600;
+}
+
+.ch-dropdown {
+  position: absolute; top: calc(100% - 4px); left: 10px; right: 10px;
+  background: #202c33; border: 1px solid #2a3942;
+  border-radius: 10px; padding: 6px;
+  z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  animation: fadeIn 0.15s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.ch-dd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 6px;
+  cursor: pointer; font-size: 13px; color: #d1d7db;
+  transition: background 0.1s;
+}
+.ch-dd-item:hover { background: #2a3942; color: #e9edef; }
+.ch-dd-item.active { color: #00a884; }
+.ch-dd-item svg { color: #8696a0; }
+.ch-dd-item.active svg { color: #00a884; }
+.ch-check { margin-left: auto; color: #00a884; font-size: 14px; font-weight: 700; }
+.ch-dd-divider { height: 1px; background: #2a3942; margin: 4px 0; }
+.ch-dd-add {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 10px; background: none;
+  border: 1.5px dashed #364147; border-radius: 8px;
+  color: #8696a0; cursor: pointer; font-size: 13px;
+  transition: all 0.15s;
+}
+.ch-dd-add:hover { border-color: #00a884; color: #00a884; background: #00a88410; }
+.ch-add-icon {
+  width: 20px; height: 20px; display: flex;
+  align-items: center; justify-content: center;
+  border-radius: 50%; background: #364147; font-size: 14px; font-weight: 700;
+}
+
+/* 添加账号 */
+.add-account-btn {
+  margin: 0 10px 8px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px; background: none;
+  border: 1.5px dashed #364147; border-radius: 10px;
+  color: #8696a0; cursor: pointer; font-size: 13px;
+  transition: all 0.15s;
+}
+.add-account-btn:hover { border-color: #00a884; color: #00a884; background: #00a88408; }
+.add-icon { font-size: 16px; font-weight: 700; }
+
+/* 账号列表 */
+.account-list { flex: 1; overflow-y: auto; padding: 4px 8px 8px; }
+.account-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; margin-bottom: 2px;
+  border-radius: 8px; cursor: pointer;
+  transition: background 0.15s; position: relative;
+}
+.account-card:hover { background: #202c33; }
+.account-card.active { background: #2a3942; }
+.acc-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 600; font-size: 16px;
+  flex-shrink: 0; position: relative;
+}
+.acc-online-dot {
+  position: absolute; right: 0; bottom: 0;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #00a884; border: 2px solid #111b21;
+}
+.account-card.offline .acc-online-dot { background: #667781; }
+.acc-info { flex: 1; min-width: 0; }
+.acc-name { font-size: 13px; font-weight: 500; color: #e9edef; }
+.acc-meta { font-size: 11px; color: #8696a0; margin-top: 2px; }
+.acc-meta.online-text { color: #00a884; }
+.wa-account-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px; border-radius: 8px;
+  background: #202c33;
+  border: 1px solid #00a88430;
+}
+.acc-disconnect-btn {
+  background: none; border: none; color: #8696a0;
+  font-size: 16px; cursor: pointer; padding: 6px 8px;
+  border-radius: 6px;
+}
+.acc-disconnect-btn:hover { background: #ea433520; color: #ea4335; }
+.wa-show-qr-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid #364147;
+  color: #8696a0;
+  border-radius: 6px;
+  cursor: pointer; font-size: 12px;
+}
+.wa-show-qr-btn:hover { border-color: #00a884; color: #00a884; }
+.wa-qr-inline {
+  margin-top: 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.wa-qr-img {
+  width: 160px; height: 160px;
+  background: #fff; border-radius: 6px; padding: 6px;
+}
+.wa-qr-hint {
+  font-size: 10px; color: #8696a0; text-align: center; line-height: 1.4;
+}
+.wa-connect-btn:disabled { opacity: 0.6; cursor: wait; }
+
+.channel-icons {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 10px 0; flex: 1;
+}
+.ch-icon-btn {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: #202c33; border-radius: 8px;
+  color: #8696a0; cursor: pointer; position: relative;
+  transition: all 0.15s;
+}
+.ch-icon-btn:hover { background: #2a3942; color: #e9edef; }
+.ch-icon-btn.active { background: #00a88430; color: #00a884; }
+.ch-icon-btn.online { box-shadow: inset 0 -3px 0 #00a884; }
+.ch-icon-badge {
+  position: absolute; top: -3px; right: -3px;
+  background: #00a884; color: #fff;
+  font-size: 9px; padding: 1px 4px; border-radius: 8px; font-weight: 600;
+}
+.ch-icon-add {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: #202c33; border: 1px dashed #364147;
+  color: #8696a0; border-radius: 8px; cursor: pointer; font-size: 20px;
+}
+
+/* ③ 状态栏 */
+/* ④ 聊天列表 */
+.col-chatlist {
+  width: 340px; background: #111b21;
+  border-right: 1px solid #222d34;
+  display: flex; flex-direction: column;
+  flex-shrink: 0; transition: width 0.2s; overflow: hidden;
+}
+.col-chatlist.collapsed { width: 40px; }
+.col-chatlist.collapsed .col-header { justify-content: center; padding: 0 6px; }
+.search-box {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: #202c33; padding: 6px 12px; border-radius: 8px;
+}
+.search-box input {
+  flex: 1; background: transparent; border: none;
+  color: #e9edef; font-size: 13px; outline: none;
+}
+.search-box svg { color: #8696a0; flex-shrink: 0; }
+.chat-filters {
+  padding: 8px 10px;
+  border-bottom: 1px solid #222d34;
+  background: #111b21;
+  flex-shrink: 0;
+}
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+.filter-tab {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  background: #202c33;
+  color: #8696a0;
+  border: none;
+  border-radius: 16px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.filter-tab:hover { background: #2a3942; color: #e9edef; }
+.filter-tab.active {
+  background: #00a884;
+  color: #111b21;
+  font-weight: 500;
+}
+.filter-tab-badge {
+  background: rgba(255,255,255,0.25);
+  font-size: 11px;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: 2px;
+}
+.filter-tab.active .filter-tab-badge { background: rgba(17,27,33,0.2); color: #111b21; }
+.filter-tab-more { padding: 5px 10px; }
+.chatlist-body { flex: 1; overflow-y: auto; }
+.conv-item {
+  display: flex; gap: 10px; padding: 10px 12px;
+  cursor: pointer; border-bottom: 1px solid #222d3430;
+  transition: background 0.15s;
+}
+.conv-item:hover { background: #202c33; }
+.conv-item.active { background: #2a3942; }
+.conv-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 600; flex-shrink: 0; position: relative;
+}
+.conv-status-dot {
+  position: absolute; right: 0; bottom: 0;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #00a884; border: 2px solid #111b21;
+}
+.conv-status-dot.offline { background: #667781; }
+.conv-main { flex: 1; min-width: 0; }
+.conv-row { display: flex; align-items: center; justify-content: space-between; }
+.conv-row:last-child { margin-top: 3px; }
+.conv-name { font-size: 14px; font-weight: 500; color: #e9edef; }
+.conv-time { font-size: 11px; color: #8696a0; flex-shrink: 0; }
+.conv-preview {
+  font-size: 12px; color: #8696a0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1; margin-right: 6px;
+}
+.conv-unread {
+  background: #00a884; color: #fff;
+  font-size: 10px; min-width: 18px; height: 18px;
+  border-radius: 9px; display: flex; align-items: center; justify-content: center;
+  font-weight: 600; padding: 0 5px;
+}
+
+/* ⑤ 对话区 */
+.col-conversation {
+  flex: 1; display: flex; flex-direction: column;
+  min-width: 0; background: #0b141a; overflow: hidden;
+}
+.conv-placeholder {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: #8696a0; gap: 8px;
+}
+.ph-icon { font-size: 64px; opacity: 0.3; }
+.ph-title { font-size: 18px; color: #e9edef; }
+.ph-desc { font-size: 13px; }
+
+/* ⑥ AI面板 */
+.col-aipanel { position: relative;
+  width: 320px; background: #111b21;
+  border-left: 1px solid #222d34;
+  display: flex; flex-direction: column;
+  flex-shrink: 0; transition: width 0.2s; overflow: hidden;
+}
+.col-aipanel.collapsed {
+  width: 44px;
+}
+.col-aipanel.collapsed .col-header { padding: 10px 6px; justify-content: center; }
+.col-aipanel.mini { width: 260px; }
+.ai-resize-handle {
+  position: absolute; left: -2px; top: 0; bottom: 0;
+  width: 4px; cursor: col-resize; z-index: 20; background: transparent;
+  transition: background .1s ease;
+}
+.ai-resize-handle:hover {
+  background: #00a884;
+}
+.ai-col-header { gap: 4px; }
+.ai-title { flex: 1; display: flex; align-items: center; gap: 8px; padding-left: 4px; color: #e9edef; font-weight: 600; font-size: 13px; }
+.ai-title-icon { font-size: 16px; }
+.ai-mini-toggle { margin-left: 2px; }
+
+.ai-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Mini mode ── */
+.ai-mini {
+  flex: 1; display: flex; flex-direction: column;
+  padding: 6px; gap: 6px; overflow-y: auto;
+}
+.ai-actions-mini {
+  gap: 5px;
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
+}
+.ai-actions-mini .ai-action-btn {
+  height: 34px;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 0 8px;
+}
+.ai-mini-tip { text-align: center; font-size: 11px; color: #8696a0; padding: 4px 0; }
+.ai-mini-expand {
+  margin-top: auto; padding: 5px; background: transparent;
+  border: 1px dashed #3b4a54; color: #8696a0; border-radius: 6px;
+  font-size: 11px; cursor: pointer;
+}
+.ai-mini-expand:hover { color: #00a884; border-color: #00a884; }
+
+/* ── Full mode ── */
+.ai-full { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.ai-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #222d34;
+  background: #111b21;
+}
+.ai-action-btn {
+  width: 100%;
+  height: 42px;
+  background: #202c33;
+  border: 1px solid #2a3942;
+  color: #e9edef;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-family: inherit;
+  padding: 0 12px;
+}
+.ai-action-btn:hover:not(:disabled) { background: #2a3942; }
+.ai-action-btn.hot {
+  background: #00a884;
+  border-color: #00a884;
+  color: #111b21;
+  font-weight: 600;
+}
+.ai-action-btn.hot:hover:not(:disabled) { background: #00c59b; border-color: #00c59b; }
+.ai-action-btn.active { background: #00a88430 !important; border-color: #00a884 !important; color: #00a884 !important; }
+.ai-action-btn.disabled, .ai-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Result area ── */
+.ai-result-area {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ai-empty, .ai-welcome {
+  margin: auto; text-align: center; color: #8696a0; padding: 24px 12px;
+}
+.ai-empty-icon { font-size: 36px; margin-bottom: 8px; opacity: 0.5; }
+.ai-empty-text, .ai-welcome-desc { font-size: 12px; color: #8696a0; }
+.ai-welcome-title { font-size: 13px; color: #d1d7db; margin-bottom: 4px; }
+
+.ai-result-header {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; padding-bottom: 4px;
+  border-bottom: 1px solid #1f2c33;
+}
+.arh-title { font-weight: 600; color: #00a884; font-size: 12px; }
+.arh-ts { margin-left: auto; font-size: 11px; color: #667781; }
+
+.ai-loading {
+  display: flex; align-items: center; gap: 8px;
+  padding: 16px 4px; color: #8696a0; font-size: 12px;
+}
+.ai-dots { display: inline-flex; gap: 3px; }
+.ai-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: #00a884;
+  animation: aiBounce 1.2s infinite ease-in-out both;
+}
+.ai-dots span:nth-child(1) { animation-delay: -0.32s; }
+.ai-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes aiBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.ai-error {
+  background: #3b2a2a; color: #f08a8a; padding: 10px; border-radius: 8px;
+  font-size: 12px; border-left: 3px solid #ea4335;
+}
+
+.ai-bubble {
+  background: #202c33; border-radius: 10px; padding: 12px;
+  font-size: 13px; line-height: 1.65; color: #e9edef;
+  white-space: pre-wrap; word-break: break-word;
+  border-top-left-radius: 2px;
+}
+
+/* ── Reply cards (click to fill) ── */
+.ai-reply-list { display: flex; flex-direction: column; gap: 8px; }
+.ai-reply-card {
+  background: #2a3942; border: 1px solid transparent;
+  border-radius: 8px; padding: 12px 12px 12px 36px;
+  cursor: pointer; transition: all 0.15s;
+  position: relative;
+}
+.ai-reply-card:hover { background: #00a88430; border-color: #00a884; }
+.ai-reply-card.flashed { background: #00a884; border-color: #00a884; }
+.ai-reply-card.flashed .arc-text { color: #fff; }
+.arc-idx {
+  position: absolute; top: 10px; left: 10px;
+  font-size: 11px; color: #00a884; font-weight: 600;
+}
+.ai-reply-card.flashed .arc-idx { color: #fff; }
+.arc-text {
+  font-size: 13px; line-height: 1.6; color: #e9edef; white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Structured summary ── */
+.ai-struct {
+  background: #202c33; border-radius: 10px; padding: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ais-row { display: flex; gap: 8px; font-size: 12px; line-height: 1.5; }
+.ais-label { flex-shrink: 0; color: #00a884; font-weight: 500; min-width: 78px; }
+.ais-val { flex: 1; color: #d1d7db; }
+.ais-stars { color: #f5c542; }
+
+/* ── Translate ── */
+.ai-translate {
+  background: #202c33; border-radius: 10px; padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ait-label { font-size: 11px; color: #00a884; font-weight: 600; margin-bottom: 3px; }
+.ait-val { font-size: 13px; color: #e9edef; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.ait-trans { font-size: 14px; font-weight: 500; }
+.ait-orig { padding-top: 8px; border-top: 1px solid #2a3942; }
+.ait-orig .ait-val { color: #8696a0; font-size: 12px; }
+.arc-fill-btn {
+  align-self: flex-start;
+  background: #00a88420; border: 1px solid #00a88460;
+  color: #00a884; padding: 5px 12px; border-radius: 4px;
+  font-size: 11px; cursor: pointer; transition: all 0.15s;
+}
+.arc-fill-btn:hover { background: #00a884; color: #fff; }
+
+/* ── Result footer ── */
+.ai-result-footer {
+  display: flex; align-items: center; gap: 10px; padding-top: 6px;
+  border-top: 1px solid #1f2c33; margin-top: 2px;
+}
+.arf-btn {
+  background: transparent; border: 1px solid #3b4a54;
+  color: #8696a0; padding: 5px 12px; border-radius: 6px;
+  font-size: 11px; cursor: pointer; transition: all 0.15s;
+}
+.arf-btn:hover { color: #e9edef; border-color: #8696a0; }
+.arf-toast { font-size: 11px; color: #00a884; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .ai-actions { gap: 6px; padding: 6px; }
+  .ai-action-btn { height: 40px; font-size: 13px; border-radius: 8px; }
+}
+
+
+/* ⑥ 功能面板（AI助手 / 翻译设置） */
+.col-function-panel { position: relative;
+  width: 360px; background: #111b21;
+  border-left: 1px solid #222d34;
+  display: flex; flex-direction: column;
+  flex-shrink: 0; transition: width .28s cubic-bezier(.4,0,.2,1); overflow: hidden;
+}
+.col-function-panel.collapsed {
+  width: 0 !important;
+  min-width: 0;
+  border-left: none;
+  overflow: hidden;
+}
+.col-function-panel.collapsed > * { visibility: hidden; }
+.col-function-panel.collapsed .col-header { padding: 10px 6px; justify-content: center; }
+.col-function-panel.mini { width: 260px; }
+.col-function-panel.translating { background: #111b21; border-left: 1px solid #222d34; }
+.col-function-panel.aitalking { background: #111b21; border-left: 1px solid #222d34; }
+.col-function-panel.aitalking .panel-col-header { background: #202c33; color: #e9edef; border-bottom: 1px solid #222d34; }
+.col-function-panel.aitalking .panel-col-header .col-toggle { color: #8696a0; }
+.col-function-panel.aitalking .panel-col-header .col-toggle:hover { background: #2a3942; color: #e9edef; }
+.col-function-panel.aitalking .ai-title { color: #e9edef; }
+.col-function-panel.translating .panel-col-header { background: #202c33; color: #e9edef; border-bottom: 1px solid #222d34; }
+.col-function-panel.translating .panel-col-header .col-toggle { color: #8696a0; }
+.col-function-panel.translating .panel-col-header .col-toggle:hover { background: #2a3942; color: #e9edef; }
+.col-function-panel .ai-resize-handle {
+  position: absolute; left: -3px; top: 0; bottom: 0;
+  width: 6px; cursor: col-resize; z-index: 10;
+}
+.col-function-panel .ai-resize-handle:hover { background: rgba(0,168,132,0.3); }
+.panel-col-header { gap: 4px; }
+.panel-col-header .ai-title { flex: 1; display: flex; align-items: center; gap: 8px; padding-left: 4px; font-weight: 600; font-size: 13px; }
+.panel-col-header.ai-col-header .ai-title { color: #e9edef; }
+.col-function-panel.translating .ai-title { color: #e9edef; }
+.ai-mini-toggle { margin-left: 2px; }
+.col-function-panel .ai-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.col-function-panel .ai-actions {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px; border-bottom: 1px solid #222d34; background: #111b21;
+}
+.col-function-panel .ai-action-btn {
+  flex: 1; min-width: 0;
+  height: 34px; background: #202c33; color: #8696a0;
+  border: none; border-radius: 6px; cursor: pointer;
+  font-size: 12px; display: flex; align-items: center; justify-content: center;
+  transition: all .15s; font-family: inherit; padding: 0 6px; white-space: nowrap;
+}
+.col-function-panel .ai-action-btn:hover { background: #2a3942; color: #e9edef; }
+.col-function-panel .ai-action-btn.active { background: #00a88430; color: #00a884; }
+.col-function-panel .ai-action-btn.hot { color: #00a884; }
+.col-function-panel .ai-action-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* 翻译设置面板 body — dark WhatsApp theme */
+.trans-panel-body { flex: 1; overflow-y: auto; padding: 16px; background: #111b21; }
+.trans-panel { padding: 0; }
+.trans-block { background: transparent; border-radius: 0; padding: 2px 0 6px; margin-bottom: 4px; border-bottom: 1px solid #222d34; }
+.trans-block:last-of-type { border-bottom: none; }
+.switch-row { display: flex; align-items: center; height: 48px; padding: 0 4px; }
+.switch-label { flex: 1; font-size: 15px; color: #e9edef; font-weight: 500; }
+.sub-row { display: flex; align-items: center; min-height: 40px; padding: 0 4px 0 24px; margin-top: 2px; }
+.sub-label { width: 72px; font-size: 14px; color: #8696a0; flex-shrink: 0; }
+.sub-select { flex: 1; }
+.sub-help { color: #8696a0; font-size: 14px; margin-right: 6px; cursor: help; transition: color .15s; }
+.sub-help:hover { color: #00a884; }
+.switch-help { margin-left: 4px; }
+.trans-divider { display: flex; align-items: center; margin: 16px 0; }
+.trans-divider::before, .trans-divider::after { content: ''; flex: 1; height: 1px; background: #222d34; }
+.trans-divider-text { padding: 0 12px; font-size: 12px; color: #8696a0; }
+.cfg-row { display: flex; align-items: center; min-height: 44px; padding: 0 4px; }
+.cfg-help { margin-left: 4px; margin-right: 8px; }
+.cfg-color-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+.cfg-color-input { flex: 1; height: 32px; border: 1px solid #3b4a54; border-radius: 4px; padding: 0 10px; font-size: 13px; color: #e9edef; background: #2a3942; outline: none; font-family: monospace; min-width: 0; }
+.cfg-color-input:focus { border-color: #00a884; }
+.cfg-color-picker { flex-shrink: 0; }
+.trans-save-btn { width: 100%; height: 40px; margin-top: 16px; background: #00a884; color: #fff; border: none; border-radius: 6px; font-size: 15px; font-weight: 500; cursor: pointer; transition: background .15s; font-family: inherit; }
+.trans-save-btn:hover { background: #069671; }
+.trans-save-btn:disabled { background: #3b5a54; color: #8696a0; cursor: not-allowed; }
+
+/* ⑦ 图标列 — dark WhatsApp theme */
+.col-iconbar {
+  width: 64px; background: #202c33;
+  display: flex; flex-direction: column;
+  flex-shrink: 0; border-left: 1px solid #222d34;
+  transition: width 0.2s;
+}
+.col-iconbar.collapsed { width: 40px; }
+.ib-items { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; }
+.ib-item { background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 8px; color: #aebac1; width: 100%; font-family: inherit; transition: background .15s, color .15s; }
+.ib-item:hover { background: #2a3942; }
+.ib-item.active { color: #00a884; }
+.ib-icon { font-size: 22px; line-height: 1; }
+.ib-label { font-size: 11px; white-space: nowrap; line-height: 1; opacity: 1; transform: translateX(0); transition: opacity .2s cubic-bezier(.4,0,.2,1), transform .28s cubic-bezier(.4,0,.2,1); }
+.col-iconbar.collapsed .ib-label { opacity: 0; transform: translateX(-6px); pointer-events: none; }
+.ib-toggle { margin-top: auto; align-self: center; width: 28px; height: 28px; border: none; background: #2a3942; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #8696a0; margin-bottom: 12px; padding: 0; transition: background .15s, color .15s, transform .28s cubic-bezier(.4,0,.2,1); }
+.ib-toggle:hover { background: #3b4a54; color: #e9edef; }
+.ib-toggle.expanded { transform: rotate(180deg); }
+.col-iconbar.collapsed .ib-item { padding: 8px 4px; justify-content: center; }
+.ib-item { transition: padding .28s cubic-bezier(.4,0,.2,1), justify-content .28s cubic-bezier(.4,0,.2,1); }
+
+
+/* ── Element Plus dark overrides inside translation panel ── */
+.trans-panel-body .el-select { width: 100%; }
+.trans-panel-body .el-select .el-select__wrapper,
+.trans-panel-body .el-select .el-input__wrapper {
+  background-color: transparent !important;
+  box-shadow: 0 1px 0 0 #3b4a54 inset !important;
+  border-radius: 0;
+}
+.trans-panel-body .el-select .el-select__wrapper:hover,
+.trans-panel-body .el-select .el-input__wrapper:hover {
+  box-shadow: 0 1px 0 0 #8696a0 inset !important;
+}
+.trans-panel-body .el-select .el-select__wrapper.is-focused,
+.trans-panel-body .el-select .el-input__wrapper.is-focus {
+  box-shadow: 0 2px 0 0 #00a884 inset !important;
+}
+.trans-panel-body .el-select .el-select__placeholder,
+.trans-panel-body .el-select .el-select__selected-item,
+.trans-panel-body .el-input__inner {
+  color: #e9edef !important;
+  -webkit-text-fill-color: #e9edef !important;
+}
+.trans-panel-body .el-select .el-select__caret,
+.trans-panel-body .el-select .el-select__suffix,
+.trans-panel-body .el-input__suffix {
+  color: #8696a0 !important;
+}
+.trans-panel-body .el-switch.is-checked .el-switch__core {
+  background-color: #00a884 !important;
+  border-color: #00a884 !important;
+}
+.trans-panel-body .el-color-picker__trigger {
+  background: #2a3942 !important;
+  border-color: #3b4a54 !important;
+}
+/* ========== 设置全屏弹窗 ========== */
+.settings-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.settings-dialog {
+  width: 90%; max-width: 1000px; height: 80vh;
+  background: #111b21; border-radius: 12px;
+  display: flex; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.settings-sidebar {
+  width: 220px; background: #202c33;
+  padding: 20px 0; display: flex; flex-direction: column; flex-shrink: 0;
+}
+.settings-title {
+  font-size: 18px; font-weight: 700;
+  padding: 0 20px 16px; color: #e9edef;
+  border-bottom: 1px solid #222d34; margin-bottom: 8px;
+}
+.settings-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; cursor: pointer;
+  color: #8696a0; font-size: 13px; transition: all 0.15s;
+}
+.settings-nav-item:hover { background: #2a3942; color: #e9edef; }
+.settings-nav-item.active { background: #00a88430; color: #00a884; }
+.settings-close {
+  margin-top: auto; margin: auto 20px 0; padding: 8px;
+  background: none; border: 1px solid #364147;
+  color: #8696a0; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.settings-close:hover { background: #ea433520; color: #ea4335; border-color: #ea4335; }
+.settings-content { flex: 1; padding: 24px; overflow-y: auto; }
+.settings-placeholder h2 { color: #e9edef; margin-bottom: 8px; }
+.settings-placeholder p { color: #8696a0; }
+
+/* ========== 动画 ========== */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ========== 移动端 ========== */
+.mobile-tabbar { display: none; }
+.mobile-ai-fab { display: none; }
+.mobile-header { display: none; }
+.mobile-overlay { display: none; }
+
+@media (max-width: 768px) {
+  html, body, #app { height: 100%; overflow: hidden; }
+
+  .crm-layout { flex-direction: column; height: 100vh; }
+
+  /* 移动端顶部栏 */
+  .mobile-header {
+    display: flex; align-items: center; gap: 8px;
+    height: 52px; padding: 0 12px;
+    background: #202c33; border-bottom: 1px solid #222d34;
+    flex-shrink: 0; z-index: 50; position: relative;
+  }
+  .mh-btn {
+    width: 40px; height: 40px; display: flex;
+    align-items: center; justify-content: center;
+    background: none; border: none; color: #e9edef;
+    cursor: pointer; border-radius: 50%;
+  }
+  .mh-btn:active { background: #2a3942; }
+  .mh-title {
+    flex: 1; font-size: 16px; font-weight: 600;
+    color: #e9edef; text-align: left; padding-left: 4px;
+  }
+
+  /* 遮罩 */
+  .mobile-overlay {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 25;
+  }
+
+  .platform-nav { display: none; }
+  .workspace {
+    flex: 1; min-height: 0; position: relative;
+    overflow: hidden; height: 0; /* 让flex:1实际控制高度 */
+  }
+  .workspace.has-mheader { /* 配合mobile-header占高度 */ }
+  .comm-module {
+    position: relative; width: 100%; height: 100%;
+    overflow: hidden;
+  }
+
+  /* ② 账号栏 - 左侧抽屉 */
+  .col-accounts {
+    position: absolute !important; left: 0; top: 0; bottom: 0;
+    z-index: 35; width: 82vw !important; max-width: 320px !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 2px 0 16px rgba(0,0,0,0.4);
+  }
+  .col-accounts.collapsed {
+    transform: translateX(-100%) !important; width: 82vw !important;
+  }
+  .col-accounts.m-open { transform: translateX(0) !important; }
+
+  /* ③ 状态栏隐藏 */
+
+  /* ④ 聊天列表 - 默认全宽，进入对话时隐藏 */
+  .col-chatlist {
+    width: 100% !important; max-width: none !important;
+    border-right: none !important; position: relative;
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  .col-chatlist.collapsed { width: 0 !important; overflow: hidden; }
+  .col-chatlist.m-hidden { transform: translateX(-100%); }
+
+  /* ⑤ 对话主区 - 右侧滑入 */
+  .col-conversation {
+    position: absolute !important; left: 0; right: 0; top: 0; bottom: 0;
+    z-index: 45; background: #0b141a;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    display: flex !important; flex-direction: column !important;
+  }
+  .col-conversation.m-in { transform: translateX(0) !important; }
+  /* 对话页内部要撑满 */
+  .col-conversation > * { height: 100%; }
+
+  /* ⑥ ⑦ 功能栏隐藏 */
+  .col-iconbar { display: none !important; }
+
+  .mobile-tabbar {
+    display: flex; height: 56px;
+    background: #202c33; border-top: 1px solid #222d34;
+    flex-shrink: 0; z-index: 50;
+  }
+  .m-tab {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+    background: none; border: none; color: #8696a0;
+    font-size: 10px; cursor: pointer;
+  }
+  .m-tab.active { color: #00a884; }
+
+  .mobile-ai-fab {
+    display: flex; position: fixed;
+    right: 16px; bottom: 72px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #00a884; color: #fff; border: none;
+    align-items: center; justify-content: center;
+    font-size: 24px; box-shadow: 0 4px 16px rgba(0,168,132,0.4);
+    cursor: pointer; z-index: 60;
+  }
+
+  .settings-dialog { width: 100%; height: 100%; max-width: none; border-radius: 0; }
+
+  /* 账号栏/聊天列表内部滚动适配 */
+  .col-accounts, .col-chatlist { height: 100%; }
+  .comm-module { display: flex; }
+
+  /* 隐藏桌面端折叠按钮（手机端用顶部汉堡/返回） */
+  .col-accounts .col-header .col-toggle,
+  .col-chatlist .col-header .col-toggle,
+  .col-function-panel .col-header .col-toggle,
+  .col-iconbar { display: none !important; }
+
+  /* 手机端account栏col-header标题显示 */
+  .col-accounts .col-header .col-title { display: block !important; }
+
+  /* 确保col-header在手机端能看到 */
+  .col-accounts .col-header { justify-content: space-between !important; padding: 10px 12px !important; }
+  .col-chatlist .col-header { padding: 8px 10px !important; }
+
+  /* 搜索框在手机端适配 */
+  .col-chatlist .search-box { flex: 1; }
+
+  /* 功能面板在手机端改为浮层 */
+  .col-function-panel.m-panel {
+    display: flex !important; position: fixed;
+    right: 0; top: 52px; bottom: 56px; width: 86vw !important;
+    max-width: 360px; z-index: 55;
+    transform: translateX(100%); transition: transform 0.28s;
+    box-shadow: -2px 0 16px rgba(0,0,0,0.4); background: #111b21;
+  }
+  .col-function-panel.m-panel.show { transform: translateX(0); }
+  .col-function-panel.m-panel.translating { background: #111b21; }
+}
+/* WA connect card in accounts column */
+.wa-connect-card {
+  margin: 8px; padding: 16px 12px;
+  background: linear-gradient(135deg, #00a88420, #202c33);
+  border: 1px solid #00a88440;
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  text-align: center;
+}
+.wa-connect-icon { font-size: 32px; }
+.wa-connect-title { font-size: 13px; font-weight: 600; color: #e9edef; }
+.wa-connect-desc { font-size: 11px; color: #8696a0; }
+.wa-connect-btn {
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: #00a884; color: #fff;
+  border: none; border-radius: 16px;
+  font-size: 12px; cursor: pointer;
+  font-weight: 500;
+}
+.wa-connect-btn:hover { background: #06cf9c; }
+.empty-list-hint {
+  padding: 40px 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+
+
+/* === WhatsApp-native col-accounts styles === */
+.wa-col-header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: #202c33;
+  border-bottom: 1px solid #222d34;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.wa-col-brand {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e9edef;
+  min-width: 0;
+}
+.wa-col-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #e9edef;
+  white-space: nowrap;
+}
+.wa-col-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.wa-col-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #aebac1;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.wa-col-btn:hover { background: #364147; color: #e9edef; }
+.wa-col-btn:disabled { opacity: 0.4; cursor: wait; }
+
+.wa-account-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+.wa-empty-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-left: 3px solid transparent;
+}
+.wa-empty-card:hover {
+  background: #202c33;
+}
+.wa-empty-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #2a3942;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wa-empty-info { flex: 1; min-width: 0; }
+.wa-empty-name {
+  font-size: 16px;
+  font-weight: 400;
+  color: #e9edef;
+}
+.wa-empty-meta {
+  font-size: 13px;
+  color: #8696a0;
+  margin-top: 2px;
+}
+.wa-empty-meta .status-text.connecting { color: #53bdeb; }
+.wa-empty-meta .status-text.error { color: #ea4335; }
+
+.wa-account-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  background: #2a3942;
+  border-left: 3px solid #00a884;
+}
+.wa-account-item .acc-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #00a884;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 18px;
+  position: relative;
+  flex-shrink: 0;
+}
+.wa-account-item .acc-info { flex: 1; min-width: 0; }
+.wa-account-item .acc-name {
+  font-size: 16px;
+  color: #e9edef;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wa-account-item .acc-meta {
+  font-size: 13px;
+  margin-top: 2px;
+}
+.wa-account-item .acc-meta.online-text { color: #00a884; }
+.wa-account-item .acc-online-dot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00a884;
+  border: 2px solid #2a3942;
+}
+
+/* Empty conv placeholder big button */
+.connect-btn-big {
+  margin-top: 20px;
+  padding: 11px 28px;
+  background: #00a884;
+  color: #111b21;
+  border: none;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.connect-btn-big:hover { background: #06cf9c; }
+.ph-icon.wa-green { font-size: 72px; opacity: 1; color: #00a884; }
+
+/* ========== AI 窄版聊天框样式 ========== */
+.ai-chat-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.ai-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #222d34;
+  background: #202c33;
+}
+.ai-chat-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e9edef;
+}
+.ai-chat-actions { display: flex; gap: 4px; }
+.ai-chat-icon-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #8696a0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.ai-chat-icon-btn:hover:not(:disabled) { background: #2a3942; color: #00a884; }
+.ai-chat-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ai-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #0b141a;
+}
+.ai-welcome-icon { font-size: 36px; margin-bottom: 8px; }
+
+.ai-chat-msg { display: flex; width: 100%; }
+.ai-chat-msg.ai-user { justify-content: flex-end; }
+.ai-chat-msg.ai-assistant { justify-content: flex-start; }
+.ai-chat-msg.ai-error .ai-chat-bubble { background: #3d1e1e; color: #ff9b9b; }
+
+.ai-chat-bubble {
+  max-width: 85%;
+  padding: 8px 12px 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+  box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
+}
+.ai-chat-msg.ai-assistant .ai-chat-bubble {
+  background: #202c33;
+  color: #e9edef;
+  border-top-left-radius: 2px;
+}
+.ai-chat-msg.ai-user .ai-chat-bubble {
+  background: #00a884;
+  color: #fff;
+  border-top-right-radius: 2px;
+}
+.ai-chat-content { white-space: pre-wrap; }
+
+.ai-insert-row {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.ai-insert-btn {
+  background: #2a3942;
+  color: #00a884;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  font-family: inherit;
+}
+.ai-insert-btn:hover { background: #00a884; color: #fff; }
+.ai-insert-btn-secondary { color: #8696a0; }
+.ai-insert-btn-secondary:hover { background: #2a3942; color: #e9edef; }
+
+.ai-translate-card {
+  background: #202c33;
+  border-radius: 8px;
+  border-top-left-radius: 2px;
+  padding: 4px 12px;
+  max-width: 100%;
+  box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
+}
+.ai-trans-section {
+  padding: 8px 0;
+  border-bottom: 1px solid #2a3942;
+}
+.ai-trans-section:last-child { border-bottom: none; }
+.ai-trans-label {
+  font-size: 11px;
+  color: #8696a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ai-trans-text {
+  font-size: 13px;
+  color: #e9edef;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.ai-trans-result { color: #00a884; font-weight: 500; }
+.ai-trans-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+/* AI 话术/总结/背调 面板 */
+.ai-reply-panel, .ai-summary-panel { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.ai-section-title { font-size: 11px; color: #8696a0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.ai-reply-styles { padding: 0 2px; }
+.ai-style-row { display: flex; gap: 6px; margin-top: 6px; }
+.ai-style-card {
+  flex: 1; padding: 8px 4px;
+  background: #202c33; border: 2px solid transparent;
+  border-radius: 8px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  transition: all 0.15s;
+  color: #e9edef; font-size: 12px;
+}
+.ai-style-card .ai-style-icon { font-size: 20px; }
+.ai-style-card.active {
+  border-color: #00a884;
+  background: #00a88420;
+}
+.ai-style-card:hover:not(.active) { background: #2a3942; }
+.ai-gen-btn {
+  width: 100%; padding: 10px 16px;
+  background: linear-gradient(90deg, #00a884, #00c896);
+  color: #fff; border: none;
+  border-radius: 20px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: opacity 0.15s;
+}
+.ai-gen-btn:hover:not(:disabled) { opacity: 0.9; }
+.ai-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-profile-gen-btn { margin: 0 10px; width: calc(100% - 20px); }
+.ai-dots-inline { display: inline-flex; gap: 3px; align-items: center; }
+.ai-dots-inline span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #fff; display: inline-block;
+  animation: aiBounce 1.2s infinite ease-in-out both;
+}
+.ai-dots-inline span:nth-child(1) { animation-delay: -0.32s; }
+.ai-dots-inline span:nth-child(2) { animation-delay: -0.16s; }
+
+.ai-reply-list { display: flex; flex-direction: column; gap: 8px; }
+.ai-reply-card {
+  background: #202c33; border-radius: 8px; padding: 10px 12px;
+  border-top-left-radius: 2px;
+  box-shadow: 0 1px 0.5px rgba(0,0,0,.13);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ai-error-card { opacity: 0.85; }
+.ai-reply-text { font-size: 13px; color: #e9edef; line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
+.ai-reply-footer { display: flex; align-items: center; justify-content: space-between; }
+.ai-reply-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #8696a0; }
+.ai-reply-meta-tag { display: flex; align-items: center; gap: 3px; }
+
+.ai-regen-btn {
+  background: none; border: none; color: #53bdeb;
+  font-size: 12px; cursor: pointer; padding: 6px 0;
+  font-family: inherit; align-self: center;
+}
+.ai-regen-btn:hover { text-decoration: underline; }
+.ai-regen-btn:disabled { opacity: 0.5; cursor: not-allowed; text-decoration: none; }
+
+/* 需求总结面板 */
+.ai-summary-result { display: flex; flex-direction: column; gap: 10px; }
+.ai-score-block {
+  background: #202c33; border-radius: 8px; padding: 10px 12px;
+}
+.ai-score-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.ai-score-num { font-size: 18px; font-weight: 700; color: #f5c842; }
+.ai-score-bar { height: 6px; background: #2a3942; border-radius: 3px; overflow: hidden; }
+.ai-score-fill { height: 100%; background: linear-gradient(90deg, #f5c842, #f9d971); border-radius: 3px; transition: width 0.4s; }
+
+.ai-stage-block {
+  background: #202c33; border-radius: 8px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ai-stage-text { font-size: 14px; color: #e9edef; font-weight: 600; }
+
+.ai-fields-grid { display: flex; flex-direction: column; gap: 6px; }
+.ai-field-card {
+  background: #202c33; border-radius: 8px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ai-field-label { font-size: 11px; color: #8696a0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.ai-field-value { font-size: 13px; color: #e9edef; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+
+.ai-summary-block {
+  background: #202c33; border-radius: 8px; padding: 10px 12px;
+  border-left: 3px solid #a78bfa;
+}
+.ai-summary-title { font-size: 12px; color: #a78bfa; font-weight: 600; margin-bottom: 6px; }
+.ai-summary-text { font-size: 13px; color: #e9edef; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+
+/* 欢迎提示（profile用） */
+.ai-welcome-text { font-size: 13px; color: #8696a0; }
+
+.ai-chat-input-wrap {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid #222d34;
+  background: #111b21;
+  align-items: center;
+}
+.ai-chat-input {
+  flex: 1;
+  background: #2a3942;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 14px;
+  color: #e9edef;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.4;
+}
+.ai-chat-input::placeholder { color: #8696a0; }
+.ai-chat-input:disabled { opacity: 0.6; }
+.ai-chat-send {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #00a884;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, opacity .15s;
+  flex-shrink: 0;
+}
+.ai-chat-send:hover:not(:disabled) { background: #06cf9c; }
+.ai-chat-send:disabled { opacity: 0.4; cursor: not-allowed; background: #00a884; }
+
+.ai-loading-bubble { padding: 10px 14px; }
+.ai-dots { display: inline-flex; gap: 4px; align-items: center; }
+.ai-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #8696a0;
+  animation: aiBounce 1.2s infinite ease-in-out both;
+  display: inline-block;
+}
+.ai-dots span:nth-child(1) { animation-delay: -0.32s; }
+.ai-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes aiBounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+
+/* Resize handle dark */
+.col-function-panel .ai-resize-handle { background: #222d34; }
+
+
+/* ── AI 话术面板 v2 ── */
+.aitalk-panel-body {
+  flex: 1; display: flex; flex-direction: column;
+  background: #111b21; overflow: hidden; height: 100%;
+}
+
+.aitalk-top-bar {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 12px 8px; border-bottom: 1px solid #222d34;
+}
+.aitalk-top-bar .aitalk-top-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.aitalk-model-select { flex: 1; }
+.aitalk-model-select .el-select__wrapper { background: transparent !important; box-shadow: 0 1px 0 0 #3b4a54 inset !important; border-radius: 0; }
+.aitalk-model-select .el-select__wrapper:hover { box-shadow: 0 1px 0 0 #8696a0 inset !important; }
+.aitalk-model-select .el-select__wrapper.is-focused { box-shadow: 0 2px 0 0 #00a884 inset !important; }
+.aitalk-model-select .el-select__placeholder, .aitalk-model-select .el-select__selected-item { color: #e9edef !important; }
+
+.aitalk-top-first-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.aitalk-top-first-select { flex: 1; }
+.aitalk-select-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+.aitalk-select-row .aitalk-model-select { flex: 1; }
+.aitalk-lang-row { margin-top: 6px; }
+.aitalk-select-label { color: #8696a0; font-size: 12px; white-space: nowrap; min-width: 54px; }
+.aitalk-lang-select { flex: 1; }
+.aitalk-lang-select .el-select__wrapper { background: transparent !important; box-shadow: 0 1px 0 0 #3b4a54 inset !important; border-radius: 0; }
+.aitalk-lang-select .el-select__wrapper:hover { box-shadow: 0 1px 0 0 #8696a0 inset !important; }
+.aitalk-lang-select .el-select__wrapper.is-focused { box-shadow: 0 2px 0 0 #00a884 inset !important; }
+.aitalk-lang-select .el-select__placeholder, .aitalk-lang-select .el-select__selected-item { color: #e9edef !important; font-size: 13px; }
+
+
+.aitalk-top-actions { display: flex; gap: 4px; }
+.aitalk-mode-btn {
+  width: 30px; height: 30px; border-radius: 6px; border: none;
+  background: #2a3942; color: #8696a0; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; transition: all .2s ease;
+}
+.aitalk-mode-btn:hover { background: #3b4a54; color: #e9edef; }
+.aitalk-mode-btn.active { background: rgba(0,168,132,.15); color: #00a884; }
+.aitalk-clear-btn {
+  width: 30px; height: 30px; border-radius: 6px; border: none;
+  background: transparent; color: #8696a0; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; transition: all .2s ease;
+}
+.aitalk-clear-btn:hover { background: rgba(239,68,68,.15); color: #ef4444; }
+
+.aitalk-scroll {
+  flex: 1; overflow-y: auto; padding: 12px; position: relative;
+}
+.aitalk-scroll::-webkit-scrollbar { width: 6px; }
+.aitalk-scroll::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 3px; }
+.aitalk-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.aitalk-welcome { text-align: center; padding: 24px 12px; }
+.aitalk-welcome-icon { font-size: 40px; margin-bottom: 8px; }
+.aitalk-welcome-title { color: #e9edef; font-size: 14px; margin-bottom: 16px; }
+.aitalk-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.aitalk-chip {
+  background: #2a3942; color: #e9edef; border: none; border-radius: 16px;
+  padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all .2s ease;
+  font-family: inherit; margin: 2px;
+}
+.aitalk-chip:hover { background: #3b4a54; }
+
+.aitalk-msg { margin-bottom: 10px; display: flex; flex-direction: column; }
+.aitalk-msg-user { align-items: flex-end; }
+.aitalk-msg-ai { align-items: flex-start; }
+.aitalk-bubble {
+  max-width: 90%; padding: 9px 12px; border-radius: 8px; font-size: 14px;
+  line-height: 1.5; word-break: break-word; white-space: pre-wrap;
+}
+.aitalk-bubble b { font-weight: 600; }
+.aitalk-bubble-user {
+  background: #005c4b; color: #e9edef; border-radius: 8px 0 8px 8px; max-width: 80%;
+}
+.aitalk-bubble-ai {
+  background: #202c33; color: #e9edef; border-radius: 0 8px 8px 8px; max-width: 95%;
+}
+.aitalk-msg-time { font-size: 10px; color: #8696a0; margin-top: 3px; padding: 0 4px; }
+
+.aitalk-typing { display: inline-flex; align-items: center; gap: 4px; padding: 12px 16px; }
+.aitalk-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #8696a0;
+  animation: aitalk-bounce 1.2s infinite ease-in-out; display: inline-block;
+}
+.aitalk-dot:nth-child(2) { animation-delay: .2s; }
+.aitalk-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes aitalk-bounce {
+  0%, 80%, 100% { opacity: .3; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-4px); }
+}
+
+.aitalk-error-block {
+  background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 8px;
+  padding: 10px 12px; max-width: 95%;
+}
+.aitalk-error-text { color: #fca5a5; font-size: 13px; margin-bottom: 6px; }
+.aitalk-retry-btn {
+  background: #2a3942; color: #e9edef; border: 1px solid #3b4a54; border-radius: 4px;
+  padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.aitalk-retry-btn:hover { background: #3b4a54; }
+.aitalk-error-global {
+  margin: 0 12px 8px; padding: 8px 12px; background: rgba(239,68,68,.15);
+  border-radius: 6px; color: #fca5a5; font-size: 12px;
+}
+
+.aitalk-reply-card-v2 {
+  background: #202c33; border-radius: 8px; padding: 12px; margin-bottom: 8px;
+  max-width: 100%; position: relative; transition: background .2s ease;
+}
+.aitalk-reply-card-v2:hover { background: #26353d; }
+.aitalk-reply-num {
+  position: absolute; top: 8px; right: 10px; color: #00a884; font-weight: 700;
+  font-size: 12px; background: rgba(0,168,132,.12); width: 22px; height: 22px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.aitalk-reply-head { margin-bottom: 8px; padding-right: 28px; }
+.aitalk-reply-name { color: #00a884; font-weight: 700; font-size: 14px; }
+.aitalk-reply-sep { color: #8696a0; }
+.aitalk-reply-desc { color: #8696a0; font-size: 12px; }
+.aitalk-reply-foreign {
+  background: #111b21; border-left: 3px solid #00a884; border-radius: 4px; padding: 10px;
+  color: #e9edef; font-size: 14px; line-height: 1.55; margin: 6px 0;
+  white-space: pre-wrap; word-break: break-word;
+}
+.aitalk-reply-chinese { color: #8696a0; font-size: 13px; font-style: italic; line-height: 1.5; margin-bottom: 8px; }
+.aitalk-reply-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+.aitalk-mini-btn {
+  background: #2a3942; color: #8696a0; border: none; border-radius: 4px;
+  padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit;
+  transition: all .2s ease;
+}
+.aitalk-mini-btn:hover { background: #3b4a54; color: #e9edef; }
+.aitalk-use-btn {
+  width: 100%; background: #00a884; color: #fff; border: none; border-radius: 6px;
+  padding: 10px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit;
+  transition: all .2s ease;
+}
+.aitalk-use-btn:hover { background: #008c6e; }
+.aitalk-use-btn.done { background: #006e56; }
+
+.aitalk-footer {
+  padding: 10px 12px 12px; border-top: 1px solid #222d34; background: #111b21;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.aitalk-quick-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.aitalk-mini-chip {
+  background: #2a3942; color: #8696a0; border: none; border-radius: 4px;
+  padding: 3px 8px; font-size: 11px; cursor: pointer; font-family: inherit; transition: all .2s ease;
+}
+.aitalk-mini-chip:hover { background: #3b4a54; color: #e9edef; }
+.aitalk-input-row { display: flex; gap: 8px; align-items: flex-end; }
+.aitalk-textarea {
+  flex: 1; background: #2a3942; border: 1px solid #3b4a54; border-radius: 8px;
+  padding: 10px 12px; color: #e9edef; font-size: 14px; resize: none;
+  outline: none; font-family: inherit; line-height: 1.4; min-height: 42px; max-height: 120px;
+  transition: border-color .2s ease;
+}
+.aitalk-textarea:focus { border-color: #00a884; }
+.aitalk-textarea::placeholder { color: #8696a0; }
+.aitalk-send-btn {
+  width: 38px; height: 38px; border-radius: 50%; background: #00a884; border: none;
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .2s ease;
+}
+.aitalk-send-btn:hover:not(:disabled) { background: #008c6e; }
+.aitalk-send-btn:disabled { background: #3b4a54; cursor: not-allowed; }
+
+.aitalk-gen-btn {
+  width: 100%; height: 44px; background: #7c3aed; color: #fff; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center; gap: 8px; transition: background .15s ease, transform .1s ease;
+  font-family: inherit;
+}
+.aitalk-gen-btn:hover:not(:disabled) { background: #6d28d9; }
+.aitalk-gen-btn:active:not(:disabled) { transform: scale(.98); }
+.aitalk-gen-btn:disabled { opacity: .6; cursor: not-allowed; }
+.aitalk-spinner { display: inline-block; animation: aitalk-spin 1s linear infinite; }
+@keyframes aitalk-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+.aitalk-switch-mode-link {
+  background: none; border: none; color: #8696a0; font-size: 12px; cursor: pointer;
+  padding: 2px 0; font-family: inherit; text-align: center; transition: color .2s ease;
+}
+.aitalk-switch-mode-link:hover { color: #00a884; }
+
+.aitalk-scroll-down {
+  position: absolute; right: 16px; bottom: 8px; width: 32px; height: 32px;
+  border-radius: 50%; background: #202c33; border: 1px solid #3b4a54; color: #00a884;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.4); z-index: 5;
+  transition: all .2s ease;
+}
+.aitalk-scroll-down:hover { background: #2a3942; }
+
+</style>
+
+<style>
+/* 全局深色下拉 popper（teleport到body，必须用非scoped样式） */
+.el-popper.crm-dark-popper,
+.el-popper.is-light.crm-dark-popper {
+  background: #233138 !important;
+  border: 1px solid #2a3942 !important;
+}
+.el-popper.crm-dark-popper .el-popper__arrow::before {
+  background: #233138 !important;
+  border-color: #2a3942 !important;
+}
+.el-popper.crm-dark-popper .el-select-dropdown__item {
+  color: #d1d7db !important;
+}
+.el-popper.crm-dark-popper .el-select-dropdown__item:hover,
+.el-popper.crm-dark-popper .el-select-dropdown__item.hover,
+.el-popper.crm-dark-popper .el-select-dropdown__item.is-hovering {
+  background: #2a3942 !important;
+  color: #e9edef !important;
+}
+.el-popper.crm-dark-popper .el-select-dropdown__item.selected,
+.el-popper.crm-dark-popper .el-select-dropdown__item.is-selected {
+  color: #00a884 !important;
+  font-weight: 600;
+}
+.el-popper.crm-dark-popper .el-select-dropdown__empty {
+  color: #8696a0 !important;
+}
+
+/* 全局：功能面板内所有 Element Plus 控件统一黑底下划线风格 */
+.col-function-panel .el-select .el-select__wrapper,
+.col-function-panel .el-select .el-input__wrapper,
+.col-function-panel .el-input .el-input__wrapper {
+  background-color: transparent !important;
+  box-shadow: 0 1px 0 0 #3b4a54 inset !important;
+  border-radius: 0 !important;
+}
+.col-function-panel .el-select .el-select__wrapper:hover,
+.col-function-panel .el-select .el-input__wrapper:hover,
+.col-function-panel .el-input .el-input__wrapper:hover {
+  box-shadow: 0 1px 0 0 #8696a0 inset !important;
+}
+.col-function-panel .el-select .el-select__wrapper.is-focused,
+.col-function-panel .el-select .el-input__wrapper.is-focus,
+.col-function-panel .el-input .el-input__wrapper.is-focus {
+  box-shadow: 0 2px 0 0 #00a884 inset !important;
+}
+.col-function-panel .el-select .el-select__placeholder,
+.col-function-panel .el-select .el-select__selected-item,
+.col-function-panel .el-input .el-input__inner {
+  color: #e9edef !important;
+  -webkit-text-fill-color: #e9edef !important;
+}
+.col-function-panel .el-select .el-select__caret,
+.col-function-panel .el-select .el-select__suffix,
+.col-function-panel .el-input__suffix {
+  color: #8696a0 !important;
+}
+/* 颜色选择器按钮黑底 */
+.col-function-panel .el-color-picker__trigger {
+  background: #2a3942 !important;
+  border-color: #3b4a54 !important;
+}
+/* 色值输入框也黑底 */
+.col-function-panel .cfg-color-input {
+  background: #2a3942 !important;
+  border-color: #3b4a54 !important;
+  color: #e9edef !important;
+}
+
+</style>

@@ -1,0 +1,15 @@
+{
+  "receiveEnabled": true,
+  "receiveEngine": "google",
+  "receiveSourceLang": "auto",
+  "receiveTargetLang": "zh",
+  "sendEnabled": true,
+  "sendEngine": "doubao",
+  "sendSourceLang": "auto",
+  "sendTargetLang": "ja",
+  "groupAutoTranslate": false,
+  "blockChinese": true,
+  "translateConfirm": false,
+  "translationColor": "#f5efef",
+  "translationSize": "14px"
+}

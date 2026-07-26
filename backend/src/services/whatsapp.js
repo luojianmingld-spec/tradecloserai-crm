@@ -20,7 +20,7 @@ async function loadBaileys() {
   if (baileysModule) return baileysModule;
   if (baileysLoadError) throw baileysLoadError;
   try {
-    baileysModule = await import('@whiskeysockets/baileys');
+    baileysModule = await import('baileys-york');
     console.log('[WhatsApp] Baileys library loaded successfully');
     return baileysModule;
   } catch (err) {
@@ -246,7 +246,7 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
   const messageType = getMessageType(msg.message);
 
   let contact = await prisma.contact.findUnique({
-    where: { accountId_jid: { accountId, jid } },
+    where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid } },
   });
 
   if (!contact) {
@@ -303,7 +303,7 @@ async function handleIncomingMessage(accountId, userId, msg, io) {
   });
 
   await prisma.conversation.upsert({
-    where: { accountId_jid: { accountId, jid } },
+    where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid } },
     create: {
       accountId,
       contactId: contact.id,
@@ -340,7 +340,7 @@ export async function sendMessage(accountId, userId, jid, text, io) {
   const sent = await conn.sock.sendMessage(jid, { text });
 
   let contact = await prisma.contact.findUnique({
-    where: { accountId_jid: { accountId, jid } },
+    where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid } },
   });
 
   if (!contact) {
@@ -368,7 +368,7 @@ export async function sendMessage(accountId, userId, jid, text, io) {
   });
 
   await prisma.conversation.upsert({
-    where: { accountId_jid: { accountId, jid } },
+    where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid } },
     create: {
       accountId,
       contactId: contact.id,

@@ -1,0 +1,324 @@
+/**
+ * WhatsApp API 路由 — 修复版
+ * POST /api/whatsapp/send 修复：
+ *  - 不再做自动翻译，只发送原文
+ *  - 落库后只 emit 一次 whatsapp:message_sent（provider 不再 emit 'sent'，避免重复）
+ */
+
+import { Router } from 'express';
+import { authMiddleware } from '../middleware/auth.js';
+import whatsappProvider from '../services/whatsapp-provider.js';
+import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { translateText, detectLanguage } from '../services/ai.service.js';
+
+// Translation settings for outgoing (same file as routes/translation.js)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../../data');
+const SETTINGS_FILE = path.join(DATA_DIR, 'translation-settings.json');
+const DEFAULT_SEND_SETTINGS = {
+  sendEnabled: true,
+  sendEngine: 'google',
+  sendSourceLang: 'auto',
+  sendTargetLang: 'en',
+};
+function readSendSettings() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(SETTINGS_FILE)) return { ...DEFAULT_SEND_SETTINGS };
+    const raw = fs.readFileSync(SETTINGS_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_SEND_SETTINGS, ...parsed };
+  } catch (e) {
+    return { ...DEFAULT_SEND_SETTINGS };
+  }
+}
+
+// Quick regex check: is text already in targetLang? (only covers zh/ar/en family for now; other langs fall through to LLM detect)
+function isAlreadyInLang(text, targetLang) {
+  if (!text) return false;
+  const sample = text.slice(0, 500);
+  if (targetLang === 'zh') return /[一-鿿]/.test(sample) && !/[؀-ۿ]/.test(sample);
+  if (targetLang === 'ar') return /[؀-ۿݐ-ݿࢠ-ࣿ]/.test(sample) && !/[一-鿿]/.test(sample);
+  // For en/es/fr/de etc - check if mostly latin and no CJK/Arabic dominant chars
+  if (['en','es','fr','de','pt','it','nl','tr','id','vi'].includes(targetLang)) {
+    const hasCJK = /[一-鿿]/.test(sample);
+    const hasArabic = /[؀-ۿ]/.test(sample);
+    if (hasCJK || hasArabic) return false;
+    // Allow latin scripts pass → trust source/target match at translateText level too
+    const latin = (sample.match(/[A-Za-zÀ-ÿ]/g) || []).length;
+    const total = sample.replace(/\s+/g, '').length;
+    return total === 0 || (latin / total) > 0.5;
+  }
+  return false;
+}
+
+const router = Router();
+const prisma = new PrismaClient();
+router.use(authMiddleware);
+
+/** POST /api/whatsapp/qr — 生成二维码，开始连接 */
+router.post('/qr', async (req, res) => {
+  try {
+    const userId = req.userId;
+    const sessionId = `user_${userId}`;
+    const result = await whatsappProvider.connect(sessionId, userId);
+    if (result.status === 'unavailable') {
+      return res.status(503).json({ error: result.message, status: 'unavailable' });
+    }
+    res.json({ ...result, sessionId });
+  } catch (err) {
+    console.error('[WA QR Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** POST /api/whatsapp/send — 发送消息（发送前强制按翻译设置转换为目标语言，失败回退原文） */
+router.post('/send', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const { to, message, skipTranslate } = body;
+    if (!to || !message) {
+      return res.status(400).json({ error: 'to and message are required' });
+    }
+
+    const sessionId = `user_${req.userId}`;
+    let toJid = to;
+    if (!toJid.includes('@')) toJid = `${toJid}@s.whatsapp.net`;
+
+    // 1. 发送前强制翻译：以翻译设置的sendTargetLang为唯一真相源
+    let outgoingText = String(message);
+    let translatedMeta = null;
+    try {
+      const ts = readSendSettings();
+      if (!skipTranslate && ts.sendEnabled && ts.sendTargetLang && ts.sendTargetLang !== 'auto') {
+        const targetLang = ts.sendTargetLang;
+        const engine = ts.sendEngine || 'google';
+        // 快速正则预检：如果已经是目标语言则跳过
+        const fastOk = isAlreadyInLang(outgoingText, targetLang);
+        if (!fastOk) {
+          // 使用 detectLanguage 再确认（可能是LLM检测，失败走fastDetect）
+          let sourceLang = 'auto';
+          try {
+            const detected = await detectLanguage(outgoingText, engine);
+            if (detected && detected !== 'unknown') sourceLang = detected;
+          } catch (_) { sourceLang = 'auto'; }
+          if (sourceLang !== targetLang) {
+            const tr = await translateText(outgoingText, sourceLang, targetLang, engine, req.userId);
+            if (tr && tr.translated && tr.translated.trim() && !tr.error) {
+              outgoingText = tr.translated.trim();
+              translatedMeta = { sourceLang, targetLang, original: String(message) };
+            }
+          }
+        }
+      }
+    } catch (te) {
+      console.warn('[WA Send] pre-translate failed, sending original:', te.message);
+    }
+
+    // 2. 通过 provider 发送（可能是已翻译文本）
+    const result = await whatsappProvider.sendMessage(sessionId, toJid, outgoingText);
+
+    // 2. 查出我方连接信息
+    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+    const meFrom = conn?.phone ? `${conn.phone}@s.whatsapp.net` : 'me';
+
+    // 3. 落库保存消息
+    let saved = null;
+    try {
+      saved = await prisma.wAMessage.create({
+        data: {
+          sessionId,
+          from: meFrom,
+          to: toJid,
+          body: outgoingText,
+          type: 'text',
+          direction: 'outbound',
+          timestamp: new Date(),
+          waMessageId: result.messageId || null,
+        },
+      });
+    } catch (e) {
+      console.warn('[WA] save outgoing via REST failed:', e.message);
+    }
+
+    // 4. 自动创建/更新客户
+    try {
+      const phone = toJid.split('@')[0];
+      const existing = await prisma.customer.findFirst({ where: { userId: req.userId, phone } });
+      if (!existing) {
+        await prisma.customer.create({
+          data: { userId: req.userId, phone, name: phone, source: 'whatsapp', status: 'potential', lastContactAt: new Date() },
+        });
+      } else {
+        await prisma.customer.update({ where: { id: existing.id }, data: { lastContactAt: new Date() } });
+      }
+    } catch (e) { /* ignore */ }
+
+    // 5. 只 emit 一次 whatsapp:message_sent（带真实 savedId，前端据此替换 tmp- 条目）
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user_${req.userId}`).emit('whatsapp:message_sent', {
+          id: saved?.id || ('tmp-' + Date.now()),
+          waMessageId: result.messageId || null,
+          to: toJid,
+          from: meFrom,
+          body: outgoingText,
+          content: outgoingText,
+          direction: 'outbound',
+          translated: translatedMeta,
+          fromMe: true,
+          messageType: 'text',
+          timestamp: saved?.timestamp || new Date(),
+        });
+      }
+    } catch (e) { /* ignore */ }
+
+    res.json({ ...result, savedId: saved?.id });
+  } catch (err) {
+    console.error('[WA Send Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** GET /api/whatsapp/status */
+router.get('/status', async (req, res) => {
+  try {
+    const sessionId = req.query.sessionId || `user_${req.userId}`;
+    const status = whatsappProvider.getStatus(sessionId);
+    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+    res.json({ ...status, sessionId, lastConnectedAt: conn?.lastConnectedAt });
+  } catch (err) {
+    console.error('[WA Status Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** POST /api/whatsapp/disconnect */
+router.post('/disconnect', async (req, res) => {
+  try {
+    const sessionId = req.body?.sessionId || `user_${req.userId}`;
+    await whatsappProvider.disconnect(sessionId);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[WA Disconnect Error]', err.stack || err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+/** POST /api/whatsapp/pairing-code — 通过手机号获取8位配对码登录 */
+router.post('/pairing-code', async (req, res) => {
+  try {
+    const { phone } = req.body || {};
+    if (!phone) return res.status(400).json({ error: 'phone number is required' });
+    const sessionId = `user_${req.userId}`;
+    // 确保连接已建立
+    let status = whatsappProvider.getStatus(sessionId);
+    if (status.status !== 'waiting_qr' && status.status !== 'connecting') {
+      // 自动发起连接
+      await whatsappProvider.connect(sessionId, req.userId);
+      // 等2秒让QR/socket就绪
+      await new Promise(r => setTimeout(r, 2500));
+    }
+    const result = await whatsappProvider.requestPairingCode(sessionId, phone);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[WA Pairing Code Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+/** GET /api/whatsapp/connections */
+router.get('/connections', async (req, res) => {
+  try {
+    const connections = whatsappProvider.getActiveConnections();
+    const dbConns = await prisma.wAConnection.findMany();
+    const merged = connections.map(c => {
+      const db = dbConns.find(d => d.sessionId === c.sessionId);
+      return { ...c, lastConnectedAt: db?.lastConnectedAt };
+    });
+    res.json(merged);
+  } catch (err) {
+    console.error('[WA Connections Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** GET /api/whatsapp/messages */
+router.get('/messages', async (req, res) => {
+  try {
+    const { jid, limit = 50, before } = req.query;
+    if (!jid) return res.status(400).json({ error: 'jid is required' });
+
+    const sessionId = `user_${req.userId}`;
+    const where = { sessionId, OR: [{ from: jid }, { to: jid }] };
+    if (before) where.timestamp = { lt: new Date(before) };
+
+    const messages = await prisma.wAMessage.findMany({
+      where, orderBy: { timestamp: 'desc' }, take: parseInt(limit),
+    });
+    res.json(messages.reverse());
+  } catch (err) {
+    console.error('[WA Messages Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** GET /api/whatsapp/conversations */
+router.get('/conversations', async (req, res) => {
+  try {
+    const sessionId = `user_${req.userId}`;
+    const search = (req.query.search || '').toString().trim();
+
+    const allMsgs = await prisma.wAMessage.findMany({
+      where: { sessionId }, orderBy: { timestamp: 'desc' }, take: 500,
+    });
+
+    const contactMap = new Map();
+    for (const msg of allMsgs) {
+      const contactJid = msg.direction === 'inbound' ? msg.from : msg.to;
+      if (!contactJid || contactJid === 'me' || !contactJid.includes('@')) continue;
+      if (!contactMap.has(contactJid)) {
+        contactMap.set(contactJid, { lastMsg: msg, unread: (msg.direction === 'inbound' && !msg.read) ? 1 : 0 });
+      } else {
+        const entry = contactMap.get(contactJid);
+        if (msg.direction === 'inbound' && !msg.read) entry.unread += 1;
+      }
+    }
+
+    const phones = [...contactMap.keys()].map(j => j.split('@')[0]);
+    const customers = phones.length
+      ? await prisma.customer.findMany({
+          where: { userId: req.userId, phone: { in: phones } },
+          select: { id: true, phone: true, name: true },
+        })
+      : [];
+    const custMap = new Map(customers.map(c => [c.phone, c]));
+
+    const conversations = [];
+    for (const [jid, entry] of contactMap) {
+      const phone = jid.split('@')[0];
+      const cust = custMap.get(phone);
+      const name = cust?.name || phone;
+      if (search && !name.includes(search) && !phone.includes(search) && !(entry.lastMsg.body || '').includes(search)) continue;
+      conversations.push({
+        jid, phone, name,
+        lastMessage: entry.lastMsg.body,
+        lastMessageTime: entry.lastMsg.timestamp,
+        direction: entry.lastMsg.direction,
+        unreadCount: entry.unread,
+      });
+    }
+    conversations.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+    res.json(conversations);
+  } catch (err) {
+    console.error('[WA Conversations Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

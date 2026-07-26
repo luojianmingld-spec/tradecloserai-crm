@@ -17,12 +17,16 @@ export function initSocket() {
     },
     transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 2000,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
   });
 
   socket.on('connect', () => {
     console.log('[Socket] Connected');
+    // 重连后刷新会话列表，补齐断线期间的内容
+    try { chatStore.fetchConversations?.(); } catch(e) {}
   });
 
   socket.on('disconnect', (reason) => {
@@ -42,8 +46,36 @@ export function initSocket() {
     chatStore.handleNewMessage(data);
   });
 
+  socket.on('whatsapp:reaction', (data) => {
+    chatStore.handleReaction?.(data);
+  });
   socket.on('whatsapp:message_sent', (data) => {
     chatStore.handleMessageSent(data);
+  });
+
+  // Telegram events → 通过window事件转发给LayoutView（避免污染chatStore）
+  socket.on('telegram:message', (data) => {
+    window.dispatchEvent(new CustomEvent('tg:message', { detail: data }));
+  });
+  socket.on('telegram:translation', (data) => {
+    window.dispatchEvent(new CustomEvent('tg:translation', { detail: data }));
+  });
+  socket.on('conversation:update', (data) => {
+    if (data?.conversation?.platform === 'telegram') {
+      window.dispatchEvent(new CustomEvent('tg:conv-update', { detail: data }));
+    }
+  });
+
+  socket.on('whatsapp:message_update', (data) => {
+    chatStore.handleMessageUpdate?.(data);
+  });
+
+  socket.on('whatsapp:translation', (data) => {
+    chatStore.handleTranslation(data);
+  });
+
+    socket.on('whatsapp:message_translated', (data) => {
+    chatStore.handleMessageTranslated(data);
   });
 
   socket.on('whatsapp:conversations', (data) => {
@@ -66,6 +98,10 @@ export function initSocket() {
 
   socket.on('whatsapp:chats_loaded', (data) => {
     chatStore.fetchConversations();
+  });
+
+  socket.on('whatsapp:receipt', (data) => {
+    chatStore.handleReceipt(data);
   });
 
   socket.on('whatsapp:presence', (data) => {

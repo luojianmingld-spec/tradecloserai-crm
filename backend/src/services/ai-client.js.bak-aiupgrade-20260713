@@ -1,0 +1,167 @@
+/**
+ * AI Client - 统一AI服务
+ * 使用 openai npm 包调用各种 LLM 提供商
+ * 从 Settings 表读取当前激活的 provider 配置
+ */
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+const USER_ID = 1;
+
+// Default lite model for fast translation/detection (doubao-lite)
+export const DOUBAO_LITE_MODEL = "doubao-seed-2-0-lite-260215";
+// Default pro model for high-quality tasks (doubao-pro)
+export const DOUBAO_PRO_MODEL = "doubao-pro-32k-250115";
+// Default request timeout (ms)
+export const DEFAULT_TIMEOUT_MS = 10000;
+
+let openaiModule = null;
+
+async function getOpenAI() {
+  if (!openaiModule) {
+    try {
+      openaiModule = await import("openai");
+    } catch (e) {
+      console.error("[AI Client] openai package not available:", e.message);
+      return null;
+    }
+  }
+  return openaiModule.default || openaiModule;
+}
+
+/**
+ * 获取所有 provider 配置
+ */
+export async function getProviders() {
+  const setting = await prisma.setting.findUnique({
+    where: { userId_key: { userId: USER_ID, key: "ai_providers" } },
+  });
+  if (!setting || !setting.value) return [];
+  try {
+    return JSON.parse(setting.value);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 保存所有 provider 配置
+ */
+async function saveProviders(providers) {
+  await prisma.setting.upsert({
+    where: { userId_key: { userId: USER_ID, key: "ai_providers" } },
+    create: { userId: USER_ID, key: "ai_providers", value: JSON.stringify(providers) },
+    update: { value: JSON.stringify(providers) },
+  });
+}
+
+/**
+ * 获取当前激活的 provider
+ */
+export async function getActiveProvider() {
+  const providers = await getProviders();
+  const activeIdSetting = await prisma.setting.findUnique({
+    where: { userId_key: { userId: USER_ID, key: "ai_active_id" } },
+  });
+  const activeId = activeIdSetting?.value;
+  if (!activeId) {
+    return providers.find((p) => p.isDefault) || providers[0] || null;
+  }
+  return providers.find((p) => p.id === activeId) || providers[0] || null;
+}
+
+/**
+ * 按 id 获取指定 provider（用于按模型路由到不同供应商）
+ */
+export async function getProviderById(id) {
+  if (!id) return null;
+  const providers = await getProviders();
+  return providers.find((p) => p.id === id) || null;
+}
+
+/**
+ * 创建 OpenAI client 实例
+ */
+async function createClient(provider, timeout = DEFAULT_TIMEOUT_MS) {
+  const OpenAI = await getOpenAI();
+  if (!OpenAI) {
+    throw new Error("openai npm 包不可用，请检查安装");
+  }
+  if (!provider || !provider.apiKey) {
+    throw new Error("未配置 AI 模型，请先在设置中添加并激活一个 AI 模型");
+  }
+  return new OpenAI({
+    apiKey: provider.apiKey,
+    baseURL: provider.baseUrl || undefined,
+    timeout,
+  });
+}
+
+/**
+ * 统一的 chat completion 调用
+ * @param {Array} messages - [{role, content}]
+ * @param {Object} options - { model, temperature, max_tokens, provider, timeout, useLite }
+ *   provider: 可选，不传则用激活的 provider
+ *   useLite:  为 true 时强制使用 DOUBAO_LITE_MODEL（用于快速翻译/检测）
+ */
+export async function chatComplete(messages, options = {}) {
+  const provider = options.provider || (await getActiveProvider());
+  if (!provider) {
+    throw new Error("未配置 AI 模型，请先在设置中添加并激活一个 AI 模型");
+  }
+  const timeout = options.timeout || DEFAULT_TIMEOUT_MS;
+  const client = await createClient(provider, timeout);
+  let model = options.model || provider.model;
+  if (options.useLite) {
+    model = DOUBAO_LITE_MODEL;
+  }
+  const params = {
+    model,
+    messages,
+    temperature: options.temperature ?? 0.7,
+  };
+  if (options.max_tokens || options.maxTokens) {
+    params.max_tokens = options.max_tokens || options.maxTokens;
+  }
+  const response = await client.chat.completions.create(params);
+  return response.choices?.[0]?.message?.content || "";
+}
+
+/**
+ * 轻量快速 chat completion（doubao-lite，短超时，短输出）
+ * 适合翻译/语言检测等追求速度的场景
+ */
+export async function chatCompleteLite(messages, options = {}) {
+  return chatComplete(messages, {
+    ...options,
+    useLite: true,
+    timeout: options.timeout || DEFAULT_TIMEOUT_MS,
+    max_tokens: options.max_tokens || options.maxTokens || 256,
+    temperature: options.temperature ?? 0.1,
+  });
+}
+
+/**
+ * 测试某个 provider 的连接
+ */
+export async function testConnection(providerConfig) {
+  try {
+    const client = await createClient(providerConfig, DEFAULT_TIMEOUT_MS);
+    const response = await client.chat.completions.create({
+      model: providerConfig.model,
+      messages: [{ role: "user", content: "Hi" }],
+      max_tokens: 5,
+      temperature: 0,
+    });
+    return {
+      success: true,
+      message: "连接成功",
+      response: response.choices?.[0]?.message?.content || "",
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: "连接失败: " + (err.message || "未知错误"),
+    };
+  }
+}

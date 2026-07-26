@@ -1,0 +1,488 @@
+<template>
+  <div class="skill-store-page">
+    <!-- Header -->
+    <div class="page-header">
+      <h1 class="page-title">技能商店</h1>
+      <p class="page-subtitle">发现和安装更多AI技能，扩展你的外贸能力</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-number">46</div>
+        <div class="stat-label">技能总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-online">20</div>
+        <div class="stat-label">已上线</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number stat-coming">26</div>
+        <div class="stat-label">即将上线</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+      </svg>
+      <input v-model="searchQuery" type="text" placeholder="搜索技能..." class="search-input" />
+    </div>
+
+    <!-- Category Filters -->
+    <div class="filter-row category-filters">
+      <button
+        v-for="cat in categories"
+        :key="cat"
+        class="filter-btn"
+        :class="{ active: selectedCategory === cat }"
+        @click="selectedCategory = cat"
+      >{{ cat }}</button>
+    </div>
+
+    <!-- Phase Filters -->
+    <div class="filter-row phase-filters">
+      <button
+        v-for="phase in phases"
+        :key="phase"
+        class="phase-btn"
+        :class="{ active: selectedPhase === phase }"
+        @click="selectedPhase = phase"
+      >{{ phase }}</button>
+    </div>
+
+    <!-- Skills Grid -->
+    <div class="skills-grid">
+      <div
+        v-for="skill in filteredSkills"
+        :key="skill.name"
+        class="skill-card"
+      >
+        <div class="card-header">
+          <div class="skill-icon-wrapper">
+            <span class="skill-emoji">{{ skill.emoji }}</span>
+          </div>
+          <div class="skill-meta">
+            <div class="skill-name-row">
+              <span class="skill-name">{{ skill.name }}</span>
+              <span
+                class="status-badge"
+                :class="skill.status === '已上线' ? 'badge-online' : 'badge-coming'"
+              >{{ skill.status }}</span>
+            </div>
+            <span class="skill-category">{{ skill.category }}</span>
+            <span class="skill-phase">{{ skill.phase }}</span>
+          </div>
+        </div>
+        <p class="skill-desc">{{ skill.desc }}</p>
+        <div class="skill-tags">
+          <span v-for="tag in skill.tags" :key="tag" class="tag">{{ tag }}</span>
+        </div>
+        <button
+          class="action-btn"
+          :class="skill.status === '已上线' ? 'btn-installed' : 'btn-coming'"
+        >
+          {{ skill.status === '已上线' ? '已安装' : '敬请期待' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue';
+
+const searchQuery = ref('');
+const selectedCategory = ref('全部');
+const selectedPhase = ref('全部阶段');
+
+const categories = ['全部', '营销获客', '沟通触达', '单证合规', '客户管理', '物流运输', '供应链', '数据分析', '品牌展会'];
+const phases = ['全部阶段', '第一期', '第二期', '第三期'];
+
+const skills = ref([
+  { name:'智能获客', category:'营销获客', desc:'从全球采购商数据库挖掘高意向线索，AI评分筛选', tags:['全球企业库搜索','AI意向评分','批量导出','CRM同步'], status:'已上线', phase:'第一期', emoji:'🎯' },
+  { name:'市场分析', category:'营销获客', desc:'分析目标市场规模、竞争格局、采购趋势，生成市场报告', tags:['市场规模分析','竞争格局','趋势预测','报告生成'], status:'已上线', phase:'第一期', emoji:'📊' },
+  { name:'社媒营销', category:'营销获客', desc:'LinkedIn、Facebook等社媒平台自动获客和内容营销', tags:['自动添加好友','内容发布','互动管理','数据分析'], status:'即将上线', phase:'第三期', emoji:'📱' },
+  { name:'谷歌SEO优化', category:'营销获客', desc:'关键词研究、网站结构优化、内容SEO建议，提升Google排名', tags:['关键词研究','网站诊断','内容优化','排名追踪'], status:'即将上线', phase:'第三期', emoji:'🔍' },
+  { name:'内容营销', category:'营销获客', desc:'博客文章、产品描述、Landing Page文案自动生成', tags:['博客文章','产品描述','Landing Page','SEO优化'], status:'即将上线', phase:'第三期', emoji:'✍️' },
+  { name:'Google Ads投放', category:'营销获客', desc:'广告文案生成、关键词出价建议、投放策略优化', tags:['广告文案','关键词建议','出价策略','ROI分析'], status:'即将上线', phase:'第三期', emoji:'📢' },
+  { name:'邮件自动化', category:'沟通触达', desc:'AI撰写多语种开发信，智能匹配模板，自动发送和跟进', tags:['个性化邮件生成','多语种支持','智能跟进','打开率追踪'], status:'已上线', phase:'第一期', emoji:'' },
+  { name:'WhatsApp沟通', category:'客户沟通', desc:'实时WhatsApp对话，AI翻译和话术生成，客户互动追踪', tags:['实时沟通','AI翻译','话术生成','需求分析'], status:'已上线', phase:'第一期', emoji:'💬' },
+  { name:'视频会议', category:'沟通触达', desc:'集成Zoom/Teams，AI自动生成会议纪要和跟进任务', tags:['一键发起','AI纪要','任务提取','多语言翻译'], status:'即将上线', phase:'第三期', emoji:'' },
+  { name:'销售话术库', category:'沟通触达', desc:'不同销售场景的话术模板，AI智能推荐最佳沟通策略', tags:['场景话术','AI推荐','多语种','效果追踪'], status:'已上线', phase:'第一期', emoji:'🎭' },
+  { name:'多语种翻译', category:'沟通触达', desc:'英/西/法/阿/俄/葡等外贸常用语种专业翻译', tags:['专业术语','本地化润色','邮件翻译','合同翻译'], status:'已上线', phase:'第一期', emoji:'🌐' },
+  { name:'谈判策略', category:'沟通触达', desc:'基于客户画像的谈判技巧、让步策略、僵局破解方案', tags:['客户分析','策略推荐','话术生成','模拟演练'], status:'即将上线', phase:'第二期', emoji:'' },
+  { name:'异议处理', category:'沟通触达', desc:'常见客户异议（价格、质量、交期）的智能应对方案', tags:['异议识别','应对方案','话术生成','案例参考'], status:'即将上线', phase:'第二期', emoji:'️' },
+  { name:'单证生成', category:'单证合规', desc:'自动生成报价单、商业发票、合同、报关单等外贸单证', tags:['多模板选择','自动填充','格式规范','PDF导出'], status:'已上线', phase:'第一期', emoji:'📋' },
+  { name:'外贸报价单', category:'单证合规', desc:'智能生成专业外贸报价单，支持多种货币和贸易术语', tags:['多币种','Incoterms','利润计算','模板库'], status:'已上线', phase:'第一期', emoji:'💰' },
+  { name:'PI/CI', category:'单证合规', desc:'形式发票(PI)和商业发票(CI)自动生成，符合国际规范', tags:['PI生成','CI生成','格式规范','自动编号'], status:'已上线', phase:'第一期', emoji:'📄' },
+  { name:'销售合同', category:'单证合规', desc:'外贸销售合同自动生成，支持多种合同条款模板', tags:['合同模板','条款生成','风险提示','版本管理'], status:'已上线', phase:'第一期', emoji:'📝' },
+  { name:'报关单', category:'单证合规', desc:'报关单据自动生成，HS编码智能匹配', tags:['HS编码匹配','单据生成','合规检查','模板库'], status:'已上线', phase:'第一期', emoji:'🏛️' },
+  { name:'装箱单', category:'单证合规', desc:'装箱单自动生成，支持多箱多品规格', tags:['自动计算','多品规','格式规范','PDF导出'], status:'已上线', phase:'第一期', emoji:'📦' },
+  { name:'信用证审核', category:'单证合规', desc:'L/C条款逐条解读、风险点标注、不符点预警', tags:['条款解读','风险标注','不符点预警','修改建议'], status:'即将上线', phase:'第二期', emoji:'🏦' },
+  { name:'出口管制', category:'单证合规', desc:'制裁名单筛查、出口许可证检查、合规风险预警', tags:['制裁筛查','许可证检查','风险预警','合规报告'], status:'即将上线', phase:'第二期', emoji:'🔒' },
+  { name:'退税计算', category:'单证合规', desc:'出口退税率查询、退税金额自动计算', tags:['税率查询','金额计算','政策更新','报表生成'], status:'即将上线', phase:'第二期', emoji:'' },
+  { name:'客户背调', category:'客户管理', desc:'深度背调全球企业，分析公司规模、采购记录和信用评分', tags:['企业工商信息','采购记录分析','信用评分','风险预警'], status:'已上线', phase:'第一期', emoji:'' },
+  { name:'客户跟进', category:'客户管理', desc:'智能跟进提醒、跟进记录管理、客户状态追踪', tags:['跟进提醒','记录管理','状态追踪','转化分析'], status:'已上线', phase:'第一期', emoji:'' },
+  { name:'客户分层', category:'客户管理', desc:'RFM模型分析，识别高价值客户，制定差异化跟进策略', tags:['RFM分析','客户分层','策略推荐','价值评估'], status:'已上线', phase:'第一期', emoji:'️' },
+  { name:'客户画像', category:'客户管理', desc:'基于CRM数据生成客户360°画像报告', tags:['数据整合','行为分析','偏好预测','画像报告'], status:'即将上线', phase:'第二期', emoji:'👤' },
+  { name:'客户维护', category:'客户管理', desc:'客户关系维护、节日问候、定期回访智能提醒', tags:['关系维护','节日问候','回访提醒','满意度调查'], status:'即将上线', phase:'第二期', emoji:'💝' },
+  { name:'名片识别', category:'客户管理', desc:'拍照识别名片信息，自动录入CRM系统', tags:['拍照识别','自动录入','信息提取','去重检查'], status:'即将上线', phase:'第三期', emoji:'🪪' },
+  { name:'货代背调', category:'物流运输', desc:'货代公司资质审核、服务质量评估、价格对比', tags:['资质审核','服务评估','价格对比','口碑查询'], status:'已上线', phase:'第一期', emoji:'🚛' },
+  { name:'海运费查询', category:'物流运输', desc:'实时海运费查询、航线推荐、船期跟踪', tags:['实时报价','航线推荐','船期查询','对比分析'], status:'已上线', phase:'第一期', emoji:'' },
+  { name:'汇率计算', category:'物流运输', desc:'实时汇率转换、锁汇建议、利润测算', tags:['实时汇率','多币种转换','锁汇建议','利润测算'], status:'已上线', phase:'第一期', emoji:'💱' },
+  { name:'关税查询', category:'物流运输', desc:'各国HS编码对应的关税率、FTA优惠查询', tags:['关税率表','FTA优惠','税率对比','政策更新'], status:'即将上线', phase:'第二期', emoji:'🏛️' },
+  { name:'收汇风险', category:'物流运输', desc:'付款方式风险评估（T/T、L/C、D/P、O/A）', tags:['风险评估','方式对比','建议生成','案例参考'], status:'即将上线', phase:'第二期', emoji:'⚠️' },
+  { name:'生产进度跟进', category:'供应链', desc:'实时跟踪生产进度，异常预警，进度报告自动生成', tags:['进度跟踪','异常预警','报告生成','节点管理'], status:'已上线', phase:'第一期', emoji:'🏭' },
+  { name:'履约跟踪', category:'供应链', desc:'跟踪生产进度和物流状态，异常预警和报告生成', tags:['物流跟踪','进度监控','异常预警','报告生成'], status:'已上线', phase:'第一期', emoji:'📦' },
+  { name:'供应商管理', category:'供应链', desc:'供应商评估、比价、质量评分、交期跟踪', tags:['供应商评估','比价分析','质量评分','交期跟踪'], status:'即将上线', phase:'第二期', emoji:'🏗️' },
+  { name:'质量检验', category:'供应链', desc:'QC报告生成、验货标准制定、不合格品处理', tags:['QC报告','验货标准','不合格处理','质量分析'], status:'即将上线', phase:'第二期', emoji:'✅' },
+  { name:'成本核算', category:'供应链', desc:'产品成本BOM、利润率分析、报价支撑', tags:['BOM管理','成本分析','利润测算','报价支撑'], status:'即将上线', phase:'第二期', emoji:'🧮' },
+  { name:'样品管理', category:'供应链', desc:'样品寄送跟踪、客户反馈收集、量产转换建议', tags:['寄送跟踪','反馈收集','量产建议','成本评估'], status:'即将上线', phase:'第三期', emoji:'' },
+  { name:'库存预警', category:'供应链', desc:'安全库存计算、补货提醒、滞销品预警', tags:['安全库存','补货提醒','滞销预警','库存分析'], status:'即将上线', phase:'第三期', emoji:'📉' },
+  { name:'销售看板', category:'数据分析', desc:'销售额、客户数、转化率等核心指标可视化', tags:['数据可视化','趋势分析','目标追踪','报表导出'], status:'即将上线', phase:'第二期', emoji:'📈' },
+  { name:'竞品分析', category:'数据分析', desc:'竞争对手产品、价格、渠道对比分析', tags:['竞品监控','价格对比','渠道分析','报告生成'], status:'即将上线', phase:'第二期', emoji:'' },
+  { name:'趋势预测', category:'数据分析', desc:'基于历史数据预测销售趋势、季节性分析', tags:['趋势预测','季节性分析','需求预测','策略建议'], status:'即将上线', phase:'第三期', emoji:'🔮' },
+  { name:'展会管理', category:'品牌展会', desc:'展前准备清单、展位设计建议、客户邀约话术', tags:['准备清单','展位设计','客户邀约','效果评估'], status:'即将上线', phase:'第三期', emoji:'🎪' },
+  { name:'品牌故事', category:'品牌展会', desc:'公司介绍、品牌故事、产品视频脚本生成', tags:['公司介绍','品牌故事','视频脚本','多语种'], status:'即将上线', phase:'第三期', emoji:'📖' },
+  { name:'独立站搭建', category:'品牌展会', desc:'Shopify/WordPress建站指导、产品页优化', tags:['建站指导','产品页优化','SEO建议','转化优化'], status:'即将上线', phase:'第三期', emoji:'' },
+]);
+
+const filteredSkills = computed(() => {
+  return skills.value.filter(s => {
+    const matchCat = selectedCategory.value === '全部' || s.category === selectedCategory.value;
+    const matchPhase = selectedPhase.value === '全部阶段' || s.phase === selectedPhase.value;
+    const matchSearch = !searchQuery.value ||
+      s.name.includes(searchQuery.value) ||
+      s.desc.includes(searchQuery.value) ||
+      s.tags.some(t => t.includes(searchQuery.value));
+    return matchCat && matchPhase && matchSearch;
+  });
+});
+</script>
+
+<style scoped>
+.skill-store-page {
+  padding: 24px 28px 40px;
+  width: 100%;
+  min-height: 100%;
+  background: #0f1923;
+  color: #e2e8f0;
+  box-sizing: border-box;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 6px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #1a2736;
+  border: 1px solid #2a3a4a;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 32px;
+  font-weight: 700;
+  color: #e2e8f0;
+  line-height: 1.2;
+}
+
+.stat-number.stat-online {
+  color: #22c55e;
+}
+
+.stat-number.stat-coming {
+  color: #f59e0b;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #1a2736;
+  border: 1px solid #2a3a4a;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.search-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.search-input::placeholder {
+  color: #64748b;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filter-btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid #2a3a4a;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  border-color: #3b82f6;
+  color: #e2e8f0;
+}
+
+.filter-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.phase-btn {
+  padding: 5px 14px;
+  border-radius: 16px;
+  border: 1px solid #2a3a4a;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.phase-btn:hover {
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.phase-btn.active {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.skill-card {
+  background: #1a2736;
+  border: 1px solid #2a3a4a;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s;
+}
+
+.skill-card:hover {
+  border-color: #3b82f6;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.skill-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #253345;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.skill-emoji {
+  font-size: 22px;
+}
+
+.skill-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.skill-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.skill-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.status-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.badge-online {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.badge-coming {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.skill-category {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.skill-phase {
+  display: block;
+  font-size: 11px;
+  color: #475569;
+  margin-top: 1px;
+}
+
+.skill-desc {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  flex: 1;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: #253345;
+  color: #94a3b8;
+  border: 1px solid #2a3a4a;
+}
+
+.action-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-installed {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.btn-installed:hover {
+  background: #475569;
+}
+
+.btn-coming {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #2a3a4a;
+}
+
+.btn-coming:hover {
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+@media (max-width: 1200px) {
+  .skills-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .skill-store-page {
+    padding: 16px;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .stat-card {
+    padding: 12px 8px;
+  }
+
+  .stat-number {
+    font-size: 24px;
+  }
+
+  .skills-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+}
+</style>

@@ -1,0 +1,1643 @@
+<template>
+  <div class="conv-page">
+    <!-- ========== 状态一：未连接 WhatsApp ========== -->
+    <template v-if="false && !chatStore.isConnected && !qrViewVisible">
+      <div class="wa-intro">
+        <div class="wa-intro-art" aria-hidden="true">
+          <svg viewBox="0 0 303 172" width="303" height="172" class="wa-intro-svg">
+            <defs>
+              <linearGradient id="waLaptopGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#364147"/>
+                <stop offset="100%" stop-color="#233138"/>
+              </linearGradient>
+            </defs>
+            <path fill="#364147" d="M229.26 161.53h-148.5c-.8 0-1.46.65-1.46 1.46v7.04c0 .8.65 1.46 1.46 1.46h148.5c.8 0 1.46-.65 1.46-1.46v-7.04c0-.8-.66-1.46-1.46-1.46z"/>
+            <path fill="#233138" d="M231.34 164.69H80.51c-.8 0-1.46.65-1.46 1.46v2.42c0 .8.65 1.46 1.46 1.46h150.83c.8 0 1.46-.65 1.46-1.46v-2.42c0-.8-.66-1.46-1.46-1.46z"/>
+            <path fill="url(#waLaptopGrad)" d="M72.73 154.69h165.57V25.06c0-5.9-4.79-10.69-10.69-10.69H83.42c-5.9 0-10.69 4.79-10.69 10.69v129.63z"/>
+            <path fill="#0b141a" d="M79.54 30.47h151.96v118.3H79.54z"/>
+            <path fill="#00a884" d="M155.52 61.5c-20.7 0-37.5 16.8-37.5 37.5 0 7.96 2.49 15.35 6.72 21.5l-4.33 15.82 16.24-4.24c5.85 3.72 12.77 5.87 20.2 5.87h.01c20.7 0 37.5-16.8 37.5-37.5s-16.8-38.95-38.84-38.95z" opacity=".15"/>
+            <path fill="#00a884" d="M187.52 117.73c-1.57 4.1-7.57 7.54-11.36 8.03-2.94.38-6.69.54-10.68-.57-2.45-.68-5.6-1.82-9.64-3.57-16.98-7.35-28.08-24.39-28.92-25.5-.83-1.12-6.81-9.06-6.81-17.3 0-8.23 4.33-12.28 5.87-13.97.67-.73 1.46-.92 1.95-.92l4.19-.05c.62 0 1.48-.23 2.28 1.73.83 2.04 2.85 7.04 3.1 7.55.25.5.42 1.09.08 1.75-.33.67-.5 1.09-1 1.67-.5.59-1.06 1.31-1.51 1.76-.5.5-1.02 1.05-.44 2.06.58 1 2.6 4.3 5.59 6.97 3.84 3.43 7.09 4.49 8.08 5 .99.5 1.57.42 2.15-.25.58-.68 2.45-2.88 3.1-3.87.65-.99 1.31-.83 2.21-.5.91.33 5.76 2.72 6.76 3.22 1 .5 1.67.75 1.92 1.16.25.42.25 2.4-1.32 5.64z"/>
+            <path fill="#00a884" d="M155.52 66.5c-18.03 0-32.7 14.67-32.7 32.7 0 7.14 2.3 13.74 6.2 19.11l-.67-.89-4.07 14.85 15.24-3.98-.67-.48c5.13 3.16 11.12 5 17.5 5h.01c18.03 0 32.7-14.67 32.7-32.7s-14.67-33.61-33.54-33.61zm0 60.2c-5.67 0-11.01-1.59-15.52-4.34l-.99-.58-10.41 2.72 2.78-10.15-.65-.99c-3.12-4.79-4.93-10.46-4.93-16.51 0-16.41 13.36-29.76 29.77-29.76s29.77 13.35 29.77 29.76-13.35 29.85-29.82 29.85z"/>
+            <circle cx="145" cy="96" r="2" fill="#00a884"/>
+            <circle cx="156" cy="96" r="2" fill="#00a884"/>
+            <circle cx="167" cy="96" r="2" fill="#00a884"/>
+            <path d="M198 50l12-14 14 14" stroke="#53bdeb" stroke-width="2" fill="none"/>
+            <path d="M210 36v15" stroke="#00a884" stroke-width="2"/>
+            <path fill="#fff" d="M194 60h24l-12-12z" opacity=".05"/>
+            <path fill="#00a884" d="M224 104c0 6.63-5.37 12-12 12s-12-5.37-12-12 5.37-12 12-12 12 5.37 12 12z"/>
+            <path fill="#111b21" d="M217 100.5v7l-6-3.5z"/>
+          </svg>
+        </div>
+        <h1 class="wa-intro-title">WhatsApp Web</h1>
+        <p class="wa-intro-sub">发送私密消息，免费体验简单可靠的通话，这些功能均可在全球手机上使用。</p>
+        <button class="wa-login-btn" @click="startQrLogin" :disabled="startingQr">
+          <svg v-if="startingQr" class="wa-spin" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+          <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>
+          {{ startingQr ? '正在加载...' : 'Log in with QR code' }}
+        </button>
+        <div class="wa-intro-tips">
+          <p><span class="wa-lock">🔒</span> Your personal messages are end-to-end encrypted</p>
+        </div>
+      </div>
+    </template>
+
+    <!-- ========== 状态二：扫码大卡片 ========== -->
+    <template v-else-if="!chatStore.isConnected && phoneViewVisible">
+      <div class="wa-scan-wrap">
+        <div class="wa-scan-card" style="max-width:480px">
+          <div style="padding:40px 48px;width:100%">
+            <h2 class="wa-scan-title" style="margin-bottom:8px">Log in with phone number</h2>
+            <p style="color:#8696a0;font-size:13px;margin:0 0 24px">输入WhatsApp手机号（含国家码，如8613800138000），我们会给你一个8位配对码，在手机WhatsApp里输入即可登录。</p>
+            <div v-if="!chatStore.pairingCode?.code">
+              <label style="display:block;font-size:12px;color:#8696a0;margin-bottom:6px">手机号（含国家码，不要+号）</label>
+              <div style="display:flex;gap:8px">
+                <input v-model="phoneInput" placeholder="例如 8613800138000"
+                  style="flex:1;background:#2a3942;border:1px solid #374248;color:#e9edef;border-radius:8px;padding:10px 14px;font-size:14px;outline:none"
+                  @keydown.enter="submitPairing" />
+                <button class="qr-reload-btn" @click="submitPairing" :disabled="chatStore.pairingLoading || !phoneInput"
+                  style="white-space:nowrap;padding:10px 18px;border-radius:8px;font-size:14px">
+                  <span v-if="chatStore.pairingLoading">请求中...</span>
+                  <span v-else>获取配对码</span>
+                </button>
+              </div>
+              <p v-if="chatStore.pairingError" style="color:#f15c6d;font-size:12px;margin:8px 0 0">{{ chatStore.pairingError }}</p>
+              <p style="color:#8696a0;font-size:12px;margin:12px 0 0">操作路径：打开WhatsApp → 设置 → 已关联设备 → 关联设备 → 没有二维码？使用配对码</p>
+            </div>
+            <div v-else style="text-align:center">
+              <div style="font-size:13px;color:#8696a0;margin-bottom:12px">配对码已生成，请在手机WhatsApp输入：</div>
+              <div style="font-family:'Courier New',monospace;font-size:40px;font-weight:700;letter-spacing:8px;color:#00a884;background:#111b21;border:2px dashed #00a884;border-radius:12px;padding:24px;margin:0 auto;display:inline-block;user-select:all">{{ chatStore.pairingCode.code }}</div>
+              <p style="color:#8696a0;font-size:12px;margin:16px 0 0">手机号 +{{ chatStore.pairingCode.phone }} · 等待手机确认...<br/>WhatsApp → 设置 → 已关联设备 → 关联设备 → 使用配对码</p>
+              <button class="qr-reload-btn" @click="cancelPairing" style="margin-top:16px">取消 / 切换方式</button>
+            </div>
+          </div>
+        </div>
+        <button class="wa-scan-back" @click="backToIntro" title="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+      </div>
+    </template>
+
+    <template v-else-if="!chatStore.isConnected">
+      <div class="wa-scan-wrap">
+        <div class="wa-scan-card">
+          <div class="wa-scan-left">
+            <h2 class="wa-scan-title">Scan to log in</h2>
+            <ol class="wa-scan-steps">
+              <li><span class="step-num">1</span><span class="step-text">Open WhatsApp on your phone</span></li>
+              <li><span class="step-num">2</span><span class="step-text">Tap <strong>Menu</strong> <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align:-2px"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2.9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg> or <strong>Settings</strong> and select <strong>Linked devices</strong></span></li>
+              <li><span class="step-num">3</span><span class="step-text">Tap <strong>Link a device</strong> and point your phone at this screen</span></li>
+            </ol>
+            <a class="wa-help-link" href="javascript:void(0)" @click="onHelpClick">Need help getting started?</a>
+            <label class="wa-stay-logged">
+              <input type="checkbox" v-model="stayLoggedIn" />
+              <span class="checkbox-box" :class="{checked: stayLoggedIn}">
+                <svg v-if="stayLoggedIn" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111b21" stroke-width="3.5"><path d="M5 12l5 5L20 7"/></svg>
+              </span>
+              <span>Stay logged in on this browser</span>
+            </label>
+            <!-- pairing code登录方式用户拒绝使用 -->
+            <div style="display:none" class="wa-phone-login" @click="onPhoneLoginClick">Log in with phone number <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+          </div>
+          <div class="wa-scan-right">
+            <template v-if="qrError">
+              <div class="qr-error-box">
+                <div class="qr-error-icon">!</div>
+                <div class="qr-error-text">{{ qrError }}</div>
+                <button class="qr-reload-btn" @click="retryQR"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> Reload QR code</button>
+              </div>
+            </template>
+            <template v-else-if="qrExpired">
+              <div class="qr-expired-box">
+                <div class="qr-expired-title">QR code expired</div>
+                <button class="qr-reload-btn" @click="retryQR"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> Click to reload</button>
+              </div>
+            </template>
+            <template v-else-if="chatStore.qrCode?.qr && isDataUrl(chatStore.qrCode.qr)">
+              <div class="qr-frame">
+                <img :src="chatStore.qrCode.qr" class="qr-img" alt="QR code" />
+                <div class="qr-overlay-logo">
+                  <svg viewBox="0 0 32 32" width="32" height="32" fill="#00a884"><path d="M16.003 3C9.385 3 4 8.384 4 15.002c0 2.416.719 4.669 1.956 6.542L4 27l5.567-1.874a11.94 11.94 0 006.436 1.878c6.617 0 12.002-5.384 12.002-12.001C28.005 8.384 22.62 3 16.003 3zm6.953 15.79c-.291-.146-1.724-.849-1.992-.945-.268-.097-.464-.146-.659.147-.194.292-.752.945-.922 1.138-.17.195-.34.22-.632.073-.292-.147-1.233-.455-2.348-1.448-.866-.772-1.452-1.727-1.623-2.018-.17-.292-.018-.45.128-.597.132-.132.293-.342.439-.513.146-.17.195-.293.292-.488.098-.195.049-.366-.024-.513-.073-.147-.658-1.586-.904-2.172-.239-.567-.483-.49-.658-.498-.17-.008-.365-.01-.56-.01-.195 0-.513.073-.782.366-.269.293-1.026 1.002-1.026 2.443 0 1.442 1.05 2.834 1.197 3.03.146.194 2.058 3.14 4.987 4.397.697.301 1.24.48 1.665.614.699.223 1.335.192 1.837.116.56-.085 1.725-.705 1.968-1.387.243-.681.243-1.264.17-1.386-.072-.122-.268-.195-.56-.34z"/></svg>
+                </div>
+                <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+              </div>
+              <div class="qr-hint-text">
+                <span v-if="qrCountdown > 0">QR code refreshes in <strong>{{ qrCountdown }}s</strong></span>
+                <span v-else>Scanning...</span>
+              </div>
+            </template>
+            <template v-else-if="chatStore.connectionStatus === 'scanning'">
+              <div class="qr-loading-box">
+                <div style="font-size:48px;margin-bottom:8px">📱</div>
+                <div class="qr-loading-text" style="color:#00a884;font-weight:600">已扫描，正在登录...</div>
+                <div style="font-size:12px;color:#8696a0;margin-top:8px">请在手机上确认登录</div>
+              </div>
+            </template>
+            <template v-else-if="chatStore.connectionStatus === 'qr_refreshing' || chatStore.connectionStatus === 'reconnecting'">
+              <div class="qr-loading-box"><div class="qr-loading-spin"></div><div class="qr-loading-text">{{ chatStore.connectionStatus === 'reconnecting' ? '连接断开，正在重试...' : 'QR code refreshing...' }}</div></div>
+            </template>
+            <template v-else-if="chatStore.connectionStatus === 'connecting'">
+              <div class="qr-loading-box"><div class="qr-loading-spin"></div><div class="qr-loading-text">正在连接WhatsApp服务器...</div></div>
+            </template>
+            <template v-else-if="chatStore.connectionStatus === 'error'">
+              <div class="qr-error-box">
+                <div class="qr-error-icon">!</div>
+                <div class="qr-error-text">{{ chatStore.waError || '连接失败，请确认代理/VPN已启动' }}</div>
+                <button class="qr-reload-btn" @click="retryQR">重试连接</button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="qr-loading-box"><div class="qr-loading-spin"></div><div class="qr-loading-text">Loading QR code...</div></div>
+            </template>
+          </div>
+        </div>
+        <div class="wa-scan-footer">
+          <p class="wa-scan-lock"><svg viewBox="0 0 24 24" width="13" height="13" fill="#8696a0" style="margin-right:6px;vertical-align:-2px"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg> Your personal messages are end-to-end encrypted</p>
+          <p class="wa-scan-terms"><a href="javascript:void(0)">Terms</a><span class="dot">·</span><a href="javascript:void(0)">Privacy Policy</a></p>
+          <p class="wa-scan-create">Don't have a WhatsApp account? <a href="javascript:void(0)">Get started</a></p>
+        </div>
+        <button class="wa-scan-back" @click="backToIntro" title="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+      </div>
+    </template>
+
+    <!-- ========== 状态三：已连接 ========== -->
+    <template v-else>
+      <div class="conv-header" v-if="chatStore.activeConversation">
+        <button class="back-btn mobile-only" @click="goBack"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <div class="ch-avatar" :style="!chAvatarOk ? {background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)} : {}"><img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid) && chAvatarOk" class="ch-avatar-img" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="onChAvatarError" alt="" /><span v-else>{{ (chatStore.activeConversation.name || '?')[0] }}</span></div>
+        <div class="ch-info">
+          <div class="ch-name">{{ chatStore.activeConversation.name }}</div>
+          <div class="ch-status"><span class="online-dot offline"></span>{{ chatStore.activeConversation.phone ? chatStore.activeConversation.phone + ' · ' : '' }}最近在线</div>
+        </div>
+        <div class="ch-actions">
+          <button title="搜索"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+          <button title="更多"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2.9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg></button>
+        </div>
+      </div>
+
+      <!-- ⚡ 首响等待提示 -->
+      <div v-if="activeFirstResponse" class="fr-wait-banner">
+        <span class="fr-wb-icon">⚡</span>
+        <span class="fr-wb-text">
+          该客户已等待首响 <b>{{ activeFirstResponseLive.minutes }} 分 {{ activeFirstResponseLive.seconds }} 秒</b>，请尽快回复！
+        </span>
+      </div>
+
+      <div class="conv-messages" ref="msgArea">
+        <template v-if="!chatStore.activeConversation">
+          <div class="wa-noselect">
+            <div class="wa-noselect-art"><svg viewBox="0 0 303 172" width="303" height="172"><path fill="#364147" d="M229.26 161.53h-148.5c-.8 0-1.46.65-1.46 1.46v7.04c0 .8.65 1.46 1.46 1.46h148.5c.8 0 1.46-.65 1.46-1.46v-7.04c0-.8-.66-1.46-1.46-1.46z"/><path fill="#233138" d="M231.34 164.69H80.51c-.8 0-1.46.65-1.46 1.46v2.42c0 .8.65 1.46 1.46 1.46h150.83c.8 0 1.46-.65 1.46-1.46v-2.42c0-.8-.66-1.46-1.46-1.46z"/><path fill="#364147" d="M72.73 154.69h165.57V25.06c0-5.9-4.79-10.69-10.69-10.69H83.42c-5.9 0-10.69 4.79-10.69 10.69v129.63z"/><path fill="#0b141a" d="M79.54 30.47h151.96v118.3H79.54z"/><path fill="#00a884" d="M140 60h30v50h-30z" opacity=".18"/><path fill="#fff" d="M148 72h14v3h-14zM148 79h24v3h-24zM148 86h22v3h-22z" opacity=".1"/><path fill="#00a884" d="M155 100c-3 0-5 1-7 3l-4 12 12-3c2 1 4 1 6 0v-12h-7z"/></svg></div>
+            <h2 class="wa-noselect-title">WhatsApp Web</h2>
+            <p class="wa-noselect-sub">发送私密消息，免费体验简单可靠的通话，这些功能均可在全球手机上使用。</p>
+            <div class="wa-noselect-divider"></div>
+            <p class="wa-noselect-tip">从左侧列表选择一个会话开始聊天</p>
+            <p class="wa-noselect-encrypt">🔒 Your personal messages are end-to-end encrypted</p>
+          </div>
+        </template>
+
+        <template v-else>
+          <div v-if="chatStore.loadingMessages" class="msgs-loading"><span class="loading-dots">加载消息中</span></div>
+          <template v-for="(group, gIdx) in groupedMessages" :key="gIdx">
+            <div class="msg-date-divider"><span>{{ group.label }}</span></div>
+            <div v-for="msg in group.msgs" :key="msg.id" class="msg" :class="{ incoming: !msg.fromMe, outgoing: msg.fromMe }">
+              <div class="msg-bubble">
+                <!-- 悬浮 AI 按钮：仅在客户消息（incoming）上显示，默认隐藏，hover 显示 -->
+                <button
+                  v-if="!msg.fromMe"
+                  class="msg-ai-btn"
+                  title="AI 帮我回复"
+                  @click="onMsgAIReply(msg)"
+                >🤖</button>
+                
+                <template v-if="msg.messageType === 'video' || msg.type === 'video' || (msg.mimeType && msg.mimeType.startsWith('video/'))">
+                  <div class="msg-media-video">
+                    <video v-if="msg.mediaUrl || msg.previewDataUrl" controls preload="metadata" class="msg-video-player">
+                      <source :src="msg.previewDataUrl || ('/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl))" :type="msg.mimeType || 'video/mp4'"/>
+                      您的浏览器不支持 video 标签
+                    </video>
+                    <div v-else class="msg-video-placeholder">📹 {{ msg.fileName || msg.body || '视频' }}</div>
+                  </div>
+                  <div v-if="msg.body && msg.body !== '[视频]'" class="msg-caption">{{ msg.body }}</div>
+                </template>
+                <template v-else-if="msg.messageType === 'image' || msg.type === 'image'">
+                  <a v-if="msg.mediaUrl && !msg.previewDataUrl" :href="'/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl)" target="_blank" class="msg-media-img">
+                    <img :src="msg.previewDataUrl || ('/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl))" @error="onImgError($event)" alt="image" loading="lazy"/>
+                  </a>
+                  <div v-else class="msg-media-img">
+                    <img :src="msg.previewDataUrl || (msg.mediaUrl ? '/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl) : '')" @error="onImgError($event)" alt="image" loading="lazy"/>
+                  </div>
+                  <div v-if="msg.body && msg.body !== '[图片]'" class="msg-caption">{{ msg.body }}</div>
+                </template>
+                <template v-else-if="msg.messageType === 'document' || msg.type === 'document'">
+                  <div
+                    v-if="msg.mediaUrl"
+                    class="msg-media-doc msg-media-doc-link"
+                    :class="{ 'msg-media-pdf': isPdfMsg(msg) }"
+                    @click="onMediaDocClick(msg)"
+                  >
+                    <div class="mmd-icon">{{ isPdfMsg(msg) ? '📕' : '📄' }}</div>
+                    <div class="mmd-info">
+                      <div class="mmd-name">{{ msg.fileName || msg.body || '文件' }}</div>
+                      <div class="mmd-size">{{ isPdfMsg(msg) ? (msg.fileSize ? formatFileSize(msg.fileSize) + ' · 点击预览' : '点击预览PDF') : (msg.fileSize ? formatFileSize(msg.fileSize) : '点击下载') }}</div>
+                    </div>
+                    <a v-if="!isPdfMsg(msg)" class="mmd-download-hidden" :href="'/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl)" :download="msg.fileName || 'file'" target="_blank"></a>
+                  </div>
+                  <div v-else class="msg-media-doc">
+                    <div class="mmd-icon">📄</div>
+                    <div class="mmd-info">
+                      <div class="mmd-name">{{ msg.fileName || msg.body || '文件' }}</div>
+                      <div class="mmd-size">文件不可用</div>
+                    </div>
+                  </div>
+                  <div v-if="msg.body && msg.body !== (msg.fileName||'') && msg.body !== '[文件]' && msg.body !== '[文档]'" class="msg-caption">{{ msg.body }}</div>
+                </template>
+                <template v-else>
+                  <div class="msg-text">{{ msg.body || msg.content }}</div>
+                </template>
+                <div v-if="msg.translation" class="msg-translation">
+                  <span class="msg-trans-text">{{ getTranslationText(msg) }}</span>
+                  <button
+                    class="msg-retranslate-btn"
+                    :class="{ spinning: retranslatingIds.has(msg.id) }"
+                    :disabled="retranslatingIds.has(msg.id)"
+                    title="重新翻译"
+                    @click.stop="onRetranslate(msg)"
+                  >
+                    <svg v-if="!retranslatingIds.has(msg.id)" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    <span v-else class="msg-retrans-spin"></span>
+                  </button>
+                </div>
+                <div class="msg-time">
+                  {{ formatTime(msg.timestamp) }}
+                  <span v-if="msg.fromMe && msg.ackError" class="msg-check error" title="发送失败">❌</span>
+                  <span v-else-if="msg.fromMe && msg.pending" class="msg-check pending">⏳</span>
+                  <span v-else-if="msg.fromMe && msg.readAt" class="msg-check read">✓✓</span>
+                  <span v-else-if="msg.fromMe && msg.deliveredAt" class="msg-check delivered">✓✓</span>
+                  <span v-else-if="msg.fromMe" class="msg-check sent">✓</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </template>
+      </div>
+
+      <!-- 内嵌翻译对照确认面板（位于输入框上方） -->
+      <div v-if="confirmPanelVisible" class="trans-confirm-panel">
+        <div class="tcp-row tcp-top">
+          <span class="tcp-label">译文:</span>
+          <span class="tcp-text tcp-translated" :class="{ 'tcp-error': confirmError }">{{ confirmLoading ? '翻译中...' : confirmTranslated }}</span>
+          <button class="tcp-swap" @click="swapConfirm" title="互换原文/译文">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:2px"><path d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"/></svg>
+            <span>互换</span>
+          </button>
+        </div>
+        <div class="tcp-divider"></div>
+        <div class="tcp-row tcp-bottom">
+          <span class="tcp-label">对照:</span>
+          <span class="tcp-text tcp-original">{{ confirmOriginal }}</span>
+        </div>
+        <div class="tcp-tips">
+          快捷键：Enter 发送译文 · Esc 取消 · Ctrl+T 只翻译不发送
+        </div>
+      </div>
+
+      <!-- 输入区 -->
+      <!-- 附件预览条（在输入框上方） -->
+      <div v-if="chatStore.isConnected && chatStore.activeConversation && pendingFile" class="media-preview-bar">
+        <div class="mpb-file">
+          <img v-if="pendingMediaType === 'image'" class="mpb-thumb" :src="pendingFilePreview" alt="preview"/>
+          <div v-else-if="pendingMediaType === 'video'" class="mpb-doc-icon">📹</div>
+          <div v-else class="mpb-doc-icon">📄</div>
+          <div class="mpb-info">
+            <div class="mpb-name">{{ pendingFile.name }}</div>
+            <div class="mpb-size">{{ formatFileSize(pendingFile.size) }}</div>
+          </div>
+        </div>
+        <input class="mpb-caption" type="text" v-model="pendingCaption" placeholder="添加说明... (可选, Enter发送)"/>
+        <button class="mpb-send" @click="sendPendingMedia" :disabled="sendingMedia" :title="sendingMedia ? '发送中' : '发送'">
+          <span v-if="!sendingMedia"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></span>
+          <span v-else class="mpb-spin"></span>
+        </button>
+        <button class="mpb-cancel" @click="cancelPendingMedia" title="取消">✕</button>
+      </div>
+
+      <!-- AI 快捷建议条（仅移动端显示，位于附件预览条下方、输入框上方） -->
+      <div v-if="aiSuggestVisible" class="ai-suggest-bar">
+        <span class="aisb-icon" title="AI 建议">✨</span>
+        <div class="aisb-scroll">
+          <div v-if="aiSuggestLoading" class="aisb-skeleton-wrap">
+            <span class="aisb-skeleton"></span>
+            <span class="aisb-skeleton"></span>
+            <span class="aisb-skeleton"></span>
+          </div>
+          <template v-else>
+            <button v-for="(s, idx) in aiSuggestReplies" :key="'aisb-'+idx" class="aisb-chip" :class="{'with-zh': s && s.zh}" @click="onSuggestClick(s)">
+              <span class="aisb-foreign">{{ s.foreign || s }}</span>
+              <span v-if="s && s.zh" class="aisb-zh">{{ s.zh }}</span>
+            </button>
+          </template>
+        </div>
+        <button class="aisb-refresh" :disabled="aiSuggestLoading" title="刷新建议" @click="refreshAiSuggests">🔄</button>
+      </div>
+
+      <div class="conv-input-area" v-if="chatStore.isConnected && chatStore.activeConversation">
+        <div class="attach-wrap">
+          <button class="input-action" title="添加" @click="toggleAttachMenu"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
+          <div v-if="attachMenuOpen" class="attach-menu">
+            <div class="attach-arrow"></div>
+            <button class="attach-item" @click="pickImage">
+              <span class="attach-icon" style="background:#00a884">🖼️</span>
+              <span>图片/视频</span>
+            </button>
+            <button class="attach-item" @click="pickDocument">
+              <span class="attach-icon" style="background:#53bdeb">📄</span>
+              <span>文件</span>
+            </button>
+          </div>
+        </div>
+        <input ref="imageInput" type="file" accept="image/*,video/*" style="display:none" @change="onFileSelected($event,'image')"/>
+        <input ref="docInput" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv,application/*" style="display:none" @change="onFileSelected($event,'document')"/>
+        <div class="input-wrap">
+          <input ref="inputEl" type="text" v-model="draftMsg" placeholder="输入消息... (Enter发送)" @keydown="onInputKeydown" @input="onDraftInput"/>
+          <button class="emoji-btn" title="表情">😊</button>
+        </div>
+        <button v-if="!pendingFile" class="send-btn" @click="onSendClick"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+      </div>
+
+
+
+
+
+      <!-- PDF 全屏预览层 -->
+      <div v-if="pdfPreviewUrl" class="pdf-preview-overlay" @click.self="closePdfPreview">
+        <button class="pdf-preview-close" @click="closePdfPreview" title="关闭">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+        <iframe class="pdf-preview-frame" :src="pdfPreviewUrl" frameborder="0"></iframe>
+      </div>
+
+    </template>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, nextTick, watch, reactive } from 'vue';
+import { useChatStore } from '../stores/chat.js';
+import { useSocket } from '../utils/socket.js';
+import { ElMessage, ElMessageBox } from 'element-plus';
+
+const emit = defineEmits(['go-back','open-ai-panel','open-translate-panel']);
+const chatStore = useChatStore();
+
+// ── ⚡ 5分钟首响：当前会话是否为首响客户 ──
+const activeFirstResponse = computed(() => {
+  if (!chatStore.activeJid) return null;
+  return chatStore.firstResponseMapByJid?.[chatStore.activeJid] || null;
+});
+// 实时秒数计时
+const activeFirstResponseLive = reactive({ minutes: 0, seconds: 0 });
+let frLiveTimer = null;
+function updateFrLive() {
+  const fr = activeFirstResponse.value;
+  if (!fr?.lastMessageTime) { activeFirstResponseLive.minutes = 0; activeFirstResponseLive.seconds = 0; return; }
+  const diff = Date.now() - new Date(fr.lastMessageTime).getTime();
+  const totalSec = Math.max(0, Math.floor(diff / 1000));
+  activeFirstResponseLive.minutes = Math.floor(totalSec / 60);
+  activeFirstResponseLive.seconds = totalSec % 60;
+}
+watch(activeFirstResponse, (v) => {
+  if (frLiveTimer) { clearInterval(frLiveTimer); frLiveTimer = null; }
+  if (v) {
+    updateFrLive();
+    frLiveTimer = setInterval(updateFrLive, 1000);
+  }
+}, { immediate: true });
+onBeforeUnmount(() => { if (frLiveTimer) clearInterval(frLiveTimer); });
+
+const draftMsg = ref('');
+const msgArea = ref(null);
+const inputEl = ref(null);
+const imageInput = ref(null);
+const docInput = ref(null);
+const attachMenuOpen = ref(false);
+const pendingFile = ref(null);
+const pendingMediaType = ref('document');
+const pendingFilePreview = ref(null);
+const pendingCaption = ref('');
+const sendingMedia = ref(false);
+
+// ── AI 快捷建议条（仅移动端） ──
+const aiSuggestReplies = ref([]);
+const aiSuggestLoading = ref(false);
+const aiSuggestHiddenByInput = ref(false); // 用户开始输入后隐藏
+const isMobileView = ref(false);
+let aiSuggestAbort = 0;
+let aiSuggestSocketHandler = null;
+
+function updateMobileView() {
+  isMobileView.value = window.innerWidth <= 768;
+}
+const aiSuggestVisible = computed(() => {
+  if (!isMobileView.value) return false;
+  if (!chatStore.isConnected || !chatStore.activeConversation) return false;
+  if (!chatStore.activeJid) return false;
+  // 仅在该会话有消息记录时显示（至少一条入站消息）
+  const msgs = chatStore.currentMessages || [];
+  const hasIncoming = msgs.some(m => !m.fromMe);
+  if (!hasIncoming) return false;
+  // 输入框已有文字则隐藏
+  if (draftMsg.value && draftMsg.value.trim()) return false;
+  if (aiSuggestHiddenByInput.value) return false;
+  // loading 或有建议时显示
+  return aiSuggestLoading.value || aiSuggestReplies.value.length > 0;
+});
+
+async function refreshAiSuggests() {
+  const jid = chatStore.activeJid;
+  if (!jid || !isMobileView.value) return;
+  const mySeq = ++aiSuggestAbort;
+  aiSuggestLoading.value = true;
+  aiSuggestHiddenByInput.value = false;
+  aiSuggestReplies.value = [];
+  try {
+    const res = await chatStore.fetchQuickReplies(jid, chatStore.replyStyle || 'formal');
+    if (mySeq !== aiSuggestAbort) return; // 被新请求覆盖
+    aiSuggestReplies.value = (res?.replies || []).slice(0, 3);
+  } catch (e) {
+    if (mySeq !== aiSuggestAbort) return;
+    console.warn('[AI suggest] fetch failed, silent hide:', e?.message || e);
+    aiSuggestReplies.value = [];
+  } finally {
+    if (mySeq === aiSuggestAbort) aiSuggestLoading.value = false;
+  }
+}
+
+function onSuggestClick(s) {
+  const text = (s && s.foreign) ? s.foreign : (typeof s === 'string' ? s : '');
+  if (!text) return;
+  // 点击建议 → 填入输入框，隐藏建议条（不再自动发送）
+  _applyAiReplyRef(text);
+  aiSuggestHiddenByInput.value = true;
+  aiSuggestReplies.value = [];
+}
+// 占位引用，applyAiReply 定义后会赋值
+let _applyAiReplyRef = (text) => { draftMsg.value = String(text); };
+function onDraftInput() {
+  // 用户开始输入后隐藏建议条
+  if (!aiSuggestHiddenByInput.value) {
+    aiSuggestHiddenByInput.value = true;
+  }
+}
+
+function toggleAttachMenu(e) {
+  attachMenuOpen.value = !attachMenuOpen.value;
+}
+function closeAttachMenu() { attachMenuOpen.value = false; }
+
+function pickImage() {
+  closeAttachMenu();
+  imageInput.value?.click();
+}
+function pickDocument() {
+  closeAttachMenu();
+  docInput.value?.click();
+}
+
+function onFileSelected(e, mediatype) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  // WhatsApp官方大小限制：图片5MB/视频16MB/音频16MB/文档100MB
+  let sizeLimit = 100 * 1024 * 1024; // default document 100MB
+  let typeLabel = '文件';
+  if (file.type && file.type.startsWith('image/')) {
+    sizeLimit = 16 * 1024 * 1024;
+    typeLabel = '图片';
+  } else if (file.type && file.type.startsWith('video/')) {
+    sizeLimit = 16 * 1024 * 1024;
+    typeLabel = '视频';
+  } else if (file.type && file.type.startsWith('audio/')) {
+    sizeLimit = 16 * 1024 * 1024;
+    typeLabel = '音频';
+  }
+  if (file.size > sizeLimit) {
+    const mb = (sizeLimit / 1024 / 1024);
+    const fSizeMB = (file.size / 1024 / 1024).toFixed(1);
+    ElMessageBox.alert(
+      typeLabel + '大小 ' + fSizeMB + 'MB，超过WhatsApp ' + mb + 'MB 限制，无法发送，请压缩后再试。',
+      '文件过大',
+      { type: 'warning', confirmButtonText: '我知道了', center: true, customClass: 'size-alert-modal' }
+    ).catch(function(){});
+    e.target.value = '';
+    return;
+  }
+  // Auto-detect media type by MIME when coming from the photo/video picker
+  let detectedType = mediatype;
+  if (mediatype === 'image') {
+    if (file.type && file.type.startsWith('video/')) {
+      detectedType = 'video';
+    } else if (file.type && file.type.startsWith('image/')) {
+      detectedType = 'image';
+    } else {
+      detectedType = 'image';
+    }
+  }
+  pendingFile.value = file;
+  pendingMediaType.value = detectedType;
+  pendingCaption.value = '';
+  pendingFilePreview.value = null;
+  if (detectedType === 'image') {
+    const reader = new FileReader();
+    reader.onload = () => { pendingFilePreview.value = reader.result; };
+    reader.readAsDataURL(file);
+  }
+  e.target.value = '';
+}
+
+function cancelPendingMedia() {
+  pendingFile.value = null;
+  pendingFilePreview.value = null;
+  pendingCaption.value = '';
+  sendingMedia.value = false;
+  if (chatStore.stagedMedia) chatStore.clearStagedMedia?.();
+}
+
+async function sendPendingMedia() {
+  if (!pendingFile.value || sendingMedia.value) return;
+  if (!chatStore.activeJid) return;
+  sendingMedia.value = true;
+  try {
+    await chatStore.sendMedia(chatStore.activeJid, pendingFile.value, pendingMediaType.value, pendingCaption.value.trim());
+    chatStore.clearStagedMedia?.();
+    cancelPendingMedia();
+    scrollToBottom();
+  } catch (err) {
+    ElMessage.error('媒体发送失败: ' + (err?.response?.data?.error || err?.message || '未知错误'));
+    sendingMedia.value = false;
+  }
+}
+
+
+// ── 监听 stagedMedia：外部（如AI单证面板）预挂文件到输入框附件条 ──
+watch(() => chatStore.stagedMedia?._ts, (ts) => {
+  if (!ts) return;
+  const sm = chatStore.stagedMedia;
+  if (!sm || !sm.file) return;
+  const file = sm.file;
+  const mt = sm.mediatype || 'document';
+  pendingFile.value = file;
+  pendingMediaType.value = mt;
+  pendingCaption.value = sm.caption || '';
+  pendingFilePreview.value = null;
+  if (mt === 'image' && file.type && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = () => { pendingFilePreview.value = reader.result; };
+    reader.readAsDataURL(file);
+  }
+}, { flush: 'post' });
+
+// ── 重翻译 & PDF 预览 ──
+const retranslatingIds = reactive(new Set());
+const pdfPreviewUrl = ref('');
+
+function isPdfMsg(msg) {
+  if (!msg) return false;
+  const mt = (msg.mimeType || '').toLowerCase();
+  const fn = (msg.fileName || '').toLowerCase();
+  return mt === 'application/pdf' || fn.endsWith('.pdf');
+}
+
+async function onRetranslate(msg) {
+  if (!msg || msg.id == null || retranslatingIds.has(msg.id)) return;
+  retranslatingIds.add(msg.id);
+  try {
+    const api = await getApi();
+    await api.post('/whatsapp/retranslate', { messageId: msg.id });
+    // socket push (whatsapp:translation) will update UI via chatStore.handleMessageTranslated
+  } catch (e) {
+    console.error('[Retranslate] failed:', e);
+    try { ElMessage.error('重新翻译失败：' + (e?.response?.data?.error || e.message || '未知错误')); } catch (_) {}
+  } finally {
+    // remove after a tick to allow socket event to arrive; keep spinning briefly for UX
+    setTimeout(() => retranslatingIds.delete(msg.id), 400);
+  }
+}
+
+function onMediaDocClick(msg) {
+  if (!msg || !msg.mediaUrl) return;
+  if (isPdfMsg(msg)) {
+    const url = '/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl) + '&inline=1';
+    pdfPreviewUrl.value = url;
+  } else {
+    // trigger download for non-PDF: same as <a download>
+    const a = document.createElement('a');
+    a.href = '/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl);
+    a.download = msg.fileName || 'file';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+}
+
+function closePdfPreview() { pdfPreviewUrl.value = ''; }
+
+function onPdfKeydown(e) { if (e.key === 'Escape') closePdfPreview(); }
+
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function onImgError(e) {
+  // hide broken image
+  e.target.style.display = 'none';
+}
+
+// Close attach menu on outside click
+function onDocClick(e) {
+  if (attachMenuOpen.value && !e.target.closest('.attach-wrap')) attachMenuOpen.value = false;
+}
+onMounted(() => { document.addEventListener('click', onDocClick); });
+onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); });
+
+
+// ── 翻译设置（面板已移至 LayoutView） ──
+
+// ── 内嵌翻译确认面板 ──
+const confirmPanelVisible = ref(false);
+const confirmLoading = ref(false);
+const confirmError = ref(false);
+const confirmOriginal = ref('');
+const confirmTranslated = ref('');
+const confirmSwapped = ref(false);
+let confirmTranslateTimer = null;
+let apiModule = null;
+async function getApi() {
+  if (!apiModule) apiModule = (await import('../utils/api.js')).default;
+  return apiModule;
+}
+
+// 简单语言检测（中/阿/英）
+function quickLang(text) {
+  if (!text) return 'unknown';
+  if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+  if (/[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]/.test(text)) return 'ar';
+  return 'en';
+}
+// 判断是否需要翻译：sendEnabled 开启 且 源语言!=目标语言
+function needsOutgoingTranslation(text) {
+  const st = chatStore.translationSettings || {};
+  if (!st.sendEnabled) return false;
+  const tgt = st.sendTargetLang || 'en';
+  if (tgt === 'auto') return false;
+  const src = quickLang(text);
+  // Latin family: treat en/es/fr/de/pt/it/nl/tr/id/vi as needing translation if target is ar/zh
+  const latinFamily = ['en','es','fr','de','pt','it','nl','tr','id','vi'];
+  if (src === tgt) return false;
+  if (latinFamily.includes(src) && latinFamily.includes(tgt)) return false; // 拉丁语系内部不弹确认
+  return true;
+}
+
+async function runPreTranslate(text) {
+  const s = chatStore.translationSettings || {};
+  confirmLoading.value = true;
+  confirmError.value = false;
+  confirmTranslated.value = '';
+  try {
+    const api = await getApi();
+    const src = (s.sendSourceLang && s.sendSourceLang !== 'auto') ? s.sendSourceLang : 'auto';
+    const tgt = s.sendTargetLang || 'en';
+    const { data } = await api.post('/translation/translate', { text, from: src, to: tgt });
+    const translated = (data && (data.translated || data.text)) || '';
+    if (!translated) throw new Error('empty result');
+    confirmTranslated.value = translated;
+  } catch (e) {
+    confirmError.value = true;
+    confirmTranslated.value = '翻译失败，将发送原文';
+  } finally {
+    confirmLoading.value = false;
+  }
+}
+
+function openConfirmPanel(text) {
+  confirmPanelVisible.value = true;
+  confirmSwapped.value = false;
+  confirmOriginal.value = text;
+  runPreTranslate(text);
+  nextTick(() => { if (inputEl.value) inputEl.value.focus(); });
+}
+function closeConfirmPanel() {
+  confirmPanelVisible.value = false;
+  confirmOriginal.value = '';
+  confirmTranslated.value = '';
+  confirmSwapped.value = false;
+  confirmError.value = false;
+  confirmLoading.value = false;
+  if (confirmTranslateTimer) { clearTimeout(confirmTranslateTimer); confirmTranslateTimer = null; }
+}
+function swapConfirm() { confirmSwapped.value = !confirmSwapped.value; }
+
+// ── AI 话术面板调用：填入输入框并聚焦；如开启翻译确认且含中文则弹出译文确认 ──
+function applyAiReply(text) {
+  if (!text) return;
+  // 先关闭旧的确认面板，避免残留译文
+  closeConfirmPanel();
+  draftMsg.value = String(text);
+  nextTick(() => {
+    if (inputEl.value) {
+      inputEl.value.focus();
+      // 将光标移到末尾
+      try {
+        const len = inputEl.value.value.length;
+        inputEl.value.setSelectionRange(len, len);
+      } catch(e) {}
+    }
+    if (needsOutgoingTranslation(draftMsg.value)) {
+      const st = chatStore.translationSettings || {};
+      if (st.translateConfirm) {
+        openConfirmPanel(draftMsg.value);
+      }
+    }
+  });
+}
+// 让 AI 建议条的 onSuggestClick 能复用 applyAiReply
+_applyAiReplyRef = applyAiReply;
+defineExpose({ applyAiReply });
+
+// 输入框变更 -> 防抖重译
+watch(draftMsg, (val) => {
+  if (!confirmPanelVisible.value) return;
+  confirmOriginal.value = val;
+  if (confirmSwapped.value) confirmSwapped.value = false;
+  if (confirmTranslateTimer) clearTimeout(confirmTranslateTimer);
+  confirmTranslateTimer = setTimeout(() => {
+    if (val && val.trim()) runPreTranslate(val.trim());
+  }, 500);
+});
+
+function onInputKeydown(e) {
+  if (confirmPanelVisible.value) {
+    if (e.key === 'Enter') { e.preventDefault(); doSendConfirm(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); closeConfirmPanel(); return; }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 't' || e.key === 'T')) {
+      e.preventDefault();
+      if (confirmTranslated.value && !confirmError.value) {
+        draftMsg.value = confirmTranslated.value;
+        closeConfirmPanel();
+      }
+      return;
+    }
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    onSendClick();
+  }
+}
+
+async function onSendClick() {
+  const text = draftMsg.value.trim();
+  if (!text || !chatStore.activeJid) return;
+  const s = chatStore.translationSettings || {};
+  const srcLang = quickLang(text);
+  const tgtLang = s.sendTargetLang || 'en';
+  const hasChinese = srcLang === 'zh';
+
+  // 拦截：输入中文但没开翻译 → 阻止
+  if (hasChinese && !s.sendEnabled) {
+    ElMessage.error('请先开启发送翻译或输入外文消息');
+    emit('open-translate-panel');
+    return;
+  }
+  // blockChinese 兼容旧逻辑（保留）
+  if (s.blockChinese && !s.sendEnabled && hasChinese) {
+    ElMessage.error('请先开启发送翻译或输入英文消息');
+    emit('open-translate-panel');
+    return;
+  }
+
+  // 需要翻译且开启了翻译确认 → 弹确认面板
+  if (needsOutgoingTranslation(text) && s.translateConfirm && !confirmPanelVisible.value) {
+    openConfirmPanel(text);
+    return;
+  }
+
+  doSendMsg();
+}
+
+function doSendConfirm() {
+  let text;
+  if (confirmSwapped.value) {
+    text = confirmOriginal.value;
+  } else if (confirmError.value || !confirmTranslated.value) {
+    text = confirmOriginal.value;
+  } else {
+    text = confirmTranslated.value;
+  }
+  text = (text || '').trim();
+  if (!text) return;
+  doSendText(text);
+  closeConfirmPanel();
+}
+
+function doSendText(text) {
+  if (!text || !chatStore.activeJid) return;
+  chatStore.sendMessage(chatStore.activeJid, text);
+  draftMsg.value = '';
+  // 发送成功后隐藏建议条（直到下一次触发刷新）
+  aiSuggestHiddenByInput.value = true;
+  aiSuggestReplies.value = [];
+  scrollToBottom();
+}
+
+function doSendMsg() { doSendText(draftMsg.value.trim()); }
+
+function getTranslationText(msg) {
+  const t = msg.translation;
+  if (!t) return "";
+  if (typeof t === "string") return t;
+  // 我方发出去的：
+  //   气泡显示外发出文本(t.translated=外文，body=外发出文本)
+  //   虚线译文显示【中文原文】(t.original=中文/输入原文)
+  //   但若原输入就是外文(同语言发送)，t.original 会等于 body，已在 normalizeMessage 里清掉 translation，不会到这里
+  if (msg.fromMe) {
+    // 优先显示 original（中文原文），如果 original 为空则显示 translated
+    return t.original || t.translated || "";
+  }
+  // 对方发进来的：气泡显示原文外文，虚线显示中文译文 t.translated
+  return t.translated || t.text || "";
+}
+
+const qrViewVisible = ref(false);
+const startingQr = ref(false);
+const qrError = ref(null);
+const qrExpired = ref(false);
+const qrCountdown = ref(0);
+const stayLoggedIn = ref(true);
+let qrTimer = null;
+
+function startQrLogin() {
+  startingQr.value = true; qrError.value = null; qrExpired.value = false; qrViewVisible.value = true;
+  chatStore.requestQR().finally(() => { startingQr.value = false; });
+}
+function backToIntro() { qrViewVisible.value = false; phoneViewVisible.value = false; qrError.value = null; qrExpired.value = false; chatStore.clearPairing(); if (qrTimer) { clearInterval(qrTimer); qrTimer = null; } }
+function retryQR() { qrError.value = null; qrExpired.value = false; chatStore.qrCode = null; chatStore.requestQR(); }
+function onHelpClick() { window.open('https://faq.whatsapp.com/1317546212400204', '_blank'); }
+const phoneViewVisible = ref(false);
+const phoneInput = ref('');
+function onPhoneLoginClick() { phoneViewVisible.value = true; qrViewVisible.value = false; }
+function cancelPairing() { phoneViewVisible.value = false; qrViewVisible.value = true; chatStore.clearPairing(); }
+async function submitPairing() {
+  if (!phoneInput.value.trim()) return;
+  await chatStore.requestPairingCode(phoneInput.value.trim());
+}
+
+function resetQrCountdown() {
+  if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
+  qrCountdown.value = 60; qrExpired.value = false;
+  qrTimer = setInterval(() => {
+    qrCountdown.value--;
+    if (qrCountdown.value <= 0) { clearInterval(qrTimer); qrTimer = null; qrExpired.value = true; }
+  }, 1000);
+}
+watch(() => chatStore.qrCode?.qr, (val) => { if (val && qrViewVisible.value) resetQrCountdown(); });
+watch(() => chatStore.connectionStatus, (s) => {
+  console.log('[ChatView] connectionStatus changed to:', s);
+  if (s === 'connected') { if (qrTimer){clearInterval(qrTimer);qrTimer=null;} qrExpired.value=false; qrError.value=null; qrViewVisible.value=false; phoneViewVisible.value=false; chatStore.clearPairing(); }
+  else if (s === 'waiting_qr') { qrViewVisible.value = true; startingQr.value = false; }
+  else if (s === 'qr_refreshing' || s === 'reconnecting') { qrExpired.value=false; qrError.value=null; if (qrTimer){clearInterval(qrTimer);qrTimer=null;} }
+  else if (s === 'scanning') { if (qrTimer){clearInterval(qrTimer);qrTimer=null;} qrExpired.value=false; }
+  else if (s === 'error' && qrViewVisible.value) { qrError.value = chatStore.waError || '连接失败'; if (qrTimer){clearInterval(qrTimer);qrTimer=null;} }
+});
+
+const colorPalette = ['#00a884','#4FC3F7','#AB47BC','#FF7043','#66BB6A','#FFA726','#EC407A','#26A69A','#EF5350','#5C6BC0'];
+// header头像状态
+const chAvatarOk = ref(true);
+function onChAvatarError() { chAvatarOk.value = false; }
+// 切换会话时重置头像加载状态
+watch(() => chatStore.activeConversation?.jid, () => { chAvatarOk.value = true; });
+
+function avatarColor(name) {
+  if (!name) return '#00a884';
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colorPalette[Math.abs(hash) % colorPalette.length];
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts); if (isNaN(d.getTime())) return '';
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function getDayLabel(ts) {
+  if (!ts) return '';
+  const d = new Date(ts); if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((today - msgDay) / (1000*60*60*24));
+  if (diff === 0) return '今天';
+  if (diff === 1) return '昨天';
+  if (diff < 7) return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  return String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+const groupedMessages = computed(() => {
+  const msgs = chatStore.currentMessages || [];
+  const groups = []; let lastLabel = null;
+  for (const m of msgs) {
+    const label = getDayLabel(m.timestamp);
+    if (label !== lastLabel) { groups.push({ label, msgs: [m] }); lastLabel = label; }
+    else groups[groups.length-1].msgs.push(m);
+  }
+  return groups;
+});
+
+function scrollToBottom() { nextTick(() => { if (msgArea.value) msgArea.value.scrollTop = msgArea.value.scrollHeight; }); }
+watch(() => chatStore.currentMessages?.length, () => scrollToBottom());
+watch(() => chatStore.activeJid, () => {
+  draftMsg.value = '';
+  aiSuggestHiddenByInput.value = false;
+  aiSuggestReplies.value = [];
+  scrollToBottom();
+  // 切换会话时，自动拉取一次 AI 建议（移动端才真正请求）
+  // 进入待跟进客户时主动刷新建议（手机端显示、PC端隐藏逻辑保持不变）
+  nextTick(() => {
+    if (chatStore.activeJid && isMobileView.value) refreshAiSuggests();
+    // 切换会话时顺带刷新待跟进列表（兜底）
+    chatStore.fetchPendingFollowups && chatStore.fetchPendingFollowups().catch(() => {});
+  });
+});
+// 当前会话新增入站消息 → 刷新建议
+watch(() => chatStore.currentMessages?.length, (newLen, oldLen) => {
+  if (!isMobileView.value) return;
+  if (!chatStore.activeJid) return;
+  if (!newLen || newLen <= (oldLen || 0)) return;
+  const msgs = chatStore.currentMessages || [];
+  const last = msgs[msgs.length - 1];
+  if (last && !last.fromMe) {
+    // 收到客户新消息 → 重新刷新建议
+    aiSuggestHiddenByInput.value = false;
+    refreshAiSuggests();
+  }
+});
+watch(() => chatStore.insertText, (val) => {
+  if (val) {
+    draftMsg.value = (draftMsg.value ? draftMsg.value + ' ' : '') + val;
+    chatStore.clearInsertText();
+    nextTick(() => { if (inputEl.value) inputEl.value.focus(); });
+  }
+});
+
+function sendMsg() {
+  // Legacy alias — prefer onSendClick which honors translation confirm
+  onSendClick();
+}
+function goBack() { emit('go-back'); }
+
+// 点击消息旁小圆点：触发 AI 回复并展开 AI 面板
+function onMsgAIReply(msg) {
+  chatStore.triggerAIReplyForMessage(msg);
+  emit('open-ai-panel');
+}
+
+function isDataUrl(s) { return typeof s === 'string' && (s.startsWith('data:') || s.startsWith('http')); }
+
+function onOpenQrEvent() { if (!chatStore.isConnected) startQrLogin(); }
+
+onMounted(async () => {
+  scrollToBottom();
+  window.addEventListener('wa:open-qr', onOpenQrEvent);
+  window.addEventListener('keydown', onPdfKeydown);
+  updateMobileView();
+  window.addEventListener('resize', updateMobileView);
+  try { useSocket(); } catch (e) { console.warn('socket init', e); }
+  // 监听 socket 入站消息（兜底，watch currentMessages 之外的快速通道）
+  try {
+    const sock = useSocket();
+    if (sock && !aiSuggestSocketHandler) {
+      aiSuggestSocketHandler = (data) => {
+        if (!isMobileView.value) return;
+        if (!chatStore.activeJid) return;
+        const msg = data || {};
+        // 仅当新消息是发给当前会话且非自己发出时刷新
+        const jid = msg.jid || (msg.fromMe ? msg.to : msg.from);
+        if (jid === chatStore.activeJid && !msg.fromMe && msg.direction !== 'outbound') {
+          aiSuggestHiddenByInput.value = false;
+          refreshAiSuggests();
+        }
+      };
+      sock.on('whatsapp:message', aiSuggestSocketHandler);
+    }
+  } catch (e) { console.warn('socket listen for ai-suggest failed:', e); }
+  // 加载翻译设置
+  try { await chatStore.fetchTranslationSettings(); } catch (e) { console.warn('translation settings load failed:', e); }
+  // 页面加载后自动触发QR连接，无需手动点按钮
+  if (!chatStore.isConnected) {
+    console.log('[ChatView] Auto-starting QR login...');
+    qrViewVisible.value = true;
+    chatStore.requestQR().catch(e => console.error('Auto QR failed:', e));
+  } else if (chatStore.activeJid && isMobileView.value) {
+    // 已连接且存在会话时，移动端首次加载也拉一次建议
+    refreshAiSuggests();
+  }
+});
+onUnmounted(() => {
+  window.removeEventListener('wa:open-qr', onOpenQrEvent);
+  window.removeEventListener('keydown', onPdfKeydown);
+  window.removeEventListener('resize', updateMobileView);
+  try {
+    const sock = useSocket();
+    if (sock && aiSuggestSocketHandler) sock.off('whatsapp:message', aiSuggestSocketHandler);
+  } catch (_) {}
+  aiSuggestSocketHandler = null;
+  if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
+});
+</script>
+
+<style scoped>
+.conv-page { display: flex; flex-direction: column; height: 100%; background: #0b141a; position: relative; }
+
+/* ── 未连接/扫码/无会话 等页面样式（保持原样） ── */
+.wa-intro { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; color:#e9edef; background:#111b21; border-bottom:6px solid #00a884; overflow-y:auto; }
+.wa-intro-art { margin-bottom:28px; opacity:.9; }
+.wa-intro-svg { max-width:303px; width:100%; height:auto; }
+.wa-intro-title { font-size:28px; font-weight:300; color:#e9edef; margin:0 0 14px; }
+.wa-intro-sub { font-size:14px; color:#8696a0; text-align:center; max-width:440px; line-height:1.5; margin:0 0 32px; }
+.wa-login-btn { display:inline-flex; align-items:center; gap:10px; padding:12px 28px; background:#00a884; color:#111b21; border:none; border-radius:24px; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s; font-family:inherit; }
+.wa-login-btn:hover:not(:disabled) { background:#06cf9c; }
+.wa-login-btn:disabled { opacity:.7; cursor:wait; }
+.wa-spin { animation: wa-spin 1s linear infinite; }
+@keyframes wa-spin { to { transform: rotate(360deg); } }
+.wa-intro-tips { margin-top:40px; color:#8696a0; font-size:12px; text-align:center; }
+.wa-intro-tips p { margin:6px 0; display:flex; align-items:center; justify-content:center; gap:6px; }
+.wa-lock { font-size:14px; }
+
+.wa-scan-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#111b21; padding:24px; position:relative; }
+.wa-scan-back { position:absolute; top:16px; left:16px; width:36px; height:36px; background:#202c33; border:none; color:#e9edef; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+.wa-scan-back:hover { background:#2a3942; }
+.wa-scan-card { display:flex; gap:40px; background:#111b21; border-radius:4px; padding:48px 56px 40px; max-width:820px; width:100%; align-items:flex-start; }
+.wa-scan-left { flex:1; min-width:0; color:#e9edef; }
+.wa-scan-right { flex-shrink:0; display:flex; flex-direction:column; align-items:center; }
+.wa-scan-title { font-size:28px; font-weight:300; color:#e9edef; margin:0 0 32px; line-height:1.2; }
+.wa-scan-steps { list-style:none; padding:0; margin:0 0 32px; }
+.wa-scan-steps li { display:flex; align-items:flex-start; gap:18px; margin-bottom:20px; font-size:14px; line-height:1.5; color:#d1d7db; }
+.step-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; background:transparent; border:2px solid #8696a0; color:#8696a0; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+.step-text strong { color:#e9edef; font-weight:600; }
+.wa-help-link { display:inline-block; color:#53bdeb; text-decoration:none; font-size:14px; margin-bottom:28px; }
+.wa-help-link:hover { text-decoration:underline; }
+.wa-stay-logged { display:inline-flex; align-items:center; gap:10px; font-size:14px; color:#d1d7db; cursor:pointer; margin-bottom:24px; user-select:none; }
+.wa-stay-logged input { display:none; }
+.checkbox-box { width:18px; height:18px; border-radius:3px; border:2px solid #8696a0; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+.checkbox-box.checked { background:#00a884; border-color:#00a884; }
+.wa-phone-login { display:inline-flex; align-items:center; gap:6px; color:#53bdeb; font-size:14px; cursor:pointer; margin-top:4px; }
+.wa-phone-login:hover { text-decoration:underline; }
+.qr-frame { position:relative; width:264px; height:264px; background:#fff; border-radius:4px; padding:12px; display:flex; align-items:center; justify-content:center; }
+.qr-img { width:240px; height:240px; display:block; }
+.qr-overlay-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:50px; height:50px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:4px; }
+.corner { position:absolute; width:24px; height:24px; border:4px solid #00a884; }
+.corner.tl { top:0; left:0; border-right:none; border-bottom:none; border-top-left-radius:4px; }
+.corner.tr { top:0; right:0; border-left:none; border-bottom:none; border-top-right-radius:4px; }
+.corner.bl { bottom:0; left:0; border-right:none; border-top:none; border-bottom-left-radius:4px; }
+.corner.br { bottom:0; right:0; border-left:none; border-top:none; border-bottom-right-radius:4px; }
+.qr-hint-text { margin-top:16px; font-size:12px; color:#8696a0; text-align:center; }
+.qr-hint-text strong { color:#00a884; }
+.qr-loading-box, .qr-expired-box, .qr-error-box { width:264px; height:264px; background:#fff; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center; }
+.qr-loading-spin { width:36px; height:36px; border:3px solid #e9edef; border-top-color:#00a884; border-radius:50%; animation: wa-spin .8s linear infinite; }
+.qr-loading-text { font-size:13px; color:#667781; }
+.qr-expired-title { font-size:16px; font-weight:500; color:#111b21; }
+.qr-error-icon { width:40px; height:40px; border-radius:50%; background:#ea4335; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; }
+.qr-error-text { font-size:13px; color:#111b21; line-height:1.4; }
+.qr-reload-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; background:#00a884; color:#fff; border:none; border-radius:20px; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s; font-family:inherit; }
+.qr-reload-btn:hover { background:#06cf9c; }
+.wa-scan-footer { margin-top:24px; text-align:center; color:#8696a0; font-size:12px; }
+.wa-scan-footer p { margin:6px 0; }
+.wa-scan-lock { display:flex; align-items:center; justify-content:center; }
+.wa-scan-footer a { color:#53bdeb; text-decoration:none; }
+.wa-scan-footer a:hover { text-decoration:underline; }
+.wa-scan-terms .dot { margin:0 6px; }
+.wa-scan-create a { color:#00a884; }
+
+.wa-noselect { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; background:#111b21; border-bottom:6px solid #00a884; color:#e9edef; }
+.wa-noselect-art { margin-bottom:28px; opacity:.75; }
+.wa-noselect-title { font-size:28px; font-weight:300; margin:0 0 12px; color:#e9edef; }
+.wa-noselect-sub { font-size:13px; color:#8696a0; text-align:center; max-width:440px; line-height:1.5; margin:0; }
+.wa-noselect-divider { width:240px; height:1px; background:#222d34; margin:32px 0 24px; }
+.wa-noselect-tip { font-size:14px; color:#d1d7db; margin:0 0 16px; }
+.wa-noselect-encrypt { font-size:12px; color:#8696a0; margin:0; }
+
+/* ── ⚡ 首响等待提示 banner ── */
+.fr-wait-banner {
+  background: linear-gradient(90deg, #f15c6d, #b9303f);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  animation: frb-pulse-chat 2s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(241, 92, 109, 0.3);
+}
+@keyframes frb-pulse-chat {
+  0%, 100% { background: linear-gradient(90deg, #f15c6d, #b9303f); }
+  50% { background: linear-gradient(90deg, #ff6b7a, #c9404f); }
+}
+.fr-wb-icon { font-size: 18px; animation: frb-bell 1s ease-in-out infinite; }
+.fr-wb-text b { font-size: 15px; }
+
+/* ── 对话 Header ── */
+.conv-header { height:56px; background:#202c33; border-bottom:1px solid #222d34; display:flex; align-items:center; padding:0 16px; gap:12px; flex-shrink:0; }
+.back-btn { display:none; background:none; border:none; color:#e9edef; cursor:pointer; padding:6px; }
+.ch-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; flex-shrink:0; overflow:hidden; }
+.ch-avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+.ch-info { flex:1; min-width:0; }
+.ch-name { font-size:15px; font-weight:500; color:#e9edef; }
+.ch-status { font-size:12px; color:#8696a0; display:flex; align-items:center; gap:4px; margin-top:1px; }
+.online-dot { width:7px; height:7px; border-radius:50%; background:#00a884; }
+.online-dot.offline { background:#667781; }
+.ch-actions { display:flex; gap:6px; }
+.ch-actions button { width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:none; border:none; color:#8696a0; border-radius:50%; cursor:pointer; }
+.ch-actions button:hover { background:#364147; color:#e9edef; }
+
+/* ── 消息区 ── */
+.conv-messages { flex:1; overflow-y:auto; padding:16px 8% 16px calc(8% + 8px); display:flex; flex-direction:column; gap:4px; }
+.msgs-loading { display:flex; justify-content:center; padding:20px; color:#8696a0; font-size:12px; }
+.loading-dots::after { content:''; animation: dots 1.5s infinite; }
+@keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+.msg-date-divider { display:flex; justify-content:center; margin:12px 0; }
+.msg-date-divider span { background:#202c33; color:#8696a0; padding:5px 12px; border-radius:8px; font-size:11px; }
+.msg { display:flex; margin-bottom:2px; position:relative; }
+.msg.incoming { justify-content:flex-start; padding-right:40px; }
+.msg.outgoing { justify-content:flex-end; }
+.msg-bubble {
+  max-width:75%; padding:8px 12px 6px; border-radius:8px;
+  font-size:14.5px; line-height:1.4; position:relative; word-wrap:break-word;
+  display:flex; flex-direction:column; gap:0;
+}
+.msg.incoming .msg-bubble { background:#202c33; color:#e9edef; border-top-left-radius:2px; }
+.msg.outgoing .msg-bubble { background:#005c4b; color:#e9edef; border-top-right-radius:2px; }
+.msg-text { padding-right:0; white-space:pre-wrap; word-break:break-word; font-size:15px; }
+.msg-translation {
+  margin-top:6px; padding-top:6px; padding-bottom:2px;
+  border-top:1px dashed rgba(255,255,255,0.2);
+  font-size:14px; color:#a8b4ba; font-style:normal; line-height:1.4;
+  display:flex; align-items:center; gap:8px;
+}
+.msg-translation::after { content: none; }
+.msg-trans-text { flex:1; min-width:0; }
+.msg-retranslate-btn {
+  margin-left:auto; flex-shrink:0;
+  background:transparent; border:none; color:#8696a0; cursor:pointer;
+  padding:2px; border-radius:4px; display:inline-flex; align-items:center; justify-content:center;
+  opacity:.6; transition: opacity .15s, transform .3s, color .15s;
+}
+.msg-retranslate-btn:hover { opacity:1; color:#53bdeb; }
+.msg-retranslate-btn.spinning { opacity:.8; cursor:wait; }
+.msg-retranslate-btn.spinning .msg-retrans-spin {
+  width:12px; height:12px; border:2px solid rgba(134,150,160,.35);
+  border-top-color:#8696a0; border-radius:50%;
+  animation: wa-spin .7s linear infinite; display:inline-block;
+}
+.msg-media-doc-link { cursor:pointer; }
+.msg-media-doc-link:hover .mmd-name { color:#53bdeb; }
+.msg-media-pdf { cursor:zoom-in; }
+.mmd-download-hidden { display:none; }
+
+/* ── PDF 全屏预览 ── */
+.pdf-preview-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.92);
+  z-index:9999; display:flex; align-items:center; justify-content:center;
+}
+.pdf-preview-frame {
+  width:92vw; height:92vh; border:none; border-radius:4px; background:#fff;
+  box-shadow:0 10px 40px rgba(0,0,0,.6);
+}
+.pdf-preview-close {
+  position:absolute; top:20px; right:24px;
+  width:40px; height:40px; border-radius:50%;
+  background:rgba(255,255,255,.1); color:#fff; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .15s;
+}
+.pdf-preview-close:hover { background:rgba(255,255,255,.22); }
+.msg-time {
+  align-self:flex-end; font-size:10.5px; color:#8696a0;
+  display:flex; align-items:center; gap:3px; margin-top:4px;
+}
+.msg-check { color:#53bdeb; font-size:12px; margin-left:3px; }
+.msg-check.pending { color:#8696a0; font-size:11px; }
+.msg-check.sent { color:#8696a0; font-size:12px; }
+.msg-check.delivered { color:#8696a0; font-size:12px; }
+.msg-check.read { color:#53bdeb; font-size:12px; }
+.msg-check.error { color:#f15c6d; font-size:11px; }
+
+/* ── 消息悬浮 AI 小圆点按钮（只在 incoming 上显示） ── */
+.msg-ai-btn {
+  position:absolute;
+  right:-36px;
+  top:4px;
+  width:28px; height:28px;
+  border-radius:50%;
+  background:#202c33;
+  color:#8696a0;
+  border:none;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+  opacity:0;
+  transform:scale(.8);
+  transition: opacity .15s ease, transform .15s ease, background .15s, color .15s;
+  z-index:5;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+.msg.incoming:hover .msg-ai-btn,
+.msg-ai-btn:focus-visible {
+  opacity:1;
+  transform:scale(1);
+}
+.msg-ai-btn:hover {
+  background:#00a884;
+  color:#fff;
+}
+
+/* ── 输入区 ── */
+.conv-input-area { background:#202c33; padding:8px 12px; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.input-action, .emoji-btn { background:none; border:none; color:#8696a0; cursor:pointer; padding:6px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.input-action:hover, .emoji-btn:hover { color:#e9edef; }
+.input-wrap { flex:1; background:#2a3942; border-radius:22px; display:flex; align-items:center; padding:0 6px 0 16px; }
+.input-wrap input { flex:1; background:transparent; border:none; color:#e9edef; padding:10px 0; font-size:14px; outline:none; font-family:inherit; }
+.send-btn { width:40px; height:40px; border-radius:50%; background:#00a884; color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+.send-btn:hover { background:#06cf9c; }
+/* ── 内嵌翻译确认面板 ── */
+.trans-confirm-panel { position:relative; margin:0 80px 8px 16px; background:#202c33; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,.4); padding:12px 14px; border:1px solid #2a3942; }
+.tcp-row { display:flex; align-items:flex-start; gap:8px; }
+.tcp-top { justify-content:space-between; align-items:center; }
+.tcp-label { font-size:13px; color:#8696a0; flex-shrink:0; line-height:1.5; }
+.tcp-text { flex:1; font-size:14px; line-height:1.5; word-break:break-all; }
+.tcp-translated { color:#e9edef; font-weight:500; }
+.tcp-original { color:#8696a0; }
+.tcp-error { color:#ea6b6b !important; }
+.tcp-swap { display:inline-flex; align-items:center; background:none; border:1px solid #3b4a54; color:#00a884; font-size:12px; cursor:pointer; padding:3px 8px; border-radius:4px; flex-shrink:0; font-family:inherit; transition:all .15s; }
+.tcp-swap:hover { background:#00a88420; border-color:#00a884; color:#00a884; }
+.tcp-divider { height:1px; border-top:1px dashed #3b4a54; margin:8px 0; }
+.tcp-tips { margin-top:8px; text-align:right; font-size:11px; color:#8696a0; line-height:1.5; }
+
+/* ── 移动端适配 ── *//* ── 移动端适配 ── */
+@media (max-width: 768px) {
+  .conv-header, .conv-input-area { padding-right:16px !important; }
+  .conv-messages { padding-right:12px !important; }
+  .trans-confirm-panel { margin-right:16px !important; }
+  .wa-scan-card { flex-direction:column; padding:24px 20px; gap:24px; align-items:center; }
+  .wa-scan-left { order:2; width:100%; }
+  .wa-scan-right { order:1; }
+  .wa-scan-title { font-size:22px; margin-bottom:20px; }
+  .wa-intro-title, .wa-noselect-title { font-size:22px; }
+  .qr-frame, .qr-loading-box, .qr-expired-box, .qr-error-box { width:220px; height:220px; }
+  .qr-img { width:196px; height:196px; }
+  .conv-messages { padding:12px; }
+  .msg-bubble { max-width:85%; }
+  .msg.incoming { padding-right:36px; }
+  .msg-ai-btn { right:-32px; width:26px; height:26px; font-size:13px; opacity:1; transform:scale(1); }
+  .back-btn { display:flex; }
+  .ch-actions button:nth-child(1) { display:none; }
+  .wa-scan-back { top:8px; left:8px; }
+}
+
+/* ===== 2026-07-13 移动端响应式补丁（追加） ===== */
+@media (max-width: 768px) {
+  /* 顶部header */
+  .conv-header {
+    padding: 0 10px !important;
+    height: 52px !important;
+    gap: 8px !important;
+  }
+  .ch-avatar { width: 36px; height: 36px; font-size: 15px; }
+.ch-avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+  .ch-name { font-size: 15px; }
+  .ch-status { font-size: 11px; }
+  /* 搜索按钮隐藏，保留更多按钮 */
+  .ch-actions button { width: 38px; height: 38px; }
+
+  /* 返回按钮 */
+  .back-btn { display: flex !important; width: 38px; height: 38px; align-items:center; justify-content:center; }
+
+  /* 消息区 */
+  .conv-messages {
+    padding: 10px 10px 10px 12px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .msg-bubble {
+    max-width: 82% !important;
+    padding: 7px 10px 9px !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+    border-radius: 10px !important;
+  }
+  .msg.incoming { padding-right: 0 !important; }
+  .msg.incoming .msg-bubble { border-top-left-radius: 2px !important; }
+  .msg.outgoing .msg-bubble { border-top-right-radius: 2px !important; }
+  .msg-text { padding-right: 0; font-size:14px; }
+  .msg-time { font-size: 10px; margin-top:3px; }
+  .msg-translation { font-size:14px; }
+
+  /* 悬浮AI按钮：移动端常驻显示，位置调整为贴右侧（避免超出） */
+  .msg-ai-btn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    right: 4px !important;
+    top: -36px !important;
+    width: 30px !important; height: 30px !important;
+    background: #2a3942 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
+
+  /* 输入区 */
+  .conv-input-area {
+    padding: 8px 10px !important;
+    gap: 6px !important;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0)) !important;
+  }
+  .input-action, .emoji-btn {
+    width: 42px; height: 42px;
+    flex-shrink: 0;
+  }
+  .input-wrap {
+    border-radius: 24px;
+    padding: 0 8px 0 16px;
+    min-height: 44px;
+  }
+  .input-wrap input {
+    padding: 11px 0 !important;
+    font-size: 16px !important; /* 防止iOS自动缩放 */
+    line-height: 1.4;
+  }
+  .send-btn {
+    width: 44px; height: 44px; flex-shrink: 0;
+  }
+
+  /* 翻译确认弹窗 */
+  .trans-confirm-panel {
+    margin: 0 10px 8px 10px !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+  }
+  .tcp-row { gap: 6px; }
+  .tcp-label { font-size: 12px; min-width: 36px; }
+  .tcp-text { font-size: 14px; }
+  .tcp-swap { padding: 6px 10px; min-height: 36px; font-size: 12px; }
+  .tcp-tips { font-size: 10px; text-align: center; margin-top: 6px; }
+
+  /* 扫码页适配 */
+  .wa-scan-wrap { padding: 16px 12px; }
+  .wa-scan-card { padding: 24px 16px; gap: 20px; }
+  .qr-frame, .qr-loading-box, .qr-expired-box, .qr-error-box { width: 200px; height: 200px; }
+  .qr-img { width: 176px; height: 176px; }
+  .wa-scan-title { font-size: 20px; margin-bottom: 16px; text-align:center; }
+  .wa-scan-steps li { font-size: 13px; gap: 10px; margin-bottom: 14px; }
+  .wa-scan-back { top: 10px; left: 10px; width: 40px; height: 40px; }
+  .wa-login-btn { padding: 12px 24px; font-size: 14px; min-height: 48px; }
+  .qr-reload-btn { min-height: 40px; padding: 8px 18px; font-size: 14px; }
+
+  /* 无会话占位 */
+  .wa-noselect { padding: 32px 20px; }
+  .wa-noselect-title { font-size: 20px; }
+  .wa-noselect-sub { font-size: 13px; }
+
+  /* 日期分隔条 */
+  .msg-date-divider span { font-size: 11px; padding: 4px 10px; }
+
+  /* body 禁止橡皮筋 */
+  :deep(body) { overscroll-behavior: none; }
+}
+
+
+/* ── 附件菜单 ── */
+.attach-wrap { position:relative; }
+.attach-menu {
+  position:absolute;
+  bottom:calc(100% + 6px);
+  left:0;
+  background:#233138;
+  border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  padding:6px;
+  z-index:50;
+  min-width:180px;
+  border:1px solid #2a3942;
+}
+.attach-arrow {
+  position:absolute;
+  bottom:-6px; left:16px;
+  width:10px; height:10px;
+  background:#233138;
+  border-right:1px solid #2a3942;
+  border-bottom:1px solid #2a3942;
+  transform:rotate(45deg);
+}
+.attach-item {
+  display:flex; align-items:center; gap:10px;
+  width:100%;
+  background:none; border:none; color:#e9edef;
+  padding:10px 12px;
+  border-radius:6px; cursor:pointer;
+  font-size:14px; font-family:inherit; text-align:left;
+}
+.attach-item:hover { background:#2a3942; }
+.attach-icon {
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0; color:#fff;
+}
+
+/* ── 附件预览条 ── */
+.media-preview-bar {
+  background:#202c33;
+  margin:0 12px;
+  padding:8px 10px;
+  border-radius:8px 8px 0 0;
+  border-top:1px solid #2a3942;
+  display:flex; align-items:center; gap:8px;
+}
+.mpb-file { display:flex; align-items:center; gap:8px; min-width:0; }
+.mpb-thumb { width:44px; height:44px; object-fit:cover; border-radius:6px; flex-shrink:0; }
+.mpb-doc-icon {
+  width:44px; height:44px; border-radius:6px;
+  background:#2a3942; display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.mpb-info { min-width:0; }
+.mpb-name { font-size:13px; color:#e9edef; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mpb-size { font-size:11px; color:#8696a0; margin-top:2px; }
+.mpb-caption {
+  flex:1;
+  background:#2a3942; border:none; outline:none;
+  color:#e9edef; padding:8px 12px; border-radius:18px;
+  font-size:13px; font-family:inherit;
+  min-width:80px;
+}
+.mpb-send {
+  width:38px; height:38px; border-radius:50%;
+  background:#00a884; color:#fff; border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.mpb-send:disabled { background:#3b4a54; cursor:wait; }
+.mpb-cancel {
+  width:32px; height:32px; border-radius:50%;
+  background:none; border:none; color:#8696a0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.mpb-cancel:hover { color:#e9edef; }
+.mpb-spin {
+  width:16px; height:16px; border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff; border-radius:50%;
+  animation: wa-spin .7s linear infinite;
+  display:inline-block;
+}
+
+/* ── 消息气泡中的媒体 ── */
+.msg-media-img { max-width:280px; max-height:280px; border-radius:6px; overflow:hidden; margin-right:50px; margin-bottom:4px; }
+.msg-media-img img { max-width:100%; max-height:280px; display:block; border-radius:6px; object-fit:cover; cursor:pointer; }
+.msg-media-video { max-width:320px; margin-right:50px; margin-bottom:4px; border-radius:8px; overflow:hidden; background:#000; }
+.msg-video-player { width:100%; max-height:420px; display:block; border-radius:8px; background:#000; }
+.msg-video-placeholder { padding:28px 18px; color:#fff; text-align:center; font-size:14px; background:#202c33; border-radius:8px; }
+.msg-media-doc {
+  display:flex; align-items:center; gap:10px;
+  padding:6px 50px 6px 0;
+  max-width:280px;
+}
+.mmd-icon {
+  width:40px; height:40px; border-radius:6px;
+  background:rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.msg.incoming .mmd-icon { background:#2a3942; }
+.mmd-info { min-width:0; }
+.mmd-name { font-size:14px; color:#e9edef; word-break:break-all; }
+.mmd-size { font-size:11px; color:#8696a0; margin-top:2px; }
+.msg-caption { font-size:13px; color:#e9edef; margin-top:4px; padding-right:0; white-space:pre-wrap; line-height:1.4; }
+@media (max-width:768px) {
+  .msg-media-img { max-width:220px; max-height:220px; margin-right:46px; }
+  .msg-media-img img { max-height:220px; }
+  .msg-media-video { max-width:240px; margin-right:46px; }
+  .msg-video-player { max-height:300px; }
+  .msg-media-doc { max-width:240px; padding-right:46px; }
+  .attach-menu { min-width:160px; }
+  .mpb-name { max-width:100px; }
+}
+
+/* ── AI 快捷建议条（默认隐藏，仅移动端显示） ── */
+.ai-suggest-bar { display: none !important; }
+@media (max-width: 768px) {
+  .ai-suggest-bar {
+    display: none !important;
+  }
+  .aisb-hidden-placeholder { display:block; }
+  /* 原样式保留但被上面覆盖
+  .ai-suggest-bar-old {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #111b21;
+    padding: 6px 10px;
+    flex-shrink: 0;
+    border-top: 1px solid #1f2c34;
+  }
+  .aisb-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+    line-height: 1;
+  }
+  .aisb-scroll {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .aisb-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+  .aisb-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 0 0 auto;
+    background: #202c33;
+    color: #e9edef;
+    border: 1px solid #2a3942;
+    border-radius: 14px;
+    padding: 8px 12px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-right: 6px;
+    max-width: 60vw;
+    overflow: hidden;
+    transition: background .15s, color .15s, border-color .15s;
+    gap: 0;
+  }
+  .aisb-foreign {
+    font-size: 13px; line-height: 1.35; color: #e9edef;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; word-break: break-word;
+  }
+  .aisb-zh {
+    font-size: 11px; line-height: 1.3; color: #8696a0; font-style: italic;
+    margin-top: 3px;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    overflow: hidden; word-break: break-word;
+  }
+  .aisb-chip.with-zh { padding: 7px 12px 8px; }
+  .aisb-chip:first-child { margin-left: 2px; }
+  .aisb-chip:last-child { margin-right: 2px; }
+  .aisb-chip:hover, .aisb-chip:active {
+    background: #2a3942;
+    border-color: #00a884;
+    color: #e9edef;
+  }
+  .aisb-refresh {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #8696a0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    padding: 0;
+    transition: color .15s, transform .3s, background .15s;
+  }
+  .aisb-refresh:hover { color: #00a884; background: #202c33; }
+  .aisb-refresh:disabled { opacity: .5; cursor: wait; }
+  .aisb-refresh:disabled .aisb-refresh-spin { animation: aisb-spin .8s linear infinite; display:inline-block; }
+  /* 骨架屏 */
+  .aisb-skeleton-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 2px;
+  }
+  .aisb-skeleton {
+    display: inline-block;
+    height: 30px;
+    border-radius: 20px;
+    background: linear-gradient(90deg, #202c33 0%, #2a3942 50%, #202c33 100%);
+    background-size: 200% 100%;
+    animation: aisb-skeleton 1.2s ease-in-out infinite;
+  }
+  .aisb-skeleton:nth-child(1) { width: 92px; }
+  .aisb-skeleton:nth-child(2) { width: 128px; }
+  .aisb-skeleton:nth-child(3) { width: 76px; }
+}
+@keyframes aisb-skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes aisb-spin {
+  to { transform: rotate(360deg); }
+}
+
+</style>

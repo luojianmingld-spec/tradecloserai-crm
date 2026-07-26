@@ -1,0 +1,1638 @@
+<template>
+  <div class="chat-layout" :class="{ 'mobile-show-chat': showMobileChat, 'mobile-show-customer': showMobileChat && mobilePanel === 'customer' }">
+    <!-- Left Panel: Connection Status + Conversation List -->
+    <div class="left-panel">
+      <div class="panel-header">
+        
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索联系人..."
+            clearable
+            size="small"
+          >
+            <template #prefix>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color: var(--text-muted)">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+              </svg>
+            </template>
+          </el-input>
+        </div>
+      </div>
+
+      <!-- Left Panel Tabs: 会话 / 客户 -->
+      <div class="left-tabs">
+        <button class="left-tab" :class="{ active: leftTab === 'conversations' }" @click="leftTab = 'conversations'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          会话
+        </button>
+        <button class="left-tab" :class="{ active: leftTab === 'customers' }" @click="switchToCustomers">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          客户
+        </button>
+      </div>
+
+      <!-- Customer List (CRM) -->
+      <div v-show="leftTab === 'customers'" class="customer-list">
+        <div v-if="crmLoading" class="empty-state" style="padding:20px;color:#8696a0;font-size:13px;">加载中...</div>
+        <div v-else-if="crmCustomers.length === 0" class="empty-state" style="padding:20px;color:#8696a0;font-size:13px;">暂无客户</div>
+        <div
+          v-for="c in crmCustomers"
+          :key="c.id"
+          class="conv-item conv-customer"
+          @click="startChatWithCustomer(c)"
+        >
+          <div class="conv-avatar">
+            <span class="avatar-text" style="background:#00a884;color:#111b21;font-weight:700;">{{ (c.name || '?')[0] }}</span>
+          </div>
+          <div class="conv-info">
+            <div class="conv-top">
+              <span class="conv-name">{{ c.name }}</span>
+              <span class="status-badge-sm" :class="'status-' + c.status">{{ statusLabel(c.status) }}</span>
+            </div>
+            <div class="conv-bottom">
+              <span class="conv-last-msg" style="font-size:11px;">{{ c.phone || '-' }} | {{ c.company || '' }}</span>
+              <span v-if="c.tags" class="tag-count">{{ parseTags(c.tags).length }} 标签</span>
+            </div>
+          </div>
+          <button v-if="c.phone" class="btn-icon btn-whatsapp-quick" @click.stop="quickSendWhatsApp(c)" title="发消息">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div v-show="leftTab === 'conversations'" class="conversation-list">
+        <div
+          v-for="conv in filteredConversations"
+          :key="conv.jid"
+          class="conversation-item"
+          :class="{ active: chatStore.activeJid === conv.jid }"
+          @click="selectConversation(conv)"
+        >
+          <div class="conv-avatar">
+            <span class="avatar-text">
+              {{ getInitial(conv.name || conv.phone || conv.jid) }}
+            </span>
+          </div>
+          <div class="conv-info">
+            <div class="conv-top">
+              <span class="conv-name">{{ conv.name || conv.phone || conv.jid.split('@')[0] }}</span>
+              <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
+            </div>
+            <div class="conv-bottom">
+              <span class="conv-last-msg">{{ conv.lastMessage || '' }}</span>
+              <span v-if="conv.unreadCount > 0" class="conv-unread">
+                {{ conv.unreadCount > 99 ? '99+' : conv.unreadCount }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!chatStore.isConnected" class="empty-state">
+          <el-empty description="请先连接WhatsApp账号" :image-size="80">
+            <el-button type="primary" @click="showQRDialog = true">
+              扫码连接
+            </el-button>
+          </el-empty>
+        </div>
+
+        <div
+          v-else-if="chatStore.sortedConversations.length === 0"
+          class="empty-state"
+        >
+          <el-empty description="暂无会话" :image-size="80" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Panel: Chat Window -->
+    <div class="center-panel">
+      <template v-if="chatStore.activeJid">
+        <ChatWindow
+          :jid="chatStore.activeJid"
+          :contact="chatStore.activeConversation"
+          :messages="chatStore.currentMessages"
+          :connected="chatStore.isConnected"
+          @send="onSendMessage"
+        />
+        <button class="mobile-back-btn" @click="showMobileChat = false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+      </template>
+      <template v-else>
+        <div class="no-chat-selected">
+          <div class="no-chat-content">
+            <svg viewBox="0 0 303 172" width="300" fill="none">
+              <path
+                d="M229.565 160.229c32.647-16.166 54.391-50.471 54.391-89.691C283.956 31.588 252.368 0 213.418 0c-28.867 0-53.862 17.39-64.754 42.261C137.772 17.39 112.777 0 83.91 0 44.96 0 13.372 31.588 13.372 70.538c0 39.22 21.744 73.525 54.39 89.691H229.565z"
+                fill="#00a884"
+                opacity="0.08"
+              />
+            </svg>
+            <h2>WhatsApp CRM</h2>
+            <p v-if="!chatStore.isConnected">请先扫码连接WhatsApp账号</p>
+            <p v-else>选择一个会话开始聊天</p>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Right Panel: TradeAgent style -->
+    <div class="right-panel">
+      <!-- Tab Content Area -->
+      <div class="rp-content">
+
+      <div v-show="rpActiveTab === 1" class="rp-tab-body">
+        <div class="rp-toggle-row">
+          <span class="rp-toggle-label">独立翻译</span>
+          <label class="rp-switch"><input type="checkbox" v-model="rpStandalone"><span class="rp-slider"></span></label>
+        </div>
+        <div class="rp-section">
+          <div class="rp-toggle-row">
+            <span class="rp-toggle-label">接收翻译设置</span>
+            <label class="rp-switch"><input type="checkbox" v-model="rpRecvEnabled"><span class="rp-slider"></span></label>
+          </div>
+          <div class="rp-fields" v-if="rpRecvEnabled">
+            <div class="rp-field"><span class="rp-field-label">翻译线路</span><div class="rp-select"><select v-model="rpRecvLine"><option>AI大模型</option><option>Google翻译</option><option>DeepL</option></select></div></div>
+            <div class="rp-field"><span class="rp-field-label">源语言</span><div class="rp-select"><select v-model="rpRecvSrc"><option>自动检测</option><option>英文</option><option>中文</option><option>日文</option><option>韩文</option></select></div></div>
+            <div class="rp-field"><span class="rp-field-label">目标语言</span><div class="rp-select"><select v-model="rpRecvTarget"><option>中文（简体）</option><option>英文</option><option>日文</option><option>韩文</option></select></div></div>
+          </div>
+        </div>
+        <div class="rp-section">
+          <div class="rp-toggle-row">
+            <span class="rp-toggle-label">发送翻译设置</span>
+            <label class="rp-switch"><input type="checkbox" v-model="rpSendEnabled"><span class="rp-slider"></span></label>
+          </div>
+          <div class="rp-fields" v-if="rpSendEnabled">
+            <div class="rp-field"><span class="rp-field-label">翻译线路</span><div class="rp-select"><select v-model="rpSendLine"><option>AI大模型</option><option>Google翻译</option><option>DeepL</option></select></div></div>
+            <div class="rp-field"><span class="rp-field-label">语言</span><div class="rp-select"><select v-model="rpSendSrc"><option>自动检测</option><option>中文</option><option>英文</option></select></div></div>
+            <div class="rp-field"><span class="rp-field-label">目标语言</span><div class="rp-select"><select v-model="rpSendTarget"><option>英文</option><option>中文（简体）</option><option>日文</option><option>韩文</option></select></div></div>
+          </div>
+        </div>
+        <div class="rp-toggle-row rp-toggle-with-desc">
+          <div><div class="rp-toggle-label">禁发中文</div><div class="rp-toggle-desc">防止误发中文消息</div></div>
+          <label class="rp-switch"><input type="checkbox" v-model="rpBlockChinese"><span class="rp-slider"></span></label>
+        </div>
+        <div class="rp-toggle-row rp-toggle-with-desc">
+          <div><div class="rp-toggle-label">翻译确认</div><div class="rp-toggle-desc">发送前确认翻译结果</div></div>
+          <label class="rp-switch"><input type="checkbox" v-model="rpConfirmTranslate"><span class="rp-slider"></span></label>
+        </div>
+      </div>
+
+      <div v-show="rpActiveTab === 2" class="rp-tab-body">
+        <div class="rp-card">
+          <div class="rp-card-title">AI 智能回复</div>
+          <div class="rp-card-desc">根据聊天内容生成专业回复话术</div>
+          <div class="rp-field" style="margin-top:12px">
+            <span class="rp-field-label">回复风格</span>
+            <div class="rp-select"><select v-model="rpAiStyle">
+              <option value="formal">正式商务</option>
+              <option value="friendly">友好亲切</option>
+              <option value="brief">简洁直接</option>
+            </select></div>
+          </div>
+          <div class="rp-field" style="margin-top:8px">
+            <span class="rp-field-label">回复语言</span>
+            <div class="rp-select"><select v-model="rpAiLang">
+              <option value="en">英文</option>
+              <option value="zh">中文</option>
+              <option value="es">西班牙语</option>
+              <option value="ar">阿拉伯语</option>
+            </select></div>
+          </div>
+          <button class="rp-action-btn" @click="rpGenReply" :disabled="rpGenerating">
+            {{ rpGenerating ? "生成中..." : "生成回复话术" }}
+          </button>
+          <div v-if="rpAiReplyText" class="rp-result-box">{{ rpAiReplyText }}</div>
+        </div>
+      </div>
+
+      <div v-show="rpActiveTab === 3" class="rp-tab-body">
+        <button class="demand-analyze-btn" @click="rpGenSummary" :disabled="rpSummarizing">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          {{ rpSummarizing ? "分析中..." : "分析客户需求" }}
+        </button>
+        <div v-if="rpDemandData" class="demand-result-area">
+          <div class="demand-score-section">
+            <div class="demand-score-header">
+              <span class="demand-score-label">意向度评分</span>
+              <span class="demand-score-value">{{ rpDemandData.intentionScore * 10 }}<span class="demand-score-total">/100</span></span>
+            </div>
+            <div class="demand-progress-bar">
+              <div class="demand-progress-fill" :style="{ width: (rpDemandData.intentionScore * 10) + '%' }"></div>
+            </div>
+            <div class="demand-score-bar">
+              <span class="demand-bar-label">低</span>
+              <span class="demand-bar-label">中</span>
+              <span class="demand-bar-label">高</span>
+            </div>
+          </div>
+          <div class="demand-fields-grid">
+            <div class="demand-field-card">
+              <div class="demand-field-label">意向产品</div>
+              <div class="demand-field-value highlight">{{ rpDemandData.products || '-' }}</div>
+            </div>
+            <div class="demand-field-card">
+              <div class="demand-field-label">需求规模</div>
+              <div class="demand-field-value">{{ rpDemandData.quantity || '-' }}</div>
+            </div>
+            <div class="demand-field-card">
+              <div class="demand-field-label">价格敏感度</div>
+              <div class="demand-field-value">{{ rpDemandData.priceSensitivity || '-' }}</div>
+            </div>
+            <div class="demand-field-card">
+              <div class="demand-field-label">交付要求</div>
+              <div class="demand-field-value">{{ rpDemandData.deliveryRequirements || '-' }}</div>
+            </div>
+            <div class="demand-field-card" style="grid-column: span 2">
+              <div class="demand-field-label">核心关注点</div>
+              <div class="demand-field-value">{{ rpDemandData.keyConcerns || '-' }}</div>
+            </div>
+            <div class="demand-field-card">
+              <div class="demand-field-label">客户风格</div>
+              <div class="demand-field-value">{{ rpDemandData.customerStyle || '-' }}</div>
+            </div>
+            <div class="demand-field-card" style="grid-column: span 2">
+              <div class="demand-field-label">下一步行动建议</div>
+              <div class="demand-field-value">{{ rpDemandData.nextActions || '-' }}</div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="!rpSummarizing" class="demand-empty">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <p>点击按钮分析客户需求</p>
+        </div>
+      </div>
+
+      <!-- Tab 4: 客户背调 -->
+      <div v-show="rpActiveTab === 4" class="rp-tab-body">
+        <div class="rp-card">
+          <div class="rp-card-title">客户背景调查</div>
+          <div class="rp-card-desc">通过全网搜索分析客户公司背景信息</div>
+          <div class="rp-field" style="margin-top:12px">
+            <span class="rp-field-label">公司名称/域名/手机号</span>
+            <input class="rp-input" v-model="rpBgQuery" placeholder="输入公司名、域名或WhatsApp号" />
+          </div>
+          <button class="rp-action-btn" @click="rpGenBgCheck" :disabled="rpBgLoading" style="margin-top:10px">
+            {{ rpBgLoading ? "全网搜索中..." : "开始背调" }}
+          </button>
+          <div v-if="rpBgReport" class="rp-result-box" style="white-space:pre-wrap; line-height:1.6">
+            <div v-if="rpBgReport.companyName" style="font-size:14px; font-weight:600; color:#22c55e; margin-bottom:8px">
+              {{ rpBgReport.companyName }}
+            </div>
+            <div v-if="rpBgReport.description" style="margin-bottom:8px">{{ rpBgReport.description }}</div>
+            <div v-if="rpBgReport.industry"><strong>行业：</strong>{{ rpBgReport.industry }}</div>
+            <div v-if="rpBgReport.country"><strong>国家/地区：</strong>{{ rpBgReport.country }}</div>
+            <div v-if="rpBgReport.website"><strong>官网：</strong><a :href="rpBgReport.website" target="_blank" style="color:#60a5fa">{{ rpBgReport.website }}</a></div>
+            <div v-if="rpBgReport.products"><strong>主要产品：</strong>{{ rpBgReport.products }}</div>
+            <div v-if="rpBgReport.scale"><strong>公司规模：</strong>{{ rpBgReport.scale }}</div>
+            <div v-if="rpBgReport.trustLevel" style="margin-top:8px">
+              <strong>可信度：</strong>
+              <span :style="{ color: rpBgReport.trustLevel === '高' ? '#22c55e' : rpBgReport.trustLevel === '中' ? '#f59e0b' : '#ef4444', fontWeight: 600 }">
+                {{ rpBgReport.trustLevel }}
+              </span>
+            </div>
+            <div v-if="rpBgReport.trustReasons" style="margin-top:4px; font-size:12px; color:#94a3b8">{{ rpBgReport.trustReasons }}</div>
+            <div v-if="rpBgReport.riskFlags && rpBgReport.riskFlags.length" style="margin-top:8px">
+              <strong style="color:#ef4444">风险信号：</strong>
+              <span v-for="flag in rpBgReport.riskFlags" style="color:#fca5a5; margin-right:8px">{{ flag }}</span>
+            </div>
+            <div v-if="rpBgReport.marketFit" style="margin-top:8px"><strong>合作匹配度：</strong>{{ rpBgReport.marketFit }}</div>
+            <div v-if="rpBgReport.suggestedApproach" style="margin-top:8px"><strong>跟进建议：</strong>{{ rpBgReport.suggestedApproach }}</div>
+          </div>
+          <div v-if="rpBgSources && rpBgSources.length" style="margin-top:8px; font-size:12px">
+            <strong style="color:#94a3b8">信息来源：</strong>
+            <div v-for="src in rpBgSources" style="margin-top:2px">
+              <a :href="src.url" target="_blank" style="color:#60a5fa; text-decoration:none">{{ src.title }}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 5: 单证生成 -->
+      <div v-show="rpActiveTab === 5" class="rp-tab-body">
+        <div class="doc-type-selector">
+          <div class="doc-type-label">选择单证类型</div>
+          <div class="doc-type-options">
+            <button class="doc-type-btn" :class="{ active: docType === 'quotation' }" @click="docType = 'quotation'">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              报价单
+            </button>
+            <button class="doc-type-btn" :class="{ active: docType === 'invoice' }" @click="docType = 'invoice'">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              形式发票
+            </button>
+            <button class="doc-type-btn" :class="{ active: docType === 'packing' }" @click="docType = 'packing'">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+              装箱单
+            </button>
+            <button class="doc-type-btn" :class="{ active: docType === 'contract' }" @click="docType = 'contract'">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              合同
+            </button>
+          </div>
+        </div>
+        <button class="demand-analyze-btn" @click="generateDocument" :disabled="docGenerating" style="margin-top:12px">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          {{ docGenerating ? '生成中...' : '基于聊天记录生成' }}
+        </button>
+        <div v-if="docResult" class="doc-result-area">
+          <div class="doc-result-header">
+            <span class="doc-result-title">{{ docTypeLabel }}</span>
+            <button class="doc-copy-btn" @click="copyDocResult">复制</button>
+          </div>
+          <div class="doc-result-content" v-html="docResult"></div>
+        </div>
+        <div v-else-if="!docGenerating" class="demand-empty">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+          <p>选择单证类型，基于聊天记录智能生成</p>
+        </div>
+      </div>
+      </div>
+
+      <!-- Vertical Icon Bar -->
+      <div class="rp-icon-bar">
+        <button class="rp-icon-tab" :class="{ active: rpActiveTab === 1 }" @click="rpActiveTab = 1" title="翻译设置">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+          <span>翻译</span>
+        </button>
+        <button class="rp-icon-tab" :class="{ active: rpActiveTab === 2 }" @click="rpActiveTab = 2" title="话术">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <span>话术</span>
+        </button>
+        <button class="rp-icon-tab" :class="{ active: rpActiveTab === 3 }" @click="rpActiveTab = 3" title="需求总结">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <span>需求</span>
+        </button>
+        <button class="rp-icon-tab" :class="{ active: rpActiveTab === 4 }" @click="rpActiveTab = 4" title="客户背调">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <span>背调</span>
+        </button>
+        <button class="rp-icon-tab" :class="{ active: rpActiveTab === 5 }" @click="rpActiveTab = 5" title="单证生成">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+          <span>单证</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Send WhatsApp Dialog -->
+    <div v-if="showQuickSendDialog" class="dialog-overlay" @click.self="showQuickSendDialog = false">
+      <div class="dialog-box-quick">
+        <div class="dialog-header-quick">
+          <h3>发送WhatsApp消息</h3>
+          <button class="btn-close-quick" @click="showQuickSendDialog = false">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body-quick">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#202c33;border-radius:6px;border:1px solid #2a3942;margin-bottom:12px;">
+            <div class="conv-avatar" style="width:32px;height:32px;"><span class="avatar-text" style="background:#00a884;color:#111b21;font-size:13px;font-weight:700;">{{ (qsTarget.name || '?')[0] }}</span></div>
+            <div>
+              <div style="font-size:13px;color:#e9edef;">{{ qsTarget.name }}</div>
+              <div style="font-size:11px;color:#8696a0;">{{ qsTarget.phone }}</div>
+            </div>
+          </div>
+          <textarea v-model="qsMessage" rows="4" placeholder="输入消息内容..." style="width:100%;background:#202c33;border:1px solid #2a3942;border-radius:6px;padding:10px 12px;color:#e9edef;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:8px;"></textarea>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+            <button v-for="(t, i) in qsTemplates" :key="i" class="template-chip" @click="qsMessage = t.text">{{ t.label }}</button>
+          </div>
+        </div>
+        <div class="dialog-footer-quick">
+          <button class="btn-cancel-quick" @click="showQuickSendDialog = false">取消</button>
+          <button class="btn-send-quick" @click="doQuickSend" :disabled="!qsMessage.trim() || qsSending">
+            <span v-if="qsSending">发送中...</span>
+            <span v-else>发送</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, watch } from 'vue';
+import { Loading } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { useChatStore } from '../stores/chat.js';
+import { initSocket } from '../utils/socket.js';
+import ChatWindow from '../components/chat/ChatWindow.vue';
+import CustomerPanel from '../components/chat/CustomerPanel.vue';
+
+const chatStore = useChatStore();
+
+const searchQuery = ref('');
+const showQRDialog = ref(false);
+const showMobileChat = ref(false);
+const mobilePanel = ref('chat'); // 'chat' | 'customer' — mobile panel switch
+const waTranslateTarget = ref("zh-CN");
+
+// Right panel translation settings (TradeAgent style)
+const rpStandalone = ref(true);
+const rpRecvEnabled = ref(true);
+const rpRecvLine = ref("AI大模型");
+const rpRecvSrc = ref("自动检测");
+const rpRecvTarget = ref("中文（简体）");
+const rpSendEnabled = ref(true);
+const rpSendLine = ref("AI大模型");
+const rpSendSrc = ref("自动检测");
+const rpSendTarget = ref("英文");
+const rpBlockChinese = ref(true);
+const rpConfirmTranslate = ref(false);
+const rpActiveTab = ref(1);
+const rpAiStyle = ref("formal");
+const rpAiLang = ref("en");
+const rpGenerating = ref(false);
+const rpAiReplyText = ref("");
+const rpSummarizing = ref(false);
+const rpSummaryText = ref("");
+const rpDemandData = ref(null);
+const docType = ref('quotation');
+const docGenerating = ref(false);
+const docResult = ref('');
+
+const docTypeLabel = computed(() => {
+  const labels = { quotation: '报价单', invoice: '形式发票', packing: '装箱单', contract: '合同' };
+  return labels[docType.value] || '单证';
+});
+const rpBgQuery = ref("");
+const rpBgLoading = ref(false);
+const rpBgReport = ref(null);
+const rpBgSources = ref([]);
+
+async function rpGenReply() {
+  if (!chatStore.activeJid) return;
+  rpGenerating.value = true;
+  rpAiReplyText.value = "";
+  try {
+    await chatStore.generateAIReply(null, chatStore.activeJid, rpAiStyle.value);
+    rpAiReplyText.value = "AI回复已生成，请在聊天窗口查看";
+  } catch (e) { rpAiReplyText.value = "生成失败"; }
+  rpGenerating.value = false;
+}
+
+
+async function rpGenBgCheck() {
+  let query = rpBgQuery.value.trim();
+  if (!query && chatStore.activeJid) {
+    const jid = chatStore.activeJid;
+    const phone = jid.split("@")[0] || "";
+    const convs = chatStore.sortedConversations || [];
+    const conv = convs.find(c => c.jid === jid);
+    query = (conv && conv.name) ? conv.name : phone;
+  }
+  if (!query) { rpBgReport.value = { companyName: "\u8bf7\u8f93\u5165\u516c\u53f8\u540d\u79f0\u3001\u57df\u540d\u6216WhatsApp\u53f7" }; return; }
+  
+  rpBgLoading.value = true;
+  rpBgReport.value = null;
+  rpBgSources.value = [];
+  try {
+    const { data } = await api.post("/background-check", {
+      query,
+      context: ""
+    });
+    rpBgReport.value = data.report || {};
+    rpBgSources.value = data.sources || [];
+  } catch (e) {
+    rpBgReport.value = { companyName: "\u80cc\u8c03\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5", description: e.message || "" };
+  }
+  rpBgLoading.value = false;
+}
+
+async function rpGenSummary() {
+  if (!chatStore.activeJid) return;
+  rpSummarizing.value = true;
+  rpDemandData.value = null;
+  try {
+    await chatStore.generateNeedSummary(null, chatStore.activeJid);
+    if (chatStore.needSummary && typeof chatStore.needSummary === 'object') {
+      rpDemandData.value = chatStore.needSummary;
+    }
+  } catch (e) { console.error('需求分析失败:', e); }
+  rpSummarizing.value = false;
+}
+
+async function generateDocument() {
+  if (!chatStore.activeJid) return;
+  docGenerating.value = true;
+  docResult.value = '';
+  try {
+    const messages = chatStore.currentMessages || [];
+    const contextMsgs = messages.slice(-50).map(m => ({
+      role: m.fromMe ? 'assistant' : 'user',
+      content: m.body || m.text || ''
+    })).filter(m => m.content);
+    
+    const docTypePrompts = {
+      quotation: '请根据以下聊天记录，生成一份专业的外贸报价单(Quotation)，包含：产品名称、规格、单价、数量、付款方式、交货期、有效期等。输出Markdown格式。',
+      invoice: '请根据以下聊天记录，生成一份形式发票(Proforma Invoice)，包含：买卖双方信息、产品明细、金额、付款条件、交货条款等。输出Markdown格式。',
+      packing: '请根据以下聊天记录，生成一份装箱单(Packing List)，包含：产品名称、数量、毛重、净重、体积、包装方式等。输出Markdown格式。',
+      contract: '请根据以下聊天记录，生成一份外贸销售合同模板，包含：买卖双方、产品描述、数量、价格、付款方式、交货条款、质量保证等。输出Markdown格式。'
+    };
+    
+    const { data } = await api.post('/ai/reply', {
+      jid: chatStore.activeJid,
+      style: 'formal',
+      messages: contextMsgs,
+      customPrompt: docTypePrompts[docType.value]
+    });
+    
+    if (data.replies && data.replies.length > 0) {
+      docResult.value = data.replies[0];
+    } else {
+      docResult.value = '生成失败，请重试';
+    }
+  } catch (e) {
+    console.error('单证生成失败:', e);
+    docResult.value = '生成失败: ' + (e.message || '未知错误');
+  }
+  docGenerating.value = false;
+}
+
+function copyDocResult() {
+  if (docResult.value) {
+    navigator.clipboard.writeText(docResult.value).then(() => {
+      // copied
+    });
+  }
+}
+const autoTranslateWa = ref(false);
+const waStyle = ref("formal");
+const waReplyLang = ref("en");
+
+const qrDialogWidth = computed(() => {
+  if (typeof window !== 'undefined' && window.innerWidth < 480) return '90%';
+  return '420px';
+});
+
+const filteredConversations = computed(() => {
+  const convs = chatStore.sortedConversations;
+  if (!searchQuery.value) return convs;
+  const q = searchQuery.value.toLowerCase();
+  return convs.filter(
+    c =>
+      c.name?.toLowerCase().includes(q) ||
+      c.phone?.toLowerCase().includes(q) ||
+      c.jid?.toLowerCase().includes(q) ||
+      c.lastMessage?.toLowerCase().includes(q)
+  );
+});
+
+onMounted(async () => {
+  initSocket();
+
+  // Check current connection status
+  const status = await chatStore.fetchConnectionStatus();
+
+  // If connected, fetch conversations
+  if (chatStore.isConnected) {
+    await chatStore.fetchConversations();
+  }
+
+  // Fetch translation settings
+  await chatStore.fetchTranslationSettings();
+});
+
+// Watch for connection status changes
+watch(
+  () => chatStore.connectionStatus,
+  (newStatus) => {
+    if (newStatus === 'connected') {
+      showQRDialog.value = false;
+      chatStore.fetchConversations();
+    }
+  }
+);
+
+function handleQROpen() {
+  if (!chatStore.isConnected) {
+    chatStore.requestQR();
+  }
+}
+
+function handleQRClose() {
+  // Don't disconnect - keep the connection attempt alive
+}
+
+async function handleDisconnect() {
+  try {
+    await ElMessageBox.confirm(
+      '确定断开WhatsApp连接？断开后需要重新扫码登录。',
+      '断开连接',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    );
+    await chatStore.disconnectWhatsApp();
+    ElMessage.success('已断开连接');
+  } catch {
+    // User cancelled
+  }
+}
+
+function selectConversation(conv) {
+  chatStore.setActiveConversation(conv.jid);
+  showMobileChat.value = true;
+}
+
+function onSendMessage(text) {
+  if (!chatStore.activeJid || !chatStore.isConnected) return;
+  chatStore.sendMessage(chatStore.activeJid, text);
+}
+
+async function handleAIReply() {
+  if (!chatStore.activeJid) return;
+  try {
+    await chatStore.generateAIReply(null, chatStore.activeJid, 'formal');
+  } catch (err) {
+    console.error('AI reply failed:', err);
+  }
+}
+
+async function translateLastMessage() {
+  if (!chatStore.activeJid) return;
+  const lastMsg = chatStore.activeMessages?.slice(-1)[0];
+  if (!lastMsg) return;
+  try {
+    const { data } = await api.post("/messages/translate", {
+      messageId: lastMsg.id,
+      targetLang: waTranslateTarget.value
+    });
+    lastMsg.translation = data.translation;
+    ElMessage.success("翻译完成");
+  } catch (err) {
+    ElMessage.error("翻译失败");
+  }
+}
+
+async function handleAISummarize() {
+  if (!chatStore.activeJid) return;
+  try {
+    await chatStore.generateNeedSummary(null, chatStore.activeJid);
+  } catch (err) {
+    console.error('AI summarize failed:', err);
+  }
+}
+
+function getInitial(name) {
+  if (!name) return '?';
+  return name.charAt(0).toUpperCase();
+}
+
+function formatTime(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now - date;
+
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth();
+
+  if (isYesterday) return '昨天';
+
+  return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+}
+// ========== CRM Customer Integration ==========
+const leftTab = ref('conversations');
+const crmCustomers = ref([]);
+const crmLoading = ref(false);
+const showQuickSendDialog = ref(false);
+const qsTarget = reactive({ name: '', phone: '' });
+const qsMessage = ref('');
+const qsSending = ref(false);
+const qsTemplates = [
+  { label: '产品报价', text: 'Hi! Thank you for your interest. Please find our quotation attached.' },
+  { label: '发货通知', text: 'Hi! Your order has been shipped. Tracking number will be provided shortly.' },
+  { label: '售后跟进', text: 'Hi! Following up on your recent order. Is everything satisfactory?' },
+  { label: '节日问候', text: 'Greetings! Wishing you a wonderful holiday season.' },
+];
+
+function statusLabel(status) {
+  const map = { potential: '潜在', active: '活跃', vip: 'VIP', inactive: '不活跃', lost: '已流失' };
+  return map[status] || status;
+}
+
+function parseTags(tags) {
+  if (!tags) return [];
+  try {
+    const arr = JSON.parse(tags);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return tags.split(',').map(t => t.trim()).filter(Boolean);
+  }
+}
+
+async function switchToCustomers() {
+  leftTab.value = 'customers';
+  await loadCrmCustomers();
+}
+
+async function loadCrmCustomers() {
+  if (crmCustomers.value.length > 0) return;
+  crmLoading.value = true;
+  try {
+    const { data } = await api.get('/customers?limit=100');
+    crmCustomers.value = data;
+  } catch (err) {
+    console.error('Failed to load customers:', err);
+  } finally {
+    crmLoading.value = false;
+  }
+}
+
+function startChatWithCustomer(c) {
+  if (!c.phone) return;
+  const jid = c.phone.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+  chatStore.selectConversation({
+    jid,
+    name: c.name,
+    phone: c.phone,
+    lastMessage: '',
+    lastMessageTime: '',
+    unreadCount: 0,
+  });
+  if (window.innerWidth <= 768) {
+    showMobileChat.value = true;
+  }
+}
+
+function quickSendWhatsApp(c) {
+  qsTarget.name = c.name || '';
+  qsTarget.phone = c.phone || '';
+  qsMessage.value = '';
+  showQuickSendDialog.value = true;
+}
+
+async function doQuickSend() {
+  if (!qsMessage.value.trim() || !qsTarget.phone) return;
+  qsSending.value = true;
+  try {
+    await api.post('/whatsapp/send', {
+      to: qsTarget.phone,
+      message: qsMessage.value.trim(),
+    });
+    showQuickSendDialog.value = false;
+    ElMessage.success('消息已发送');
+  } catch (err) {
+    console.error('Failed to send:', err);
+    ElMessage.error('发送失败: ' + (err.response?.data?.error || err.message));
+  } finally {
+    qsSending.value = false;
+  }
+}
+
+</script>
+
+<style scoped>
+/* ===== Main Layout ===== */
+.chat-layout {
+  display: flex;
+  height: 100vh;
+  background: #0a0f14;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+.left-panel {
+  width: 320px;
+  min-width: 320px;
+  background: #0f1419;
+  border-right: 1px solid #1e2a35;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header { flex-shrink: 0; }
+
+.connection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #111922;
+  border-bottom: 1px solid #1e2a35;
+}
+
+.connection-info { display: flex; align-items: center; gap: 8px; }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+.status-dot.connected { background: #22c55e; }
+.status-dot.connecting, .status-dot.waiting_qr { background: #f59e0b; }
+.status-dot.error { background: #ef4444; }
+
+.connection-text { font-size: 12px; color: #8696a0; }
+.connection-actions { display: flex; gap: 2px; flex-wrap: nowrap; }
+.act-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #202c33; border: none; color: #8696a0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.act-icon:hover { background: #2a3942; color: #e9edef; }
+.act-icon.act-primary { background: #00a884; color: #111b21; }
+.act-icon.act-primary:hover { background: #06cf9c; }
+
+.search-bar { padding: 8px 12px; border-bottom: 1px solid #1e2a35; }
+
+.conversation-list { flex: 1; overflow-y: auto; }
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #1e2a35;
+  transition: background 0.15s;
+}
+.conversation-item:hover { background: #1a2332; }
+.conversation-item.active { background: #1a3a4a; }
+
+.conv-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #1a3a4a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.avatar-text { font-weight: 600; color: #22c55e; font-size: 14px; }
+
+.conv-info { flex: 1; min-width: 0; }
+.conv-top { display: flex; justify-content: space-between; align-items: center; }
+.conv-name { font-size: 14px; color: #e0e0e0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-time { font-size: 11px; color: #8696a0; flex-shrink: 0; }
+.conv-bottom { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.conv-last-msg { font-size: 12px; color: #8696a0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.conv-unread {
+  background: #22c55e;
+  color: #000;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
+
+.center-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #0a0f14;
+  min-width: 0;
+}
+
+.no-chat-selected {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.no-chat-content { text-align: center; color: #8696a0; }
+.no-chat-content h2 { font-size: 24px; color: #c0c0c0; margin: 16px 0 8px; }
+
+.mobile-back-btn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+  background: #1a2332;
+  border: none;
+  color: #e0e0e0;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #8696a0;
+}
+
+@media (max-width: 768px) {
+  .left-panel { width: 100%; min-width: 100%; }
+  .center-panel { display: none; }
+  .right-panel { display: none; }
+  .chat-layout.mobile-show-chat .left-panel { display: none; }
+  .chat-layout.mobile-show-chat .center-panel { display: flex; width: 100%; }
+  .mobile-back-btn { display: flex; }
+}
+
+/* Right Panel - AI Assistant */
+.right-panel {
+  width: 280px;
+  min-width: 280px;
+  background: #0f1419;
+  border-left: 1px solid #1e2a35;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.rp-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rp-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #1a3a4a;
+  border: none;
+  color: #6c5ce7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.rp-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #1a2332;
+  border-radius: 10px;
+}
+
+.rp-toggle-with-desc {
+  align-items: flex-start;
+}
+
+.rp-toggle-with-desc > div {
+  flex: 1;
+}
+
+.rp-toggle-label {
+  font-size: 14px;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.rp-toggle-desc {
+  font-size: 11px;
+  color: #667;
+  margin-top: 2px;
+}
+
+.rp-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.rp-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rp-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #3a4555;
+  border-radius: 24px;
+  transition: 0.3s;
+}
+
+.rp-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.rp-switch input:checked + .rp-slider {
+  background: #22c55e;
+}
+
+.rp-switch input:checked + .rp-slider::before {
+  transform: translateX(20px);
+}
+
+.rp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.rp-section .rp-toggle-row {
+  border-radius: 10px 10px 0 0;
+}
+
+.rp-fields {
+  background: #1a2332;
+  border-radius: 0 0 10px 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-field-label {
+  font-size: 12px;
+  color: #667;
+}
+
+.rp-select {
+  position: relative;
+}
+
+.rp-select select {
+  width: 100%;
+  padding: 10px 32px 10px 12px;
+  background: #253342;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 13px;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.rp-select select:focus {
+  border-color: #6c5ce7;
+}
+
+.rp-select::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #667;
+  pointer-events: none;
+  font-size: 12px;
+}
+/* ===== Tab System - TradeAgent Style ===== */
+.rp-tabs { display: none !important; }
+
+.email-right-panel {
+  width: 336px;
+  min-width: 336px;
+  background: #0f1419;
+  border-left: 1px solid #1e2a35;
+  display: flex;
+  flex-direction: row;
+  padding: 0;
+  overflow: hidden;
+}
+
+.rp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-width: 0;
+}
+
+.rp-tab-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Vertical Icon Bar */
+.rp-icon-bar {
+  width: 56px;
+  min-width: 56px;
+  background: #0d1117;
+  border-left: 1px solid #1e2a35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.rp-icon-tab {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: #6b7b8d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.rp-icon-tab span {
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rp-icon-tab:hover {
+  background: #1a2332;
+  color: #a0b0c0;
+}
+
+.rp-icon-tab.active {
+  background: #1a3a4a;
+  color: #22c55e;
+}
+
+/* Tab Content Cards */
+.rp-card {
+  background: #1a2332;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.rp-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.rp-card-desc {
+  font-size: 12px;
+  color: #6b7b8d;
+  margin-top: 4px;
+}
+
+.rp-action-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #22c55e;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rp-action-btn:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.rp-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rp-result-box {
+  background: #0f1419;
+  border: 1px solid #1e2a35;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #e0e0e0;
+  line-height: 1.5;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.rp-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #1a2332;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.rp-input:focus {
+  border-color: #22c55e;
+}
+
+/* ===== Tab System - TradeAgent Style ===== */
+.rp-tabs { display: none !important; }
+
+.email-right-panel {
+  width: 336px;
+  min-width: 336px;
+  background: #0f1419;
+  border-left: 1px solid #1e2a35;
+  display: flex;
+  flex-direction: row;
+  padding: 0;
+  overflow: hidden;
+}
+
+.rp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-width: 0;
+}
+
+.rp-tab-body { display: flex; flex-direction: column; }
+
+.rp-icon-bar {
+  width: 56px;
+  min-width: 56px;
+  background: #0d1117;
+  border-left: 1px solid #1e2a35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.rp-icon-tab {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: #6b7b8d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.rp-icon-tab span {
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.rp-icon-tab:hover { background: #1a2332; color: #a0b0c0; }
+.rp-icon-tab.active { background: #1a3a4a; color: #22c55e; }
+
+.rp-card { background: #1a2332; border-radius: 10px; padding: 14px; }
+.rp-card-title { font-size: 14px; font-weight: 600; color: #fff; }
+.rp-card-desc { font-size: 12px; color: #6b7b8d; margin-top: 4px; }
+
+.rp-action-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #22c55e;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rp-action-btn:hover:not(:disabled) { background: #16a34a; }
+.rp-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.rp-result-box {
+  background: #0f1419;
+  border: 1px solid #1e2a35;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #e0e0e0;
+  line-height: 1.5;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.rp-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #1a2332;
+  border: 1px solid #2a3a4a;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.rp-input:focus { border-color: #22c55e; }
+
+/* ========== Left Panel Tabs ========== */
+.left-tabs {
+  display: flex;
+  border-bottom: 1px solid #2a3942;
+  background: #111b21;
+}
+.left-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  background: none;
+  border: none;
+  color: #8696a0;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.left-tab:hover {
+  color: #e9edef;
+}
+.left-tab.active {
+  color: #00a884;
+  border-bottom-color: #00a884;
+}
+
+/* ========== Customer List ========== */
+.customer-list {
+  overflow-y: auto;
+  flex: 1;
+}
+.customer-list::-webkit-scrollbar {
+  width: 4px;
+}
+.customer-list::-webkit-scrollbar-thumb {
+  background: #2a3942;
+  border-radius: 2px;
+}
+.conv-item.conv-customer {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.conv-item.conv-customer:hover {
+  background: #202c33;
+}
+.conv-item.conv-customer .conv-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.status-badge-sm {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.status-badge-sm.status-potential { background: rgba(245,166,35,0.15); color: #f5a623; }
+.status-badge-sm.status-active { background: rgba(0,168,132,0.15); color: #00a884; }
+.status-badge-sm.status-vip { background: rgba(168,130,255,0.15); color: #a882ff; }
+.status-badge-sm.status-inactive { background: rgba(134,150,160,0.15); color: #8696a0; }
+.status-badge-sm.status-lost { background: rgba(234,67,53,0.15); color: #ea4335; }
+.tag-count {
+  font-size: 10px;
+  color: #8696a0;
+  background: rgba(255,255,255,0.04);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+.btn-whatsapp-quick {
+  background: none;
+  border: none;
+  color: #25D366;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-whatsapp-quick:hover {
+  background: rgba(37, 211, 102, 0.15);
+}
+
+/* ========== Quick Send Dialog ========== */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.dialog-box-quick {
+  background: #111b21;
+  border: 1px solid #2a3942;
+  border-radius: 12px;
+  width: 440px;
+  max-width: 95vw;
+}
+.dialog-header-quick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #2a3942;
+}
+.dialog-header-quick h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #e9edef;
+}
+.btn-close-quick {
+  background: none;
+  border: none;
+  color: #8696a0;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+}
+.btn-close-quick:hover {
+  color: #e9edef;
+  background: #2a3942;
+}
+.dialog-body-quick {
+  padding: 16px 18px;
+}
+.template-chip {
+  background: rgba(0, 168, 132, 0.1);
+  color: #00a884;
+  border: 1px solid rgba(0, 168, 132, 0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.template-chip:hover {
+  background: rgba(0, 168, 132, 0.2);
+}
+.dialog-footer-quick {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid #2a3942;
+}
+.btn-cancel-quick {
+  background: #202c33;
+  color: #e9edef;
+  border: 1px solid #2a3942;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-cancel-quick:hover {
+  background: #2a3942;
+}
+.btn-send-quick {
+  background: #00a884;
+  color: #111b21;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-send-quick:hover {
+  background: #06cf9c;
+}
+.btn-send-quick:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* 需求分析Tab */
+.demand-analyze-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: #00a884;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+.demand-analyze-btn:hover { background: #008f6f; }
+.demand-analyze-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.demand-result-area { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.demand-score-section { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
+.demand-score-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.demand-score-label { font-size: 13px; color: #94a3b8; }
+.demand-score-value { font-size: 28px; font-weight: 700; color: #00a884; }
+.demand-score-total { font-size: 14px; color: #64748b; font-weight: 400; }
+.demand-progress-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+.demand-progress-fill { height: 100%; background: linear-gradient(90deg, #00a884, #22c55e); border-radius: 4px; transition: width 0.6s ease; }
+.demand-score-bar { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; }
+.demand-fields-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.demand-field-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; }
+.demand-field-label { font-size: 11px; color: #94a3b8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.demand-field-value { font-size: 13px; color: #e9edef; line-height: 1.4; }
+.demand-field-value.highlight { color: #00a884; font-weight: 500; }
+.demand-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: #64748b; }
+.demand-empty p { margin-top: 12px; font-size: 13px; }
+
+/* 单证生成Tab */
+.doc-type-selector { margin-bottom: 8px; }
+.doc-type-label { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+.doc-type-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.doc-type-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.doc-type-btn:hover { background: rgba(255,255,255,0.08); color: #e9edef; }
+.doc-type-btn.active { background: rgba(0,168,132,0.12); border-color: #00a884; color: #00a884; }
+
+.doc-result-area { margin-top: 16px; }
+.doc-result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.doc-result-title { font-size: 14px; font-weight: 600; color: #00a884; }
+.doc-copy-btn {
+  padding: 4px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+}
+.doc-copy-btn:hover { background: rgba(255,255,255,0.1); color: #e9edef; }
+.doc-result-content {
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+}
+</style>

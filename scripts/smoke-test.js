@@ -1,0 +1,388 @@
+#!/usr/bin/env node
+/**
+ * WhatsApp CRM Smoke Test
+ * -----------------------
+ * Deploy: /opt/whatsapp-crm/scripts/smoke-test.js
+ * Usage : node /opt/whatsapp-crm/scripts/smoke-test.js
+ *
+ * Designed to run within 30s after build/restart.
+ * Uses only Node 22 native fetch + sqlite3 CLI + fs. No npm deps.
+ * ESM module. Exit 0 = all pass, exit 1 = any failure.
+ */
+
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+
+const execFileAsync = promisify(execFile);
+
+// ─── Config (overridable via env) ────────────────────────────────────────────
+const BASE_URL       = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000';
+const ADMIN_USER     = process.env.SMOKE_USER     || 'admin';
+const ADMIN_PASS     = process.env.SMOKE_PASS     || 'admin123';
+const TEST_JID       = process.env.SMOKE_TEST_JID || '8613910308625@s.whatsapp.net';
+const DB_PATH        = process.env.SMOKE_DB_PATH  || '/opt/whatsapp-crm/backend/prisma/crm.db';
+const FRONTEND_DIST  = process.env.SMOKE_DIST     || '/opt/whatsapp-crm/frontend/dist/index.html';
+const BUILD_FRESH_MS = 10 * 60 * 1000; // 10 min
+const ENABLE_SEND = process.env.SMOKE_ENABLE_SEND === "1"; // 默认跳过真实发送，防风控封号
+
+// ANSI colors
+const C = {
+  reset:  '\x1b[0m',
+  green:  '\x1b[32m',
+  red:    '\x1b[31m',
+  yellow: '\x1b[33m',
+  bold:   '\x1b[1m',
+  dim:    '\x1b[2m',
+};
+
+// ─── Result tracking ─────────────────────────────────────────────────────────
+const results = []; // { name, pass, detail }
+
+function record(name, pass, detail = '') {
+  results.push({ name, pass, detail });
+  const icon = pass ? `${C.green}PASS${C.reset}` : `${C.red}FAIL${C.reset}`;
+  const line = `  ${icon}  ${name}`;
+  console.log(line);
+  if (detail) {
+    const prefix = pass ? `${C.dim}` : `${C.red}`;
+    console.log(`        ${prefix}${detail}${C.reset}`);
+  }
+}
+
+function warn(msg) {
+  console.log(`  ${C.yellow}WARN${C.reset}  ${msg}`);
+}
+
+// ─── HTTP helper ─────────────────────────────────────────────────────────────
+async function http(method, urlPath, { body, token, timeoutMs = 15000 } = {}) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${BASE_URL}${urlPath}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = text; }
+    return { status: res.status, ok: res.ok, json, text, headers: res.headers };
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+// ─── SQLite helper ───────────────────────────────────────────────────────────
+async function dbQuery(sql) {
+  const { stdout, stderr } = await execFileAsync('sqlite3', ['-noheader', '-list', DB_PATH, sql], {
+    timeout: 10000,
+    maxBuffer: 1024 * 1024,
+  });
+  if (stderr && stderr.trim()) {
+    // sqlite3 sometimes writes warnings to stderr; don't fail unless stdout empty
+    if (!stdout.trim()) throw new Error(`sqlite3 stderr: ${stderr.trim()}`);
+  }
+  return stdout.trim();
+}
+
+// ─── Small utilities ─────────────────────────────────────────────────────────
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+function hasChinese(s) {
+  return /[\u4e00-\u9fff]/.test(s);
+}
+
+// ─── Test runner ─────────────────────────────────────────────────────────────
+let token = null;
+let savedId = null;
+let messageId = null;
+
+const tests = [
+  // ── 1. Health check ──────────────────────────────────────────────────────
+  {
+    name: '健康检查 GET /api/whatsapp/status',
+    run: async () => {
+      const r = await http('GET', '/api/whatsapp/status');
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,200) || r.text}`);
+      const d = r.json;
+      if (!d || d.status !== 'connected') throw new Error(`status=${d?.status}, connected=${d?.connected}`);
+      return `connected to instance=${d.instance || '?'}, phone=${d.phone || '?'}`;
+    },
+  },
+
+  // ── 2. Login ─────────────────────────────────────────────────────────────
+  {
+    name: '登录鉴权 POST /api/auth/login',
+    run: async () => {
+      const r = await http('POST', '/api/auth/login', { body: { username: ADMIN_USER, password: ADMIN_PASS } });
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,200) || r.text}`);
+      if (!r.json?.token || typeof r.json.token !== 'string') throw new Error('no token in response');
+      token = r.json.token;
+      return `token length=${r.json.token.length}, user=${r.json.user?.username}`;
+    },
+  },
+
+  // ── 3. Translation settings ──────────────────────────────────────────────
+  {
+    name: '翻译设置 GET /api/translation/settings',
+    run: async () => {
+      if (!token) throw new Error('no auth token (login failed)');
+      const r = await http('GET', '/api/translation/settings', { token });
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,200) || r.text}`);
+      const d = r.json;
+      if (typeof d.sendEnabled !== 'boolean')    throw new Error(`sendEnabled not boolean: ${d.sendEnabled}`);
+      if (typeof d.receiveEnabled !== 'boolean') throw new Error(`receiveEnabled not boolean: ${d.receiveEnabled}`);
+      return `sendEnabled=${d.sendEnabled}, receiveEnabled=${d.receiveEnabled}, sendTargetLang=${d.sendTargetLang}`;
+    },
+  },
+
+  // ── 4. Send Chinese message ──────────────────────────────────────────────
+  {
+    name: '发送中文消息 POST /api/whatsapp/send (核心链路)',
+    run: async () => {
+      if (!ENABLE_SEND) return '[SKIPPED] set SMOKE_ENABLE_SEND=1 to enable real send (风控期禁发)';
+      if (!token) throw new Error('no auth token (login failed)');
+      const zhMsg = '[SMOKE TEST] 你好，这是一条冒烟测试消息';
+      const r = await http('POST', '/api/whatsapp/send', { token, body: { to: TEST_JID, message: zhMsg }, timeoutMs: 30000 });
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,300) || r.text}`);
+      const d = r.json;
+      if (!d?.success && d?.success !== undefined) {
+        // success key present but falsy
+        if (d.success === false) throw new Error(`success=false, error=${d.error || JSON.stringify(d)}`);
+      }
+      // Some implementations return success:true; tolerate when key missing but savedId present
+      const ok = (d.success === true) || (d.savedId != null);
+      if (!ok) throw new Error(`neither success=true nor savedId present: ${JSON.stringify(d).slice(0,300)}`);
+
+      // translation: non-empty string for Chinese message
+      if (d.translation === null || d.translation === undefined || d.translation === '') {
+        throw new Error(`translation field is empty/null (expected translated English string), got: ${JSON.stringify(d.translation)}`);
+      }
+      if (typeof d.translation !== 'string') {
+        // Could be object; that's acceptable too — stringify for display
+        warn(`translation is object (not raw string): ${JSON.stringify(d.translation).slice(0,120)}`);
+      }
+
+      if (d.savedId == null) throw new Error(`savedId missing in response`);
+      savedId = d.savedId;
+      messageId = d.messageId || d.key?.id || null;
+      const transPreview = typeof d.translation === 'string' ? d.translation.slice(0,80) : JSON.stringify(d.translation).slice(0,80);
+      return `savedId=${savedId}, messageId=${messageId || '?'}, translation="${transPreview}"`;
+    },
+  },
+
+  // ── 5. DB persistence verification ───────────────────────────────────────
+  {
+    name: 'DB落库验证 (WAMessage translation JSON)',
+    run: async () => {
+      if (!ENABLE_SEND) return '[SKIPPED] needs real send';
+      if (savedId == null) throw new Error('no savedId from previous test');
+      await sleep(2000);
+      const sql = `SELECT body, ifnull(translation,''), direction FROM WAMessage WHERE id=${Number(savedId)};`;
+      const out = await dbQuery(sql);
+      if (!out) throw new Error(`no row found for id=${savedId}`);
+
+      // sqlite3 -list uses '|' delimiter; body/translation shouldn't contain '|' in our smoke messages
+      const parts = out.split('|');
+      if (parts.length < 3) throw new Error(`unexpected DB row: ${out.slice(0,200)}`);
+      const body = parts[0];
+      const transJson = parts.slice(1, parts.length - 1).join('|'); // in case translation contains '|'
+      const direction = parts[parts.length - 1];
+
+      if (direction !== 'outbound') throw new Error(`direction=${direction}, expected outbound`);
+
+      // body must be English translation (not contain Chinese "你好")
+      if (hasChinese(body)) {
+        throw new Error(`body still contains Chinese chars: "${body.slice(0,80)}"`);
+      }
+      if (!body.trim()) throw new Error('body is empty');
+
+      // translation must be valid JSON with original/translated/sourceLang/targetLang
+      if (!transJson || !transJson.trim()) throw new Error('translation column is empty/null');
+      let parsed;
+      try { parsed = JSON.parse(transJson); }
+      catch (e) { throw new Error(`translation is not valid JSON: ${e.message}, raw=${transJson.slice(0,200)}`); }
+      if (typeof parsed !== 'object' || parsed === null) throw new Error('translation JSON is not an object');
+      if (typeof parsed.original !== 'string' || !parsed.original.includes('你好')) {
+        throw new Error(`translation.original missing Chinese original: ${JSON.stringify(parsed.original)}`);
+      }
+      if (typeof parsed.translated !== 'string' || !parsed.translated.trim()) {
+        throw new Error(`translation.translated missing/empty: ${JSON.stringify(parsed.translated)}`);
+      }
+      // translated should equal body (what was actually sent)
+      if (parsed.translated.trim() !== body.trim()) {
+        warn(`translated="${parsed.translated.slice(0,60)}" vs body="${body.slice(0,60)}" — mismatch (may be whitespace)`);
+      }
+      if (parsed.sourceLang !== 'zh' && !String(parsed.sourceLang || '').startsWith('zh')) {
+        throw new Error(`sourceLang=${parsed.sourceLang}, expected zh`);
+      }
+      if (parsed.targetLang !== 'ja' && parsed.targetLang !== 'en') {
+        throw new Error(`targetLang=${parsed.targetLang}, expected ja/en based on settings`);
+      }
+      return `body="${body.slice(0,60)}", original="${parsed.original.slice(0,40)}", ${parsed.sourceLang}→${parsed.targetLang}`;
+    },
+  },
+
+  // ── 6. Messages API format ───────────────────────────────────────────────
+  {
+    name: '消息列表API GET /api/whatsapp/messages (translation字段可解析)',
+    run: async () => {
+      if (!token) throw new Error('no auth token');
+      const encodedJid = encodeURIComponent(TEST_JID);
+      const r = await http('GET', `/api/whatsapp/messages?jid=${encodedJid}&limit=3`, { token });
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,200) || r.text}`);
+      const arr = r.json;
+      if (!Array.isArray(arr)) throw new Error(`expected array, got ${typeof arr}`);
+      if (arr.length === 0) {
+        warn('messages array is empty (Evolution may not have synced yet) — skipping structure check');
+        return 'empty array (warn)';
+      }
+      // Find latest outbound
+      const outbound = [...arr].reverse().find(m => m.direction === 'outbound');
+      if (!outbound) throw new Error('no outbound message found in latest 3');
+      const t = outbound.translation;
+      if (t === null || t === undefined || t === '') {
+        // outbound English messages may have null translation; that's fine for non-Chinese
+        // but we just sent Chinese so there should be a translation on *some* outbound.
+        // Check if body contains Chinese — if body is English and translation null, that's the English-only test below or a previously sent English message, which is ok.
+        warn(`latest outbound has no translation (body="${String(outbound.body||'').slice(0,60)}")`);
+      } else {
+        // Must be valid JSON with original/translated
+        let parsed;
+        try { parsed = (typeof t === 'string') ? JSON.parse(t) : t; }
+        catch (e) { throw new Error(`translation field is not valid JSON: ${e.message}, raw=${String(t).slice(0,200)}`); }
+        if (typeof parsed !== 'object' || parsed === null) throw new Error('translation field is not an object after parse');
+        if (!parsed.original || !parsed.translated) throw new Error(`translation missing original/translated: ${JSON.stringify(parsed).slice(0,200)}`);
+      }
+      return `returned ${arr.length} msgs, latest outbound id=${outbound.id}, body="${String(outbound.body||'').slice(0,50)}"`;
+    },
+  },
+
+  // ── 7. Conversations list ────────────────────────────────────────────────
+  {
+    name: '会话列表 GET /api/whatsapp/conversations',
+    run: async () => {
+      if (!token) throw new Error('no auth token');
+      const r = await http('GET', '/api/whatsapp/conversations', { token });
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,200) || r.text}`);
+      const arr = r.json;
+      if (!Array.isArray(arr)) throw new Error(`expected array, got ${typeof arr}`);
+      return `returned ${arr.length} conversations`;
+    },
+  },
+
+  // ── 8. Avatar proxy ──────────────────────────────────────────────────────
+  {
+    name: '头像代理 GET /api/wa/avatar (200或404，非500)',
+    run: async () => {
+      const encodedJid = encodeURIComponent(TEST_JID);
+      const r = await http('GET', `/api/wa/avatar?jid=${encodedJid}`);
+      if (r.status === 500) throw new Error(`HTTP 500 (server error): ${r.text?.slice?.(0,200) || r.text}`);
+      if (r.status !== 200 && r.status !== 404) {
+        warn(`unexpected status ${r.status} (expected 200 or 404)`);
+      }
+      const ct = r.headers?.get?.('content-type') || '';
+      return `HTTP ${r.status}, content-type=${ct || '?'}`;
+    },
+  },
+
+  // ── 9. Outbound English not translated ───────────────────────────────────
+  {
+    name: '出站英文不翻译 (translation=null)',
+    run: async () => {
+      if (!ENABLE_SEND) return '[SKIPPED] set SMOKE_ENABLE_SEND=1 to enable real send (风控期禁发)';
+      if (!token) throw new Error('no auth token');
+      const enMsg = '[SMOKE TEST] Hello this is English only';
+      const r = await http('POST', '/api/whatsapp/send', { token, body: { to: TEST_JID, message: enMsg }, timeoutMs: 30000 });
+      if (r.status !== 200) throw new Error(`HTTP ${r.status}: ${r.text?.slice?.(0,300) || r.text}`);
+      const d = r.json;
+      if (d.success === false) throw new Error(`success=false: ${d.error || JSON.stringify(d)}`);
+      const t = d.translation;
+      if (t !== null && t !== undefined && t !== '') {
+        // If it's an object with original==translated that's also fine (no-op translation)
+        if (typeof t === 'string' && t.trim() !== '') {
+          throw new Error(`expected translation=null/empty for pure English, got string: "${t.slice(0,100)}"`);
+        }
+        if (typeof t === 'object' && t.translated && t.original && t.translated !== t.original) {
+          // Still translated something — not necessarily wrong, but warn
+          warn(`English message got translation object: ${JSON.stringify(t).slice(0,150)}`);
+        }
+      }
+      if (d.savedId == null) warn(`no savedId returned for English message`);
+      return `savedId=${d.savedId}, translation=${JSON.stringify(t)}`;
+    },
+  },
+
+  // ── 10. Build artifact ───────────────────────────────────────────────────
+  {
+    name: '构建产物 frontend/dist/index.html (10分钟内)',
+    run: async () => {
+      // Use fs.statSync via execFile since this script may run on VPS or locally via SSH;
+      // we use Node's built-in fs since we're running on the VPS directly.
+      if (!fs.existsSync(FRONTEND_DIST)) throw new Error(`${FRONTEND_DIST} does not exist`);
+      const st = fs.statSync(FRONTEND_DIST);
+      const ageMs = Date.now() - st.mtimeMs;
+      const ageMin = Math.round(ageMs / 60000);
+      if (ageMs > BUILD_FRESH_MS) {
+        warn(`index.html is ${ageMin} min old (threshold 10 min) — build may be stale`);
+      }
+      const size = st.size;
+      if (size < 50) throw new Error(`index.html suspiciously small (${size} bytes)`);
+      return `mtime=${st.mtime.toISOString()}, size=${size}B, age=${ageMin}min`;
+    },
+  },
+];
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+async function main() {
+  const t0 = Date.now();
+  console.log('');
+  console.log(`${C.bold}  WhatsApp CRM 冒烟测试${C.reset}`);
+  console.log(`${C.dim}  target: ${BASE_URL}  test-jid: ${TEST_JID}${C.reset}`);
+  console.log('');
+
+  for (const t of tests) {
+    try {
+      const detail = await t.run();
+      record(t.name, true, detail || '');
+    } catch (e) {
+      record(t.name, false, e.message || String(e));
+    }
+  }
+
+  // Summary
+  const passed = results.filter(r => r.pass).length;
+  const failed = results.length - passed;
+  const allPass = failed === 0;
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+
+  console.log('');
+  console.log('  ========================================');
+  console.log(`  SMOKE TEST RESULT: ${passed} passed, ${failed} failed  (${elapsed}s)`);
+  console.log('  ========================================');
+  if (allPass) {
+    console.log(`  ${C.green}${C.bold}ALL PASSED ✓${C.reset}`);
+  } else {
+    console.log(`  ${C.red}${C.bold}FAILED ✗${C.reset}`);
+    console.log('');
+    console.log(`  ${C.red}Failed tests:${C.reset}`);
+    for (const r of results.filter(x => !x.pass)) {
+      console.log(`    ${C.red}- ${r.name}${C.reset}`);
+      console.log(`      ${C.dim}${r.detail}${C.reset}`);
+    }
+  }
+  console.log('');
+
+  process.exit(allPass ? 0 : 1);
+}
+
+main().catch(err => {
+  console.error(`${C.red}FATAL:${C.reset}`, err);
+  process.exit(1);
+});

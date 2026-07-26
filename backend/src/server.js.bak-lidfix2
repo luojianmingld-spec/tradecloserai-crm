@@ -1,0 +1,583 @@
+/**
+ * CRM Backend Server - Evolution API 集成版
+ * 替代裸Baileys直连，通过Evolution HTTP REST API对接WhatsApp
+ */
+import express from 'express';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
+import { setupSocketHandlers } from './socket/handlers.js';
+import { getEvolutionConnector } from './services/evolution-connector.js';
+import authRoutes from './routes/auth.js';
+import accountRoutes from './routes/accounts.js';
+import contactRoutes from './routes/contacts.js';
+import messageRoutes from './routes/messages.js';
+import settingsRoutes from './routes/settings.js';
+import translationRoutes from './routes/translation.js';
+import aiRoutes from './routes/ai.js';
+import customerRoutes from './routes/customers.js';
+import emailRoutes from './routes/emails.js';
+import bgCheckRoutes from './routes/background-check.js';
+import automationRoutes from './routes/automation.js';
+import dashboardRoutes from './routes/dashboard.js';
+import evolutionWebhookRoutes from './routes/evolution-webhook.js';
+import { authMiddleware } from './middleware/auth.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const prisma = new PrismaClient();
+const app = express();
+const httpServer = createServer(app);
+
+async function ensureDatabase() {
+  try {
+    await prisma.user.count();
+    console.log('[DB] Database connected, tables exist');
+  } catch (err) {
+    console.error('[DB] Database check failed, running prisma db push...');
+    try {
+      const { execSync } = await import('child_process');
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit', cwd: process.cwd() });
+      console.log('[DB] prisma db push completed');
+    } catch (pushErr) {
+      console.error('[DB] prisma db push failed:', pushErr.message);
+    }
+  }
+}
+
+const PORT = process.env.PORT || 3001;
+const isProduction = process.env.NODE_ENV === 'production';
+const LISTEN_PORT = isProduction ? (parseInt(process.env.DEPLOY_RUN_PORT, 10) || 5000) : PORT;
+const DEFAULT_SESSION_ID = "user_1";
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
+    process.exit(1);
+  }
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[ERROR] Unhandled Promise Rejection:', reason);
+});
+
+app.use(cors({
+  origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
+  credentials: true,
+}));
+app.use(express.json());
+
+// ─── API Routes ───
+app.use('/api/auth', authRoutes);
+app.use('/api/accounts', authMiddleware, accountRoutes);
+app.use('/api/contacts', authMiddleware, contactRoutes);
+app.use('/api/messages', authMiddleware, messageRoutes);
+app.use('/api/settings', authMiddleware, settingsRoutes);
+app.use('/api/translation', authMiddleware, translationRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/customers', authMiddleware, customerRoutes);
+app.use('/api/emails', authMiddleware, emailRoutes);
+app.use('/api/background-check', authMiddleware, bgCheckRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/automation", authMiddleware, automationRoutes);
+
+// ─── Evolution Webhook（公开，Evolution通过127.0.0.1访问，不带auth） ───
+app.use("/api/evolution/webhook", evolutionWebhookRoutes);
+
+// ─── Evolution WhatsApp 公开接口（状态/QR）必须在authMiddleware之前 ───
+const evoConnector = getEvolutionConnector();
+
+app.get("/api/whatsapp/status", async (req, res) => {
+  try {
+    const state = await evoConnector.getConnectionState();
+    const isConnected = state === "open";
+    const info = isConnected ? await evoConnector.getInstanceInfo().catch(() => null) : null;
+    const ownerJid = info?.ownerJid || "";
+    const phone = ownerJid.split("@")[0] || "8613016242602";
+    // 确保DB有记录
+    try {
+      let conn = await prisma.wAConnection.findUnique({ where: { sessionId: DEFAULT_SESSION_ID } });
+      if (!conn) {
+        await prisma.wAConnection.create({ data: { userId: 1, sessionId: DEFAULT_SESSION_ID, phone, status: isConnected ? "connected" : "disconnected" } });
+      } else if (isConnected && conn.status !== "connected") {
+        await prisma.wAConnection.update({ where: { id: conn.id }, data: { status: "connected", phone, lastConnectedAt: new Date() } });
+      }
+    } catch (e) {}
+    res.json({
+      status: isConnected ? "connected" : "disconnected",
+      connected: isConnected,
+      state,
+      instance: evoConnector.instance,
+      phone,
+      sessionId: DEFAULT_SESSION_ID,
+      mode: "evolution-api",
+    });
+  } catch (e) {
+    res.json({ status: "disconnected", connected: false, state: "error", error: e.message });
+  }
+});
+
+app.get("/api/whatsapp/qr", async (req, res) => {
+  try {
+    const qr = await evoConnector.getQRCode();
+    res.json({ qr, connected: false });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── WhatsApp 核心业务接口（需auth，走Evolution） ───
+
+// 发消息：POST /api/whatsapp/send  （前端用的接口）
+app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
+  try {
+    const body = req.body || {};
+    // 兼容：前端可能传 message 或 text
+    const to = body.to;
+    const text = body.message || body.text || body.body;
+    if (!to || !text) return res.status(400).json({ error: "to and message/text required" });
+
+    let toJid = to;
+    if (!toJid.includes("@")) toJid = `${toJid.replace(/\D/g, "")}@s.whatsapp.net`;
+    const toPhone = toJid.split("@")[0];
+
+    // 1. 通过Evolution发消息
+    const result = await evoConnector.sendTextMessage(toJid, text);
+
+    // 2. 我自己的JID
+    const info = await evoConnector.getInstanceInfo().catch(() => null);
+    const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
+
+    // 3. 落库
+    let saved = null;
+    try {
+      // 避免重复
+      const waMessageId = result?.key?.id || result?.messageId || null;
+      if (waMessageId) {
+        const exists = await prisma.wAMessage.findFirst({ where: { sessionId: DEFAULT_SESSION_ID, waMessageId } });
+        if (exists) saved = exists;
+      }
+      if (!saved) {
+        saved = await prisma.wAMessage.create({
+          data: {
+            sessionId: DEFAULT_SESSION_ID,
+            from: ownerJid,
+            to: toJid,
+            body: text,
+            type: "text",
+            direction: "outbound",
+            timestamp: new Date(),
+            waMessageId: waMessageId,
+          },
+        });
+      }
+    } catch (e) {
+      console.warn("[WA Send] save outgoing failed:", e.message);
+    }
+
+    // 4. 维护客户
+    try {
+      let cust = await prisma.customer.findFirst({ where: { userId: req.userId || 1, phone: toPhone } });
+      if (!cust) {
+        await prisma.customer.create({
+          data: { userId: req.userId || 1, phone: toPhone, name: toPhone, source: "whatsapp", status: "potential", lastContactAt: new Date() },
+        });
+      } else {
+        await prisma.customer.update({ where: { id: cust.id }, data: { lastContactAt: new Date() } });
+      }
+    } catch (e) {}
+
+    // 5. Socket广播（webhook也会发MESSAGES_UPSERT，但我们先发一次乐观更新）
+    try {
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("whatsapp:message_sent", {
+          id: saved?.id || ("tmp-" + Date.now()),
+          waMessageId: result?.key?.id || null,
+          jid: toJid,
+          from: ownerJid,
+          to: toJid,
+          body: text,
+          content: text,
+          direction: "outbound",
+          fromMe: true,
+          messageType: "text",
+          timestamp: saved?.timestamp ? new Date(saved.timestamp).getTime() : Date.now(),
+          contact: { name: toPhone, phone: toPhone },
+          instance: evoConnector.instance,
+          sessionId: DEFAULT_SESSION_ID,
+        });
+      }
+    } catch (e) {}
+
+    res.json({ success: result.success, key: result.key, savedId: saved?.id, messageId: result?.key?.id });
+  } catch (err) {
+    console.error("[WA Send Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 兼容别名：POST /api/whatsapp/send-evo
+app.post("/api/whatsapp/send-evo", authMiddleware, async (req, res) => {
+  req.url = "/api/whatsapp/send";
+  app(req, res);
+});
+
+// 聊天列表：GET /api/whatsapp/conversations
+// 策略：Evolution fetchChats + 本地DB合并
+app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
+  try {
+    const search = (req.query.search || "").toString().trim();
+
+    // 解析@lid临时ID为真实JID
+    const resolveJid = (raw, lastMsg) => {
+      if (!raw) return raw;
+      if (!raw.endsWith("@lid")) return raw;
+      const alt = lastMsg?.key?.remoteJidAlt;
+      if (alt && alt.includes("@s.whatsapp.net")) return alt;
+      return raw;
+    };
+
+    // 拿自己的JID，过滤发给自己的会话
+    let ownerJid = "8613016242602@s.whatsapp.net";
+    try {
+      const info = await evoConnector.getInstanceInfo();
+      if (info?.ownerJid) ownerJid = info.ownerJid;
+    } catch(e){}
+
+    // 1. 从本地DB聚合
+    const dbMsgs = await prisma.wAMessage.findMany({
+      where: { sessionId: DEFAULT_SESSION_ID },
+      orderBy: { timestamp: "desc" },
+      take: 1000,
+    });
+
+    const contactMap = new Map();
+    for (const msg of dbMsgs) {
+      let contactJid = null;
+      if (msg.direction === "inbound") contactJid = msg.from;
+      else if (msg.to && msg.to !== "me") contactJid = msg.to;
+      if (!contactJid || contactJid === "me" || !contactJid.includes("@")) continue;
+      if (contactJid.includes("@broadcast")) continue;
+      if (contactJid === ownerJid) continue;
+      if (contactJid.endsWith("@lid")) {
+        const other = msg.direction === "inbound" ? msg.to : msg.from;
+        if (other && other.endsWith("@s.whatsapp.net") && other !== ownerJid) contactJid = other;
+        else continue;
+      }
+      if (!contactMap.has(contactJid)) {
+        contactMap.set(contactJid, {
+          jid: contactJid,
+          lastMsg: msg,
+          unread: msg.direction === "inbound" && !msg.read ? 1 : 0,
+        });
+      } else {
+        const entry = contactMap.get(contactJid);
+        if (new Date(msg.timestamp) > new Date(entry.lastMsg.timestamp)) entry.lastMsg = msg;
+        if (msg.direction === "inbound" && !msg.read) entry.unread += 1;
+      }
+    }
+
+    // 2. 从Evolution拉取最新聊天
+    try {
+      const evoChats = await evoConnector.fetchChats();
+      for (const chat of evoChats) {
+        let jid = chat.remoteJid;
+        if (!jid || jid.includes("@g.us") || jid.includes("@broadcast")) continue;
+        const lastEv = chat.lastMessage;
+        jid = resolveJid(jid, lastEv);
+        if (jid === ownerJid) continue;
+        if (jid.endsWith("@lid")) continue;
+        const evoTs = lastEv?.messageTimestamp
+          ? new Date(lastEv.messageTimestamp > 1e12 ? lastEv.messageTimestamp : lastEv.messageTimestamp * 1000)
+          : new Date(chat.updatedAt || Date.now());
+        const body = lastEv?.message?.conversation || lastEv?.message?.extendedTextMessage?.text || "[新会话]";
+        const direction = lastEv?.key?.fromMe ? "outbound" : "inbound";
+        if (!contactMap.has(jid)) {
+          contactMap.set(jid, { jid, lastMsg: { body, timestamp: evoTs, direction }, unread: chat.unreadCount || 0, _evoOnly: true });
+        } else {
+          const entry = contactMap.get(jid);
+          if (evoTs > new Date(entry.lastMsg.timestamp)) {
+            entry.lastMsg = { body, timestamp: evoTs, direction };
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[WA conversations] fetchChats failed:", e.message);
+    }
+
+    // 3. 查联系人名
+    const phones = [...contactMap.keys()].map(j => j.split("@")[0]);
+    const customers = phones.length
+      ? await prisma.customer.findMany({
+          where: { userId: req.userId || 1, phone: { in: phones } },
+          select: { id: true, phone: true, name: true },
+        })
+      : [];
+    const custMap = new Map(customers.map(c => [c.phone, c]));
+
+    // 4. 组装返回
+    const conversations = [];
+    for (const [jid, entry] of contactMap) {
+      const phone = jid.split("@")[0];
+      const cust = custMap.get(phone);
+      const name = cust?.name || phone;
+      if (search && !name.includes(search) && !phone.includes(search) && !(entry.lastMsg.body || "").includes(search)) continue;
+      conversations.push({
+        jid, phone, name,
+        avatar: cust?.avatar || null,
+        lastMessage: entry.lastMsg.body || "",
+        lastMessageTime: entry.lastMsg.timestamp,
+        direction: entry.lastMsg.direction,
+        unreadCount: entry.unread,
+      });
+    }
+    conversations.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+    res.json(conversations);
+  } catch (err) {
+    console.error("[WA Conversations Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 消息历史：GET /api/whatsapp/messages?jid=xxx
+app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
+  try {
+    const { jid, limit = 50, before } = req.query;
+    if (!jid) return res.status(400).json({ error: "jid is required" });
+
+    let targetJid = jid;
+    if (!targetJid.includes("@")) targetJid = `${targetJid.replace(/\D/g, "")}@s.whatsapp.net`;
+
+    // 1. 先从DB查
+    const where = { sessionId: DEFAULT_SESSION_ID, OR: [{ from: targetJid }, { to: targetJid }] };
+    if (before) where.timestamp = { lt: new Date(before) };
+    const dbMsgs = await prisma.wAMessage.findMany({
+      where, orderBy: { timestamp: "desc" }, take: parseInt(limit),
+    });
+
+    // 2. 如果DB消息少，从Evolution补拉
+    let messages = [...dbMsgs];
+    if (dbMsgs.length < 10) {
+      try {
+        const evoMsgs = await evoConnector.fetchMessages(targetJid, parseInt(limit));
+        // 落库那些DB中没有的
+        const existingWaIds = new Set(dbMsgs.map(m => m.waMessageId).filter(Boolean));
+        const info = await evoConnector.getInstanceInfo().catch(() => null);
+        const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
+        const bulkInsert = [];
+        for (const m of evoMsgs) {
+          const key = m.key || {};
+          if (key.id && existingWaIds.has(key.id)) continue;
+          const remoteJid = key.remoteJid || targetJid;
+          const fromMe = !!key.fromMe;
+          let body = "";
+          let type = "text";
+          const mm = m.message || {};
+          if (mm.conversation) body = mm.conversation;
+          else if (mm.extendedTextMessage) { body = mm.extendedTextMessage.text || ""; }
+          else if (mm.imageMessage) { body = mm.imageMessage.caption || "[图片]"; type = "image"; }
+          else if (mm.audioMessage) { body = "[语音]"; type = "audio"; }
+          else if (mm.videoMessage) { body = mm.videoMessage.caption || "[视频]"; type = "video"; }
+          else if (mm.documentMessage) { body = mm.documentMessage.fileName || "[文件]"; type = "document"; }
+          else { body = `[${m.messageType || "unknown"}]`; type = m.messageType || "unknown"; }
+          const ts = m.messageTimestamp ? new Date(m.messageTimestamp > 1e12 ? m.messageTimestamp : m.messageTimestamp * 1000) : new Date();
+          bulkInsert.push({
+            sessionId: DEFAULT_SESSION_ID,
+            from: fromMe ? ownerJid : remoteJid,
+            to: fromMe ? remoteJid : ownerJid,
+            body,
+            type,
+            direction: fromMe ? "outbound" : "inbound",
+            timestamp: ts,
+            waMessageId: key.id || null,
+          });
+        }
+        if (bulkInsert.length) {
+          for (const m of bulkInsert) { try { await prisma.wAMessage.create({ data: m }); } catch(e){ /* dup, skip */ } }
+          // 重新查DB
+          const refreshed = await prisma.wAMessage.findMany({
+            where: { sessionId: DEFAULT_SESSION_ID, OR: [{ from: targetJid }, { to: targetJid }] },
+            orderBy: { timestamp: "desc" }, take: parseInt(limit),
+          });
+          messages = refreshed;
+        }
+      } catch (e) {
+        console.warn("[WA messages] fetch from evolution failed:", e.message);
+      }
+    }
+
+    // 标记已读
+    try {
+      await prisma.wAMessage.updateMany({
+        where: { sessionId: DEFAULT_SESSION_ID, from: targetJid, direction: "inbound", read: false },
+        data: { read: true },
+      });
+    } catch (e) {}
+
+    res.json(messages.reverse());
+  } catch (err) {
+    console.error("[WA Messages Error]", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 获取活跃连接列表
+app.get("/api/whatsapp/connections", authMiddleware, async (req, res) => {
+  try {
+    const state = await evoConnector.getConnectionState();
+    const info = await evoConnector.getInstanceInfo().catch(() => null);
+    res.json([{
+      sessionId: DEFAULT_SESSION_ID,
+      status: state === "open" ? "connected" : "disconnected",
+      phone: (info?.ownerJid || "").split("@")[0] || null,
+      instance: evoConnector.instance,
+      mode: "evolution-api",
+    }]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 断开连接
+app.post("/api/whatsapp/disconnect", authMiddleware, async (req, res) => {
+  try {
+    await evoConnector._delete(`/instance/logout/${evoConnector.instance}`).catch(() => {});
+    await prisma.wAConnection.updateMany({ where: { sessionId: DEFAULT_SESSION_ID }, data: { status: "disconnected" } });
+    const io = app.get("io");
+    if (io) io.emit("whatsapp:status", { status: "disconnected", reason: "manual logout", sessionId: DEFAULT_SESSION_ID });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 兼容别名
+app.get('/api/conversations', authMiddleware, (req, res) => {
+  req.url = '/api/whatsapp/conversations' + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '');
+  app(req, res);
+});
+app.post('/api/messages/send', authMiddleware, (req, res) => {
+  req.url = '/api/whatsapp/send';
+  app(req, res);
+});
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// ─── 前端静态资源（生产环境） ───
+if (isProduction) {
+  const cwdFrontendPath = path.join(process.cwd(), '../frontend/dist');
+  const fallbackFrontendPath = path.join(__dirname, '../../frontend/dist');
+  const frontendPath = fs.existsSync(cwdFrontendPath) ? cwdFrontendPath : fallbackFrontendPath;
+  const hasDist = fs.existsSync(path.join(frontendPath, 'index.html'));
+  console.log(`[Production] Serving frontend from: ${frontendPath} (dist exists: ${hasDist})`);
+
+  if (hasDist) {
+    app.use(express.static(frontendPath));
+    app.get('{*path}', (req, res, next) => {
+      if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    });
+  } else {
+    console.warn('[Production] WARNING: frontend dist not found, serving API-only mode');
+    app.get('/', (req, res) => {
+      res.json({ status: 'ok', mode: 'api-only', message: 'Frontend not built' });
+    });
+  }
+}
+
+// ─── Socket.io ───
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+app.set('io', io);
+app.set('prisma', prisma);
+
+// 简化的Socket handler（直接使用Evolution connector状态，旧BaileysProvider handler保留文件但不引入其依赖）
+setupSocketHandlers(io, prisma);
+
+// ─── Start ───
+httpServer.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
+    process.exit(1);
+  }
+  console.error('[FATAL] Server error:', err);
+});
+
+async function seedDefaultUser() {
+  try {
+    try { await prisma.$queryRaw`SELECT name FROM sqlite_master WHERE type='table' LIMIT 1`; }
+    catch {
+      console.log('[Seed] Database not ready, running db push...');
+      const { execSync } = await import('child_process');
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit', cwd: process.cwd() });
+    }
+    const bcrypt = (await import('bcryptjs')).default || (await import('bcryptjs'));
+    const hashFunc = bcrypt.hash || bcrypt.default?.hash;
+    if (!hashFunc) throw new Error('bcrypt.hash not available');
+    const existing = await prisma.user.findUnique({ where: { username: 'admin' } });
+    if (!existing) {
+      const hash = await hashFunc('admin123', 10);
+      await prisma.user.create({ data: { username: 'admin', password: hash, name: 'Admin', role: 'admin' } });
+      console.log('[Seed] Default user created: admin / admin123');
+    }
+  } catch (err) {
+    console.error('[Seed] Error creating default user:', err.message);
+  }
+}
+
+async function startServer() {
+  await ensureDatabase();
+  await seedDefaultUser();
+
+  const sessionsDir = path.join(process.cwd(), 'sessions');
+  try {
+    if (!fs.existsSync(sessionsDir)) fs.mkdirSync(sessionsDir, { recursive: true });
+    console.log(`[Server] Sessions dir: ${sessionsDir}`);
+  } catch (err) {
+    console.warn(`[Server] Could not create sessions dir: ${err.message}`);
+  }
+
+  httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
+    console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
+    console.log(`[Server] Build version: evolution-api-v1 | Mode: Evolution REST API`);
+    // 初始化Evolution Connector
+    evoConnector.init().catch(err => console.warn('[Evolution] init error:', err.message));
+    // 启动自动化调度器（如果存在）
+    import("./services/automation-scheduler.js").then(m => {
+      if (m.startScheduler) m.startScheduler();
+    }).catch(() => {});
+  });
+}
+
+startServer().catch(err => {
+  console.error('[FATAL] Failed to start server:', err);
+  process.exit(1);
+});
+
+async function gracefulShutdown(signal) {
+  console.log(`\n[${signal}] Shutting down gracefully...`);
+  io.close();
+  httpServer.close();
+  await prisma.$disconnect();
+  process.exit(0);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

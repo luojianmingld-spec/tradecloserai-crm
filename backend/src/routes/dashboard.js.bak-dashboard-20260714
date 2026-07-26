@@ -1,0 +1,40 @@
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+router.get('/stats', async (req, res) => {
+  try {
+    const [customers, conversations, messages, contacts, accounts] = await Promise.all([
+      prisma.customer.count(),
+      prisma.conversation.count(),
+      prisma.message.count(),
+      prisma.contact.count(),
+      prisma.whatsAppAccount.count(),
+    ]);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const [todayMessages, todayConversations] = await Promise.all([
+      prisma.message.count({ where: { createdAt: { gte: today } } }),
+      prisma.conversation.count({ where: { updatedAt: { gte: today } } }),
+    ]);
+
+    res.json({
+      customers,
+      conversations,
+      messages,
+      contacts,
+      accounts,
+      todayMessages,
+      todayConversations,
+    });
+  } catch (err) {
+    console.error('[Dashboard Stats Error]', err);
+    res.status(500).json({ error: '获取统计数据失败: ' + err.message });
+  }
+});
+
+export default router;
