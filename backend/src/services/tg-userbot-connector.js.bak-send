@@ -5,7 +5,6 @@
  */
 import { TelegramClient, Api } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
-import { NewMessage } from 'telegram/events/index.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -152,32 +151,18 @@ export async function autoConnectUserBot(opts) {
 /** 监听新消息 */
 function registerUpdateHandler() {
   if (!client) return;
-  console.log('[TG-UB] Registering update handler (raw mode)...');
-  // 先测试: 不带 filter，记录所有收到的 update 类型
-  let updateCount = 0;
   client.addEventHandler(async (update) => {
-    updateCount++;
-    if (updateCount <= 100) {
-      // Try different ways to identify the update type
-      const type1 = update?.className;
-      const type2 = update?.CONSTRUCTOR;
-      const type3 = update?.constructor?.name;
-      const state = update?.state;
-      console.log('[TG-UB] Update #' + updateCount + ': type1=' + type1 + ' type2=' + type2 + ' type3=' + type3 + ' state=' + state);
-    }
     try {
       await handleIncomingUpdate(update);
     } catch (e) {
       console.error('[TG-UB] update handler error:', e.message);
     }
   });
-  console.log('[TG-UB] Update handler registered. Client connected:', client.connected);
 }
 
 async function handleIncomingUpdate(update) {
-  const ctorName = update?.constructor?.name || '';
   // 新消息
-  if (ctorName === 'UpdateNewMessage' || ctorName === 'UpdateNewChannelMessage' || update.className === 'UpdateNewMessage' || update.className === 'UpdateNewChannelMessage') {
+  if (update.className === 'UpdateNewMessage' || update.className === 'UpdateNewChannelMessage') {
     const msg = update.message;
     if (!msg || !msg.peerId) return;
     // 只处理私聊消息
@@ -270,9 +255,7 @@ export async function getHistory(peerId, limit = 50, offsetId = 0) {
 /** 发送文本消息 */
 export async function sendMessage(peerId, text, options = {}) {
   if (!client || connectionState !== 'connected') throw new Error('TG User Bot not connected');
-  // GramJS requires numeric peer ID (string numbers are rejected)
-  const numericPeer = typeof peerId === 'string' ? Number(peerId) : peerId;
-  const sent = await client.sendMessage(numericPeer, {
+  const sent = await client.sendMessage(peerId, {
     message: text,
     ...options,
   });
