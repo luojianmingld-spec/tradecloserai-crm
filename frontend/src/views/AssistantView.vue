@@ -20,10 +20,15 @@
         <div class="message-content">
           <div class="message-text" v-html="formatMessage(msg.content)"></div>
           <div v-if="msg.attachments && msg.attachments.length" class="message-attachments">
-            <div v-for="(file, i) in msg.attachments" :key="i" class="msg-attach-item">
-              <img v-if="file.type && file.type.startsWith('image')" :src="file.url" class="msg-image" />
-              <span v-else>📄 {{ file.name }}</span>
-            </div>
+            <a v-for="(file, i) in msg.attachments" :key="i" :href="file.url" target="_blank" rel="noopener" class="msg-file-card">
+              <div class="msg-file-icon">📄</div>
+              <div class="msg-file-info">
+                <div class="msg-file-name">{{ file.name }}</div>
+              </div>
+              <div class="msg-file-thumb">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+            </a>
           </div>
           
           <!-- 任务确认卡片 -->
@@ -410,11 +415,25 @@ async function sendMessage() {
     const res = await api.post('/assistant/chat', formData);
     const data = res.data;
     
+    // 收集附件信息
+    const replyAttachments = [];
+    if (data.attachments && data.attachments.length) {
+      replyAttachments.push(...data.attachments);
+    }
+    // 从回复文本中提取文件URL（兜底）
+    const replyText = data.reply || '好的';
+    const urlMatch = replyText.match(/(https?:\/\/[^\s]+\.(?:pdf|docx|xlsx|pptx|zip))/i);
+    if (urlMatch && replyAttachments.length === 0) {
+      const fname = urlMatch[1].split('/').pop();
+      replyAttachments.push({ name: decodeURIComponent(fname), url: urlMatch[1], type: 'application/pdf' });
+    }
+    
     // 添加助理回复
     messages.value.push({
       role: 'assistant',
       content: data.reply || '好的',
       tasks: data.tasks || [],
+      attachments: replyAttachments.length ? replyAttachments : undefined,
       createdAt: new Date().toISOString()
     });
   } catch (e) {
@@ -523,6 +542,9 @@ function formatMessage(content) {
   s = s.replace(/`([^`]+)`/g, '$1');
   s = s.replace(/\n{3,}/g, '\n\n');
   s = s.trim();
+  // 移除下载地址行（已渲染为卡片）
+  s = s.replace(/📄\s*下载地址：https?:\/\/[^\s]+/g, '');
+  s = s.replace(/https?:\/\/[^\s]+\.(?:pdf|docx|xlsx|pptx|zip)/gi, '');
   return s
     .replace(/\n/g, '<br>')
     .replace(/✅/g, '<span style="color:#34a853">✅</span>')
@@ -1546,5 +1568,56 @@ async function loadProviders() {
   font-size: 13px;
   color: var(--text-secondary, #6b7280);
   letter-spacing: 0.5px;
+}
+.msg-file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--msg-incoming, #202c33);
+  border: 1px solid var(--border-color, #2a3942);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  max-width: 260px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: box-shadow 0.2s;
+}
+.msg-file-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.msg-file-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+.msg-file-info {
+  flex: 1;
+  min-width: 0;
+}
+.msg-file-name {
+  font-size: 13px;
+  color: var(--text-primary, #e9edef);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.msg-file-thumb {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: var(--panel-header-bg, #2a3942);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.msg-file-thumb svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-secondary, #8696a0);
 }
 </style>
