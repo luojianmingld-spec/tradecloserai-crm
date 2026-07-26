@@ -52,7 +52,7 @@ function saveState(state) {
  *   - codeCallback: 异步函数()=>string，用于获取验证码（如果需要交互登录）
  */
 export async function initUserBot(opts) {
-  const { apiId, apiHash, codeCallback } = opts;
+  const { apiId, apiHash, phoneNumber, codeCallback } = opts;
   if (!apiId || !apiHash) throw new Error('TG User Bot 需要 apiId 和 apiHash');
 
   const sessionStr = loadSession();
@@ -66,30 +66,32 @@ export async function initUserBot(opts) {
 
   // 注册事件回调
   if (opts.onEvent) {
-    eventHandlers = opts.onEvent; // { onMessage, onReady, onError }
+    eventHandlers = opts.onEvent;
   }
 
   connectionState = 'connecting';
   console.log('[TG-UB] Connecting to Telegram...');
 
   await client.start({
-    phoneNumber: async () => {
+    phoneNumber: phoneNumber || (async () => {
       if (codeCallback && codeCallback.onPhoneNumber) {
+        console.log('[TG-UB] phoneNumber callback called');
         return await codeCallback.onPhoneNumber();
       }
-      throw new Error('需要手机号，但未提供codeCallback.onPhoneNumber');
-    },
+      throw new Error('需要手机号，但未提供');
+    }),
     phoneCode: async () => {
+      console.log('[TG-UB] phoneCode callback called, waiting for code...');
       if (codeCallback && codeCallback.onCode) {
         return await codeCallback.onCode();
       }
-      throw new Error('需要验证码，但未提供codeCallback.onCode');
+      throw new Error('需要验证码，但未提供');
     },
     password: async () => {
+      console.log('[TG-UB] password callback called');
       if (codeCallback && codeCallback.onPassword) {
         return await codeCallback.onPassword();
       }
-      // 如果没有2FA密码，返回空
       return '';
     },
     onError: (err) => {

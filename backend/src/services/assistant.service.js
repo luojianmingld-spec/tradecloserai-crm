@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { chatComplete, analyzeImageWithVision } from './ai-client.js';
+import { generateStructuredPDF, generateQuotePDF } from './pdf-generator.js';
 
 const prisma = new PrismaClient();
 
@@ -58,6 +59,22 @@ const TOOLS = [
       customerId: '客户ID（必填）',
       note: '跟进内容（必填）',
       followUpDate: '下次跟进日期（YYYY-MM-DD，可选）'
+    },
+    needConfirm: false
+  },
+  {
+    name: 'generate_document',
+    description: '生成PDF文档（报价单、产品目录、备忘录等）。当用户要求生成PDF、报价单、PI、产品说明文档时调用此工具。',
+    parameters: {
+      docType: '文档类型（必填，可选值：quote/PI/general）。quote=报价单，PI=形式发票，general=通用文档',
+      title: '文档标题（必填）',
+      subtitle: '副标题/日期说明（可选）',
+      content: '文档正文内容，支持Markdown格式（通用文档时必填）',
+      customerName: '客户名称（报价单/PI时必填）',
+      customerContact: '客户联系人（可选）',
+      customerEmail: '客户邮箱（可选）',
+      items: '产品列表JSON字符串，格式：[{\"name\":\"产品名\",\"spec\":\"规格\",\"qty\":数量,\"price\":单价}]（报价单/PI时必填）',
+      notes: '备注说明（可选）'
     },
     needConfirm: false
   }
@@ -570,6 +587,127 @@ ${rawSummary}
         return { followUp };
       }
 
+      case 'generate_document': {
+        try {
+          const { default: axios } = await import('axios');
+          const port = process.env.DEPLOY_RUN_PORT || 3000;
+          const baseUrl = `http://127.0.0.1:${port}`;
+          
+          const docType = args.docType || 'general';
+          
+          if (docType === 'quote' || docType === 'PI') {
+            // Parse items
+            let items = [];
+            if (typeof args.items === 'string') {
+              try { items = JSON.parse(args.items); } catch(e) { items = []; }
+            } else if (Array.isArray(args.items)) {
+              items = args.items;
+            }
+            
+            // Try to find customer
+            let customerId = null;
+            if (args.customerName) {
+              const cust = await prisma.customer.findFirst({
+                where: {
+                  OR: [
+                    { name: { contains: args.customerName } },
+                    { companyName: { contains: args.customerName } },
+                    { contactName: { contains: args.customerName } }
+                  ]
+                }
+              });
+              if (cust) customerId = cust.id;
+            }
+            
+            const docItems = items.map((item, idx) => ({
+              sortOrder: idx,
+              productName: item.name || item.productName || '',
+              model: item.model || '',
+              spec: item.spec || '',
+              quantity: item.qty || item.quantity || 0,
+              unit: item.unit || 'pcs',
+              unitPrice: item.price || item.unitPrice || 0,
+              amount: (item.qty || item.quantity || 0) * (item.price || item.unitPrice || 0),
+              remark: item.remark || ''
+            }));
+            
+            const total = docItems.reduce((s, i) => s + (i.amount || 0), 0);
+            
+            // Create document record
+            const docRecord = await prisma.document.create({
+              data: {
+                userId: 1,
+                customerId: customerId,
+                type: docType === 'PI' ? 'PI' : 'QUOTATION',
+                docNumber: `DOC-${new Date().toISOString().split('T')[0].replace(/-/g,'')}-${Date.now().toString().slice(-3)}`,
+                title: args.title || (docType === 'PI' ? 'Proforma Invoice' : 'Quotation'),
+                issueDate: new Date(),
+                currency: 'USD',
+                totalAmount: total,
+                amountInWords: '',
+                status: 'DRAFT',
+                sellerInfo: {},
+                buyerInfo: {
+                  companyName: args.customerName || '',
+                  contactName: args.customerContact || '',
+                  email: args.customerEmail || ''
+                },
+                remarks: args.notes || ''
+              }
+            });
+            
+            // Create items
+            for (const di of docItems) {
+              await prisma.documentItem.create({
+                data: { documentId: docRecord.id, ...di }
+              });
+            }
+            
+            // Generate PDF directly
+            const pdfResult = await generateQuotePDF(docRecord);
+            return { success: true, url: pdfResult.url, filename: pdfResult.filename, docId: docRecord.id };
+            
+          } else {
+            // General document - parse markdown-like content into sections
+            const contentStr = args.content || args.title || '';
+            const sections = [];
+            const lines = contentStr.split('\n');
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              if (trimmed.startsWith('## ')) {
+                sections.push({ type: 'heading', content: trimmed.slice(3) });
+              } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                const lastSection = sections[sections.length - 1];
+                if (lastSection && lastSection.type === 'bullet-list') {
+                  lastSection.items.push(trimmed.slice(2));
+                } else {
+                  sections.push({ type: 'bullet-list', items: [trimmed.slice(2)] });
+                }
+              } else {
+                sections.push({ type: 'paragraph', content: trimmed });
+              }
+            }
+            
+            const payload = {
+              title: args.title || 'Document',
+              subtitle: args.subtitle || '',
+              sections,
+              options: {
+                companyName: args.customerName || '',
+                date: new Date().toISOString().split('T')[0]
+              }
+            };
+            
+            const pdfResult = await generateStructuredPDF(payload);
+            return { success: true, url: pdfResult.url, filename: pdfResult.filename };
+          }
+        } catch (genErr) {
+          console.error('[Assistant] generate_document error:', genErr);
+          return { error: genErr.message };
+        }
+      }
+
       default:
         throw new Error(`未知工具：${funcName}`);
     }
@@ -635,6 +773,12 @@ ${rawSummary}
     
     if (funcName === 'add_follow_up') {
       return `${prefix}\n跟进记录已添加`;
+    }
+    
+    if (funcName === 'generate_document') {
+      if (result.error) return `${prefix}\n文档生成失败：${result.error}`;
+      const host = process.env.BASE_URL || 'https://ai.jzjglass.com';
+      return `${prefix}\n文档「${args.title || 'Document'}」已生成！\n📄 下载地址：${host}${result.url}`;
     }
     
     return `${prefix}\n操作完成`;

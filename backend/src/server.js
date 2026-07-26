@@ -32,6 +32,8 @@ import documentRoutes from './routes/documents.js';
 import waAvatarRoutes from './routes/wa-avatar.js';
 import telegramWebhookRoutes from './routes/telegram-webhook.js';
 import { getTelegramConnector } from './services/telegram-connector.js';
+import tgUserbotRoutes from './routes/tg-userbot.js';
+import { autoConnectUserBot } from './services/tg-userbot-connector.js';
 import companyMaterialsRouter from './routes/companyMaterials.js';
 import assistantRoutes from './routes/assistant.js';
 import { getPendingFollowups } from './services/followup.service.js';
@@ -224,6 +226,7 @@ app.use("/api/evolution/webhook", (req, _res, next) => {
 app.use("/api/evolution/webhook", evolutionWebhookRoutes);
 // Telegram webhook (no auth - TG servers push directly)
 app.use("/api/telegram", telegramWebhookRoutes);
+app.use("/api/tg-userbot", tgUserbotRoutes);
 
 // ─── Evolution WhatsApp 公开接口（状态/QR）必须在authMiddleware之前 ───
 const evoConnector = getEvolutionConnector();
@@ -1827,6 +1830,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ─── 文档下载（所有环境） ───
+app.use("/uploads/documents", express.static(path.join(__dirname, '../uploads/documents')));
+
 // ─── 前端静态资源（生产环境） ───
 if (isProduction) {
   const cwdFrontendPath = path.join(process.cwd(), '../frontend/dist');
@@ -1923,6 +1929,19 @@ async function startServer() {
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
     console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
     console.log(`[Server] Build version: evolution-api-v1 | Mode: Evolution REST API`);
+    // TG User Bot 自动重连（如果有已保存的session）
+    autoConnectUserBot({
+      apiId: 33683021,
+      apiHash: 'c0fba584709b3b8ec13c0a5e18b94f75',
+      onEvent: {
+        onMessage: async (msg) => {
+          console.log('[TG-UB] Incoming message:', msg.chatId, msg.text?.substring(0, 50));
+        },
+        onReady: (me) => {
+          console.log('[TG-UB] Auto-connected:', me.username || me.id);
+        },
+      },
+    }).catch(e => console.warn('[TG-UB] Auto-connect failed:', e.message));
     // 初始化Evolution Connector
     evoConnector.init().catch(err => console.warn('[Evolution] init error:', err.message));
 
