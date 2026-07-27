@@ -195,7 +195,6 @@ model Customer {
   email         String?
   company       String?  // legacy 旧字段，保留兼容
   country       String?
-  city          String?
   address      String?
   industry     String?
   tags          String?  @default("[]")

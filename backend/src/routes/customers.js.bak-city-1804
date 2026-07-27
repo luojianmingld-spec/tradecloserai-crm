@@ -32,7 +32,7 @@ const prisma = new PrismaClient();
 // ─── Allowed fields & helpers ───
 const JID_WRITABLE_FIELDS = [
   'name', 'companyName', 'contactName', 'title', 'email', 'website',
-  'country', 'city', 'phone', 'notes', 'tags', 'source', 'customerLevel',
+  'country', 'phone', 'notes', 'tags', 'source', 'customerLevel',
   'firstContactAt', 'lastContactAt', 'address', 'industry', 'status',
   // 需求总结
   'requirementSummary', 'requirementProducts', 'requirementBudget',
@@ -43,7 +43,7 @@ const JID_WRITABLE_FIELDS = [
 // Fields allowed for :id CRUD (wider set)
 const ID_WRITABLE_FIELDS = [
   'name', 'companyName', 'contactName', 'title', 'email', 'website',
-  'country', 'city', 'phone', 'notes', 'tags', 'source', 'customerLevel',
+  'country', 'phone', 'notes', 'tags', 'source', 'customerLevel',
   'firstContactAt', 'lastContactAt', 'address', 'industry', 'status',
   'jid', 'company',
   // 需求总结
