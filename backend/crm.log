@@ -2878,3 +2878,268 @@ Unique constraint failed on the fields: (`waMessageId`)
 [Automation Scheduler] Running check at 2026-07-27T05:25:32.247Z
 [33m[2026-07-27T05:26:45.076] [INFO] - [Sleeping for 4s on flood wait (Caused by messages.GetHistory)][0m
 [Automation Scheduler] Running check at 2026-07-27T05:55:32.248Z
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T06:23:02.570] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T06:23:02.585] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T06:23:02.658] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T06:23:02.658] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9496 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: w9Pr9Y9-5yOn_v8LAAAB)
+[Socket] User 1 connected (socket: bsmiKbv-RaKHbqNLAAAD)
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785133262
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T06:24:02.588Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[Socket] User 1 connected (socket: sfgnOphLPu7rPpeWAAAF)
+[Socket] User 1 connected (socket: ddUhojCHk5Zvc4cTAAAH)
+[TG-UB] Raw update #8: UpdateConnectionState
+[Socket] User 1 disconnected (socket: ddUhojCHk5Zvc4cTAAAH)
+[Socket] User 1 disconnected (socket: sfgnOphLPu7rPpeWAAAF)
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+[TG-UB] Raw update #11: UpdateConnectionState
+[TG-UB] Raw update #12: UpdateConnectionState
+[TG-UB] Raw update #13: UpdateConnectionState
+[TG-UB] Raw update #14: UpdateConnectionState
+[TG-UB] Raw update #15: UpdateConnectionState
+[TG-UB] Raw update #16: UpdateConnectionState
+[TG-UB] Raw update #17: UpdateConnectionState
+[TG-UB] Raw update #18: UpdateConnectionState
+[TG-UB] Raw update #19: UpdateConnectionState
+[TG-UB] Raw update #20: UpdateConnectionState
+[TG-UB] Raw update #21: UpdateConnectionState
+[TG-UB] Raw update #22: UpdateConnectionState
+[TG-UB] Raw update #23: UpdateConnectionState
+[TG-UB] Raw update #24: UpdateConnectionState
+[Socket] User 1 connected (socket: 0bETzRywZR0mxWBZAAAJ)
+[TG-UB] Raw update #25: UpdateConnectionState
+[TG-UB] Raw update #26: UpdateConnectionState
+[TG-UB] Raw update #27: UpdateConnectionState
+[TG-UB] Raw update #28: UpdateConnectionState
+[TG-UB] Raw update #29: UpdateConnectionState
+[TG-UB] Raw update #30: UpdateConnectionState
+[TG-UB] Raw update #31: UpdateConnectionState
+[TG-UB] Raw update #32: UpdateConnectionState
+[TG-UB] Raw update #33: UpdateConnectionState
+[TG-UB] Raw update #34: UpdateConnectionState
+[TG-UB] Raw update #35: UpdateConnectionState
+[TG-UB] Raw update #36: UpdateConnectionState
+[TG-UB] Raw update #37: UpdateConnectionState
+[TG-UB] Raw update #38: UpdateConnectionState
+[TG-UB] Raw update #39: UpdateConnectionState
+[TG-UB] Raw update #40: UpdateConnectionState
+[TG-UB] Raw update #41: UpdateConnectionState
+[TG-UB] Raw update #42: UpdateConnectionState
+[TG-UB] Raw update #43: UpdateConnectionState
+[TG-UB] Raw update #44: UpdateConnectionState
+[TG-UB] Raw update #45: UpdateConnectionState
+[TG-UB] Raw update #46: UpdateConnectionState
+[Socket] User 1 connected (socket: GpYyt3T198IZ-SIjAAAL)
+[Socket] User 1 connected (socket: AXRM01MuZPb_yfULAAAN)
+[Socket] User 1 disconnected (socket: 0bETzRywZR0mxWBZAAAJ)
+[TG-UB] Raw update #47: UpdateConnectionState
+[TG-UB] Raw update #48: UpdateConnectionState
+[TG-UB] Raw update #49: UpdateConnectionState
+[TG-UB] Raw update #50: UpdateConnectionState
+[Socket] User 1 disconnected (socket: AXRM01MuZPb_yfULAAAN)
+[Socket] User 1 disconnected (socket: GpYyt3T198IZ-SIjAAAL)
+[Socket] User 1 connected (socket: 7EYpn_9ZMl3zRaE-AAAP)
+[Socket] User 1 disconnected (socket: 7EYpn_9ZMl3zRaE-AAAP)
+[Socket] User 1 connected (socket: d78g4-blo_xbawMSAAAR)
+[Socket] User 1 connected (socket: bDipu55s3L58l5L_AAAT)
+[Socket] User 1 disconnected (socket: bDipu55s3L58l5L_AAAT)
+[Socket] User 1 disconnected (socket: d78g4-blo_xbawMSAAAR)
+[Socket] User 1 connected (socket: BnDP7Hq8KaS9qpIPAAAV)
+[Socket] User 1 disconnected (socket: BnDP7Hq8KaS9qpIPAAAV)
+[Socket] User 1 connected (socket: nDOoYtiHIFUkO1VJAAAX)
+[Socket] User 1 disconnected (socket: nDOoYtiHIFUkO1VJAAAX)
+[Socket] User 1 connected (socket: eNjjoI7qnFXFeJ4AAAAZ)
+[Socket] User 1 connected (socket: vrmC-GdWgEBZyqr1AAAb)
+[Socket] User 1 disconnected (socket: eNjjoI7qnFXFeJ4AAAAZ)
+[Socket] User 1 disconnected (socket: vrmC-GdWgEBZyqr1AAAb)
+[Socket] User 1 connected (socket: EzoDX6oyWGm-BKtBAAAd)
+[Socket] User 1 disconnected (socket: EzoDX6oyWGm-BKtBAAAd)
+[Socket] User 1 connected (socket: yQAUvnb5viErUXK4AAAf)
+[Socket] User 1 disconnected (socket: yQAUvnb5viErUXK4AAAf)
+[Automation Scheduler] Running check at 2026-07-27T06:53:02.588Z
+[Socket] User 1 connected (socket: MPM5JVQiiBpzEK4eAAAh)
+[Socket] User 1 connected (socket: SAw0kiyCq1Xb5C2qAAAj)
+[Socket] User 1 disconnected (socket: SAw0kiyCq1Xb5C2qAAAj)
+[Socket] User 1 connected (socket: 2iE91STb2sYCqVoCAAAl)
+[Socket] User 1 disconnected (socket: 2iE91STb2sYCqVoCAAAl)
+[Socket] User 1 disconnected (socket: MPM5JVQiiBpzEK4eAAAh)
+[Socket] User 1 connected (socket: QfdZA93DK5Mx9u2QAAAn)
+[Socket] User 1 connected (socket: 8_Cl8SZfHS9A6DxWAAAp)
+[Socket] User 1 disconnected (socket: QfdZA93DK5Mx9u2QAAAn)
+[Socket] User 1 connected (socket: azSLI2gj367ManLEAAAr)
+[Socket] User 1 connected (socket: lBwo6PxX33O8L5sVAAAt)
+[Evolution Webhook] msg 3EB0CE6300 status=READ
+[Evolution Webhook] msg 3EB0753F48 status=READ
+[Evolution Webhook] msg 3EB039C5D0 status=READ
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="استيقظت للتو"
+[Translation] inbound #5693 ar->zh: "استيقظت للتو" => "我刚醒来"
+[Evolution Webhook] inbound jid=963981860908@s.whatsapp.net me=false type=text dup=false text="كيف حالك"
+[Translation] inbound #5694 ar->zh: "كيف حالك" => "你好吗？"
+[Socket] User 1 disconnected (socket: azSLI2gj367ManLEAAAr)
+[Socket] User 1 disconnected (socket: lBwo6PxX33O8L5sVAAAt)
+[TG-UB] Poll found message from 8668956536 text: Hope you have a good day
+[TG-UB] Incoming message: 8668956536 Hope you have a good day
+[TG-UB] Poll found message from 8668956536 text: I’m here on the bed
+[TG-UB] Incoming message: 8668956536 I’m here on the bed
+[TG-UB] Poll found message from 8668956536 text: Okay that’s good
+[TG-UB] Incoming message: 8668956536 Okay that’s good
+[TG-UB Translate] en->zh: "Hope you have a good day" => "希望你今天过得愉快"
+[TG-UB Translate] en->zh: "Okay that’s good" => "好的，那很好"
+[TG-UB Translate] en->zh: "I’m here on the bed" => "我在床上"
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: w9Pr9Y9-5yOn_v8LAAAB)
+[Socket] User 1 disconnected (socket: bsmiKbv-RaKHbqNLAAAD)
+[Socket] User 1 disconnected (socket: 8_Cl8SZfHS9A6DxWAAAp)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T07:16:07.000] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T07:16:07.016] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T07:16:07.089] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T07:16:07.089] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9500 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: 4RxczNRqSwbttbmpAAAC)
+[Socket] User 1 connected (socket: kWbyJWhWyH5DKojXAAAD)
+[Socket] User 1 connected (socket: Lxs4ywlE2sSJ6m9iAAAF)
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785136447
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T07:17:07.019Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[TG-UB] Raw update #8: UpdateConnectionState
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+[TG-UB] Raw update #11: UpdateConnectionState
+[TG-UB] Raw update #12: UpdateConnectionState
+[TG-UB] Raw update #13: UpdateConnectionState
+[TG-UB] Raw update #14: UpdateConnectionState
+[TG-UB] Raw update #15: UpdateConnectionState
+[TG-UB] Raw update #16: UpdateConnectionState
+[TG-UB] Raw update #17: UpdateConnectionState
+[TG-UB] Raw update #18: UpdateConnectionState
+[Socket] User 1 disconnected (socket: Lxs4ywlE2sSJ6m9iAAAF)
+[TG-UB] Raw update #19: UpdateConnectionState
+[TG-UB] Raw update #20: UpdateConnectionState
+[TG-UB] Raw update #21: UpdateConnectionState
+[TG-UB] Raw update #22: UpdateConnectionState
+[TG-UB] Raw update #23: UpdateConnectionState
+[TG-UB] Raw update #24: UpdateConnectionState
+[TG-UB] Raw update #25: UpdateConnectionState
+[TG-UB] Raw update #26: UpdateConnectionState
+[TG-UB] Raw update #27: UpdateConnectionState
+[TG-UB] Raw update #28: UpdateConnectionState
+[TG-UB] Raw update #29: UpdateConnectionState
+[TG-UB] Raw update #30: UpdateConnectionState
+[TG-UB] Raw update #31: UpdateConnectionState
+[TG-UB] Raw update #32: UpdateConnectionState
+[TG-UB] Raw update #33: UpdateConnectionState
+[TG-UB] Raw update #34: UpdateConnectionState
+[TG-UB] Raw update #35: UpdateConnectionState
+[TG-UB] Raw update #36: UpdateConnectionState
+[TG-UB] Raw update #37: UpdateConnectionState
+[TG-UB] Raw update #38: UpdateConnectionState
+[TG-UB] Raw update #39: UpdateConnectionState
+[TG-UB] Raw update #40: UpdateConnectionState
+[TG-UB] Raw update #41: UpdateConnectionState
+[TG-UB] Raw update #42: UpdateConnectionState
+[TG-UB] Raw update #43: UpdateConnectionState
+[TG-UB] Raw update #44: UpdateConnectionState
+[TG-UB] Raw update #45: UpdateConnectionState
+[TG-UB] Raw update #46: UpdateConnectionState
+[TG-UB] Raw update #47: UpdateConnectionState
+[TG-UB] Raw update #48: UpdateConnectionState
+[TG-UB] Raw update #49: UpdateConnectionState
+[TG-UB] Raw update #50: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T07:46:07.021Z
+[Automation Scheduler] Running check at 2026-07-27T08:16:07.025Z
+[Socket] User 1 connected (socket: ZFsM_5XB5c9dtrruAAAH)
+[Socket] User 1 disconnected (socket: ZFsM_5XB5c9dtrruAAAH)
+[Socket] User 1 connected (socket: usXLqufvevG2kxaKAAAJ)
+[Socket] User 1 connected (socket: Y-8myPEUHpgsLujDAAAM)
+[Socket] User 1 disconnected (socket: Y-8myPEUHpgsLujDAAAM)
+[Socket] User 1 connected (socket: RnY6fDkuG24lCqVYAAAO)
+[Socket] User 1 disconnected (socket: RnY6fDkuG24lCqVYAAAO)
+[Socket] User 1 connected (socket: ET0uwXXNjvsoonv9AAAQ)
+[Socket] User 1 disconnected (socket: ET0uwXXNjvsoonv9AAAQ)
+[Socket] User 1 connected (socket: 8VANG4WtXYhI0ZcfAAAS)
+[Assistant] AI raw response: "这个我得坦白说，我这边没有接入实时汇率查询的工具，没法直接给你今天的美元汇率。建议你打开银行APP或者汇率网站（比如中国银行官网、XE.com）看一眼，那上面的最准。如果你是想算报价单的美元价格，把金额和汇率发我，我帮你算出来。"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] Backend intent detected: null
+[Socket] User 1 disconnected (socket: 8VANG4WtXYhI0ZcfAAAS)
+[Automation Scheduler] Running check at 2026-07-27T08:46:07.026Z
+[Socket] User 1 disconnected (socket: usXLqufvevG2kxaKAAAJ)
+[Socket] User 1 connected (socket: FOwZfzu1Pnap6f-rAAAU)
+[Socket] User 1 disconnected (socket: FOwZfzu1Pnap6f-rAAAU)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 4RxczNRqSwbttbmpAAAC)
+[Socket] User 1 disconnected (socket: kWbyJWhWyH5DKojXAAAD)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T08:57:12.084] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T08:57:12.100] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[33m[2026-07-27T08:57:12.175] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T08:57:12.175] [INFO] - [Using LAYER 198 for initial connect][0m
+[Evolution Connector] state=open
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9500 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: _06UdDIGRkuezmy7AAAC)
+[Socket] User 1 connected (socket: aaT4UiPglDygorAjAAAD)
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785142512
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState

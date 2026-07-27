@@ -8945,7 +8945,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 
 .platform-nav-bottom {
   border-top: 1px solid var(--border-color); padding: 8px 6px;
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;
 }
 .wa-status-mini {
   display: flex; align-items: center; gap: 8px;
