@@ -436,6 +436,7 @@ model AssistantConversation {
   role      String   // "user" 或 "assistant"
   content   String   // 对话内容
   tasks     String?  // 关联的任务ID（JSON数组）
+  attachments String? // 附件信息（JSON数组）
   createdAt DateTime @default(now())
   
   @@index([userId, createdAt])

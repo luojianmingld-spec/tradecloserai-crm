@@ -13237,6 +13237,9 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
 /* ─── 🕰️ 时间与文化面板 ─── */
 .culture-panel { padding: 0; overflow-y: auto; }
+@media (max-width: 768px) {
+  .culture-panel { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px) !important; }
+}
 .cul-hero {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
