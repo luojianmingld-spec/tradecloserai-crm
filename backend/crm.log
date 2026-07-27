@@ -2867,3 +2867,14 @@ Unique constraint failed on the fields: (`waMessageId`)
 [Automation Scheduler] Running check at 2026-07-27T03:55:32.245Z
 [33m[2026-07-27T03:58:44.335] [INFO] - [Sleeping for 4s on flood wait (Caused by messages.GetHistory)][0m
 [33m[2026-07-27T04:04:45.434] [INFO] - [Sleeping for 20s on flood wait (Caused by messages.GetHistory)][0m
+[Automation Scheduler] Running check at 2026-07-27T04:25:32.245Z
+[33m[2026-07-27T04:36:44.344] [INFO] - [Sleeping for 3s on flood wait (Caused by messages.GetHistory)][0m
+[Automation Scheduler] Running check at 2026-07-27T04:55:32.246Z
+[33m[2026-07-27T05:01:44.363] [INFO] - [Sleeping for 3s on flood wait (Caused by messages.GetHistory)][0m
+[33m[2026-07-27T05:10:44.461] [INFO] - [Sleeping for 5s on flood wait (Caused by messages.GetHistory)][0m
+[33m[2026-07-27T05:19:14.318] [INFO] - [Sleeping for 3s on flood wait (Caused by messages.GetHistory)][0m
+[Evolution Webhook] msg 3EB0758614 status=SERVER_ACK
+[Evolution Webhook] msg 3EB0758614 status=DELIVERY_ACK
+[Automation Scheduler] Running check at 2026-07-27T05:25:32.247Z
+[33m[2026-07-27T05:26:45.076] [INFO] - [Sleeping for 4s on flood wait (Caused by messages.GetHistory)][0m
+[Automation Scheduler] Running check at 2026-07-27T05:55:32.248Z

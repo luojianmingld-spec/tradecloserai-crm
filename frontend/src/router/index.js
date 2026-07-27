@@ -26,7 +26,7 @@ const routes = [
     component: () => import("../views/LayoutView.vue"),
     meta: { requiresAuth: true },
     children: [
-      { path: "", redirect: () => (window.innerWidth <= 768 ? '/dashboard' : '/chat') },
+      { path: "", redirect: '/assistant' },
       { path: "dashboard", name: "Dashboard", component: DashboardView },
       { path: "assistant", name: "Assistant", component: AssistantView },
       { path: "chat", name: "Chat", component: ChatView },
