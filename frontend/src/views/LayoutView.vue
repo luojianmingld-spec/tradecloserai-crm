@@ -477,10 +477,16 @@
             <span v-if="chatStore.showFollowupsOnly" class="fu-filter-on">· 仅待跟进</span>
           </div>
           <div class="chatlist-body" v-if="activeChannel === 'whatsapp' || activeChannel === 'telegram'">
-            <template v-if="(activeChannel === 'whatsapp' && !chatStore.isConnected) || (activeChannel === 'telegram' && tgAccounts.length === 0)">
+            <template v-if="activeChannel === 'whatsapp' && !chatStore.isConnected">
               <div class="empty-list-hint">
-                <div style="font-size:32px;opacity:0.3">📱</div>
+                <div style="font-size:32px;opacity:0.3"></div>
                 <div style="font-size:13px;color:#8696a0;margin-top:8px;text-align:center;padding:0 16px;">请先连接 WhatsApp 账号</div>
+              </div>
+            </template>
+            <template v-else-if="activeChannel === 'telegram' && tgAccounts.length === 0">
+              <div class="empty-list-hint">
+                <div style="font-size:32px;opacity:0.3">✈️</div>
+                <div style="font-size:13px;color:#8696a0;margin-top:8px;text-align:center;padding:0 16px;">Telegram 加载中...</div>
               </div>
             </template>
             <template v-else-if="activeChannel === 'whatsapp' && displayConversations.length === 0">
