@@ -664,7 +664,8 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           conv = await prisma.conversation.create({ data: { accountId: tgAccount.id, platform: "telegram", contactId: contact.id, jid: toJid } });
         }
         const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
-        const tgWaMsgId = `tg_${tgAccount.id}_${sent.message_id}_out`;
+        const tgSentMsgId = sent.message_id || sent.id;
+        const tgWaMsgId = `tg_${tgAccount.id}_${tgSentMsgId}_out`;
         let savedWa = await prisma.wAMessage.findFirst({ where: { sessionId: tgSessionId, waMessageId: tgWaMsgId } });
         if (!savedWa) {
           savedWa = await prisma.wAMessage.create({
@@ -706,7 +707,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           });
           io.emit("conversation:update", { accountId: tgAccount.id, conversation: { id: conv.id, jid: toJid, platform: "telegram", lastMessage: textMsg.slice(0,200), lastMessageAt: new Date() } });
         }
-        return res.json({ ok: true, messageId: String(sent.message_id), platform: "telegram", waMessageId: savedWa.waMessageId, savedId: savedWa.id, translation: translationObj });
+        return res.json({ ok: true, messageId: String(tgSentMsgId), platform: "telegram", waMessageId: savedWa.waMessageId, savedId: savedWa.id, translation: translationObj });
       } catch (err) {
         console.error("[TG send] error:", err);
         return res.status(500).json({ error: "Telegram send failed: " + err.message });
