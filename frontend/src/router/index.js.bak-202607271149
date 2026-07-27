@@ -1,13 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth.js";
 
-// 主要tab页面同步导入，消除切换延迟
-import DashboardView from "../views/DashboardView.vue";
-import PipelineView from "../views/PipelineView.vue";
-import CustomersListView from "../views/CustomersListView.vue";
-import ChatView from "../views/ChatView.vue";
-import AssistantView from "../views/AssistantView.vue";
-
 const routes = [
   {
     path: "/login",
@@ -27,16 +20,32 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: "", redirect: () => (window.innerWidth <= 768 ? '/dashboard' : '/chat') },
-      { path: "dashboard", name: "Dashboard", component: DashboardView },
-      { path: "assistant", name: "Assistant", component: AssistantView },
-      { path: "chat", name: "Chat", component: ChatView },
+      {
+        path: "dashboard",
+        name: "Dashboard",
+        component: () => import("../views/DashboardView.vue"),
+      },
+      {
+        path: "assistant",
+        name: "Assistant",
+        component: () => import("../views/AssistantView.vue"),
+      },
+      {
+        path: "chat",
+        name: "Chat",
+        component: () => import("../views/ChatView.vue"),
+      },
       {
         path: "emails",
         name: "Emails",
         redirect: "/",
         component: () => import("../views/EmailView.vue"),
       },
-      { path: "customers", name: "Customers", component: CustomersListView },
+      {
+        path: "customers",
+        name: "Customers",
+        component: () => import("../views/CustomersListView.vue"),
+      },
       {
         path: "customers/:id",
         name: "CustomerDetail",
@@ -52,7 +61,11 @@ const routes = [
         name: "DocumentEdit",
         component: () => import("../views/DocumentEditorView.vue"),
       },
-      { path: "pipeline", name: "Pipeline", component: PipelineView },
+      {
+        path: "pipeline",
+        name: "Pipeline",
+        component: () => import("../views/PipelineView.vue"),
+      },
       {
         path: "automation",
         name: "Automation",

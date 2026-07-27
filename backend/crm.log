@@ -2856,3 +2856,10 @@ Error: Not connected
 [Automation Scheduler] Running check at 2026-07-27T02:55:32.245Z
 [33m[2026-07-27T03:03:45.287] [INFO] - [Sleeping for 13s on flood wait (Caused by messages.GetHistory)][0m
 [Automation Scheduler] Running check at 2026-07-27T03:25:32.245Z
+[TG-UB] Poll found message from 8668956536 text: How are you
+[TG-UB] Incoming message: 8668956536 How are you
+[TG-UB] onMessage save error: 
+Invalid `prisma.wAMessage.create()` invocation:
+
+
+Unique constraint failed on the fields: (`waMessageId`)
