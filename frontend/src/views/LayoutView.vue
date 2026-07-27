@@ -2027,7 +2027,7 @@
           <!-- 🕰️ 时间与文化面板（自动关联当前客户） -->
           <div v-if="!panelCollapsed && activePanel === 'worldclock'" class="wc-panel-body culture-panel">
             <!-- 当前客户文化信息 -->
-            <template v-if="cultureIso">
+            <template v-if="cultureIso && cultureInfo">
               <!-- 客户身份条 -->
               <div class="cul-hero">
                 <div class="cul-hero-flag">{{ cultureInfo.flag }}</div>
@@ -7536,6 +7536,36 @@ const CULTURE_DATA = {
     holidays:'Seollal春节(1-2月3天)、Chuseok中秋(9-10月3天)、光复节8/15、新年',
     dress:'深色商务正装，时尚但保守',
     gifts:'包装精致的礼品（水果/人参/牛肉/酒），送礼文化发达',
+  },
+
+  CN: {
+    flag:'🇨🇳', name:'中国', nameEn:'China', tz:'Asia/Shanghai',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CNY（人民币）', language:'中文', englishLevel:'英语普及率一般，商务场合可用英语',
+    timePerception:'守时是基本素养，约定时间应准时到达，迟到需提前告知并道歉',
+    greeting:'点头微笑或握手，熟人之间可拍肩或挥手致意；商务场合互换名片（双手递接）',
+    etiquette:[
+      '商务会面先互换名片，仔细阅读对方名片后再收起',
+      '送礼讲究包装和寓意，避免送钟（谐音"送终"）和白色/黑色包装',
+      '餐桌文化重要，商务宴请是建立关系的重要环节',
+      '尊重长幼尊卑，座位安排有讲究（面朝门为上座）',
+      '商务谈判注重关系和信任，初次合作可能需多次面谈'
+    ],
+    negotiationTips:[
+      '关系先行：先建立个人信任和好感，再谈业务细节',
+      '耐心为上：决策流程较长，可能需要多层审批，不要催促',
+      '面子很重要：公开场合避免让对方丢面子，分歧私下沟通',
+      '价格谈判留有余地：初次报价通常有议价空间，不要一口价',
+      '重视节日节奏：春节前1-2周基本停摆，国庆黄金周同理'
+    ],
+    taboos:[
+      '数字4（谐音"死"）——楼层、房间号、礼品数量都要避免',
+      '白色和黑色与丧事相关，包装/礼物慎用',
+      '绿色帽子=伴侣出轨，绝对不能送',
+      '不要公开批评中国文化或政治敏感话题',
+      '不要直接拒绝——用"我们考虑考虑"代替"不行"'
+    ],
+    holidays:'春节（1-2月）、国庆（10.1）、中秋、端午、清明、劳动节（5.1）'
   },
 };
 
