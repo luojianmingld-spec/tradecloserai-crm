@@ -703,7 +703,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           });
           io.emit("whatsapp:message_sent", {
             jid: toJid,
-            id: savedWa.id, body: textMsg, fromMe: true, timestamp: savedWa.timestamp, platform: telegram, jid: toJid, translation: translationObj, waMessageId: savedWa.waMessageId, direction: outbound,
+            message: { id: savedWa.id, body: textMsg, fromMe: true, timestamp: savedWa.timestamp, platform: "telegram", jid: toJid, translation: translationObj, waMessageId: savedWa.waMessageId },
           });
           io.emit("conversation:update", { accountId: tgAccount.id, conversation: { id: conv.id, jid: toJid, platform: "telegram", lastMessage: textMsg.slice(0,200), lastMessageAt: new Date() } });
         }
