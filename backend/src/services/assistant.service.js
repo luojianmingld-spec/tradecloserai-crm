@@ -95,6 +95,31 @@ const TOOLS = [
     needConfirm: false
   },
   {
+    name: 'track_topic',
+    description: 'Subscribe to a topic for tracking. Use when user asks to track, follow, or monitor a topic or industry trend.',
+    parameters: {
+      topic: 'Topic name to track (required)',
+      keywords: 'Search keywords JSON array string (optional)',
+      focusAreas: 'Focus directions JSON array string (optional)',
+      frequency: 'Tracking frequency: daily or weekly (optional, default daily)'
+    },
+    needConfirm: false
+  },
+  {
+    name: 'list_topics',
+    description: 'List all subscribed tracking topics.',
+    parameters: {},
+    needConfirm: false
+  },
+  {
+    name: 'get_briefing',
+    description: 'Get the latest briefing for a tracked topic.',
+    parameters: {
+      topic: 'Topic name (required)'
+    },
+    needConfirm: false
+  },
+  {
     name: 'web_search',
     description: '联网搜索互联网信息。用于市场分析、行业调研、竞品信息、最新动态、政策法规等需要实时信息的场景。',
     parameters: {
@@ -145,7 +170,7 @@ class AssistantService {
    */
   _isCrmTask(msg) {
     if (!msg) return false;
-    const keywords = ['查', '分析', '搜索', '找', '发', '更新', '修改', '添加',
+    const keywords = ['查', '分析', '搜索', '找', '发', '更新', '修改', '添加', '追踪', '关注', '订阅', '动态', '简报',
       '客户', '订单', '消息', '记录', '状态', '跟进', '背调', '汇总', '总结',
       '出', '报价', 'PDF', 'pi', 'ci', '生成', '文档', '发票', '目录', 'product',
       'query', 'send', 'update', 'add', 'analyze', 'generate', 'document', 'quotation',
@@ -1119,6 +1144,57 @@ ${rawSummary}
         }
       }
 
+
+      case "track_topic": {
+        try {
+          const topic = args.topic || userMessage;
+          const kw = args.keywords ? (typeof args.keywords === "string" ? JSON.parse(args.keywords) : args.keywords) : [];
+          const fa = args.focusAreas ? (typeof args.focusAreas === "string" ? JSON.parse(args.focusAreas) : args.focusAreas) : [];
+          const freq = args.frequency || "daily";
+          const sub = await prisma.topicSubscription.upsert({
+            where: { userId_topic: { userId: 1, topic } },
+            update: { keywords: JSON.stringify(kw), focusAreas: JSON.stringify(fa), frequency: freq, active: true },
+            create: { userId: 1, topic, keywords: JSON.stringify(kw), focusAreas: JSON.stringify(fa), frequency: freq }
+          });
+          return { success: true, id: sub.id, topic: sub.topic };
+        } catch(e) {
+          return { error: true, message: "Subscribe failed: " + e.message };
+        }
+      }
+
+      case "list_topics": {
+        try {
+          const subs = await prisma.topicSubscription.findMany({
+            where: { userId: 1, active: true },
+            include: { briefings: { take: 1, orderBy: { createdAt: "desc" } } },
+            orderBy: { updatedAt: "desc" }
+          });
+          return {
+            topics: subs.map(s => ({ id: s.id, topic: s.topic, frequency: s.frequency, lastRunAt: s.lastRunAt, latestSummary: s.briefings[0]?.summary || null })),
+            count: subs.length
+          };
+        } catch(e) {
+          return { error: true, message: "List failed: " + e.message };
+        }
+      }
+
+      case "get_briefing": {
+        try {
+          const topic = args.topic;
+          const sub = await prisma.topicSubscription.findFirst({
+            where: { userId: 1, topic: { contains: topic || "" }, active: true },
+            include: { briefings: { take: 3, orderBy: { createdAt: "desc" } } }
+          });
+          if (!sub) return { error: true, message: "Topic not found: " + topic };
+          return {
+            topic: sub.topic,
+            briefings: sub.briefings.map(b => ({ summary: b.summary, content: b.content, createdAt: b.createdAt })),
+            lastRunAt: sub.lastRunAt
+          };
+        } catch(e) {
+          return { error: true, message: "Briefing failed: " + e.message };
+        }
+      }
       default:
         throw new Error(`未知工具：${funcName}`);
     }
@@ -1253,6 +1329,32 @@ ${rawSummary}
         '📈 漏斗分布：\n' + (stages || '  暂无数据');
     }
 
+
+    if (funcName === "track_topic") {
+      if (result.error) return "Error: " + result.message;
+      return "Subscribed to topic: " + result.topic + ". I will periodically search and summarize the latest developments.";
+    }
+
+    if (funcName === "list_topics") {
+      if (result.error) return "Error: " + result.message;
+      if (result.count === 0) return "No tracked topics. Say something like track AI Agent trends to subscribe.";
+      let s = "Tracked " + result.count + " topics:\\n\\n";
+      result.topics.forEach((t, i) => {
+        s += (i+1) + ". " + t.topic + " (freq: " + t.frequency + ")\\n";
+        if (t.latestSummary) s += "   Latest: " + t.latestSummary.substring(0,60) + "...\\n";
+      });
+      return s;
+    }
+
+    if (funcName === "get_briefing") {
+      if (result.error) return "Error: " + result.message;
+      if (!result.briefings || result.briefings.length === 0) {
+        return "No briefing for topic: " + result.topic + ". I can search for latest developments now.";
+      }
+      let s = "Briefing for " + result.topic + ":\\n\\n";
+      result.briefings.forEach(b => { if (b.summary) s += b.summary + "\\n\\n"; });
+      return s;
+    }
     return `${prefix}\n操作完成`;
   }
 }
