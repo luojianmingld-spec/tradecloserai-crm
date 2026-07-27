@@ -3901,3 +3901,116 @@ ReferenceError: Cannot access 'handlerRegistered' before initialization
     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
 
 Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24
+  handlerRegistered = false;
+                    ^
+
+ReferenceError: Cannot access 'handlerRegistered' before initialization
+    at file:///opt/whatsapp-crm/backend/src/services/tg-userbot-connector.js:24:21
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.23.0
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:22:44.252] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:22:44.265] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T11:22:44.338] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:22:44.338] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9514 qts=0
+[TG-UB] Starting message polling (every 120s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[TG-UB] Initialized 18 known msg IDs, pollStartTime=1785151065
+[Socket] User 1 connected (socket: l8gm4pENB9UmhNKyAAAC)
+[Socket] User 1 connected (socket: U0NrD7KSth-pwEaBAAAD)
+[TG-UB] Raw update #1: UpdateConnectionState
