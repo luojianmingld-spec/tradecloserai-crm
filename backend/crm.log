@@ -3517,3 +3517,133 @@ Unique constraint failed on the fields: (`waMessageId`)
 [Socket] User 1 connected (socket: Pf7xMeZkbpwvKYhxAAAH)
 [33m[2026-07-27T10:11:56.772] [INFO] - [Sleeping for 5s on flood wait (Caused by messages.GetHistory)][0m
 [TG-UB] Initialized 392 known msg IDs, pollStartTime=1785146992
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database check failed, running prisma db push...
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": SQLite database "crm.db" at "file:./prisma/crm.db"
+
+SQLite database crm.db created at file:./prisma/crm.db
+
+🚀  Your database is now in sync with your Prisma schema. Done in 97ms
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v6.8.2) to ./node_modules/@prisma/client in 1.14s
+
+[DB] prisma db push completed
+[Seed] Default user created: admin / admin123
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 5000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:02:07.857] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:02:07.938] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[companyMaterials] Seeded 7 default materials
+[Evolution Connector] state=open
+[33m[2026-07-27T11:02:08.018] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:02:08.019] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9510 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785150008
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T11:03:07.947Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[TG-UB] Raw update #8: UpdateConnectionState
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+[TG-UB] Raw update #11: UpdateConnectionState
+[TG-UB] Raw update #12: UpdateConnectionState
+[TG-UB] Raw update #13: UpdateConnectionState
+[TG-UB] Raw update #14: UpdateConnectionState
+[TG-UB] Raw update #15: UpdateConnectionState
+[TG-UB] Raw update #16: UpdateConnectionState
+[TG-UB] Raw update #17: UpdateConnectionState
+[TG-UB] Raw update #18: UpdateConnectionState
+[TG-UB] Raw update #19: UpdateConnectionState
+[TG-UB] Raw update #20: UpdateConnectionState
+[TG-UB] Raw update #21: UpdateConnectionState
+[TG-UB] Raw update #22: UpdateConnectionState
+[TG-UB] Raw update #23: UpdateConnectionState
+[TG-UB] Raw update #24: UpdateConnectionState
+[TG-UB] Raw update #25: UpdateConnectionState
+[TG-UB] Raw update #26: UpdateConnectionState
+[TG-UB] Raw update #27: UpdateConnectionState
+[TG-UB] Raw update #28: UpdateConnectionState
+[TG-UB] Raw update #29: UpdateConnectionState
+[TG-UB] Raw update #30: UpdateConnectionState
+
+[SIGTERM] Shutting down gracefully...
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 5000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:07:00.052] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:07:00.068] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T11:07:00.141] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:07:00.142] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9510 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[33m[2026-07-27T11:07:04.560] [INFO] - [Sleeping for 10s on flood wait (Caused by messages.GetHistory)][0m
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785150300
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+
+[SIGTERM] Shutting down gracefully...
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:08:01.577] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:08:01.598] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T11:08:01.672] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:08:01.673] [INFO] - [Using LAYER 198 for initial connect][0m
+[Socket] User 1 connected (socket: elhU3LHYSQAqsrcFAAAB)
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9510 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: XaJ9afQFgT_pS2UPAAAD)
+[Socket] User 1 connected (socket: VhEOnwawKNif5hc0AAAF)
+[Socket] User 1 connected (socket: TwSSVDO1B8vaBnGAAAAH)
+[33m[2026-07-27T11:08:04.900] [INFO] - [Sleeping for 13s on flood wait (Caused by messages.GetHistory)][0m
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785150362
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
