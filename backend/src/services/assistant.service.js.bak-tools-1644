@@ -66,7 +66,7 @@ const TOOLS = [
     name: 'generate_document',
     description: '生成PDF文档（报价单、产品目录、备忘录等）。当用户要求生成PDF、报价单、PI、产品说明文档时调用此工具。',
     parameters: {
-      docType: '文档类型（必填）。quote=报价单, PI=形式发票, CI=商业发票, contract=合同, customs=报关单, catalog=产品目录, general=通用文档',
+      docType: '文档类型（必填，可选值：quote/PI/general）。quote=报价单，PI=形式发票，general=通用文档',
       title: '文档标题（必填）',
       subtitle: '副标题/日期说明（可选）',
       content: '文档正文内容，支持Markdown格式（通用文档时必填）',
@@ -75,31 +75,6 @@ const TOOLS = [
       customerEmail: '客户邮箱（可选）',
       items: '产品列表JSON字符串，格式：[{\"name\":\"产品名\",\"spec\":\"规格\",\"qty\":数量,\"price\":单价}]（报价单/PI时必填）',
       notes: '备注说明（可选）'
-    },
-    needConfirm: false
-  },
-  {
-    name: 'exchange_rate',
-    description: '查询实时汇率。当用户询问汇率、货币转换、美元人民币价格时调用此工具。',
-    parameters: {
-      from: '源货币代码（默认USD，可选值：USD/EUR/GBP/CNY/JPY/HKD等）',
-      to: '目标货币代码（默认CNY，可选值同上）',
-      amount: '转换金额（默认1，可选）'
-    },
-    needConfirm: false
-  },
-  {
-    name: 'query_dashboard',
-    description: '查询CRM数据概览/统计信息。当用户询问今日数据、客户统计、消息统计、业绩概况时调用。',
-    parameters: {},
-    needConfirm: false
-  },
-  {
-    name: 'web_search',
-    description: '联网搜索互联网信息。用于市场分析、行业调研、竞品信息、最新动态、政策法规等需要实时信息的场景。',
-    parameters: {
-      query: '搜索关键词（必填）',
-      topic: '搜索主题/领域（可选，如market_analysis/competitor/policy/trends）'
     },
     needConfirm: false
   }
@@ -147,12 +122,8 @@ class AssistantService {
     if (!msg) return false;
     const keywords = ['查', '分析', '搜索', '找', '发', '更新', '修改', '添加',
       '客户', '订单', '消息', '记录', '状态', '跟进', '背调', '汇总', '总结',
-      '出', '报价', 'PDF', 'pi', 'ci', '生成', '文档', '发票', '目录', 'product',
-      'query', 'send', 'update', 'add', 'analyze', 'generate', 'document', 'quotation',
-      '汇率', 'exchange', 'rate', '概览', '统计', 'dashboard',
-      '开发信', '邮件', 'email', '合同', 'contract', '报关', 'customs',
-      '谈判', '建议', '策略', '市场', '竞品', '意向', '风险',
-      '调研', '趋势', '行业', '报告', '政策', '关税', '网上', '搜索'];
+      '出', '报价', 'PDF', 'pi', '生成', '文档', '发票', '目录', 'product',
+      'query', 'send', 'update', 'add', 'analyze', 'generate', 'document', 'quotation'];
     return keywords.some(k => msg.includes(k));
   }
 
@@ -229,89 +200,6 @@ class AssistantService {
       return { tool: 'generate_document', params: { docType: m.includes('pi') || m.includes('发票') || m.includes('proforma') ? 'PI' : 'quote' } };
     }
 
-    // 汇率查询
-    if (m.includes('汇率') || m.includes('exchange') || m.includes('rate') ||
-        ((m.includes('美元') || m.includes('美金') || m.includes('usd') || m.includes('欧元') || m.includes('eur') ||
-          m.includes('人民币') || m.includes('cny') || m.includes('英鎊') || m.includes('gbp')) &&
-         (m.includes('多少') || m.includes('转换') || m.includes('换') || m.includes('折算')))) {
-      let from = 'USD', to = 'CNY';
-      if (m.includes('欧元') || m.includes('eur')) from = 'EUR';
-      else if (m.includes('英鎊') || m.includes('gbp')) from = 'GBP';
-      else if (m.includes('日元') || m.includes('jpy')) from = 'JPY';
-      else if (m.includes('美元') || m.includes('美金') || m.includes('usd')) from = 'USD';
-      if (m.includes('美元') || m.includes('美金') || m.includes('usd')) { to = 'USD'; from = 'CNY'; }
-      let amount = 1;
-      const amtMatch = msg.match(/(\d+\.?\d*)\s*(?:美元|美金|usd|元|块|欧元|英鎊|日元)/i);
-      if (amtMatch) amount = parseFloat(amtMatch[1]);
-      return { tool: 'exchange_rate', params: { from, to, amount } };
-    }
-
-    // 数据概览/统计
-    if (m.includes('概览') || m.includes('统计') || m.includes('概况') || m.includes('dashboard') ||
-        (m.includes('今天') && (m.includes('数据') || m.includes('业绩'))) ||
-        m.includes('客户数') || m.includes('消息数')) {
-      return { tool: 'query_dashboard', params: {} };
-    }
-
-    // 市场分析/联网搜索/竞品分析
-    if (m.includes('市场') || m.includes('行业') || m.includes('趋势') || m.includes('竞品') ||
-        m.includes('竞争对手') || m.includes('调研') || m.includes('最新动态') || m.includes('新闻') ||
-        m.includes('政策') || m.includes('关税') || m.includes('分析报告') || m.includes('网上') ||
-        m.includes('搜一下') || m.includes('查一下市场') || m.includes('行业报告')) {
-      // Extract search query from user message
-      let searchQuery = msg;
-      // Try to extract the main topic
-      const topicPatterns = [
-        /(?:分析|调研|搜索|查一下|搜一下|看看)(.{2,30}?)(?:的|市场|行业|情况|报告|趋势)/,
-        /(.{2,20}?)(?:市场分析|行业分析|竞品分析|调研报告|发展趋势)/,
-      ];
-      for (const p of topicPatterns) {
-        const match = msg.match(p);
-        if (match && match[1]) {
-          searchQuery = match[1].trim();
-          break;
-        }
-      }
-      return { tool: 'web_search', params: { query: searchQuery, topic: 'market' } };
-    }
-
-    // 发送邮件
-    if ((m.includes('发邮件') || m.includes('email') || m.includes('写邮件')) && (m.includes('给') || m.includes('发送'))) {
-      return { tool: 'send_email', params: {} };
-    }
-
-    // 写开发信
-    if (m.includes('开发信') || m.includes('cold email') || m.includes('outreach') || (m.includes('写信') && m.includes('客户'))) {
-      // 开发信不需要工具，LLM直接生成
-      return null;
-    }
-
-    // 分析客户（单个或全部）
-    if ((m.includes('分析') && m.includes('客户')) || m.includes('跟进策略') || m.includes('客户问题') ||
-        m.includes('意向') || m.includes('风险客户') || m.includes('不活跃')) {
-      let customerName = '';
-      const patterns = [/分析(.+?)(?:的|客户)/, /(.+?)的情况/, /(.+?)有什么问题/, /(.+?)怎么跟进/];
-      for (const p of patterns) {
-        const match = msg.match(p);
-        if (match && match[1] && match[1].length <= 10 && !['所有','全部','每个','一下','这些','那些'].includes(match[1])) {
-          customerName = match[1].trim();
-          break;
-        }
-      }
-      return { tool: 'analyze_customers', params: { customerName } };
-    }
-
-    // 生成CI/合同/报关单
-    if (m.includes('ci') || m.includes('商业发票') || m.includes('commercial invoice')) {
-      return { tool: 'generate_document', params: { docType: 'CI' } };
-    }
-    if (m.includes('合同') || m.includes('contract')) {
-      return { tool: 'generate_document', params: { docType: 'contract' } };
-    }
-    if (m.includes('报关') || m.includes('customs') || m.includes('报关单') || m.includes('海关')) {
-      return { tool: 'generate_document', params: { docType: 'customs' } };
-    }
-
     return null;
   }
 
@@ -371,60 +259,27 @@ class AssistantService {
     }));
 
     // 3. 构建prompt，让LLM判断是否需要调用工具
-    const systemPrompt = `你是Jeremy的私人AI销售助理，也是一位拥有15年经验的资深外贸业务员和外贸顾问。你具备以下核心能力：
-
-【你的专业领域】
-1. 客户开发与跟进：
-   - 写开发信（cold email）：专业、有吸引力、针对目标客户定制
-   - 制定跟进策略：根据客户阶段、响应情况、行业特点给出具体跟进计划
-   - 分析每个客户的问题：识别卡点、判断意向等级、建议下一步行动
-
-2. 外贸单证制作：
-   - 报价单（Quotation）、PI（形式发票）、CI（商业发票）
-   - 合同（Contract）、报关单（Customs Declaration）、产品目录
-   - 主动提醒关键条款风险（付款方式、贸易条款、交期等）
-
-3. 市场分析与竞品调研：
-   - 行业市场趋势分析（需联网搜索最新数据时调用web_search工具）
-   - 竞争对手分析：产品、价格、渠道、营销策略对比
-   - 目标市场画像：客户需求特征、采购习惯、决策流程
-   - 竞品分析报告：结构化输出，包含SWOT分析、差异化建议
-
-4. 商务谈判：
-   - 报价策略、议价技巧、付款方式谈判
-   - 贸易条款建议（FOB/CIF/EXW等的选择与风险）
-   - 合同条款审查与风险提示
-
-5. 邮件沟通：
-   - 开发信、跟进邮件、报价邮件、售后邮件
-   - 回复客户询盘、处理投诉邮件
-   - 可通过send_email工具直接发送邮件（需确认后发送）
-
-6. 汇率查询：实时汇率查询和货币转换
+    const systemPrompt = `你是Jeremy的私人AI销售助理。你是一个有经验、有主见的外贸老手。
 
 【极其重要 - 工具调用规则】
-当用户要求你操作CRM数据或需要实时数据（汇率、市场信息等）时，你必须且只能返回JSON格式的工具调用：
+当用户要求你查询、分析、操作CRM数据（查客户/查订单/查消息/发消息/改状态/加跟进等）时，你必须且只能返回JSON格式的工具调用，绝对不能有任何其他文字！
 正确格式：{"tool": "工具名", "params": {"参数名": "参数值"}}
-错误示例："好的我去查一下" ← 绝对不要这样说！只返回JSON。
-正确示例：{"tool": "web_search", "params": {"query": "玻璃行业出口趋势2026"}}
+错误示例："好的我去查一下" ← 这是错的！不要说任何话，只返回JSON。
+正确示例：{"tool": "query_customer", "params": {}}
 
 可用工具：
 ${TOOLS_DESC}
 
 【回复规则】
-1. 不需要工具时（写开发信/给建议/讨论策略/分析客户/谈判建议等），直接给出专业回复。
+1. 不需要工具时（闲聊/讨论/建议/翻译等），用纯文本回复，像同事微信聊天一样自然。
 2. 绝对禁止使用**、-、#等Markdown符号，只用普通文字和标点。
-3. 有主见：像老业务员一样主动给判断，不模棱两可。给建议要具体可执行，不要泛泛而谈。
-4. 写开发信/邮件时：专业、简洁、有针对性，符合外贸行业习惯。包含主题行、称呼、正文、结尾。
-5. 分析客户时：结合客户阶段、历史记录、沟通频率给出具体可执行的建议。每个客户列出问题和对应策略。
-6. 做市场分析/竞品调研时：先调用web_search获取最新信息，然后综合分析给出结论。
-7. 做竞品分析报告时：结构清晰，包含市场概况、竞品列表、优劣势对比、差异化建议。
-8. 谈单证时：主动提醒关键点（付款方式风险、贸易条款选择、报关注意事项）。
-9. 调用工具拿到数据后，必须分析总结给出洞察，不能只dump数据。
+3. 有主见：主动给判断和建议，不要问"您需要我做什么"。
+4. 会认同：用户提出好想法时先肯定再补充。
+5. 调用工具拿到数据后（由系统处理），必须分析总结给出洞察，不能只dump数据。
 
-附件处理：用户可能上传图片，系统已自动分析图片内容。直接基于分析结果回复。
+附件处理：用户可能上传图片，系统已自动分析图片内容并注入对话。直接基于分析结果回复，不要说"无法查看图片"。
 
-回复简洁自然，像同事之间微信聊天。使用中文。`;
+回复简洁自然，使用中文。`;
 
     // 组装发给AI的用户消息（含附件信息）
     let userContent = userMessage || '';
@@ -761,7 +616,7 @@ ${rawSummary}
           
           const docType = args.docType || 'general';
           
-          if (docType === 'quote' || docType === 'PI' || docType === 'CI') {
+          if (docType === 'quote' || docType === 'PI') {
             // Parse items
             let items = [];
             if (typeof args.items === 'string') {
@@ -804,9 +659,9 @@ ${rawSummary}
               data: {
                 userId: 1,
                 customerId: customerId,
-                type: docType === 'PI' ? 'PI' : (docType === 'CI' ? 'CI' : 'QUOTATION'),
+                type: docType === 'PI' ? 'PI' : 'QUOTATION',
                 docNumber: `DOC-${new Date().toISOString().split('T')[0].replace(/-/g,'')}-${Date.now().toString().slice(-3)}`,
-                title: args.title || (docType === 'PI' ? 'Proforma Invoice' : (docType === 'CI' ? 'Commercial Invoice' : 'Quotation')),
+                title: args.title || (docType === 'PI' ? 'Proforma Invoice' : 'Quotation'),
                 issueDate: new Date(),
                 currency: 'USD',
                 totalAmount: total,
@@ -833,54 +688,6 @@ ${rawSummary}
             const pdfResult = await generateQuotePDF(docRecord);
             return { success: true, url: pdfResult.url, filename: pdfResult.filename, docId: docRecord.id };
             
-          } else if (docType === 'contract' || docType === 'customs' || docType === 'catalog') {
-            // Contract/Customs/Catalog - structured document with specific sections
-            const contentStr = args.content || args.title || '';
-            const sections = [];
-            const lines = contentStr.split('\n');
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed) continue;
-              if (trimmed.startsWith('## ')) {
-                sections.push({ type: 'heading', content: trimmed.slice(3) });
-              } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-                const lastSection = sections[sections.length - 1];
-                if (lastSection && lastSection.type === 'bullet-list') {
-                  lastSection.items.push(trimmed.slice(2));
-                } else {
-                  sections.push({ type: 'bullet-list', items: [trimmed.slice(2)] });
-                }
-              } else {
-                sections.push({ type: 'paragraph', content: trimmed });
-              }
-            }
-            
-            // Add trade-specific metadata to sections
-            const metaInfo = [];
-            if (args.paymentTerms) metaInfo.push('Payment Terms: ' + args.paymentTerms);
-            if (args.incoterms) metaInfo.push('Incoterms: ' + args.incoterms);
-            if (args.portOfLoading) metaInfo.push('Port of Loading: ' + args.portOfLoading);
-            if (args.portOfDischarge) metaInfo.push('Port of Discharge: ' + args.portOfDischarge);
-            if (metaInfo.length > 0) {
-              sections.unshift({ type: 'heading', content: 'Trade Terms' });
-              sections.unshift({ type: 'paragraph', content: metaInfo.join(' | ') });
-            }
-            
-            const docTitle = args.title || (docType === 'contract' ? 'Sales Contract' : (docType === 'customs' ? 'Customs Declaration' : 'Product Catalog'));
-            const payload = {
-              title: docTitle,
-              subtitle: args.subtitle || '',
-              sections,
-              options: {
-                companyName: args.customerName || '',
-                date: new Date().toISOString().split('T')[0],
-                incoterms: args.incoterms || '',
-                paymentTerms: args.paymentTerms || ''
-              }
-            };
-            
-            const pdfResult = await generateStructuredPDF(payload);
-            return { success: true, url: pdfResult.url, filename: pdfResult.filename };
           } else {
             // General document - parse markdown-like content into sections
             const contentStr = args.content || args.title || '';
@@ -919,203 +726,6 @@ ${rawSummary}
         } catch (genErr) {
           console.error('[Assistant] generate_document error:', genErr);
           return { error: genErr.message };
-        }
-      }
-
-      case 'send_email': {
-        try {
-          const { sendEmail } = await import('./email.js');
-          // Find email account
-          const emailAccount = await prisma.emailAccount.findFirst({
-            where: { userId, status: 'active' },
-            orderBy: { lastSyncAt: 'desc' }
-          });
-          if (!emailAccount) return { error: true, message: '没有可用的邮件账户，请先配置邮箱' };
-          const result = await sendEmail(emailAccount.id, {
-            to: args.to,
-            subject: args.subject || '',
-            body: args.body || '',
-            html: args.body || ''
-          });
-          return { success: true, messageId: result.messageId, to: args.to };
-        } catch(e) {
-          return { error: true, message: '邮件发送失败：' + e.message };
-        }
-      }
-
-      case 'analyze_customers': {
-        try {
-          const where = {};
-          if (args.customerName) {
-            where.OR = [
-              { name: { contains: args.customerName } },
-              { companyName: { contains: args.customerName } },
-              { contactName: { contains: args.customerName } }
-            ];
-          }
-          const customers = await prisma.customer.findMany({
-            where,
-            include: {
-              messages: { take: 5, orderBy: { createdAt: 'desc' } },
-              followUps: { take: 3, orderBy: { createdAt: 'desc' } }
-            },
-            take: args.customerName ? 5 : 50
-          });
-          const analysis = customers.map(c => ({
-            id: c.id,
-            name: c.name || c.pushName,
-            company: c.company,
-            stage: c.stage,
-            email: c.email,
-            jid: c.jid,
-            lastMessageAt: c.lastMessageAt,
-            messageCount: c._count?.messages || 0,
-            recentMessages: (c.messages || []).map(m => ({ dir: m.direction, body: (m.body||'').substring(0,100), time: m.createdAt })),
-            followUps: (c.followUps || []).map(f => ({ content: f.content, date: f.createdAt }))
-          }));
-          return { customers: analysis, count: analysis.length };
-        } catch(e) {
-          return { error: true, message: '客户分析失败：' + e.message };
-        }
-      }
-
-      case 'web_search': {
-        try {
-          const { default: axios } = await import('axios');
-          const query = args.query || userMessage || '';
-          // Use DuckDuckGo instant answer API
-          const ddgResp = await axios.get('https://api.duckduckgo.com/', {
-            params: {
-              q: query,
-              format: 'json',
-              no_html: 1,
-              skip_disambig: 1
-            },
-            timeout: 10000
-          });
-          const ddgData = ddgResp.data;
-          let results = [];
-          
-          // Extract abstract/summary
-          if (ddgData.Abstract) {
-            results.push({
-              title: ddgData.Heading || query,
-              snippet: ddgData.Abstract,
-              url: ddgData.AbstractURL || ''
-            });
-          }
-          
-          // Extract related topics
-          if (ddgData.RelatedTopics && ddgData.RelatedTopics.length > 0) {
-            for (const topic of ddgData.RelatedTopics.slice(0, 8)) {
-              if (topic.Text) {
-                results.push({
-                  title: topic.Text.substring(0, 80),
-                  snippet: topic.Text,
-                  url: topic.FirstURL || ''
-                });
-              }
-            }
-          }
-          
-          // If DDG instant answer is empty, try a basic web scrape approach
-          if (results.length === 0) {
-            // Fallback: use a search results page approach
-            const searchUrl = 'https://html.duckduckgo.com/html/';
-            const searchResp = await axios.post(searchUrl, 
-              new URLSearchParams({ q: query }).toString(),
-              {
-                headers: { 
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                },
-                timeout: 10000
-              }
-            );
-            // Parse basic results from HTML
-            const html = searchResp.data || '';
-            const resultRegex = /<a rel="nofollow" class="result__a" href="([^"]+)".*?>(.*?)<\/a>.*?<a class="result__snippet"[^>]*>(.*?)<\/a>/gs;
-            let match;
-            let count = 0;
-            while ((match = resultRegex.exec(html)) !== null && count < 8) {
-              const url = match[1];
-              const title = match[2].replace(/<[^>]+>/g, '').trim();
-              const snippet = match[3].replace(/<[^>]+>/g, '').trim();
-              if (title && snippet) {
-                results.push({ title, snippet, url });
-                count++;
-              }
-            }
-          }
-          
-          return { 
-            query, 
-            results: results.slice(0, 8),
-            count: results.length,
-            timestamp: new Date().toISOString()
-          };
-        } catch(e) {
-          return { error: true, message: '搜索失败：' + (e.response?.data?.message || e.message), query: args.query };
-        }
-      }
-
-      case 'exchange_rate': {
-        try {
-          const { default: axios } = await import('axios');
-          const from = (args.from || 'USD').toUpperCase();
-          const to = (args.to || 'CNY').toUpperCase();
-          const amount = parseFloat(args.amount) || 1;
-          const resp = await axios.get('https://api.frankfurter.dev/v1/latest', {
-            params: { from: 'EUR' },
-            timeout: 8000
-          });
-          const rates = resp.data.rates || {};
-          rates['EUR'] = 1;
-          const fromRate = rates[from];
-          const toRate = rates[to];
-          if (!fromRate || !toRate) {
-            return { error: true, message: '不支持的货币。支持：USD/EUR/GBP/CNY/JPY/HKD/AUD/CAD/CHF等' };
-          }
-          const rate = toRate / fromRate;
-          const result = amount * rate;
-          return {
-            from, to, amount, rate: rate.toFixed(4),
-            result: result.toFixed(4),
-            date: resp.data.date || '',
-            base: 'ECB'
-          };
-        } catch(e) {
-          return { error: true, message: '汇率查询失败：' + (e.response?.data?.message || e.message) };
-        }
-      }
-
-      case 'query_dashboard': {
-        try {
-          const today = new Date();
-          today.setHours(0,0,0,0);
-          const [totalCustomers, todayCustomers, totalMessages, totalDocuments, pipelineStats] = await Promise.all([
-            prisma.customer.count(),
-            prisma.customer.count({ where: { createdAt: { gte: today } } }),
-            prisma.message.count(),
-            prisma.document.count(),
-            prisma.customer.groupBy({
-              by: ['stage'],
-              _count: true
-            })
-          ]);
-          const stageMap = {};
-          for (const s of pipelineStats) {
-            stageMap[s.stage || 'unknown'] = s._count;
-          }
-          return {
-            totalCustomers,
-            todayCustomers,
-            totalMessages,
-            totalDocuments,
-            pipeline: stageMap
-          };
-        } catch(e) {
-          return { error: true, message: '统计查询失败：' + e.message };
         }
       }
 
@@ -1192,67 +802,6 @@ ${rawSummary}
       return `${prefix}\n文档「${args.title || 'Document'}」已生成！\n📄 下载地址：${host}${result.url}`;
     }
     
-    if (funcName === 'send_email') {
-      if (result.error) return '❌ ' + result.message;
-      return '✅ 邮件已发送至 ' + result.to;
-    }
-
-    if (funcName === 'analyze_customers') {
-      if (result.error) return '❌ ' + result.message;
-      if (result.count === 0) return '未找到匹配的客户';
-      let summary = '📊 客户分析结果（' + result.count + '个客户）\n\n';
-      result.customers.forEach(c => {
-        summary += '【' + (c.name||'未知') + '】' + (c.company ? ' / ' + c.company : '') + '\n';
-        summary += '  阶段: ' + (c.stage||'未设置') + ' | 邮箱: ' + (c.email||'无') + '\n';
-        if (c.lastMessageAt) summary += '  最后联系: ' + new Date(c.lastMessageAt).toLocaleDateString() + '\n';
-        if (c.recentMessages && c.recentMessages.length > 0) {
-          summary += '  最近消息: ' + c.recentMessages.length + '条\n';
-        }
-        summary += '\n';
-      });
-      return summary;
-    }
-
-    if (funcName === 'web_search') {
-      if (result.error) return '❌ ' + result.message;
-      if (!result.results || result.results.length === 0) {
-        return '🔍 未找到关于「' + result.query + '」的相关信息。';
-      }
-      let summary = '🔍 搜索结果：「' + result.query + '」\n\n';
-      result.results.forEach((r, i) => {
-        summary += (i + 1) + '. ' + r.title + '\n';
-        summary += '   ' + (r.snippet || '').substring(0, 150) + '\n';
-        if (r.url) summary += '   链接: ' + r.url + '\n';
-        summary += '\n';
-      });
-      return summary;
-    }
-
-    if (funcName === 'exchange_rate') {
-      if (result.error) return '❌ ' + result.message;
-      return '💱 汇率查询结果\n' +
-        '日期：' + result.date + '（ECB参考汇率）\n' +
-        result.amount + ' ' + result.from + ' = ' + result.result + ' ' + result.to + '\n' +
-        '汇率：1 ' + result.from + ' = ' + result.rate + ' ' + result.to;
-    }
-
-    if (funcName === 'query_dashboard') {
-      if (result.error) return '❌ ' + result.message;
-      const pipeline = result.pipeline || {};
-      const stageLabels = {lead:'线索',contacted:'已联系',qualified:'已确认',proposal:'报价中',negotiation:'谈判中',won:'成功',lost:'失败'};
-      const stages = ['lead','contacted','qualified','proposal','negotiation','won','lost'].map(s => {
-        const count = pipeline[s] || 0;
-        if (!count) return '';
-        return '  ' + (stageLabels[s]||s) + ': ' + count + '个';
-      }).filter(Boolean).join('\n');
-      return '📊 CRM数据概览\n' +
-        '客户总数：' + result.totalCustomers + '\n' +
-        '今日新增：' + result.todayCustomers + '\n' +
-        '消息总数：' + result.totalMessages + '\n' +
-        '文档总数：' + result.totalDocuments + '\n\n' +
-        '📈 漏斗分布：\n' + (stages || '  暂无数据');
-    }
-
     return `${prefix}\n操作完成`;
   }
 }
