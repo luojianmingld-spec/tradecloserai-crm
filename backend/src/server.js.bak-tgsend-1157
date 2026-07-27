@@ -664,25 +664,21 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           conv = await prisma.conversation.create({ data: { accountId: tgAccount.id, platform: "telegram", contactId: contact.id, jid: toJid } });
         }
         const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
-        const tgWaMsgId = `tg_${tgAccount.id}_${sent.message_id}_out`;
-        let savedWa = await prisma.wAMessage.findFirst({ where: { sessionId: tgSessionId, waMessageId: tgWaMsgId } });
-        if (!savedWa) {
-          savedWa = await prisma.wAMessage.create({
-            data: {
-              sessionId: tgSessionId,
-              from: "me",
-              to: toJid,
-              body: textMsg,
-              type: "text",
-              direction: "outbound",
-              timestamp: new Date(),
-              read: true,
-              translation: translationObj ? JSON.stringify(translationObj) : null,
-              sourceLang: translationObj ? (translationObj.sourceLang || "auto") : null,
-              waMessageId: tgWaMsgId,
-            },
-          });
-        }
+        const savedWa = await prisma.wAMessage.create({
+          data: {
+            sessionId: tgSessionId,
+            from: "me",
+            to: toJid,
+            body: textMsg,
+            type: "text",
+            direction: "outbound",
+            timestamp: new Date(),
+            read: true,
+            translation: translationObj ? JSON.stringify(translationObj) : null,
+            sourceLang: translationObj ? (translationObj.sourceLang || "auto") : null,
+            waMessageId: `tg_${tgAccount.id}_${sent.message_id}_out`,
+          },
+        });
         await prisma.message.create({
           data: {
             accountId: tgAccount.id, platform: "telegram", contactId: contact.id, jid: toJid,
