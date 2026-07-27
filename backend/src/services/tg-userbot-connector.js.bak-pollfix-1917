@@ -21,7 +21,6 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 let client = null;
 let connectionState = 'disconnected';
-  handlerRegistered = false;
 let eventHandlers = {};
 let me = null; // 当前登录用户信息
 
@@ -168,13 +167,13 @@ let lastKnownMsgIds = new Set(); // 已处理的消息ID
 
 function startPolling() {
   if (pollingTimer) return;
-  console.log('[TG-UB] Starting message polling (every 120s)...');
+  console.log('[TG-UB] Starting message polling (every 30s)...');
   // 先初始化已知消息ID集合
   initKnownMessages().then(() => {
-    pollingTimer = setInterval(() => pollNewMessages(), 120000);
+    pollingTimer = setInterval(() => pollNewMessages(), 30000);
   }).catch(e => {
     console.warn('[TG-UB] initKnownMessages failed:', e.message);
-    pollingTimer = setInterval(() => pollNewMessages(), 120000);
+    pollingTimer = setInterval(() => pollNewMessages(), 30000);
   });
 }
 
@@ -186,15 +185,15 @@ let pollStartTime = 0; // 只处理此时间戳之后的消息
 
 async function initKnownMessages() {
   if (!client) return;
-  pollStartTime = Math.floor(Date.now() / 1000) - 300; // 2分钟缓冲
+  pollStartTime = Math.floor(Date.now() / 1000) - 120; // 2分钟缓冲
   try {
-    const dialogs = await client.getDialogs({ limit: 8 });
+    const dialogs = await client.getDialogs({ limit: 50 });
     for (const d of dialogs) {
       if (!d.isUser) continue;
       const peerId = d.id?.toString?.();
       if (!peerId) continue;
       // 获取每个对话最近20条消息，确保覆盖
-      const msgs = await client.getMessages(peerId, { limit: 3 });
+      const msgs = await client.getMessages(peerId, { limit: 20 });
       for (const m of msgs) {
         lastKnownMsgIds.add(m.id);
       }
@@ -208,14 +207,12 @@ async function initKnownMessages() {
 async function pollNewMessages() {
   if (!client || connectionState !== 'connected') return;
   try {
-    const dialogs = await client.getDialogs({ limit: 8 });
-    for (let di = 0; di < dialogs.length; di++) {
-      const d = dialogs[di];
+    const dialogs = await client.getDialogs({ limit: 20 });
+    for (const d of dialogs) {
       if (!d.isUser) continue;
       const peerId = d.id?.toString?.();
       if (!peerId) continue;
-      if (di > 0) await new Promise(r => setTimeout(r, 2000));
-      const msgs = await client.getMessages(peerId, { limit: 3 });
+      const msgs = await client.getMessages(peerId, { limit: 10 });
       for (const m of msgs) {
         if (lastKnownMsgIds.has(m.id)) continue;
         // 只处理最近2分钟内的消息，避免捡到老消息
@@ -242,11 +239,8 @@ async function pollNewMessages() {
 }
 
 /** 监听新消息 */
-let handlerRegistered = false;
 function registerUpdateHandler() {
   if (!client) return;
-  if (handlerRegistered) { console.log('[TG-UB] Handler already registered, skip'); return; }
-  handlerRegistered = true;
   console.log('[TG-UB] Registering update handler...');
 
   // 方法1: 用 NewMessage 事件类注册（最可靠）
@@ -502,7 +496,6 @@ export async function logout() {
   }
   try { fs.unlinkSync(SESSION_FILE); } catch {}
   connectionState = 'disconnected';
-  handlerRegistered = false;
   me = null;
 }
 

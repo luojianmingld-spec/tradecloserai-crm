@@ -457,32 +457,3 @@ model AssistantTask {
   @@index([userId, status])
   @@index([conversationId])
 }
-
-
-model TopicSubscription {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  topic       String
-  description String?
-  keywords    String?
-  focusAreas  String?
-  frequency   String   @default("daily")
-  lastRunAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  active      Boolean  @default(true)
-
-  briefings   TopicBriefing[]
-
-  @@unique([userId, topic])
-}
-
-model TopicBriefing {
-  id              Int      @id @default(autoincrement())
-  subscriptionId  Int
-  content         String
-  summary         String?
-  createdAt       DateTime @default(now())
-
-  topicSubscription TopicSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-}
