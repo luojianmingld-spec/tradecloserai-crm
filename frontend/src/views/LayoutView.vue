@@ -111,7 +111,7 @@
 
     <!-- 下拉菜单透明点击层（不黑屏，点外部关菜单） -->
     <div class="mh-menu-mask" v-if="isMobile && mhMenuOpen" @click="mhMenuOpen=null"></div>
-    <div class="mh-menu-mask" v-if="isMobile && tgMenuOpen" @click="tgMenuOpen=null"></div>
+    <!-- TG dropdown: no mask needed, items handle their own close; mask would block taps (z-index conflict) -->
     <div class="mh-menu-mask" v-if="isMobile && mobileFilterMenuOpen" @click="mobileFilterMenuOpen=false"></div>
 
     <!-- 渠道/账号切换 ActionSheet（手机端顶栏标题点击弹出） -->
@@ -591,7 +591,7 @@
           <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
           <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
             <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:50;touch-action:manipulation;overflow:visible;">
-              <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
+              <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" @touchend.stop.prevent="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
               <div class="tg-avatar" style="width:40px;height:40px;border-radius:50%;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;">{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</div>
               <div style="flex:1;">
                 <div style="font-weight:600;color:var(--text-primary,#e9edef);font-size:16px;">{{ tgConversations.find(c=>c.jid===tgActiveJid)?.name || tgActiveJid }}</div>
@@ -599,11 +599,11 @@
               </div>
               <div style="display:flex;gap:4px;margin-left:auto;align-items:center;">
                 <div class="mh-menu-wrap" v-for="g in MH_GROUPS" :key="g.key">
-                  <button type="button" class="mh-btn mh-group-btn" :class="{active: tgMenuOpen===g.key || g.items.some(i=>i.key===activePanel)}" @click.stop="tgMenuOpen=tgMenuOpen===g.key?null:g.key" :title="g.label" style="touch-action:manipulation !important;-webkit-tap-highlight-color:transparent;background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:16px;position:relative;z-index:2;pointer-events:auto !important;">
+                  <button type="button" class="mh-btn mh-group-btn" :class="{active: tgMenuOpen===g.key || g.items.some(i=>i.key===activePanel)}" @click.stop="tgMenuOpen=tgMenuOpen===g.key?null:g.key" @touchend.stop.prevent="tgMenuOpen=tgMenuOpen===g.key?null:g.key" :title="g.label" style="touch-action:manipulation !important;-webkit-tap-highlight-color:transparent;background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:16px;position:relative;z-index:2;pointer-events:auto !important;">
                     <span class="mh-g-icon">{{ g.icon }}</span><span class="mh-g-caret" :class="{open: tgMenuOpen===g.key}">▾</span>
                   </button>
                   <div class="mh-dropdown" v-if="tgMenuOpen===g.key" @click.stop>
-                    <div class="mh-dd-item" v-for="it in g.items" :key="it.key" :class="{active: activePanel===it.key}" @click="tgMenuOpen=null; switchPanel(it.key)" style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;">
+                    <div class="mh-dd-item" v-for="it in g.items" :key="it.key" :class="{active: activePanel===it.key}" @click="tgMenuOpen=null; switchPanel(it.key)" @touchend.stop.prevent="tgMenuOpen=null; switchPanel(it.key)" style="touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;">
                       <span class="mh-dd-icon">{{ it.icon }}</span>
                       <span class="mh-dd-label">{{ it.label }}</span>
                       <span class="mh-dd-check" v-if="activePanel===it.key">✓</span>
@@ -4447,7 +4447,12 @@ function bgInsertAskReply() {
 }
 
 // ── 面板切换 ──
+let _panelSwitchLock = 0;
 function switchPanel(key) {
+  // 防抖：300ms 内重复调用忽略（解决移动端 touchend+click 双触发）
+  const now = Date.now();
+  if (now - _panelSwitchLock < 300) return;
+  _panelSwitchLock = now;
   // 手机端：走 openMobilePanel 统一入口（它自己处理 activePanel/mobilePanel/会话检查）
   if (isMobile.value) { openMobilePanel(key); return; }
   // 点已激活的图标 → 收起
