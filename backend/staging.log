@@ -1770,3 +1770,365 @@ Unique constraint failed on the fields: (`waMessageId`)
 [Socket] User 1 connected (socket: DeJz0bEbzbvvmw7dAAAJ)
 [Socket] User 1 connected (socket: FuVaJLWBxSVvNx-OAAAL)
 [TG-UB] Initialized 392 known msg IDs, pollStartTime=1785112250
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T00:33:50.064Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[TG-UB] Raw update #8: UpdateConnectionState
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+[TG-UB] Raw update #11: UpdateConnectionState
+[TG-UB] Raw update #12: UpdateConnectionState
+[TG-UB] Raw update #13: UpdateConnectionState
+[TG-UB] Raw update #14: UpdateConnectionState
+[TG-UB] Raw update #15: UpdateConnectionState
+[TG-UB] Raw update #16: UpdateConnectionState
+[TG-UB] Raw update #17: UpdateConnectionState
+[TG-UB] Raw update #18: UpdateConnectionState
+[TG-UB] Raw update #19: UpdateConnectionState
+[TG-UB] Raw update #20: UpdateConnectionState
+[TG-UB] Raw update #21: UpdateConnectionState
+[TG-UB] Raw update #22: UpdateConnectionState
+[TG-UB] Raw update #23: UpdateConnectionState
+[TG-UB] Raw update #24: UpdateConnectionState
+[TG-UB] Raw update #25: UpdateConnectionState
+[TG-UB] Raw update #26: UpdateConnectionState
+[TG-UB] Raw update #27: UpdateConnectionState
+[TG-UB] Raw update #28: UpdateConnectionState
+[TG-UB] Raw update #29: UpdateConnectionState
+[TG-UB] Raw update #30: UpdateConnectionState
+[TG-UB] Raw update #31: UpdateConnectionState
+[TG-UB] Raw update #32: UpdateConnectionState
+[Socket] User 1 disconnected (socket: 6Ij-ePMtAh0wZQdZAAAD)
+[TG-UB] Raw update #33: UpdateConnectionState
+[TG-UB] Raw update #34: UpdateConnectionState
+[TG-UB] Raw update #35: UpdateConnectionState
+[TG-UB] Raw update #36: UpdateConnectionState
+[TG-UB] Raw update #37: UpdateConnectionState
+[TG-UB] Raw update #38: UpdateConnectionState
+[TG-UB] Raw update #39: UpdateConnectionState
+[TG-UB] Raw update #40: UpdateConnectionState
+[TG-UB] Raw update #41: UpdateConnectionState
+[TG-UB] Raw update #42: UpdateConnectionState
+[TG-UB] Raw update #43: UpdateConnectionState
+[TG-UB] Raw update #44: UpdateConnectionState
+[TG-UB] Raw update #45: UpdateConnectionState
+[TG-UB] Raw update #46: UpdateConnectionState
+[TG-UB] Raw update #47: UpdateConnectionState
+[TG-UB] Raw update #48: UpdateConnectionState
+[TG-UB] Raw update #49: UpdateConnectionState
+[TG-UB] Raw update #50: UpdateConnectionState
+[Socket] User 1 disconnected (socket: T3wM_f3DBXNLvuFSAAAH)
+[Socket] User 1 disconnected (socket: FuVaJLWBxSVvNx-OAAAL)
+[Socket] User 1 connected (socket: RulH8ttXm6RLhHHzAAAO)
+[Socket] User 1 connected (socket: AaV9HUaHNBcaxZglAAAP)
+[Socket] User 1 disconnected (socket: RulH8ttXm6RLhHHzAAAO)
+[Socket] User 1 disconnected (socket: AaV9HUaHNBcaxZglAAAP)
+[Socket] User 1 connected (socket: BaIrcLIVV0znFMMrAAAS)
+[Socket] User 1 connected (socket: nnuQo9pOzTfZtJCnAAAT)
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #423 jid=963981860908@s.whatsapp.net cust="We can talk when you are free." → sales="الآن عندك الفجر"
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #424 jid=963981860908@s.whatsapp.net cust="We can talk when you are free." → sales="ألم تنم بعد؟"
+[Evolution] send target: 963981860908@s.whatsapp.net -> 250938380050651@lid
+[SpeechCollector] sample #425 jid=963981860908@s.whatsapp.net cust="We can talk when you are free." → sales="بالطبع، يسعدني أن أتحدث"
+[Socket] User 1 disconnected (socket: BaIrcLIVV0znFMMrAAAS)
+[Socket] User 1 disconnected (socket: nnuQo9pOzTfZtJCnAAAT)
+[Socket] User 1 connected (socket: SatgWsy0YyCT_sJtAAAW)
+[Socket] User 1 connected (socket: mKplekCT2bReZnbaAAAX)
+[Socket] User 1 disconnected (socket: mKplekCT2bReZnbaAAAX)
+[Socket] User 1 disconnected (socket: SatgWsy0YyCT_sJtAAAW)
+[Socket] User 1 connected (socket: D7JFa9cDCTk1PWQvAAAa)
+[Socket] User 1 connected (socket: CubDTl5Qoli3Q8RcAAAb)
+[TG] Backfilled 10 messages for 8626053771@telegram from GramJS history
+[Socket] User 1 disconnected (socket: D7JFa9cDCTk1PWQvAAAa)
+[Socket] User 1 disconnected (socket: CubDTl5Qoli3Q8RcAAAb)
+[Socket] User 1 connected (socket: 3WfBpSSJA2JEZSqUAAAe)
+[Socket] User 1 connected (socket: kd8MXen8QjVKUBFlAAAf)
+[Automation Scheduler] Running check at 2026-07-27T01:02:50.064Z
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 5gx3bWUW6mMhXAP5AAAB)
+[Socket] User 1 disconnected (socket: kkBTHayZgvVxLYibAAAG)
+[Socket] User 1 disconnected (socket: DeJz0bEbzbvvmw7dAAAJ)
+[Socket] User 1 disconnected (socket: 3WfBpSSJA2JEZSqUAAAe)
+[Socket] User 1 disconnected (socket: kd8MXen8QjVKUBFlAAAf)
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+file:///opt/whatsapp-crm/backend/src/server.js:2222
+                      console.log(`[TG-UB Translate] ${srcLang}->${tgtLang}: "${body[:50]}" => "${translated[:50]}"`);
+                                                                                     ^
+
+SyntaxError: Unexpected token ':'
+    at compileSourceTextModule (node:internal/modules/esm/utils:346:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:110:18)
+    at #translate (node:internal/modules/esm/loader:559:20)
+    at afterLoad (node:internal/modules/esm/loader:612:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:617:12)
+    at #createModuleJob (node:internal/modules/esm/loader:640:36)
+    at #getJobFromResolveResult (node:internal/modules/esm/loader:353:34)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:321:41)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:680:25)
+
+Node.js v22.23.0
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Dev] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T01:09:08.853] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T01:09:08.865] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T01:09:08.961] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T01:09:08.961] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9476 qts=0
+[TG-UB] Starting message polling (every 30s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: laFFAxuRb2yY64sAAAAB)
+[Socket] User 1 connected (socket: psU-9Vnu87RV1iHJAAAD)
+[Socket] User 1 connected (socket: _3afpIBqckApVF6xAAAF)
+[TG-UB] Initialized 392 known msg IDs, pollStartTime=1785114429
+[Socket] User 1 connected (socket: 3YGVvSfu5iCAq9CRAAAH)
+[Socket] User 1 connected (socket: PgVsYJ6jFvpdt1mJAAAJ)
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T01:10:08.867Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[TG-UB] Raw update #8: UpdateConnectionState
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+[TG-UB] Raw update #11: UpdateConnectionState
+[TG-UB] Raw update #12: UpdateConnectionState
+[TG-UB] Raw update #13: UpdateConnectionState
+[TG-UB] Raw update #14: UpdateConnectionState
+[TG-UB] Raw update #15: UpdateConnectionState
+[TG-UB] Raw update #16: UpdateConnectionState
+[TG-UB] Raw update #17: UpdateConnectionState
+[TG-UB] Raw update #18: UpdateConnectionState
+[TG-UB] Raw update #19: UpdateConnectionState
+[TG-UB] Raw update #20: UpdateConnectionState
+[TG-UB] Raw update #21: UpdateConnectionState
+[TG-UB] Raw update #22: UpdateConnectionState
+[TG-UB] Raw update #23: UpdateConnectionState
+[TG-UB] Raw update #24: UpdateConnectionState
+[TG-UB] Raw update #25: UpdateConnectionState
+[TG-UB] Raw update #26: UpdateConnectionState
+[TG-UB] Raw update #27: UpdateConnectionState
+[TG-UB] Raw update #28: UpdateConnectionState
+[TG-UB] Raw update #29: UpdateConnectionState
+[TG-UB] Raw update #30: UpdateConnectionState
+[TG-UB] Raw update #31: UpdateConnectionState
+[TG-UB] Raw update #32: UpdateConnectionState
+[TG-UB] Raw update #33: UpdateConnectionState
+[TG-UB] Raw update #34: UpdateConnectionState
+[TG-UB] Raw update #35: UpdateConnectionState
+[TG-UB] Raw update #36: UpdateConnectionState
+[TG-UB] Raw update #37: UpdateConnectionState
+[TG-UB] Raw update #38: UpdateConnectionState
+[TG-UB] Raw update #39: UpdateConnectionState
+[TG-UB] Raw update #40: UpdateConnectionState
+[TG-UB] Raw update #41: UpdateConnectionState
+[TG-UB] Raw update #42: UpdateConnectionState
+[TG-UB] Raw update #43: UpdateConnectionState
+[TG-UB] Raw update #44: UpdateConnectionState
+[TG-UB] Raw update #45: UpdateConnectionState
+[TG-UB] Raw update #46: UpdateConnectionState
+[TG-UB] Raw update #47: UpdateConnectionState
+[TG-UB] Raw update #48: UpdateConnectionState
+[TG-UB] Raw update #49: UpdateConnectionState
+[TG-UB] Raw update #50: UpdateConnectionState
+[Socket] User 1 connected (socket: FXpr4JEQK_K6uGAjAAAL)
+[Socket] User 1 connected (socket: lrRueqX4S-Lu7b1_AAAN)
+[Socket] User 1 disconnected (socket: FXpr4JEQK_K6uGAjAAAL)
+[Socket] User 1 disconnected (socket: lrRueqX4S-Lu7b1_AAAN)
+[Socket] User 1 connected (socket: TLRK9i9jS1urZX0XAAAP)
+[Socket] User 1 connected (socket: T8G_J0SPlHPKz52MAAAR)
+[Socket] User 1 disconnected (socket: T8G_J0SPlHPKz52MAAAR)
+[Socket] User 1 disconnected (socket: TLRK9i9jS1urZX0XAAAP)
+[Automation Scheduler] Running check at 2026-07-27T01:39:08.868Z
+[Automation Scheduler] Running check at 2026-07-27T02:09:08.867Z
+[Socket] User 1 disconnected (socket: PgVsYJ6jFvpdt1mJAAAJ)
+[Socket] User 1 disconnected (socket: 3YGVvSfu5iCAq9CRAAAH)
+[Socket] User 1 disconnected (socket: _3afpIBqckApVF6xAAAF)
+[Socket] User 1 connected (socket: olERae3nnKX-hMLQAAAU)
+[Socket] User 1 connected (socket: k90t8tqZI8bGUZP0AAAV)
+[Socket] User 1 disconnected (socket: psU-9Vnu87RV1iHJAAAD)
+[Socket] User 1 disconnected (socket: k90t8tqZI8bGUZP0AAAV)
+[Socket] User 1 disconnected (socket: olERae3nnKX-hMLQAAAU)
+[Socket] User 1 connected (socket: sGHZE6vZssYFp8chAAAY)
+[Socket] User 1 connected (socket: 25PmCaeA77Dq5al6AAAZ)
+[TG] Backfilled 11 messages for 8143302985@telegram from GramJS history
+[TG] Backfilled 50 messages for 6756720750@telegram from GramJS history
+[Socket] User 1 disconnected (socket: sGHZE6vZssYFp8chAAAY)
+[Socket] User 1 disconnected (socket: 25PmCaeA77Dq5al6AAAZ)
+[Socket] User 1 connected (socket: rymYzbbcGEzPXBGQAAAb)
+[Socket] User 1 connected (socket: 05HxbtTNM5xDU5KCAAAd)
+[Socket] User 1 connected (socket: Z1OAYgESqiMG2z6ZAAAf)
+[Socket] User 1 disconnected (socket: Z1OAYgESqiMG2z6ZAAAf)
+[Automation Scheduler] Running check at 2026-07-27T02:39:08.868Z
+[Socket] User 1 connected (socket: Od3wSqKjjIB6-jkjAAAh)
+[Socket] User 1 disconnected (socket: Od3wSqKjjIB6-jkjAAAh)
+[Socket] User 1 connected (socket: fECnH7-PMONnmHrLAAAj)
+[Socket] User 1 connected (socket: puKfeuJPp5RT9c-wAAAl)
+[Socket] User 1 disconnected (socket: puKfeuJPp5RT9c-wAAAl)
+[Socket] User 1 connected (socket: 6c-JapFKj12LoM1nAAAo)
+[Socket] User 1 disconnected (socket: fECnH7-PMONnmHrLAAAj)
+[Socket] User 1 connected (socket: eMFVLIhnGnA5IwLsAAAq)
+[Socket] User 1 connected (socket: PydjyAUN32uNPRQzAAAs)
+[Socket] User 1 disconnected (socket: eMFVLIhnGnA5IwLsAAAq)
+[Socket] User 1 disconnected (socket: PydjyAUN32uNPRQzAAAs)
+[Socket] User 1 disconnected (socket: 6c-JapFKj12LoM1nAAAo)
+[Socket] User 1 connected (socket: _FKlRyqL1wE4VhYEAAAu)
+[Socket] User 1 connected (socket: Z86jsGjLpK77EPlYAAAw)
+[TG] Backfilled 5 messages for 777000@telegram from GramJS history
+[TG] Backfilled 7 messages for 7325119927@telegram from GramJS history
+[Socket] User 1 disconnected (socket: 05HxbtTNM5xDU5KCAAAd)
+[Socket] User 1 disconnected (socket: rymYzbbcGEzPXBGQAAAb)
+[Socket] User 1 connected (socket: wQcQHqkIJC-fH2WTAAAz)
+[Socket] User 1 connected (socket: JJjoDrZ0Wx0Ce7ltAAA0)
+[Socket] User 1 disconnected (socket: Z86jsGjLpK77EPlYAAAw)
+[Socket] User 1 disconnected (socket: _FKlRyqL1wE4VhYEAAAu)
+[Socket] User 1 connected (socket: vmCzwZNW7dVsO10sAAA2)
+[Socket] User 1 connected (socket: IL96lYzHwYX4D48_AAA4)
+[Socket] User 1 disconnected (socket: IL96lYzHwYX4D48_AAA4)
+[Socket] User 1 disconnected (socket: vmCzwZNW7dVsO10sAAA2)
+[Socket] User 1 connected (socket: Oj8-rIIMmNOq_Pp1AAA6)
+[Socket] User 1 connected (socket: pqnP3Nynmp2rwA-qAAA8)
+[Socket] User 1 disconnected (socket: pqnP3Nynmp2rwA-qAAA8)
+[Socket] User 1 disconnected (socket: Oj8-rIIMmNOq_Pp1AAA6)
+[Socket] User 1 connected (socket: 5SVex-pUBf7o7T-4AAA-)
+[Socket] User 1 connected (socket: jWcX7u6oNgGknYdSAABA)
+[Socket] User 1 disconnected (socket: jWcX7u6oNgGknYdSAABA)
+[Socket] User 1 disconnected (socket: 5SVex-pUBf7o7T-4AAA-)
+[Socket] User 1 connected (socket: p2GNKIjSWizUhtQ7AABC)
+[Socket] User 1 disconnected (socket: p2GNKIjSWizUhtQ7AABC)
+[Socket] User 1 connected (socket: VXgUr0BvqJdaFnckAABE)
+[Socket] User 1 disconnected (socket: VXgUr0BvqJdaFnckAABE)
+[Socket] User 1 connected (socket: 5o7aTMKw6wvOVHb6AABG)
+[Socket] User 1 disconnected (socket: 5o7aTMKw6wvOVHb6AABG)
+[Socket] User 1 connected (socket: i7SQbo_XK3lK8SCSAABI)

@@ -233,26 +233,11 @@ export function setupSocketHandlers(io, prisma) {
       try {
         const { jid } = data || {};
         if (!jid) return;
-        // Support both WA (@s.whatsapp.net) and TG (@telegram) conversations
         const targetJid = jid.includes("@") ? jid : `${jid.replace(/\D/g, "")}@s.whatsapp.net`;
-        const isTelegram = targetJid.endsWith('@telegram');
-        if (isTelegram) {
-          // TG: update both WAMessage and Conversation unreadCount
-          await prisma.wAMessage.updateMany({
-            where: { from: targetJid, direction: 'inbound', read: false },
-            data: { read: true },
-          });
-          await prisma.conversation.updateMany({
-            where: { jid: targetJid },
-            data: { unreadCount: 0 },
-          });
-        } else {
-          // WA: original logic
-          await prisma.wAMessage.updateMany({
-            where: { sessionId: DEFAULT_SESSION_ID, from: targetJid, direction: 'inbound', read: false },
-            data: { read: true },
-          });
-        }
+        await prisma.wAMessage.updateMany({
+          where: { sessionId: DEFAULT_SESSION_ID, from: targetJid, direction: 'inbound', read: false },
+          data: { read: true },
+        });
       } catch (err) {}
     });
 
