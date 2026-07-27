@@ -627,17 +627,10 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
                 // 虚线：先翻译成中文
                 try {
                   const zhR = await _translateTextForSend(originalText, srcLang, "zh", engine, req.userId || 1);
-                  const zhText = (zhR && (zhR.translated || zhR.text)) || "";
-                  if (zhText && zhText !== textMsg) {
-                    translationObj = { original: zhText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
-                  } else {
-                    translationObj = { original: originalText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
-                  }
+                  const zhText = (zhR && (zhR.translated || zhR.text)) || originalText;
+                  translationObj = { original: zhText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
                 } catch (_) {
-                  // Only create translationObj if displayed text differs from original
-                  if (textMsg !== originalText) {
-                    translationObj = { original: originalText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
-                  }
+                  translationObj = { original: originalText, translated: textMsg, sourceLang: srcLang || "auto", targetLang: tgtLang };
                 }
               }
             } else if (tgtLang !== "zh") {
@@ -647,14 +640,9 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
                 if (zhText && zhText !== originalText) {
                   translationObj = { original: zhText, translated: originalText, sourceLang: srcLang === "auto" ? tgtLang : srcLang, targetLang: tgtLang };
                 }
-              } catch (te) { console.warn("[TG Send] zh fallback translate failed:", te.message); }
+              } catch (_) {}
             }
           } catch (te) { console.warn("[TG Send] outgoing translate failed:", te.message); }
-        }
-        // ── Safety: if translation was supposed to happen but textMsg still has Chinese, block send ──
-        if (tSettings.sendEnabled && tgtLang && tgtLang !== "zh" && /[\u4e00-\u9fff]/.test(textMsg)) {
-          console.warn("[TG Send] translation failed - textMsg still contains Chinese, blocking send");
-          return res.status(400).json({ error: "翻译失败，无法发送中文消息到Telegram。请检查翻译服务或手动输入英文。", code: "TRANSLATE_FAILED" });
         }
         let sent;
         if (isUserBot) {
@@ -715,7 +703,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           });
           io.emit("whatsapp:message_sent", {
             jid: toJid,
-            id: savedWa.id, body: textMsg, fromMe: true, timestamp: savedWa.timestamp, platform: "telegram", jid: toJid, translation: translationObj, waMessageId: savedWa.waMessageId, direction: "outbound",
+            id: savedWa.id, body: textMsg, fromMe: true, timestamp: savedWa.timestamp, platform: telegram, jid: toJid, translation: translationObj, waMessageId: savedWa.waMessageId, direction: outbound,
           });
           io.emit("conversation:update", { accountId: tgAccount.id, conversation: { id: conv.id, jid: toJid, platform: "telegram", lastMessage: textMsg.slice(0,200), lastMessageAt: new Date() } });
         }
@@ -819,11 +807,6 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     // 翻译结果对象：translation对象存在就使用（同语发送补中文虚线时也有translation）
     const translationObj = translation ? translation : null;
 
-    // ── Safety: if translation was supposed to happen but sendText still has Chinese, block send ──
-    if (tSettings.sendEnabled && tgtLang && tgtLang !== "zh" && /[\u4e00-\u9fff]/.test(sendText)) {
-      console.warn("[WA Send] translation failed - sendText still contains Chinese, blocking send");
-      return res.status(400).json({ error: "翻译失败，无法发送中文消息。请检查翻译服务或手动输入英文。", code: "TRANSLATE_FAILED" });
-    }
     // 1. 通过Evolution发消息（用译文或原文）
     const quoted = body.quoted || null;
     const result = await evoConnector.sendTextMessage(toJid, sendText, { quoted });
