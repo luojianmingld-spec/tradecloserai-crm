@@ -2042,7 +2042,7 @@
               </div>
               <!-- 工作时段建议 -->
               <div class="cul-section cul-time-advice" :class="'cul-s-' + cultureWorkStatus.status">
-                <div class="cul-sec-title">⏰ 当地时间与联系建议</div>
+                <div class="cul-sec-title">⏰ {{ customerData.city ? customerData.city + ' ' : '' }}当地时间与联系建议</div>
                 <div class="cul-big-time">{{ cultureWorkStatus.icon }} {{ cultureWorkStatus.localTime }}</div>
                 <div class="cul-tip">{{ cultureWorkStatus.tip }}</div>
                 <div class="cul-meta-grid">
@@ -3383,6 +3383,7 @@ const CUSTOMER_FIELDS = [
   { key: 'contactName', label: '联系人名' },
   { key: 'title', label: '职位/头衔' },
   { key: 'country', label: '国家/地区' },
+  { key: 'city', label: '城市/地区' },
   { key: 'email', label: '邮箱' },
   { key: 'phone', label: '电话/账号', readonly: true },
   { key: 'website', label: '网站' },
@@ -3429,7 +3430,7 @@ const PROFILE_TABS = [
 const CUSTOMER_FIELD_LABELS = Object.fromEntries(CUSTOMER_FIELDS.map(f => [f.key, f.label]));
 
 const emptyCustomer = () => ({
-  jid: null, name: '', companyName: '', contactName: '', country: '', title: '',
+  jid: null, name: '', companyName: '', contactName: '', country: '', city: '', title: '',
   email: '', website: '', phone: '', notes: '', source: 'whatsapp', customerLevel: 'C',
   tags: [], firstContactAt: null, lastContactAt: null,
   bgReport: null, bgUpdatedAt: null,
@@ -6358,6 +6359,118 @@ const dialogTitle = computed(() => {
 // timePerception: 时间观；greeting: 问候方式
 // 国家键为ISO 3166-1 alpha-2大写
 
+
+// ── 城市→时区映射（多时区国家细分） ──
+const CITY_TIMEZONES = {
+  US: {
+    'New York': 'America/New_York',
+    'Los Angeles': 'America/Los_Angeles',
+    'Chicago': 'America/Chicago',
+    'Houston': 'America/Chicago',
+    'Dallas': 'America/Chicago',
+    'Austin': 'America/Chicago',
+    'San Antonio': 'America/Chicago',
+    'Denver': 'America/Denver',
+    'Phoenix': 'America/Phoenix',
+    'Seattle': 'America/Los_Angeles',
+    'Portland': 'America/Los_Angeles',
+    'San Francisco': 'America/Los_Angeles',
+    'Boston': 'America/New_York',
+    'Miami': 'America/New_York',
+    'Atlanta': 'America/New_York',
+    'Detroit': 'America/Detroit',
+    'Philadelphia': 'America/New_York',
+    'Washington DC': 'America/New_York',
+    'Las Vegas': 'America/Los_Angeles',
+    'Salt Lake City': 'America/Denver',
+    'Minneapolis': 'America/Chicago',
+    'St. Louis': 'America/Chicago',
+    'New Orleans': 'America/Chicago',
+    'Nashville': 'America/Chicago',
+    'Charlotte': 'America/New_York',
+    'Tampa': 'America/New_York',
+    'Orlando': 'America/New_York',
+    'Anchorage': 'America/Anchorage',
+    'Honolulu': 'Pacific/Honolulu',
+  },
+  CA: {
+    'Toronto': 'America/Toronto',
+    'Montreal': 'America/Toronto',
+    'Vancouver': 'America/Vancouver',
+    'Calgary': 'America/Edmonton',
+    'Edmonton': 'America/Edmonton',
+    'Winnipeg': 'America/Winnipeg',
+    'Ottawa': 'America/Toronto',
+    'Halifax': 'America/Halifax',
+  },
+  AU: {
+    'Sydney': 'Australia/Sydney',
+    'Melbourne': 'Australia/Melbourne',
+    'Brisbane': 'Australia/Brisbane',
+    'Perth': 'Australia/Perth',
+    'Adelaide': 'Australia/Adelaide',
+    'Darwin': 'Australia/Darwin',
+    'Hobart': 'Australia/Hobart',
+  },
+  RU: {
+    'Moscow': 'Europe/Moscow',
+    'St. Petersburg': 'Europe/Moscow',
+    'Novosibirsk': 'Asia/Novosibirsk',
+    'Yekaterinburg': 'Asia/Yekaterinburg',
+    'Vladivostok': 'Asia/Vladivostok',
+    'Krasnoyarsk': 'Asia/Krasnoyarsk',
+    'Irkutsk': 'Asia/Irkutsk',
+  },
+  BR: {
+    'Sao Paulo': 'America/Sao_Paulo',
+    'Rio de Janeiro': 'America/Sao_Paulo',
+    'Brasilia': 'America/Sao_Paulo',
+    'Manaus': 'America/Manaus',
+    'Salvador': 'America/Bahia',
+  },
+  MX: {
+    'Mexico City': 'America/Mexico_City',
+    'Guadalajara': 'America/Mexico_City',
+    'Monterrey': 'America/Monterrey',
+    'Cancun': 'America/Cancun',
+    'Tijuana': 'America/Tijuana',
+  },
+  ID: {
+    'Jakarta': 'Asia/Jakarta',
+    'Bali': 'Asia/Makassar',
+    'Surabaya': 'Asia/Jakarta',
+    'Medan': 'Asia/Jakarta',
+  },
+  CN: {
+    'Beijing': 'Asia/Shanghai',
+    'Shanghai': 'Asia/Shanghai',
+    'Guangzhou': 'Asia/Shanghai',
+    'Shenzhen': 'Asia/Shanghai',
+    'Chengdu': 'Asia/Shanghai',
+    'Urumqi': 'Asia/Urumqi',
+  },
+};
+
+
+// 根据客户城市+国家解析时区
+function resolveCustomerTz(city, countryIso) {
+  if (!city || !countryIso) return null;
+  const countryMap = CITY_TIMEZONES[countryIso.toUpperCase()];
+  if (!countryMap) return null;
+  // 精确匹配
+  if (countryMap[city]) return countryMap[city];
+  // 忽略大小写匹配
+  const cityLower = city.toLowerCase();
+  for (const [c, tz] of Object.entries(countryMap)) {
+    if (c.toLowerCase() === cityLower) return tz;
+  }
+  // 部分匹配（如输入 Austin 匹配 Austin）
+  for (const [c, tz] of Object.entries(countryMap)) {
+    if (c.toLowerCase().includes(cityLower) || cityLower.includes(c.toLowerCase())) return tz;
+  }
+  return null;
+}
+
 const CULTURE_DATA = {
   // ── 中东 ──
   SY: {
@@ -7744,11 +7857,40 @@ const cultureCustomerLabel = computed(() => {
   if (!cultureNationalityIso.value) return '';
   const nat = getCulture(cultureNationalityIso.value);
   if (!nat) return '';
+  const city = customerData.value?.city;
+  const parts = [];
   if (cultureResidenceIso.value && cultureResidenceIso.value !== cultureNationalityIso.value) {
     const res = getCulture(cultureResidenceIso.value);
-    return (nat.flag + nat.name) + '国籍 · 现居' + (res ? res.flag + res.name : '');
+    parts.push(nat.flag + nat.name + '国籍');
+    if (res) {
+      let locStr = res.flag + res.name;
+      if (city) locStr += ' · ' + city;
+      parts.push('现居' + locStr);
+    }
+    return parts.join(' · ');
   }
+  // 国籍=所在国或无所在国时，显示城市
+  if (city) return nat.flag + nat.name + ' · ' + city;
   return nat.flag + nat.name;
+});
+
+
+// 客户实际时区：优先城市→所在国→国籍国
+const cultureCustomerTz = computed(() => {
+  // 1. 尝试从客户城市解析
+  const city = customerData.value?.city;
+  const countryIso = cultureResidenceIso.value || cultureNationalityIso.value;
+  if (city && countryIso) {
+    const tz = resolveCustomerTz(city, countryIso);
+    if (tz) return tz;
+  }
+  // 2. 回退到国家默认时区
+  if (cultureResidenceIso.value) {
+    const resInfo = getCulture(cultureResidenceIso.value);
+    if (resInfo?.tz) return resInfo.tz;
+  }
+  const info = cultureInfo.value;
+  return info?.tz || null;
 });
 
 const cultureWorkStatus = computed(() => {
@@ -7756,8 +7898,8 @@ const cultureWorkStatus = computed(() => {
   if (!cultureIso.value) return { status:'none', icon:'', tip:'', localTime:'', hour:0, weekday:'', isWeekend:false };
   const info = cultureInfo.value;
   if (!info) return { status:'none', icon:'', tip:'', localTime:'', hour:0, weekday:'', isWeekend:false };
-  // 如果useResidence，时间用所在国；否则用国籍国（同国家）
-  const tz = info.tz;
+  // 优先使用客户城市时区，回退到国家默认
+  const tz = cultureCustomerTz.value || info.tz;
   return getLocalWorkStatus(tz, info.workHours) || { status:'none', icon:'', tip:'', localTime:'', hour:0, weekday:'', isWeekend:false };
 });
 
@@ -11994,6 +12136,29 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .el-popper.crm-dark-popper .el-select-dropdown__empty {
   color: var(--text-secondary) !important;
 }
+/* 客户资料面板 select 下拉暗色适配 */
+.customer-fields .el-popper.crm-dark-popper {
+  background: #233138 !important;
+  border: 1px solid #2f3338 !important;
+  border-radius: 8px !important;
+}
+.customer-fields .el-popper.crm-dark-popper .el-select-dropdown__item {
+  color: #e9edef !important;
+}
+.customer-fields .el-popper.crm-dark-popper .el-select-dropdown__item:hover,
+.customer-fields .el-popper.crm-dark-popper .el-select-dropdown__item.is-hovering {
+  background: #2a3942 !important;
+}
+.customer-fields .el-popper.crm-dark-popper .el-select-dropdown__item.is-selected {
+  color: #00a884 !important;
+  font-weight: 600;
+}
+/* nc-country 下拉暗色适配 */
+.nc-country-list { background: #233138 !important; border-color: #2f3338 !important; }
+.nc-country-item { color: #e9edef !important; }
+.nc-country-item:hover { background: #2a3942 !important; }
+.nc-search-wrap { background: #233138 !important; }
+.nc-search-input { background: #2a3942 !important; color: #e9edef !important; }
 
 /* 全局：功能面板内所有 Element Plus 控件统一黑底下划线风格 */
 .col-function-panel .el-select .el-select__wrapper,
