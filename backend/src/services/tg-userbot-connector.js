@@ -21,7 +21,6 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 let client = null;
 let connectionState = 'disconnected';
-  handlerRegistered = false;
 let eventHandlers = {};
 let me = null; // 当前登录用户信息
 
@@ -164,6 +163,7 @@ export async function autoConnectUserBot(opts) {
 
 // ── 轮询兜底机制 ──
 let pollingTimer = null;
+let handlerRegistered = false;
 let lastKnownMsgIds = new Set(); // 已处理的消息ID
 
 function startPolling() {
@@ -242,7 +242,6 @@ async function pollNewMessages() {
 }
 
 /** 监听新消息 */
-let handlerRegistered = false;
 function registerUpdateHandler() {
   if (!client) return;
   if (handlerRegistered) { console.log('[TG-UB] Handler already registered, skip'); return; }
