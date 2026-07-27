@@ -5,7 +5,7 @@
     <!-- 对话区域 -->
     <div class="chat-area" ref="chatArea">
       <div v-if="messages.length === 0" class="welcome">
-        <div class="welcome-icon"><img src="/avatar_assistant.jpg" alt="AI" class="avatar-img" /></div>
+        <div class="welcome-icon">🤖</div>
         <h3>你好，我是你的外贸智能体</h3>
         <p>既能操作CRM，也能自由聊天：</p>
         <div class="quick-actions">
