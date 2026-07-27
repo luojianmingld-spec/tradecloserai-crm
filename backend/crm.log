@@ -4014,3 +4014,123 @@ Node.js v22.23.0
 [Socket] User 1 connected (socket: l8gm4pENB9UmhNKyAAAC)
 [Socket] User 1 connected (socket: U0NrD7KSth-pwEaBAAAD)
 [TG-UB] Raw update #1: UpdateConnectionState
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:25:04.110] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:25:04.123] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T11:25:04.196] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:25:04.197] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9514 qts=0
+[TG-UB] Starting message polling (every 120s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: tpmkLXbfRwW8fbzFAAAB)
+[TG-UB] Initialized 18 known msg IDs, pollStartTime=1785151204
+[Socket] User 1 connected (socket: qL3gpiIrbH1zqOStAAAD)
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T11:26:04.126Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[TG-UB] Raw update #8: UpdateConnectionState
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: tpmkLXbfRwW8fbzFAAAB)
+[Socket] User 1 disconnected (socket: qL3gpiIrbH1zqOStAAAD)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:26:45.943] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:26:45.958] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T11:26:46.031] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:26:46.032] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9514 qts=0
+[TG-UB] Starting message polling (every 120s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[Socket] User 1 connected (socket: lEZk9GkR0H5kmx5wAAAC)
+[TG-UB] Initialized 18 known msg IDs, pollStartTime=1785151306
+[Socket] User 1 connected (socket: pBexciSCwQjFEz7HAAAD)
+[Assistant] AI raw response: "{\"tool\": \"track_topic\", \"params\": {\"topic\": \"玻璃行业趋势\", \"keywords\": \"[\\\"玻璃出口\\\",\\\"玻璃市场\\\",\\\"玻璃行业趋势\\\"]\", \"focusAreas\": \"[\\\"市场分析\\\",\\\"政策法规\\\",\\\"技术趋势\\\"]\", \"frequency\": \"daily\"}}"
+[Assistant] Parsed toolCall from AI JSON: {"tool":"track_topic","params":{"topic":"玻璃行业趋势","keywords":"[\"玻璃出口\",\"玻璃市场\",\"玻璃行业趋势\"]","focusAreas":"[\"市场分析\",\"政策法规\",\"技术趋势\"]","frequency":"daily"}}
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[TG-UB] Raw update #4: UpdateConnectionState
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T11:27:45.961Z
+[TG-UB] Raw update #6: UpdateConnectionState
+[TG-UB] Raw update #7: UpdateConnectionState
+[TG-UB] Raw update #8: UpdateConnectionState
+[TG-UB] Raw update #9: UpdateConnectionState
+[TG-UB] Raw update #10: UpdateConnectionState
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: lEZk9GkR0H5kmx5wAAAC)
+[Socket] User 1 disconnected (socket: pBexciSCwQjFEz7HAAAD)
+[Production] Serving frontend from: /opt/whatsapp-crm/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Server] Sessions dir: /opt/whatsapp-crm/backend/sessions
+[Production] Server running on port 3000
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[33m[2026-07-27T11:28:27.456] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=jeremy-main
+[33m[2026-07-27T11:28:27.468] [INFO] - [Connecting to 91.108.56.177:80/TCPFull...][0m
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-07-27T11:28:27.539] [INFO] - [Connection to 91.108.56.177:80/TCPFull complete!][0m
+[33m[2026-07-27T11:28:27.540] [INFO] - [Using LAYER 198 for initial connect][0m
+[Socket] User 1 connected (socket: I0GnavaVbamE4vY_AAAC)
+[Socket] User 1 connected (socket: DuHnEy8npdFlGRQ3AAAD)
+[TG-UB] Auto-connected as: LuoFeng28
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=9514 qts=0
+[TG-UB] Starting message polling (every 120s)...
+[TG-UB] Auto-connected: LuoFeng28
+[TG] Webhook already OK for @jzjglass2026_bot, skip reset
+[TG-UB] Initialized 18 known msg IDs, pollStartTime=1785151408
+[Assistant] AI raw response: "{\"tool\": \"track_topic\", \"params\": {\"topic\": \"玻璃行业趋势\", \"keywords\": \"[\\\"玻璃行业\\\", \\\"玻璃出口\\\", \\\"玻璃市场趋势\\\", \\\"玻璃技术创新\\\"]\", \"focusAreas\": \"[\\\"行业动态\\\", \\\"市场分析\\\", \\\"政策法规\\\", \\\"技术发展\\\"]\", \"frequency\": \"daily\"}}"
+[Assistant] Parsed toolCall from AI JSON: {"tool":"track_topic","params":{"topic":"玻璃行业趋势","keywords":"[\"玻璃行业\", \"玻璃出口\", \"玻璃市场趋势\", \"玻璃技术创新\"]","focusAreas":"[\"行业动态\", \"市场分析\", \"政策法规\", \"技术发展\"]","frequency":"daily"}}
+[Assistant] AI raw response: "{\"tool\": \"list_topics\", \"params\": {}}"
+[Assistant] Parsed toolCall from AI JSON: {"tool":"list_topics","params":{}}
+[TG-UB] Raw update #1: UpdateConnectionState
+[TG-UB] Raw update #2: UpdateConnectionState
+[TG-UB] Raw update #3: UpdateConnectionState
+[Assistant] AI raw response: "{\"tool\": \"track_topic\", \"params\": {\"topic\": \"玻璃行业趋势\", \"keywords\": \"玻璃行业, 玻璃市场, 玻璃出口, 玻璃行情\", \"focusAreas\": \"市场趋势, 供需分析, 价格走势, 技术更新\"}}"
+[Assistant] Parsed toolCall from AI JSON: {"tool":"track_topic","params":{"topic":"玻璃行业趋势","keywords":"玻璃行业, 玻璃市场, 玻璃出口, 玻璃行情","focusAreas":"市场趋势, 供需分析, 价格走势, 技术更新"}}
+[TG-UB] Raw update #4: UpdateConnectionState
+[Assistant] AI raw response: "目前我这边没有成功为你开启追踪功能，也没有记录到任何已追踪的话题。之前尝试使用追踪工具时出现了系统错误，所以这部分功能暂时不可用。\n\n不过，我可以马上为你联网搜索最新的玻璃行业趋势，并整理出来给你看。你需要我现在搜一期吗？或者你具体关注哪方面（比如建筑玻璃、光伏玻璃、出口市场、主要产区数据等），我帮你深挖一下。"
+[Assistant] No JSON tool pattern found in AI response
+[Assistant] Backend intent detected: null
+[TG-UB] Raw update #5: UpdateConnectionState
+[Automation Scheduler] Running check at 2026-07-27T11:29:27.470Z
+[TG-UB] Raw update #6: UpdateConnectionState
