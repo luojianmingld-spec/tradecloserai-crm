@@ -379,7 +379,7 @@
 
         <!-- ④ 聊天列表栏 -->
         <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }">
-          <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid">
+          <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
               <span class="wa-col-title">Telegram</span>
@@ -578,7 +578,7 @@
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
           <!-- TG tab 且未选中会话：直接显示TG空状态 -->
-          <div v-if="activeChannel === 'telegram' && !tgActiveJid" class="conv-placeholder" style="background:var(--chat-bg,#0b141a);">
+          <div v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile" class="conv-placeholder" style="background:var(--chat-bg,#0b141a);">
             <div class="ph-icon" style="background:#E3F2FD;">✈️</div>
             <div class="ph-title">Telegram Bot 已连接</div>
             <div class="ph-desc" style="text-align:center;line-height:1.6;">
@@ -7642,19 +7642,9 @@ function cultureGetAutoIso(jid, conv) {
   if (!jid) return null;
   // 1. 手动设置优先
   if (cultureManualNationality.value) return cultureManualNationality.value;
-  // 2. 从jid推断国家码（WA格式 86xxx@s.whatsapp.net 直接匹配）
-  let iso = detectCountryFromJid(jid);
-  if (iso) return iso;
-  // 3. TG jid无法从userId匹配，回退到customerData的phone字段
-  const phone = customerData.value?.phone;
-  if (phone) {
-    iso = detectCountryFromJid(phone + '@s.whatsapp.net');
-    if (iso) return iso;
-  }
-  // 4. 客户档案country字段
-  const country = customerData.value?.country;
-  if (country) return country.toUpperCase();
-  return null;
+  // 2. 客户档案country字段（需要后端返回，这里先跳过，从手机号国家码判断）
+  // 3. 手机号国家码
+  return detectCountryFromJid(jid);
 }
 
 const cultureNationalityIso = computed(() => {
