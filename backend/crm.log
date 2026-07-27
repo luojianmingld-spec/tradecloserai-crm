@@ -2866,3 +2866,4 @@ Unique constraint failed on the fields: (`waMessageId`)
 [33m[2026-07-27T03:53:13.992] [INFO] - [Sleeping for 3s on flood wait (Caused by messages.GetHistory)][0m
 [Automation Scheduler] Running check at 2026-07-27T03:55:32.245Z
 [33m[2026-07-27T03:58:44.335] [INFO] - [Sleeping for 4s on flood wait (Caused by messages.GetHistory)][0m
+[33m[2026-07-27T04:04:45.434] [INFO] - [Sleeping for 20s on flood wait (Caused by messages.GetHistory)][0m
