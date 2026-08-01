@@ -10,8 +10,12 @@ const prisma = new PrismaClient();
 
 const EVO_API_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
 const EVO_API_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
-const INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
-const OWNER_JID = "8613016242602@s.whatsapp.net";
+const INSTANCES = ["jeremy-main", "jeremy-eric"];
+const SESSION_MAP = { "jeremy-main": "user_1", "jeremy-eric": "user_2" };
+const OWNER_JIDS = {
+  "jeremy-main": "8613016242602@s.whatsapp.net",
+  "jeremy-eric": "8618038118960@s.whatsapp.net",
+};
 const LOOKBACK_SEC = 180;       // 补拉最近3分钟
 const INTERVAL_MS = 60_000;     // 每60秒跑一次
 const INITIAL_DELAY_MS = 30_000;
@@ -50,15 +54,23 @@ function extractBody(m) {
 
 // 从Evolution拉最近消息（直接拉最近100条，本地过滤）
 async function fetchRecentMessages() {
-  const url = `${EVO_API_URL}/chat/findMessages/${INSTANCE}?page=1`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: EVO_API_KEY },
-    body: JSON.stringify({ limit: 100, orderBy: { messageTimestamp: "desc" } }),
-  });
-  if (!resp.ok) { console.warn("[Backfill] fetch HTTP", resp.status); return []; }
-  const data = await resp.json().catch(() => null);
-  return data?.messages?.records || [];
+  let all = [];
+  for (const inst of INSTANCES) {
+    try {
+      const url = `${EVO_API_URL}/chat/findMessages/${inst}?page=1`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: EVO_API_KEY },
+        body: JSON.stringify({ limit: 100, orderBy: { messageTimestamp: "desc" } }),
+      });
+      if (!resp.ok) { console.warn(`[Backfill] fetch HTTP ${inst}`, resp.status); continue; }
+      const data = await resp.json().catch(() => null);
+      const records = data?.messages?.records || [];
+      records.forEach(r => { r._instance = inst; });
+      all.push(...records);
+    } catch(e) { console.warn(`[Backfill] fetch ${inst} error:`, e.message); }
+  }
+  return all;
 }
 
 async function upsertCustomer(phone, pushName) {
@@ -113,7 +125,7 @@ async function runBackfill(io) {
       if (isGroup(remoteJid)) continue;
       if (remoteJid === "status@broadcast") continue;
       if (key.fromMe) continue; // 出站消息不补拉（自己发的不会丢）
-      if (remoteJid === OWNER_JID) continue;
+      if (remoteJid === (OWNER_JIDS[m._instance] || OWNER_JIDS["jeremy-main"])) continue;
 
       resolved.push({ m, key, remoteJid });
     }
@@ -142,8 +154,9 @@ async function runBackfill(io) {
         if (extracted.type === "unknown") continue;
 
         const direction = fromMe ? "outbound" : "inbound";
-        const from = fromMe ? OWNER_JID : remoteJid;
-        const to = fromMe ? remoteJid : OWNER_JID;
+        const ownerJid = OWNER_JIDS[m._instance] || OWNER_JIDS["jeremy-main"];
+        const from = fromMe ? ownerJid : remoteJid;
+        const to = fromMe ? remoteJid : ownerJid;
         const pushName = m.pushName || "";
         const ts = evoTsToDate(m.messageTimestamp);
         const waMsgTs = evoTsToUnixSec(m.messageTimestamp);
@@ -152,7 +165,7 @@ async function runBackfill(io) {
           where: { waMessageId },
           update: {}, // 已存在则不动
           create: {
-            sessionId: "user_1", from, to,
+            sessionId: SESSION_MAP[m._instance] || "user_1", from, to,
             body: extracted.body, type: extracted.type, direction,
             timestamp: ts, waMessageId,
             fileName: extracted.fileName || null,

@@ -387,7 +387,7 @@ async function loadCustomers() {
     if (searchQuery.value) params.set('search', searchQuery.value);
     if (filterStatus.value) params.set('status', filterStatus.value);
     const { data } = await api.get(`/customers?${params.toString()}`);
-    customers.value = data;
+    customers.value = data.items || data;
   } catch (err) {
     console.error('Failed to load customers:', err);
   } finally {
@@ -932,7 +932,7 @@ onMounted(() => {
 }
 
 .customer-card {
-  background: var(--panel-bg);
+  background: var(--panel-header-bg);
   border: 1px solid var(--sidebar-active);
   border-radius: 10px;
   padding: 12px;

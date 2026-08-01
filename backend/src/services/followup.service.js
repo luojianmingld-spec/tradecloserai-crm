@@ -30,7 +30,7 @@ const TEST_ONLY_RE = /^(test|test1|hi test|Test message confirmed\.|debug log te
 
 // 非文本系统类消息（reaction、poll、protocol 等），不计入统计
 const SYSTEM_TYPES = new Set([
-  'reactionMessage', 'protocolMessage', 'pollCreationMessage',
+  'reactionMessage', 'reaction', 'protocolMessage', 'pollCreationMessage',
   'pollUpdateMessage', 'pinInChatMessage', 'keepInChatMessage',
   'paymentMessage', 'productMessage', 'groupInviteMessage',
   'stickerMessage', 'callLogMesssage',   // 注意 typo 保持原枚举

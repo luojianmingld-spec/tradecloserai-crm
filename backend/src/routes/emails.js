@@ -183,6 +183,12 @@ router.get('/accounts/:id/emails', async (req, res) => {
     const [emails, total] = await Promise.all([
       prisma.emailMessage.findMany({
         where,
+        select: {
+          id: true, accountId: true, messageId: true, from: true, to: true,
+          subject: true, direction: true, translation: true, sourceLang: true,
+          attachmentNames: true, createdAt: true, read: true,
+          body: true, bodyHtml: false, bodyPlain: false,
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take,
@@ -194,6 +200,22 @@ router.get('/accounts/:id/emails', async (req, res) => {
   } catch (err) {
     console.error('[Emails] List emails error:', err);
     res.status(500).json({ error: 'Failed to list emails' });
+  }
+});
+
+
+// GET single email with full content
+router.get('/detail/:id', async (req, res) => {
+  try {
+    const emailId = parseInt(req.params.id);
+    const email = await prisma.emailMessage.findFirst({
+      where: { id: emailId, account: { userId: req.userId } },
+    });
+    if (!email) return res.status(404).json({ error: 'Email not found' });
+    res.json(email);
+  } catch (err) {
+    console.error('[Emails] Get email error:', err);
+    res.status(500).json({ error: 'Failed to get email' });
   }
 });
 

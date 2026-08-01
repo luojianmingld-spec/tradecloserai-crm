@@ -1,0 +1,292 @@
+import { PrismaClient } from "@prisma/client";
+import { chatComplete, getActiveProvider } from "./ai-client.js";
+
+const prisma = new PrismaClient();
+
+// In-memory cache for fast lookup (backed by DB)
+const memoryCache = new Map();
+
+// Default translation settings
+const DEFAULT_SETTINGS = {
+  translationEnabled: "true",
+  translationEngine: "doubao",
+  translationTargetLang: "auto",
+  translationAutoSend: "false",
+};
+
+/**
+ * Get translation settings for a user
+ */
+export async function getTranslationSettings(userId) {
+  const settings = await prisma.setting.findMany({
+    where: { userId },
+  });
+  const map = {};
+  for (const s of settings) {
+    map[s.key] = s.value;
+  }
+  return { ...DEFAULT_SETTINGS, ...map };
+}
+
+/**
+ * Update a translation setting
+ */
+export async function updateSetting(userId, key, value) {
+  return prisma.setting.upsert({
+    where: { userId_key: { userId, key } },
+    create: { userId, key, value },
+    update: { value },
+  });
+}
+
+/**
+ * Batch update translation settings
+ */
+export async function updateSettings(userId, settings) {
+  const ops = Object.entries(settings).map(([key, value]) =>
+    prisma.setting.upsert({
+      where: { userId_key: { userId, key } },
+      create: { userId, key, value: String(value) },
+      update: { value: String(value) },
+    })
+  );
+  return Promise.all(ops);
+}
+
+/**
+ * Detect language of text using LLM
+ */
+export async function detectLanguage(text, engine = "doubao") {
+  if (!text || text.trim().length === 0) return "unknown";
+
+  // Simple heuristic for common languages
+  const detected = quickDetect(text);
+  if (detected !== "unknown") return detected;
+
+  // Use LLM for uncertain cases
+  try {
+    const langResponse = await chatComplete(
+      [
+        {
+          role: "system",
+          content:
+            "You are a language detection tool. Return ONLY the ISO 639-1 language code (2 letters) for the given text. Examples: en, zh, es, de, fr, ja, ko, ar, pt, ru, it, nl, tr, th, vi, id. Return only the code, nothing else.",
+        },
+        { role: "user", content: text.substring(0, 200) },
+      ],
+      { temperature: 0.1 }
+    );
+
+    const lang = langResponse.trim().toLowerCase();
+    if (/^[a-z]{2}$/.test(lang)) return lang;
+    return "unknown";
+  } catch (err) {
+    console.error("[Translation] Language detection error:", err);
+    return "unknown";
+  }
+}
+
+/**
+ * Quick language detection using character patterns
+ */
+function quickDetect(text) {
+  if (/[\u4e00-\u9fff]/.test(text)) return "zh";
+  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+  if (/[\uac00-\ud7af]/.test(text)) return "ko";
+  if (/[\u0600-\u06ff]/.test(text)) return "ar";
+  if (/[\u0e00-\u0e7f]/.test(text)) return "th";
+  if (/[\u0900-\u097f]/.test(text)) return "hi";
+  if (/[\u0400-\u04ff]/.test(text)) return "ru";
+  if (/[a-zA-Z]/.test(text)) {
+    const lower = text.toLowerCase();
+    if (/\b(der|die|das|und|ist|ich|nicht|ein|mit|auf|für)\b/.test(lower)) return "de";
+    if (/\b(el|la|los|las|de|en|que|por|con|una|para)\b/.test(lower)) return "es";
+    if (/\b(le|la|les|de|des|du|un|une|est|dans|pour)\b/.test(lower)) return "fr";
+    if (/\b(o|a|os|as|de|em|que|um|uma|para|com)\b/.test(lower)) return "pt";
+    if (/\b(il|la|lo|le|gli|di|da|in|che|un|per)\b/.test(lower)) return "it";
+    return "en";
+  }
+  return "unknown";
+}
+
+/**
+ * Translate text using LLM
+ */
+export async function translateText(text, sourceLang, targetLang, engine = "doubao", userId = null) {
+  if (!text || text.trim().length === 0)
+    return { translated: "", sourceLang: sourceLang || "unknown", targetLang };
+
+  sourceLang = sourceLang || "auto";
+  targetLang = targetLang || "zh";
+
+  if (sourceLang !== "auto" && sourceLang === targetLang) {
+    return { translated: text, sourceLang, targetLang };
+  }
+
+  // Check cache
+  const cacheKey = `${text}|${sourceLang}|${targetLang}|${engine}`;
+  if (memoryCache.has(cacheKey)) {
+    const cached = memoryCache.get(cacheKey);
+    return { translated: cached, sourceLang, targetLang, cached: true };
+  }
+
+  // Check DB cache
+  try {
+    const dbCached = await prisma.translationCache.findUnique({
+      where: {
+        sourceText_sourceLang_targetLang_engine: {
+          sourceText: text,
+          sourceLang,
+          targetLang,
+          engine,
+        },
+      },
+    });
+    if (dbCached) {
+      memoryCache.set(cacheKey, dbCached.translated);
+      return { translated: dbCached.translated, sourceLang, targetLang, cached: true };
+    }
+  } catch (err) {
+    // Cache lookup failed, continue with translation
+  }
+
+  // Use LLM for translation
+  try {
+    const langNames = {
+      zh: "Chinese", en: "English", es: "Spanish", de: "German",
+      fr: "French", ja: "Japanese", ko: "Korean", ar: "Arabic",
+      pt: "Portuguese", ru: "Russian", it: "Italian", nl: "Dutch",
+      tr: "Turkish", th: "Thai", vi: "Vietnamese", id: "Indonesian",
+      hi: "Hindi",
+    };
+
+    const targetName = langNames[targetLang] || targetLang;
+    const sourceInstruction =
+      sourceLang === "auto"
+        ? "Detect the source language automatically"
+        : `The source language is ${langNames[sourceLang] || sourceLang}`;
+
+    const systemPrompt = `You are a professional translator for international trade emails. Translate the given email text to ${targetName}. ${sourceInstruction}.
+
+Rules:
+1. Return ONLY the translated text, no explanations, no quotes wrapping the output
+2. Preserve the original paragraph structure with line breaks exactly
+3. Do NOT output >, >>, >>> quote prefixes that were in the source; output clean paragraphs only
+4. Translate email headers like "On Mon, Sep 22, 2025, X wrote:" into natural Chinese like "2025年9月22日（周一），XXX 写道："
+5. For business/trade terms use standard Chinese industry terminology (e.g. DDP=完税后交货, PI=形式发票, MOQ=最小起订量)
+6. Keep numbers, currency symbols, URLs and email addresses as-is
+7. Preserve line breaks between paragraphs
+8. If text is already in ${targetName}, return it unchanged`;
+
+    const translated = await chatComplete(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: text },
+      ],
+      { temperature: 0.3 }
+    );
+
+    const trimmed = translated.trim();
+
+    // Save to cache
+    memoryCache.set(cacheKey, trimmed);
+    try {
+      await prisma.translationCache.upsert({
+        where: {
+          sourceText_sourceLang_targetLang_engine: {
+            sourceText: text,
+            sourceLang,
+            targetLang,
+            engine,
+          },
+        },
+        create: {
+          sourceText: text,
+          sourceLang,
+          targetLang,
+          engine,
+          translated: trimmed,
+        },
+        update: { translated: trimmed },
+      });
+    } catch (cacheErr) {
+      console.error("[Translation] Cache write error:", cacheErr.message);
+    }
+
+    return { translated: trimmed, sourceLang, targetLang, cached: false };
+  } catch (err) {
+    console.error("[Translation] Translation error:", err);
+    return { translated: "", sourceLang, targetLang, error: err.message };
+  }
+}
+
+/**
+ * Auto-translate an incoming message
+ */
+export async function autoTranslateMessage(message, userId) {
+  try {
+    const settings = await getTranslationSettings(userId);
+
+    if (settings.translationEnabled !== "true") return null;
+    if (!message.content || message.messageType !== "text") return null;
+
+    const engine = settings.translationEngine || "doubao";
+    const targetLang = settings.translationTargetLang || "zh";
+
+    let sourceLang = await detectLanguage(message.content, engine);
+
+    let effectiveTarget = targetLang;
+    if (effectiveTarget === "auto") effectiveTarget = "zh";
+
+    if (sourceLang === effectiveTarget) return null;
+
+    const result = await translateText(message.content, sourceLang, effectiveTarget, engine, userId);
+
+    if (result.translated && result.translated !== message.content) {
+      await prisma.wAMessage.update({
+        where: { id: message.id },
+        data: {
+          translation: result.translated,
+          sourceLang: sourceLang,
+        },
+      });
+      return {
+        translation: result.translated,
+        sourceLang,
+        targetLang: effectiveTarget,
+      };
+    }
+
+    return null;
+  } catch (err) {
+    console.error("[Translation] Auto-translate error:", err);
+    return null;
+  }
+}
+
+/**
+ * Translate outgoing message text
+ */
+export async function translateOutgoing(text, contactLang, userId) {
+  try {
+    const settings = await getTranslationSettings(userId);
+
+    if (!text || settings.translationEnabled !== "true") {
+      return { translated: text, sourceLang: "zh", targetLang: contactLang };
+    }
+
+    const engine = settings.translationEngine || "doubao";
+    const sourceLang = await detectLanguage(text, engine);
+
+    let targetLang = contactLang || "en";
+    if (sourceLang === targetLang) {
+      return { translated: text, sourceLang, targetLang };
+    }
+
+    const result = await translateText(text, sourceLang, targetLang, engine, userId);
+    return result;
+  } catch (err) {
+    console.error("[Translation] Outgoing translate error:", err);
+    return { translated: text, error: err.message };
+  }
+}

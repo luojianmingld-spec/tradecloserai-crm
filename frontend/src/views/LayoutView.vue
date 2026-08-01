@@ -90,6 +90,10 @@
           </button>
         </nav>
         <div class="mdp-footer">
+          <button class="mdp-item" @click="showSettings = true; mobileDrawerOpen = false">
+            <span class="mdp-icon">⚙️</span>
+            <span class="mdp-label">设置</span>
+          </button>
           <button class="mdp-item" @click="toggleTheme">
             <span class="mdp-icon">{{ isDark ? '☀️' : '🌙' }}</span>
             <span class="mdp-label">{{ isDark ? '日间模式' : '夜间模式' }}</span>
@@ -121,44 +125,42 @@
     <transition name="sheet-up">
       <div v-if="isMobile && channelSheetOpen" class="action-sheet channel-sheet" @click.stop>
         <div class="action-sheet-title">切换渠道</div>
-        <button class="action-sheet-item"
-                v-for="ch in channels" :key="ch.id"
-                :class="{active: activeChannel===ch.id, 'asi-offline': ch.status==='offline'}"
-                @click="selectChannel(ch.id); channelSheetOpen=false">
-          <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
-          <span class="asi-label">{{ ch.name }}</span>
-          <span v-if="ch.id==='whatsapp' && (chatStore.followupCounts?.firstResponse||0) > 0" class="asi-badge asi-badge-red">{{ chatStore.followupCounts.firstResponse }}</span>
-          <span v-else-if="ch.id==='telegram' && tgUnreadTotal > 0" class="asi-badge" style="background:#2AABEE;">{{ tgUnreadTotal }}</span>
-          <span v-else-if="ch.id==='email' && emailUnreadTotal > 0" class="asi-badge" style="background:#EA4335;">{{ emailUnreadTotal }}</span>
-          <span v-if="ch.status==='offline'" class="asi-tag asi-tag-soon">即将上线</span>
-          <span v-if="activeChannel===ch.id" class="asi-check">✓</span>
-        </button>
-        <!-- WA多账号区（预占位，单账号时不显示切换，但显示当前账号信息） -->
-        <div class="as-sub-accounts" v-if="activeChannel==='whatsapp' && waAccounts.length > 1">
-          <div class="as-sub-title">WhatsApp 账号</div>
-          <button class="action-sheet-item as-sub-item"
-                  v-for="acc in waAccounts" :key="acc.id"
-                  :class="{active: acc.id===currentWaAccountId}"
-                  @click="switchWaAccount(acc.id)">
-            <span class="asi-icon">
-              <img v-if="acc.avatar" :src="acc.avatar" class="as-acc-avatar" />
-              <span v-else class="as-acc-avatar as-acc-fallback" :style="{background: acc.color}">{{ (acc.name||'?')[0] }}</span>
-            </span>
-            <span class="asi-label">{{ acc.name }}</span>
-            <span v-if="acc.online" class="asi-tag asi-tag-online">在线</span>
-            <span v-else class="asi-tag">离线</span>
-            <span v-if="acc.id===currentWaAccountId" class="asi-check">✓</span>
+        <template v-for="ch in channels" :key="ch.id">
+          <button class="action-sheet-item"
+                  :class="{active: activeChannel===ch.id, 'asi-offline': ch.status==='offline'}"
+                  @click="selectChannel(ch.id); channelSheetOpen=false">
+            <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
+            <span class="asi-label">{{ ch.name }}</span>
+            <span v-if="ch.id==='whatsapp' && (chatStore.followupCounts?.firstResponse||0) > 0" class="asi-badge asi-badge-red">{{ chatStore.followupCounts.firstResponse }}</span>
+            <span v-else-if="ch.id==='telegram' && tgUnreadTotal > 0" class="asi-badge" style="background:#2AABEE;">{{ tgUnreadTotal }}</span>
+            <span v-else-if="ch.id==='email' && emailUnreadTotal > 0" class="asi-badge" style="background:#EA4335;">{{ emailUnreadTotal }}</span>
+            <span v-if="ch.status==='offline'" class="asi-tag asi-tag-soon">即将上线</span>
+            <span v-if="activeChannel===ch.id" class="asi-check">✓</span>
           </button>
-        </div>
-        <div class="as-sub-accounts" v-else-if="activeChannel==='whatsapp'">
-          <div class="as-sub-title">当前账号</div>
-          <div class="as-current-acc">
-            <span class="as-cur-name">{{ chatStore.pushName || chatStore.connectedPhone || 'WhatsApp' }}</span>
-            <span class="asi-tag asi-tag-online" v-if="chatStore.isConnected">在线</span>
-            <span class="asi-tag" v-else>未连接</span>
-            <span class="as-add-account" @click="channelSheetOpen=false; $message.info('多账号功能开发中')">+ 添加账号</span>
+          <!-- WA多账号作为二级菜单紧跟WhatsApp按钮 -->
+          <div class="as-sub-accounts as-sub-menu" v-if="ch.id==='whatsapp' && waAccounts.length > 1">
+            <button class="action-sheet-item as-sub-item"
+                    v-for="acc in waAccounts" :key="acc.id"
+                    :class="{active: acc.id===currentWaAccountId}"
+                    @click="switchWaAccount(acc.id); channelSheetOpen=false">
+              <span class="asi-icon">
+                <span class="as-acc-avatar as-acc-fallback" :style="{background: acc.color}">{{ (acc.name||'?')[0] }}</span>
+              </span>
+              <span class="asi-label">{{ acc.name }}</span>
+              <span v-if="acc.online" class="asi-tag asi-tag-online">在线</span>
+              <span v-else class="asi-tag">离线</span>
+              <span v-if="acc.id===currentWaAccountId" class="asi-check">✓</span>
+            </button>
           </div>
-        </div>
+          <div class="as-sub-accounts as-sub-menu" v-else-if="ch.id==='whatsapp'">
+            <div class="as-current-acc">
+              <span class="as-cur-name">{{ chatStore.pushName || chatStore.connectedPhone || 'WhatsApp' }}</span>
+              <span class="asi-tag asi-tag-online" v-if="chatStore.isConnected">在线</span>
+              <span class="asi-tag" v-else>未连接</span>
+            </div>
+          </div>
+        </template>
+
         <button class="action-sheet-item asi-cancel" @click="channelSheetOpen=false">取消</button>
       </div>
     </transition>
@@ -184,6 +186,8 @@
           <span class="mh-ch-icon" v-html="channelIcons[activeChannel] || '💬'"></span>
           <div class="mh-name-row mh-name-row-list">
             <span class="mh-name-text">{{ mobileHeaderTitle }}</span>
+            <span v-if="chatStore.activeJid && getBgRating(chatStore.activeJid)" class="mh-bg-rating" :style="{background: bgRatingColor(getBgRating(chatStore.activeJid))}" :title="'背调评级: ' + getBgRating(chatStore.activeJid)">{{ getBgRating(chatStore.activeJid) }}</span>
+            <span v-if="chatStore.activeJid && getBantLevel(chatStore.activeJid)" class="mh-bant-level" :class="'bant-' + getBantLevel(chatStore.activeJid).toLowerCase()" @click="openBantDetail(chatStore.activeJid)" :title="'BANT: ' + getBantLevel(chatStore.activeJid) + ' · ' + (bantScoreMap[chatStore.activeJid]?.totalScore || '')">{{ getBantLevel(chatStore.activeJid) }} · {{ bantScoreMap[chatStore.activeJid]?.totalScore }}</span>
             <svg class="mh-ch-caret" viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
 
           </div>
@@ -196,7 +200,7 @@
         <!-- 对话视图：头像+名字 -->
         <template v-else>
           <div v-if="activeChannel==='whatsapp' && chatStore.activeConversation" class="mh-avatar" :style="{background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)}">
-            <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid) && !mhAvatarFailed" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="mhAvatarFailed=true" alt=""/>
+            <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar) && !mhAvatarFailed" :src="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar)" @error="mhAvatarFailed=true" alt=""/>
             <span v-else>{{ (chatStore.activeConversation.name || '?')[0] }}</span>
           </div>
           <div v-else-if="activeChannel==='telegram' && tgActiveJid" class="mh-avatar" style="background:#2AABEE;">
@@ -207,8 +211,11 @@
           </div>
           <div class="mh-name-row">
             <span class="mh-name-text">{{ mobileHeaderTitle }}</span>
-            <span v-if="cultureIso && cultureInfo && activeChannel==='whatsapp'" class="mh-cul-badge" :class="'mh-cul-s-'+cultureWorkStatus.status" @click.stop="switchPanel('worldclock')">
+            <span v-if="cultureIso && cultureInfo && (activeChannel==='whatsapp' || activeChannel==='telegram')" class="mh-cul-badge" :class="'mh-cul-s-'+cultureWorkStatus.status" @click.stop="switchPanel('worldclock')">
               {{ cultureInfo.name }} {{ cultureWorkStatus.localTime }} {{ cultureWorkStatus.icon }}
+            </span>
+            <span v-else-if="activeChannel==='telegram' && !cultureIso && chatStore.activeConversation && chatStore.activeConversation.platform === 'telegram' && !chatStore.activeConversation.contactPhone" class="mh-cul-badge mh-cul-set-hint" @click.stop="switchPanel('worldclock')">
+              🌐 设置国家
             </span>
           </div>
         </template>
@@ -232,7 +239,7 @@
     <!-- 工作区 -->
     <div class="workspace" :class="{ 'has-mheader': isMobile, 'has-tabbar': isMobile, 'full-page': isMobile && activePlatform !== 'communication' }">
       <!-- 沟通模块 -->
-    <div v-if="activePlatform === 'communication'" class="comm-module" :class="{ 'email-active': activeChannel === 'email', 'drawer-open': isMobile && mobileDrawerOpen, 'in-conv': isMobile && (mobileInConv || mobilePanel) }">
+    <div v-if="activePlatform === 'communication'" class="comm-module" :class="{ 'email-active': activeChannel === 'email', 'drawer-open': isMobile && mobileDrawerOpen, 'in-conv': isMobile && (mobileInConv || mobilePanel) }" :style="isMobile ? { overflow: 'hidden', position: 'relative', width: '100%', height: '100%' } : {}">
         <!-- 渠道图标切换条：v-for遍历channels，后期加渠道只需在channels数组+channelIcons加一项 -->
           <div class="ch-switch" v-if="activePlatform==='communication' && !mobileInConv && !mobilePanel && !isMobile">
             <button
@@ -277,35 +284,51 @@
           </div>
 
           <template v-if="!accountsCollapsed">
-            <!-- 单账号模型：极简 WhatsApp 账号卡 -->
+            <!-- 多WA账号列表 -->
             <div class="wa-account-list" v-if="activeChannel === 'whatsapp'">
-              <!-- 未连接：显示引导卡 -->
-              <div v-if="!chatStore.isConnected" class="wa-empty-card" @click="doConnectWA">
+              <!-- 无任何账号或未连接任何账号 -->
+              <div v-if="waAccounts.length === 0" class="wa-empty-card" @click="doConnectWA">
                 <div class="wa-empty-avatar">
                   <svg viewBox="0 0 32 32" width="28" height="28" fill="#8696a0"><path d="M16.003 3C9.385 3 4 8.384 4 15.002c0 2.416.719 4.669 1.956 6.542L4 27l5.567-1.874a11.94 11.94 0 006.436 1.878c6.617 0 12.002-5.384 12.002-12.001C28.005 8.384 22.62 3 16.003 3zm6.953 15.79c-.291-.146-1.724-.849-1.992-.945-.268-.097-.464-.146-.659.147-.194.292-.752.945-.922 1.138-.17.195-.34.22-.632.073-.292-.147-1.233-.455-2.348-1.448-.866-.772-1.452-1.727-1.623-2.018-.17-.292-.018-.45.128-.597.132-.132.293-.342.439-.513.146-.17.195-.293.292-.488.098-.195.049-.366-.024-.513-.073-.147-.658-1.586-.904-2.172-.239-.567-.483-.49-.658-.498-.17-.008-.365-.01-.56-.01-.195 0-.513.073-.782.366-.269.293-1.026 1.002-1.026 2.443 0 1.442 1.05 2.834 1.197 3.03.146.194 2.058 3.14 4.987 4.397.697.301 1.24.48 1.665.614.699.223 1.335.192 1.837.116.56-.085 1.725-.705 1.968-1.387.243-.681.243-1.264.17-1.386-.072-.122-.268-.195-.56-.34z"/></svg>
                 </div>
                 <div class="wa-empty-info">
                   <div class="wa-empty-name">WhatsApp</div>
-                  <div class="wa-empty-meta">
-                    <span v-if="chatStore.connectionStatus === 'connecting' || chatStore.connectionStatus === 'waiting_qr'" class="status-text connecting">等待扫码...</span>
-                    <span v-else-if="chatStore.connectionStatus === 'error'" class="status-text error">{{ chatStore.waError || '连接错误' }}</span>
-                    <span v-else class="status-text">点击扫码登录</span>
-                  </div>
+                  <div class="wa-empty-meta"><span class="status-text">点击扫码登录</span></div>
                 </div>
               </div>
-              <!-- 已连接：账号卡 -->
-              <div v-else class="wa-account-item active">
-                <div class="acc-avatar" :style="!selfAvatarOk ? {background: selfAvatarBg} : {}">
-                  <img v-if="chatStore.selfAvatarUrl && selfAvatarOk" class="acc-avatar-img" :src="chatStore.selfAvatarUrl" @error="onSelfAvatarError" alt="" />
-                  <span v-else class="acc-avatar-initial">{{ selfInitial }}</span>
-                  <span class="acc-online-dot"></span>
+              <!-- "全部"选项：显示所有账号合并视图 -->
+              <div v-if="waAccounts.length > 1"
+                   class="wa-account-item"
+                   :class="{active: currentWaAccountId === null}"
+                   @click="switchWaAccount(null)">
+                <div class="acc-avatar" style="background:#00a884;">
+                  <span class="acc-avatar-initial" style="font-size:16px;">📱</span>
                 </div>
                 <div class="acc-info">
-                  <div class="acc-name">{{ chatStore.pushName || chatStore.connectedPhone || 'WhatsApp' }}</div>
-                  <div class="acc-meta online-text">在线</div>
+                  <div class="acc-name">全部账号</div>
+                  <div class="acc-meta">{{ waAccounts.filter(a=>a.online).length }} 个在线</div>
                 </div>
-              </div><!-- email渠道已嵌入右侧面板 -->
-
+                <span v-if="currentWaAccountId === null" class="acc-check">✓</span>
+              </div>
+              <!-- 各WA账号卡片 -->
+              <div v-for="acc in waAccounts" :key="acc.id"
+                   class="wa-account-item"
+                   :class="{active: currentWaAccountId === acc.id}"
+                   @click="switchWaAccount(acc.id); channelSheetOpen=false">
+                <div class="acc-avatar" :style="!acc.avatar ? {background: acc.color} : {}">
+                  <img v-if="acc.avatar" class="acc-avatar-img" :src="acc.avatar" alt="" />
+                  <span v-else class="acc-avatar-initial">{{ (acc.name||'?')[0] }}</span>
+                  <span v-if="acc.online" class="acc-online-dot"></span>
+                </div>
+                <div class="acc-info">
+                  <div class="acc-name">{{ acc.name }}</div>
+                  <div class="acc-meta" :class="acc.online ? 'online-text' : 'offline-text'">
+                    {{ acc.phone || acc.instanceName }}
+                    <span v-if="acc.proxyIp" class="acc-proxy-tag">🌐 {{ acc.proxyIp }}</span>
+                  </div>
+                </div>
+                <span v-if="currentWaAccountId === acc.id" class="acc-check">✓</span>
+              </div>
             </div>
 
             <!-- Telegram账号区 -->
@@ -357,12 +380,22 @@
           <!-- 折叠态：当前渠道显示头像，点击展开 -->
           <div class="channel-icons" v-else>
             <!-- WhatsApp -->
-            <div v-if="activeChannel === 'whatsapp'" class="ch-avatar-btn active" @click="accountsCollapsed = false" title="点击展开">
-              <div class="ch-avatar" :style="!selfAvatarOk ? {background: selfAvatarBg} : {}">
+            <div v-if="activeChannel === 'whatsapp'" class="ch-avatar-btn active" @click="accountsCollapsed = false" title="点击展开" :style="{ width: '48px', borderRadius: '50%', height: waAccounts.length > 1 ? 'auto' : '48px', padding: waAccounts.length > 1 ? '4px 2px' : '0' }">
+              <!-- 多账号堆叠头像 -->
+              <div v-if="waAccounts.length > 1" class="ch-avatar-stack">
+                <div v-for="(acc, idx) in waAccounts.slice(0, 3)" :key="acc.id"
+                  class="ch-avatar ch-avatar-stacked" :style="{ background: acc.color, width: '44px', height: '44px', fontSize: '16px', border: '2px solid var(--sidebar-bg,#0b141a)' }">
+                  <img v-if="acc.profilePicUrl" class="ch-avatar-img" :src="acc.profilePicUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                  <span v-else class="ch-avatar-initial">{{ (acc.name || '?')[0] }}</span>
+                </div>
+                <span v-if="waAccounts.length > 3" class="ch-avatar-more" style="width:44px;height:44px;border-radius:50%;background:#555;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;border:2px solid var(--sidebar-bg,#0b141a);">+{{ waAccounts.length - 3 }}</span>
+              </div>
+              <!-- 单账号 -->
+              <div v-else class="ch-avatar" :style="!selfAvatarOk ? {background: selfAvatarBg} : {}">
                 <img v-if="chatStore.selfAvatarUrl && selfAvatarOk" class="ch-avatar-img" :src="chatStore.selfAvatarUrl" @error="onSelfAvatarError" alt="" />
                 <span v-else class="ch-avatar-initial">{{ selfInitial }}</span>
               </div>
-              <div class="p-tooltip">{{ chatStore.pushName || 'WhatsApp' }}</div>
+              <div class="p-tooltip">{{ waAccounts.length > 1 ? waAccounts.map(a=>a.name).join(',') : (chatStore.pushName || 'WhatsApp') }}</div>
             </div>
             <!-- Telegram -->
             <div v-else-if="activeChannel === 'telegram'" class="ch-avatar-btn active" @click="accountsCollapsed = false" title="点击展开" style="background:#2AABEE;">
@@ -378,7 +411,7 @@
         </aside>
 
         <!-- ④ 聊天列表栏 -->
-        <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }">
+        <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }" :style="isMobile ? { width: '100%', maxWidth: 'none', borderRight: 'none', minWidth: '0', minHeight: '0' } : {}">
           <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
@@ -520,11 +553,13 @@
               @touchmove.passive="onConvTouchMove"
             >
               <div class="conv-avatar" :style="!convAvatarOk(conv) ? {background: conv.color} : {}">
-                <img v-if="chatStore.loadAvatar(conv.jid) && convAvatarOk(conv)" class="conv-avatar-img" :src="chatStore.loadAvatar(conv.jid)" @error="onConvAvatarError(conv.jid)" alt="" />
+                <img v-if="chatStore.loadAvatar(conv.jid, conv.avatar) && convAvatarOk(conv)" class="conv-avatar-img" :src="chatStore.loadAvatar(conv.jid, conv.avatar)" @error="onConvAvatarError(conv.jid)" alt="" />
                 <span v-else class="conv-avatar-initial">{{ convInitial(conv) }}</span>
                 <span class="conv-status-dot" :class="conv.status || 'offline'"></span>
                 <span v-if="conv.followupStatus" class="conv-followup-dot" :class="'fu-dot-' + conv.followupStatus"></span>
                 <span v-if="conv.firstResponseWaited" class="conv-fr-badge" :title="'已等待 ' + conv.firstResponseWaited + ' 分钟'">⚡急</span>
+                <span v-if="getBgRating(conv.jid)" class="conv-bg-rating" :style="{background: bgRatingColor(getBgRating(conv.jid))}" :title="'背调评级: ' + getBgRating(conv.jid)">{{ getBgRating(conv.jid) }}</span>
+                <span v-if="getBantLevel(conv.jid)" class="conv-bant-level" :class="'bant-' + getBantLevel(conv.jid).toLowerCase()" @click.stop="openBantDetail(conv.jid)" :title="'BANT: ' + getBantLevel(conv.jid) + ' · ' + (bantScoreMap[conv.jid]?.totalScore || '')">{{ getBantLevel(conv.jid).charAt(0) }}</span>
               </div>
               <div class="conv-main">
                 <div class="conv-row">
@@ -532,6 +567,7 @@
                     <span v-if="conv.firstResponseWaited" class="conv-fr-dot-inline" :title="'已等待 ' + conv.firstResponseWaited + ' 分钟'">⚡</span>
                     <span v-else-if="conv.followupStatus" class="conv-followup-dot-inline" :class="'fu-dot-' + conv.followupStatus"></span>
                     <span v-if="conv.platform === 'telegram'" class="conv-badge" title="Telegram" style="background:#2AABEE;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:4px;font-weight:600;">TG</span>
+                    <span v-if="conv.platform === 'whatsapp' && chatStore.accountFilter == null && waAccounts.length > 1 && conv.accountName" class="conv-badge conv-acc-badge" :style="{background: accColor(conv.accountId)}" :title="conv.accountName">{{ conv.accountName }}</span>
                     {{ conv.name }}
                     <span v-if="conv.pinned" class="conv-badge conv-badge-pin" title="已置顶">📌</span>
                     <span v-if="conv.starred" class="conv-badge conv-badge-star" title="特别关注">⭐</span>
@@ -572,14 +608,14 @@
               </button>
               <button class="action-sheet-item asi-danger" @click="doDeleteConv">
                 <span class="asi-icon">🗑️</span>
-                <span>删除聊天</span>
+                <span>删除联系人</span>
               </button>
               <button class="action-sheet-item asi-cancel" @click="closeConvMenu">取消</button>
             </div>
           </transition>
 
 </aside>
-        <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (activeConv || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }">
+        <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (activeConv || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }" :style="isMobile ? { position: 'absolute', left: '0', right: '0', top: '0', bottom: '0', transform: (mobileInConv && (activeConv || tgActiveJid)) ? 'none' : 'translateX(100%)', zIndex: '45' } : {}">
           <!-- 📧 邮箱渠道嵌入式视图 -->
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
@@ -595,15 +631,21 @@
             </div>
           </div>
           <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
-          <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
+          <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);padding-bottom:env(safe-area-inset-bottom)">
             <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:50;touch-action:manipulation;overflow:visible;">
               <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" @touchend.stop.prevent="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
               <div class="tg-avatar" style="width:40px;height:40px;border-radius:50%;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;">{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</div>
               <div style="flex:1;">
                 <div style="font-weight:600;color:var(--text-primary,#e9edef);font-size:16px;">{{ tgConversations.find(c=>c.jid===tgActiveJid)?.name || tgActiveJid }}</div>
-                <div style="font-size:12px;color:var(--text-secondary,#8696a0);">✈️ Telegram</div>
+                <div style="font-size:12px;color:var(--text-secondary,#8696a0);display:flex;align-items:center;gap:4px;justify-content:flex-start;">
+                  <span v-if="tgCultureInfo && tgCultureWorkStatus.localTime" :style="{display:'inline-flex',alignItems:'center',gap:'3px',padding:'1px 6px',borderRadius:'10px',fontSize:'11px',fontWeight:500,marginRight:'auto',background:tgCultureWorkStatus.status==='working'?'rgba(46,204,113,0.15)':tgCultureWorkStatus.status==='night'?'rgba(52,152,219,0.15)':tgCultureWorkStatus.status==='weekend'?'rgba(155,89,182,0.15)':'rgba(241,196,15,0.15)',color:'#e9edef',cursor:'pointer'}" @click.stop="switchPanel('worldclock')">
+                    {{ tgCultureInfo.name }} {{ tgCultureWorkStatus.localTime }} {{ tgCultureWorkStatus.icon }}
+                  </span>
+                  <span v-else-if="tgActiveConv && tgActiveConv.platform === 'telegram' && !tgActiveConv.contactPhone" style="color:#e67e22;font-size:11px;cursor:pointer;" @click.stop="switchPanel('worldclock')">🌐 请设置国家</span>
+                  <span v-else>✈️ Telegram</span>
+                </div>
               </div>
-              <div style="display:flex;gap:4px;margin-left:auto;align-items:center;">
+              <div v-if="isMobile" style="display:flex;gap:4px;margin-left:auto;align-items:center;">
                 <div class="mh-menu-wrap" v-for="g in MH_GROUPS" :key="g.key">
                   <button type="button" class="mh-btn mh-group-btn" :class="{active: tgMenuOpen===g.key || g.items.some(i=>i.key===activePanel)}" @click.stop="tgMenuOpen=tgMenuOpen===g.key?null:g.key" @touchend.stop.prevent="tgMenuOpen=tgMenuOpen===g.key?null:g.key" :title="g.label" style="touch-action:manipulation !important;-webkit-tap-highlight-color:transparent;background:transparent;border:none;color:var(--text-secondary,#8696a0);cursor:pointer;padding:6px;border-radius:50%;font-size:16px;position:relative;z-index:2;pointer-events:auto !important;">
                     <span class="mh-g-icon">{{ g.icon }}</span><span class="mh-g-caret" :class="{open: tgMenuOpen===g.key}">▾</span>
@@ -621,9 +663,20 @@
             <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;">
               <div v-for="m in tgMessages" :key="m.id" :style="{alignSelf:m.fromMe?'flex-end':'flex-start',maxWidth:'75%'}">
                 <div :style="{background:m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)',color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word'}">
+                  <!-- 媒体消息：显示图片/视频 -->
+                  <template v-if="m.mediaUrl && (m.type === 'image' || m.type === 'MessageMediaPhoto' || m.messageType === 'image' || m.messageType === 'MessageMediaPhoto' || m.mediaType === 'MessageMediaPhoto')">
+                    <a :href="m.mediaUrl" target="_blank" rel="noopener"><img :src="m.mediaUrl" style="max-width:100%;border-radius:8px;margin-bottom:4px;cursor:pointer;" @error="$event.target.style.display='none'" /></a>
+                  </template>
+                  <template v-else-if="m.mediaUrl && (m.type === 'video' || m.type === 'MessageMediaVideo' || m.messageType === 'video' || m.messageType === 'MessageMediaVideo')">
+                    <video :src="m.mediaUrl" controls style="max-width:100%;border-radius:8px;margin-bottom:4px;max-height:240px;"></video>
+                  </template>
+                  <template v-else-if="m.mediaUrl">
+                    <a :href="m.mediaUrl" target="_blank" style="color:inherit;text-decoration:underline;">📎 {{ m.text || '附件' }}</a>
+                  </template>
+                  <!-- 文本消息 -->
                   <template v-if="m.translationObj">
-                    <div style="color:inherit;">{{ m.text }}</div>
-                    <div :style="{fontSize:'12px',color:'rgba(255,255,255,0.85)',marginTop:'4px',fontStyle:'italic',borderTop:'1px solid rgba(255,255,255,0.25)',paddingTop:'4px'}">翻译：{{ m.translationObj.translated }}</div>
+                    <div style="color:inherit;">{{ /[\u4e00-\u9fff]/.test(m.text) && m.translationObj.translated && !/[\u4e00-\u9fff]/.test(m.translationObj.translated) ? m.translationObj.translated : m.text }}</div>
+                    <div :style="{fontSize:'12px',color:'rgba(255,255,255,0.85)',marginTop:'4px',fontStyle:'italic',borderTop:'1px solid rgba(255,255,255,0.25)',paddingTop:'4px'}">{{ /[\u4e00-\u9fff]/.test(m.translationObj.translated) ? m.translationObj.translated : m.translationObj.original }}</div>
                   </template>
                   <template v-else>{{ m.text }}</template>
                 </div>
@@ -631,7 +684,7 @@
               </div>
               <div v-if="tgMessages.length === 0" style="text-align:center;color:var(--text-secondary,#8696a0);padding:20px;">暂无消息，在 Telegram 发第一条消息吧</div>
             </div>
-            <div class="tg-input" style="display:flex;gap:8px;padding:10px 12px;background:var(--panel-header-bg,#202c33);border-top:1px solid var(--border-color,#222d34);">
+            <div class="tg-input" style="display:flex;gap:8px;padding:10px 12px 14px;background:var(--panel-header-bg,#202c33);border-top:1px solid var(--border-color,#222d34);padding-bottom:max(14px, env(safe-area-inset-bottom))">
               <input v-model="tgInputText" @keydown.enter="sendTgMessage" placeholder="输入消息..." style="flex:1;background:var(--input-bg,#2a3942);border:none;border-radius:20px;padding:10px 16px;color:var(--text-primary,#e9edef);font-size:14px;outline:none;" />
               <button @click="sendTgMessage" :disabled="tgSending" style="width:42px;height:42px;border-radius:50%;border:none;background:#2AABEE;color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">➤</button>
             </div>
@@ -658,7 +711,7 @@
         </main>
 
         <!-- ⑥ 功能面板（AI助手 / 翻译设置） -->
-        <aside class="col-function-panel" :class="{ collapsed: !isMobile && panelCollapsed, mini: !isMobile && aiMiniMode && activePanel === 'ai', translating: !isMobile && activePanel === 'translate', aitalking: !isMobile && activePanel === 'aitalk', customering: !isMobile && activePanel === 'customer', requirementing: !isMobile && activePanel === 'requirement', documenting: !isMobile && activePanel === 'documents', companying: !isMobile && activePanel === 'company', clocking: !isMobile && activePanel === 'worldclock', forexing: !isMobile && activePanel === 'forex', freighting: !isMobile && activePanel === 'freight', 'm-panel': isMobile, 'm-panel-show': isMobile && mobilePanel }" :style="!isMobile && !panelCollapsed ? 'width:' + panelWidth + 'px' : ''">
+        <aside class="col-function-panel" :class="{ collapsed: !isMobile && panelCollapsed, mini: !isMobile && aiMiniMode && activePanel === 'ai', translating: !isMobile && activePanel === 'translate', aitalking: !isMobile && activePanel === 'aitalk', customering: !isMobile && activePanel === 'customer', requirementing: !isMobile && activePanel === 'requirement', documenting: !isMobile && activePanel === 'documents', companying: !isMobile && activePanel === 'company', clocking: !isMobile && activePanel === 'worldclock', forexing: !isMobile && activePanel === 'forex', freighting: !isMobile && activePanel === 'freight', 'm-panel': isMobile, 'm-panel-show': isMobile && mobilePanel, tracking: !isMobile && activePanel === 'tracking' }" :style="!isMobile && !panelCollapsed ? 'width:' + panelWidth + 'px' : ''">
           <div v-if="!isMobile && !panelCollapsed && activePanel" class="ai-resize-handle" @mousedown="startPanelDrag"></div>
           <div class="col-header panel-col-header" :class="{ 'ai-col-header': activePanel === 'ai' }">
             <template v-if="!panelCollapsed">
@@ -697,7 +750,7 @@
                 </button>
               </div>
               <div class="ai-title" v-else-if="activePanel === 'worldclock'">
-                <span class="ai-title-icon">🕰️</span>
+                🕰️ 时间文化
                 <span class="ai-title-text">时间与文化</span>
                 <button v-if="cultureIso" class="col-toggle" @click="cultureShowCustom = !cultureShowCustom" title="切换国籍/所在国">🔄</button>
               </div>
@@ -709,6 +762,11 @@
               <div class="ai-title" v-else-if="activePanel === 'freight'">
                 <span class="ai-title-icon">🚢</span>
                 <span class="ai-title-text">运费查询</span>
+              </div>
+              <div class="ai-title" v-else-if="activePanel === 'tracking'">
+                <span class="ai-title-icon">📈</span>
+                <span class="ai-title-text">效果追踪</span>
+                <button class="col-toggle" @click="loadTrackingData()" title="刷新">⟳</button>
               </div>
               <div class="ai-title" v-else-if="activePanel === 'customer'">
                 <span class="ai-title-icon">👤</span>
@@ -802,6 +860,26 @@
                           <span>{{ st.label }}</span>
                         </div>
                       </div>
+                      <!-- Phase 5: Length selector -->
+                      <div class="ai-section-title-row" style="margin-top:8px">
+                        <div class="ai-section-title">话术长度</div>
+                      </div>
+                      <div class="ai-length-chips">
+                        <button
+                          v-for="ln in replyLengths"
+                          :key="ln.key"
+                          class="ai-length-chip"
+                          :class="{ active: replyLength === ln.key }"
+                          @click="replyLength = ln.key"
+                        >{{ ln.icon }} {{ ln.label }}</button>
+                      </div>
+                      <!-- Phase 5: Context toggle -->
+                      <div class="ai-context-toggle">
+                        <label class="ai-toggle-label">
+                          <input type="checkbox" v-model="replyIncludeContext" />
+                          <span>📊 注入上下文（背调+BANT+产品库+策略）</span>
+                        </label>
+                      </div>
                     </div>
                     <button
                       class="ai-gen-btn"
@@ -812,6 +890,22 @@
                       <template v-else>⚡ 生成AI回复</template>
                     </button>
                     <div v-if="chatStore.aiReplyResults.length" class="ai-reply-list">
+                      <!-- Phase 5: Context banner on first card -->
+                      <div v-if="chatStore.aiReplyResults.length && chatStore.aiReplyResults[0]?.context" class="ai-context-banner">
+                        <div class="ai-context-line" v-if="chatStore.aiReplyResults[0].context.strategy">
+                          <span class="ai-ctx-tag" :class="chatStore.aiReplyResults[0].context.strategy === 'PROVIDE_QUOTE' ? 'tag-quote' : 'tag-ask'">
+                            {{ chatStore.aiReplyResults[0].context.strategy === 'PROVIDE_QUOTE' ? '💰 报价阶段' : '🔍 信息收集' }}
+                          </span>
+                          <span class="ai-ctx-text">{{ chatStore.aiReplyResults[0].context.stage || '' }}</span>
+                          <span class="ai-ctx-text">完整度 {{ Math.round((chatStore.aiReplyResults[0].context.completeness || 0) * 100) }}%</span>
+                        </div>
+                        <div class="ai-context-line" v-if="chatStore.aiReplyResults[0].context.backgroundCheck">
+                          <span class="ai-ctx-text">🏢 {{ chatStore.aiReplyResults[0].context.backgroundCheck.companyName || '' }} ({{ chatStore.aiReplyResults[0].context.backgroundCheck.country || '' }})</span>
+                        </div>
+                        <div class="ai-context-line" v-if="chatStore.aiReplyResults[0].context.bantScore">
+                          <span class="ai-ctx-text">BANT: {{ chatStore.aiReplyResults[0].context.bantScore.totalScore || 0 }}/10 ({{ chatStore.aiReplyResults[0].context.bantScore.level || '' }})</span>
+                        </div>
+                      </div>
                       <div
                         v-for="r in chatStore.aiReplyResults"
                         :key="r.id"
@@ -819,11 +913,19 @@
                         :class="{ 'ai-error-card': r.error }"
                       >
                         <div class="ai-reply-text">{{ r.content }}</div>
+                        <!-- Phase 5: Chinese translation -->
+                        <div v-if="r.contentCn && !r.error" class="ai-reply-cn-block">
+                          <div class="ai-reply-cn-text">{{ r.contentCn }}</div>
+                        </div>
                         <div class="ai-reply-footer">
                           <div class="ai-reply-meta">
                             <span class="ai-reply-meta-tag">{{ r.styleIcon }} {{ r.styleName }}</span>
+                            <span v-if="r.length" class="ai-reply-meta-tag length-tag">{{ lengthLabels[r.length] || r.length }}</span>
                           </div>
-                          <button v-if="!r.error" class="ai-insert-btn" @click="fillAiInput(r.content)">📝 插入</button>
+                          <div class="ai-reply-actions" v-if="!r.error">
+                            <button class="ai-copy-btn" @click="copyToClipboard(r.contentCn)" v-if="r.contentCn" title="复制中文">📋 中文</button>
+                            <button class="ai-insert-btn" @click="fillAiInput(r.content)">📝 插入</button>
+                          </div>
                         </div>
                       </div>
                       <button
@@ -1028,36 +1130,39 @@
           <!-- AI 话术面板 v2 -->
           <div v-if="!panelCollapsed && activePanel === 'aitalk'" class="aitalk-panel-body">
             <!-- 顶部：模型选择 + 模式切换 + 清空 -->
-            <div class="aitalk-top-bar">
+            <div class="aitalk-top-bar aitalk-top-bar-compact">
               <div class="aitalk-top-first-row">
-                <div class="aitalk-model-wrap">
-                  <el-select v-model="aitalkModel" class="sub-select aitalk-model-select aitalk-top-first-select" popper-class="crm-dark-popper" placeholder="选择模型" @change="v => localStorage.setItem('crm_aitalk_model', v)">
-                    <el-option v-for="m in aiModels" :key="m.key" :label="m.name" :value="m.key">
-                      <div style="display:flex;align-items:center;gap:6px;line-height:1.3">
-                        <span style="color:#e9edef;font-size:13px">{{ m.name }}</span>
-                        <span v-if="m.key==='deepseek'" style="color:#22c55e;font-size:11px;background:rgba(34,197,94,0.15);padding:1px 6px;border-radius:4px;font-weight:600">性价比高</span>
-                      </div>
-                    </el-option>
-                  </el-select>
-                  <span v-if="aitalkModel==='deepseek'" class="aitalk-model-tag">性价比高</span>
-                </div>
-                <div class="aitalk-top-actions">
-                <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'quick'}" @click="aitalkMode = 'quick'" title="快捷生成模式">⚡</button>
-                <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'chat'}" @click="switchToChatMode" title="AI对话模式">💬</button>
-                <button v-if="aiMessages.length" class="aitalk-clear-btn" @click="clearAiMessages" title="清空对话">🗑️</button>
-                </div>
-              </div>
-              <div class="aitalk-select-row aitalk-lang-row">
-                <span class="aitalk-select-label">生成语言</span>
-                <el-select v-model="aitalkTargetLang" class="sub-select aitalk-lang-select" popper-class="crm-dark-popper" placeholder="跟随翻译设置">
-                  <el-option label="🔍 跟随翻译设置" value="follow" />
-                  <el-option label="العربية (阿拉伯语)" value="ar" />
-                  <el-option label="English (英语)" value="en" />
+                <el-select v-model="aitalkModel" class="sub-select aitalk-model-select" popper-class="crm-dark-popper" placeholder="选择模型" size="small" @change="v => localStorage.setItem('crm_aitalk_model', v)">
+                  <el-option v-for="m in aiModels" :key="m.key" :label="m.name" :value="m.key" />
+                </el-select>
+                <el-select v-model="aitalkTargetLang" class="sub-select aitalk-lang-select-compact" popper-class="crm-dark-popper" placeholder="语言" size="small">
+                  <el-option label="🌐 自动" value="follow" />
+                  <el-option label="العربية" value="ar" />
+                  <el-option label="English" value="en" />
                   <el-option label="中文" value="zh" />
                 </el-select>
+                <div class="aitalk-top-actions">
+                  <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'quick'}" @click="aitalkMode = 'quick'" title="快捷生成">⚡</button>
+                  <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'chat'}" @click="switchToChatMode" title="对话模式">💬</button>
+                  <button v-if="aiMessages.length" class="aitalk-clear-btn" @click="clearAiMessages" title="清空">🗑️</button>
+                </div>
               </div>
             </div>
 
+            <!-- Tab 切换条 -->
+            <div class="profile-tabs aitalk-tabs">
+              <button class="profile-tab" :class="{active: aitalkTab==='ai'}" @click="aitalkTab='ai'">
+                <span class="profile-tab-ic">💬</span>
+                <span class="profile-tab-lb">回复话术</span>
+              </button>
+              <button class="profile-tab" :class="{active: aitalkTab==='library'}" @click="aitalkTab='library';loadSpeechSamples()">
+                <span class="profile-tab-ic">📚</span>
+                <span class="profile-tab-lb">话术库</span>
+              </button>
+            </div>
+
+            <!-- 💬 沟通话术 Tab -->
+            <template v-if="aitalkTab==='ai'">
             <!-- 中间对话/结果区 -->
             <div ref="aitalkScrollRef" class="aitalk-scroll" @scroll="onAitalkScroll">
               <!-- 空状态欢迎 -->
@@ -1110,6 +1215,7 @@
                       <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
                       <div class="aitalk-reply-actions">
                         <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制外文</button>
+                        <button class="aitalk-mini-btn" @click="copyForeign(r.chinese, $event)">📋 复制中文</button>
                       </div>
                       <button class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
                         {{ r._applied ? '✓ 已填入输入框' : '✏️ 点这里直接用' }}
@@ -1117,6 +1223,27 @@
                     </div>
                   </template>
                   <template v-else-if="msg.type === 'replies' && isRichRepliesMsg(msg)">
+                    <!-- 🔬 产品分析卡片 -->
+                    <div v-if="msg.content.productAnalysis && msg.content.productAnalysis.needed" class="aitalk-product-card">
+                      <div class="aitalk-product-header">
+                        <span class="aitalk-product-icon">🔬</span>
+                        <span class="aitalk-product-title">产品概念分析</span>
+                        <span class="aitalk-match-badge" :class="'match-' + (msg.content.productAnalysis.matchLevel || 'MEDIUM').toLowerCase()">
+                          {{ {HIGH:'高度匹配',MEDIUM:'部分匹配',LOW:'低匹配'}[msg.content.productAnalysis.matchLevel] || '匹配分析' }}
+                        </span>
+                      </div>
+                      <div class="aitalk-product-body">
+                        <div class="aitalk-product-explain">{{ msg.content.productAnalysis.productExplanation }}</div>
+                        <div v-if="msg.content.productAnalysis.matchedProducts && msg.content.productAnalysis.matchedProducts.length" class="aitalk-product-matched">
+                          <span class="aitalk-pm-label">匹配产品：</span>
+                          <span v-for="p in msg.content.productAnalysis.matchedProducts" :key="p" class="aitalk-pm-chip">{{ p }}</span>
+                        </div>
+                        <div v-if="msg.content.productAnalysis.keyParamsToConfirm && msg.content.productAnalysis.keyParamsToConfirm.length" class="aitalk-product-params">
+                          <span class="aitalk-pp-label">需追问参数：</span>
+                          <span v-for="p in msg.content.productAnalysis.keyParamsToConfirm" :key="p" class="aitalk-pp-chip">{{ p }}</span>
+                        </div>
+                      </div>
+                    </div>
                     <!-- 询盘分类徽章 -->
                     <div v-if="msg.content.inquiryType" class="aitalk-inquiry-badge" :class="'inq-'+inqTypeClass(msg.content.inquiryType.category)">
                       <span class="inq-cat-prefix">🏷️ 询盘类型</span>
@@ -1146,6 +1273,7 @@
                       <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
                       <div class="aitalk-reply-actions">
                         <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制外文</button>
+                        <button class="aitalk-mini-btn" @click="copyForeign(r.chinese, $event)">📋 复制中文</button>
                       </div>
                       <button class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
                         {{ r._applied ? '✓ 已填入输入框' : '✏️ 点这里直接用' }}
@@ -1251,6 +1379,65 @@
                 <button class="aitalk-switch-mode-link" @click="aitalkMode = 'quick'">⚡ 切换到快捷生成</button>
               </template>
             </div>
+            </template>
+
+            <!-- 📚 话术库 Tab -->
+            <div v-if="aitalkTab==='library'" class="speechlib-panel">
+              <!-- 智能匹配区 -->
+              <div class="speechlib-match-section">
+                <div class="speechlib-match-header">
+                  <span class="speechlib-match-title">🎯 智能匹配</span>
+                  <button class="speechlib-match-btn" :disabled="speechLibLoading || !chatStore.activeJid" @click="smartMatchSpeech">
+                    {{ speechLibLoading ? '匹配中...' : '匹配当前客户' }}
+                  </button>
+                </div>
+                <div v-if="speechLibMatched.length" class="speechlib-match-list">
+                  <div v-for="(s, si) in speechLibMatched" :key="'m-'+si" class="speechlib-card">
+                    <div class="speechlib-card-q">🗣 {{ s.customerMsg }}</div>
+                    <div class="speechlib-card-a">💡 {{ s.salesReply }}</div>
+                    <div class="speechlib-card-meta">
+                      <span v-if="s.scene" class="speechlib-tag">{{ s.scene }}</span>
+                      <span v-if="s.productLine" class="speechlib-tag">{{ s.productLine }}</span>
+                      <span v-if="s.qualityScore" class="speechlib-tag speechlib-tag-score">⭐{{ s.qualityScore }}</span>
+                    </div>
+                    <button class="speechlib-copy-btn" @click="copySpeechReply(s.salesReply)">📋 复制回复</button>
+                  </div>
+                </div>
+                <div v-else-if="!speechLibLoading && speechLibSearched" class="speechlib-empty">
+                  <p>未找到匹配话术</p>
+                </div>
+                <div v-else-if="!chatStore.activeJid" class="speechlib-empty">
+                  <p>请先选择客户会话</p>
+                </div>
+              </div>
+
+              <!-- 话术列表 -->
+              <div class="speechlib-list-section">
+                <div class="speechlib-list-header">
+                  <span class="speechlib-list-title">📋 全部话术 ({{ speechLibTotal }})</span>
+                  <button class="speechlib-refresh-btn" @click="loadSpeechSamples()" title="刷新">⟳</button>
+                </div>
+                <div v-if="speechLibLoading && !speechLibMatched.length" class="speechlib-loading">加载中...</div>
+                <div v-else-if="speechLibSamples.length" class="speechlib-sample-list">
+                  <div v-for="(s, si) in speechLibSamples" :key="'s-'+si" class="speechlib-card speechlib-card-compact">
+                    <div class="speechlib-card-q">🗣 {{ s.customerMsg }}</div>
+                    <div class="speechlib-card-a">💡 {{ s.salesReply }}</div>
+                    <div class="speechlib-card-meta">
+                      <span v-if="s.scene" class="speechlib-tag">{{ s.scene }}</span>
+                      <span v-if="s.productLine" class="speechlib-tag">{{ s.productLine }}</span>
+                      <span v-if="s.favorited" class="speechlib-tag speechlib-tag-fav">⭐ 收藏</span>
+                    </div>
+                    <button class="speechlib-copy-btn" @click="copySpeechReply(s.salesReply)">📋 复制</button>
+                  </div>
+                </div>
+                <div v-else class="speechlib-empty">
+                  <div style="font-size:32px;margin-bottom:8px;opacity:0.6">📚</div>
+                  <p>暂无话术</p>
+                  <p style="font-size:12px;color:var(--text-secondary);margin-top:4px">使用AI生成回复后将自动收藏</p>
+                </div>
+              </div>
+            </div>
+
           </div>
           <div v-if="!panelCollapsed && activePanel === 'customer'" class="customer-panel-body">
             <!-- 空状态 -->
@@ -1837,6 +2024,7 @@
                       <el-option label="谷歌翻译(推荐/免费)" value="google" />
                       <el-option label="DeepSeek" value="deepseek" />
                       <el-option label="豆包AI" value="doubao" />
+                      <el-option label="GPT-4o-mini" value="openai" />
                     </el-select>
                   </div>
                   <div class="sub-row">
@@ -1869,6 +2057,7 @@
                       <el-option label="谷歌翻译(推荐/免费)" value="google" />
                       <el-option label="DeepSeek" value="deepseek" />
                       <el-option label="豆包AI" value="doubao" />
+                      <el-option label="GPT-4o-mini" value="openai" />
                     </el-select>
                   </div>
                   <div class="sub-row">
@@ -2024,6 +2213,67 @@
             </template>
           </el-dialog>
 
+          <!-- 📊 BANT 评分详情弹窗 -->
+          <el-dialog v-model="showBantDetailDialog" title="BANT 客户价值评分" width="520px" class="bant-dialog" :append-to-body="true">
+            <div v-if="bantDetailJid && bantDetailMap[bantDetailJid]" class="bant-detail-body">
+              <div class="bant-summary">
+                <span class="bant-level-badge" :class="'bant-' + (bantDetailMap[bantDetailJid].level || '').toLowerCase()">{{ bantDetailMap[bantDetailJid].level }}</span>
+                <span class="bant-total-score">{{ bantDetailMap[bantDetailJid].totalScore }} 分</span>
+              </div>
+              <div class="bant-dimensions">
+                <div class="bant-dim-item">
+                  <div class="bant-dim-head"><span class="bant-dim-label">💰 Budget 预算</span><span class="bant-dim-score">{{ bantDetailMap[bantDetailJid].budgetScore }}</span></div>
+                  <div class="bant-dim-bar"><div class="bant-bar-fill bant-bar-budget" :style="{width: (bantDetailMap[bantDetailJid].budgetScore / 10 * 100) + '%'}"></div></div>
+                  <p class="bant-dim-reason" v-if="bantDetailMap[bantDetailJid].evaluationDetails?.budget?.reason">{{ bantDetailMap[bantDetailJid].evaluationDetails.budget.reason }}</p>
+                </div>
+                <div class="bant-dim-item">
+                  <div class="bant-dim-head"><span class="bant-dim-label">👤 Authority 决策权</span><span class="bant-dim-score">{{ bantDetailMap[bantDetailJid].authorityScore }}</span></div>
+                  <div class="bant-dim-bar"><div class="bant-bar-fill bant-bar-authority" :style="{width: (bantDetailMap[bantDetailJid].authorityScore / 10 * 100) + '%'}"></div></div>
+                  <p class="bant-dim-reason" v-if="bantDetailMap[bantDetailJid].evaluationDetails?.authority?.reason">{{ bantDetailMap[bantDetailJid].evaluationDetails.authority.reason }}</p>
+                </div>
+                <div class="bant-dim-item">
+                  <div class="bant-dim-head"><span class="bant-dim-label">🎯 Need 需求</span><span class="bant-dim-score">{{ bantDetailMap[bantDetailJid].needScore }}</span></div>
+                  <div class="bant-dim-bar"><div class="bant-bar-fill bant-bar-need" :style="{width: (bantDetailMap[bantDetailJid].needScore / 10 * 100) + '%'}"></div></div>
+                  <p class="bant-dim-reason" v-if="bantDetailMap[bantDetailJid].evaluationDetails?.need?.reason">{{ bantDetailMap[bantDetailJid].evaluationDetails.need.reason }}</p>
+                </div>
+                <div class="bant-dim-item">
+                  <div class="bant-dim-head"><span class="bant-dim-label">⏰ Timeline 时间线</span><span class="bant-dim-score">{{ bantDetailMap[bantDetailJid].timelineScore }}</span></div>
+                  <div class="bant-dim-bar"><div class="bant-bar-fill bant-bar-timeline" :style="{width: (bantDetailMap[bantDetailJid].timelineScore / 10 * 100) + '%'}"></div></div>
+                  <p class="bant-dim-reason" v-if="bantDetailMap[bantDetailJid].evaluationDetails?.timeline?.reason">{{ bantDetailMap[bantDetailJid].evaluationDetails.timeline.reason }}</p>
+                </div>
+              </div>
+              <p v-if="bantDetailMap[bantDetailJid].evaluationDetails?.summary" class="bant-summary-text">{{ bantDetailMap[bantDetailJid].evaluationDetails.summary }}</p>
+              <p v-if="bantDetailMap[bantDetailJid].evaluatedAt" class="bant-eval-time">评估时间: {{ new Date(bantDetailMap[bantDetailJid].evaluatedAt).toLocaleString('zh-CN') }}</p>
+            </div>
+            <div v-else class="bant-detail-empty"><p>暂无 BANT 评分数据</p><p class="bant-empty-hint">点击"重新评分"开始评估</p></div>
+            <template #footer>
+              <el-button @click="showBantConfigDialog = true; loadBantConfig()">⚙️ 评分配置</el-button>
+              <el-button type="primary" @click="triggerBantRescore(bantDetailJid)" :loading="bantRescoreLoading">🔄 重新评分</el-button>
+            </template>
+          </el-dialog>
+
+          <!-- ⚙️ BANT 评分配置弹窗 -->
+          <el-dialog v-model="showBantConfigDialog" title="BANT 评分配置" width="440px" class="bant-config-dialog" :append-to-body="true">
+            <div class="bant-config-body">
+              <div class="bant-config-section">
+                <h4>维度权重（总和 100%）</h4>
+                <div class="bant-config-row"><label>💰 Budget</label><el-slider v-model="bantConfigForm.weights.budget" :min="0" :max="100" :step="5" show-input size="small" /></div>
+                <div class="bant-config-row"><label>👤 Authority</label><el-slider v-model="bantConfigForm.weights.authority" :min="0" :max="100" :step="5" show-input size="small" /></div>
+                <div class="bant-config-row"><label>🎯 Need</label><el-slider v-model="bantConfigForm.weights.need" :min="0" :max="100" :step="5" show-input size="small" /></div>
+                <div class="bant-config-row"><label>⏰ Timeline</label><el-slider v-model="bantConfigForm.weights.timeline" :min="0" :max="100" :step="5" show-input size="small" /></div>
+              </div>
+              <div class="bant-config-section">
+                <h4>评级阈值</h4>
+                <div class="bant-config-row"><label>HIGH 阈值（≥）</label><el-slider v-model="bantConfigForm.highThreshold" :min="1" :max="10" :step="0.5" show-input size="small" /></div>
+                <div class="bant-config-row"><label>LOW 阈值（＜）</label><el-slider v-model="bantConfigForm.lowThreshold" :min="0" :max="9" :step="0.5" show-input size="small" /></div>
+              </div>
+            </div>
+            <template #footer>
+              <el-button @click="showBantConfigDialog = false">取消</el-button>
+              <el-button type="primary" @click="saveBantConfig">保存</el-button>
+            </template>
+          </el-dialog>
+
           <!-- 🕰️ 时间与文化面板（自动关联当前客户） -->
           <div v-if="!panelCollapsed && activePanel === 'worldclock'" class="wc-panel-body culture-panel">
             <!-- 当前客户文化信息 -->
@@ -2121,46 +2371,35 @@
                 </div>
               </div>
             </template>
-            <!-- 无选中客户：显示原有世界时钟（多城市时钟） -->
+            <!-- 无选中客户时提示 -->
+            <template v-else-if="chatStore.activeConversation">
+              <div class="cul-empty-tip">
+                <div style="font-size:32px;margin-bottom:8px">🌐</div>
+                <div style="color:var(--text-secondary)">未检测到该客户所在国家</div>
+                <div style="color:var(--text-tertiary);font-size:12px;margin-top:4px;margin-bottom:16px">请手动选择国籍或所在国</div>
+                <div class="cul-two-col" style="margin-top:8px">
+                  <div class="cul-pick">
+                    <label class="cul-pick-label">国籍 (文化归属)</label>
+                    <select v-model="cultureManualNationality" class="cul-pick-select" @change="cultureSaveManual">
+                      <option value="">自动 (按手机号国家码)</option>
+                      <option v-for="c in cultureAllCountries" :key="'n'+c.iso" :value="c.iso">{{ c.flag }} {{ c.name }}</option>
+                    </select>
+                  </div>
+                  <div class="cul-pick">
+                    <label class="cul-pick-label">所在国 (当地时间)</label>
+                    <select v-model="cultureManualResidence" class="cul-pick-select" @change="cultureSaveManual">
+                      <option value="">同国籍</option>
+                      <option v-for="c in cultureAllCountries" :key="'r'+c.iso" :value="c.iso">{{ c.flag }} {{ c.name }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </template>
             <template v-else>
               <div class="cul-empty-tip">
                 <div style="font-size:32px;margin-bottom:8px">👈</div>
                 <div style="color:var(--text-secondary)">请先选择一个客户对话</div>
                 <div style="color:var(--text-tertiary);font-size:12px;margin-top:4px">选中客户后将自动显示其所在国时间 + 商务文化礼仪</div>
-              </div>
-              <div class="wc-add-bar">
-                <el-select v-model="wcSelectedCity" placeholder="或添加世界时钟..." filterable popper-class="crm-dark-popper" style="flex:1" @change="wcAddClock">
-                  <el-option v-for="c in wcAvailableCities" :key="c.tz" :label="c.flag + ' ' + c.name + ' (' + c.tz_label + ')'" :value="c.tz" />
-                </el-select>
-              </div>
-              <div v-if="wcClocks.length > 0" class="wc-list">
-                <div v-for="(clk, idx) in wcClocks" :key="clk.tz" class="wc-card">
-                  <div class="wc-card-top">
-                    <div class="wc-city-info">
-                      <span class="wc-flag">{{ clk.flag }}</span>
-                      <span class="wc-city-name">{{ clk.name }}</span>
-                      <span class="wc-tz-diff">{{ wcTzDiff(clk.tz) }}</span>
-                    </div>
-                    <button class="wc-del-btn" @click="wcRemoveClock(idx)" title="删除">✕</button>
-                  </div>
-                  <div class="wc-card-mid">
-                    <div class="wc-analog">
-                      <svg viewBox="0 0 100 100" width="70" height="70">
-                        <circle cx="50" cy="50" r="46" fill="var(--wc-clock-bg)" stroke="var(--wc-clock-border)" stroke-width="1.5"/>
-                        <line v-for="(mk,mi) in wcHourMarks" :key="'m'+mi" :x1="mk.x1" :y1="mk.y1" :x2="mk.x2" :y2="mk.y2" stroke="var(--wc-clock-mark)" stroke-width="1.5" stroke-linecap="round"/>
-                        <line :x1="50" :y1="50" :x2="wcTime(clk.tz).hx" :y2="wcTime(clk.tz).hy" stroke="var(--text-primary)" stroke-width="2.5" stroke-linecap="round"/>
-                        <line :x1="50" :y1="50" :x2="wcTime(clk.tz).mx" :y2="wcTime(clk.tz).my" stroke="var(--text-primary)" stroke-width="2" stroke-linecap="round"/>
-                        <line :x1="50" :y1="50" :x2="wcTime(clk.tz).sx" :y2="wcTime(clk.tz).sy" stroke="#e74c3c" stroke-width="1" stroke-linecap="round"/>
-                        <circle cx="50" cy="50" r="2.5" fill="var(--text-primary)"/>
-                      </svg>
-                    </div>
-                    <div class="wc-digital">
-                      <div class="wc-time">{{ wcTime(clk.tz).time }}</div>
-                      <div class="wc-date">{{ wcTime(clk.tz).date }}</div>
-                      <div class="wc-day">{{ wcTime(clk.tz).day }}</div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </template>
           </div>
@@ -2261,10 +2500,89 @@
               </div>
             </div>
           </div>
+
+          <!-- 📈 效果追踪面板 -->
+          <div v-if="!panelCollapsed && activePanel === 'tracking'" class="tracking-panel-body">
+            <div v-if="trackingLoading" class="tracking-loading">
+              <span>加载中...</span>
+            </div>
+            <div v-else-if="!chatStore.activeJid" class="tracking-empty">
+              <div class="tracking-empty-icon">📈</div>
+              <p>请先选择一个客户会话</p>
+            </div>
+            <div v-else-if="trackingData" class="tracking-content">
+              <div class="tracking-stats-grid">
+                <div class="tracking-stat-card">
+                  <div class="tracking-stat-icon">📨</div>
+                  <div class="tracking-stat-num">{{ trackingData.totalMessages || 0 }}</div>
+                  <div class="tracking-stat-label">总消息</div>
+                </div>
+                <div class="tracking-stat-card">
+                  <div class="tracking-stat-icon">💬</div>
+                  <div class="tracking-stat-num tracking-green">{{ trackingData.messagesWithReply || 0 }}</div>
+                  <div class="tracking-stat-label">已回复</div>
+                </div>
+                <div class="tracking-stat-card">
+                  <div class="tracking-stat-icon">📊</div>
+                  <div class="tracking-stat-num tracking-green">{{ fmtTrackPercent(trackingData.replyRate) }}</div>
+                  <div class="tracking-stat-label">回复率</div>
+                </div>
+                <div class="tracking-stat-card">
+                  <div class="tracking-stat-icon">⏱️</div>
+                  <div class="tracking-stat-num">{{ fmtTrackTime(trackingData.avgResponseTimeMs) }}</div>
+                  <div class="tracking-stat-label">平均响应</div>
+                </div>
+                <div class="tracking-stat-card">
+                  <div class="tracking-stat-icon">⭐</div>
+                  <div class="tracking-stat-num tracking-orange">{{ fmtTrackScore(trackingData.avgEffectivenessScore) }}</div>
+                  <div class="tracking-stat-label">效果评分</div>
+                </div>
+                <div class="tracking-stat-card">
+                  <div class="tracking-stat-icon">🎯</div>
+                  <div class="tracking-stat-num">{{ fmtTrackScore(trackingData.avgAttitudeScore) }}</div>
+                  <div class="tracking-stat-label">态度评分</div>
+                </div>
+              </div>
+              <div v-if="trackingData.recentTrend && trackingData.recentTrend.length" class="tracking-trend-section">
+                <div class="tracking-section-title">📉 近期趋势</div>
+                <div class="tracking-trend-list">
+                  <div v-for="t in trackingData.recentTrend.slice(-7)" :key="t.date" class="tracking-trend-item">
+                    <span class="tracking-trend-date">{{ t.date }}</span>
+                    <span class="tracking-trend-bar-wrap">
+                      <span class="tracking-trend-bar" :style="{width: Math.min(100, (t.replyRate||0)*100) + '%'}"></span>
+                    </span>
+                    <span class="tracking-trend-rate">{{ fmtTrackPercent(t.replyRate) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="trackingData.lastAttitude" class="tracking-attitude-section">
+                <div class="tracking-section-title">🧠 最新态度分析</div>
+                <div class="tracking-attitude-card">
+                  <div class="tracking-att-row">
+                    <span>意向强度</span>
+                    <span class="tracking-att-badge" :class="'att-intent-' + (trackingData.lastAttitude.intentLevel || 'medium')">{{ trackingData.lastAttitude.intentLevel || '--' }}</span>
+                  </div>
+                  <div class="tracking-att-row">
+                    <span>情绪</span>
+                    <span class="tracking-att-badge" :class="'att-sent-' + (trackingData.lastAttitude.sentiment || 'neutral')">{{ trackingData.lastAttitude.sentiment || '--' }}</span>
+                  </div>
+                  <div class="tracking-att-row">
+                    <span>紧急度</span>
+                    <span class="tracking-att-badge" :class="'att-urg-' + (trackingData.lastAttitude.urgency || 'low')">{{ trackingData.lastAttitude.urgency || '--' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="tracking-empty">
+              <div class="tracking-empty-icon">📭</div>
+              <p>暂无该客户的效果数据</p>
+              <p style="font-size:12px;color:var(--text-secondary);margin-top:4px">持续沟通后将自动生成分析</p>
+            </div>
+          </div>
         </aside>
 
-        <!-- ⑦ 图标列（常驻） -->
-        <aside class="col-iconbar" :class="{ collapsed: iconbarCollapsed }">
+        <!-- ⑦ 图标列（常驻）） -->
+        <aside class="col-iconbar" :class="{ collapsed: iconbarCollapsed }" :style="isMobile ? { display: 'none' } : {}">
           <div class="ib-items">
             <button class="ib-item" :class="{ active: activePanel === 'translate' }" @click="switchPanel('translate')" :title="iconbarCollapsed ? '翻译设置' : ''">
               <span class="ib-icon">🌐</span>
@@ -2277,6 +2595,10 @@
             <button class="ib-item" :class="{ active: activePanel === 'requirement' }" @click="switchPanel('requirement')" :title="iconbarCollapsed ? '需求总结' : ''">
               <span class="ib-icon">🎯</span>
               <span class="ib-label">需求总结</span>
+            </button>
+            <button class="ib-item" :class="{ active: activePanel === 'tracking' }" @click="switchPanel('tracking')" :title="iconbarCollapsed ? '效果追踪' : ''">
+              <span class="ib-icon">📈</span>
+              <span class="ib-label">效果追踪</span>
             </button>
             <button class="ib-item" :class="{ active: activePanel === 'customer' }" @click="switchPanel('customer')" :title="iconbarCollapsed ? '客户画像' : ''">
               <span class="ib-icon">👤</span>
@@ -2294,7 +2616,7 @@
               <span class="ib-icon">📄</span>
               <span class="ib-label">外贸单证</span>
             </button>
-            <button class="ib-item" :class="{ active: activePanel === 'worldclock' }" @click="switchPanel('worldclock')" :title="iconbarCollapsed ? '世界时钟' : ''">
+            <button class="ib-item" :class="{ active: activePanel === 'worldclock' }" @click="switchPanel('worldclock')" :title="iconbarCollapsed ? '时间文化' : ''">
               <span class="ib-icon">🕰️</span>
               <span class="ib-label">时间文化</span>
             </button>
@@ -2833,17 +3155,36 @@ function onAitalkInputKeydown(e) {
 }
 
 async function copyForeign(text, ev) {
+  const ok = await doCopy(text || '');
+  const btn = ev?.currentTarget;
+  if (btn) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = ok ? '✓ 已复制' : '复制失败';
+    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+  }
+  if (ok) ElMessage.success('已复制');
+  else ElMessage.error('复制失败');
+}
+
+async function doCopy(text) {
   try {
-    await navigator.clipboard.writeText(text || '');
-    const btn = ev?.currentTarget;
-    if (btn) {
-      const orig = btn.innerHTML;
-      btn.innerHTML = '✓ 已复制';
-      setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
     }
-    ElMessage.success('已复制');
-  } catch (e) {
-    ElMessage.error('复制失败');
+  } catch(e) { /* fallback */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch(e) {
+    return false;
   }
 }
 
@@ -2926,7 +3267,7 @@ async function _doAnalyze({ feedback, onLoadingReplace, loadingMsg } = {}) {
   const model = aitalkModel.value || null;
   aitalkLastRequest = { type: 'analyze', jid: chatStore.activeJid, model, feedback };
   try {
-    const body = { jid: chatStore.activeJid, accountId: 1, model, targetLang: resolveTargetLang() };
+    const body = { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang() };
     if (feedback) body.feedback = feedback;
     const { data } = await api.post('/ai/analyze', body);
     if (data?.success && Array.isArray(data.data?.replies) && data.data.replies.length) {
@@ -2936,6 +3277,8 @@ async function _doAnalyze({ feedback, onLoadingReplace, loadingMsg } = {}) {
         designThinking: Array.isArray(data.data.designThinking) ? data.data.designThinking : [],
         suggestions: Array.isArray(data.data.suggestions) ? data.data.suggestions : [],
         inquiryType: data.data.inquiryType || null,
+        productAnalysis: data.data.productAnalysis || null,
+        isFirstInquiry: data.data.isFirstInquiry === true,
       };
       replaceMsg(lm.id, { role: 'assistant', type: 'replies', content: payload, ts: Date.now(), _refineChips: [], _refineText: '', _refineLoading: false });
     } else {
@@ -3003,7 +3346,7 @@ async function sendAitalkChat() {
   const model = aitalkModel.value || null;
   aitalkLastRequest = { type: 'chat', jid: chatStore.activeJid, model, text };
   try {
-    const { data } = await api.post('/ai/chat', { jid: chatStore.activeJid, accountId: 1, model, targetLang: resolveTargetLang(), messages: history });
+    const { data } = await api.post('/ai/chat', { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang(), messages: history });
     if (data?.success && typeof data.data?.reply === 'string') {
       const reply = data.data.reply;
       const parsed = tryParseRepliesInText(reply);
@@ -3162,21 +3505,64 @@ const channelDropdown = ref(false);
 const activeFilter = ref('all');
 const mobileFilterMenuOpen = ref(false);
 const channelSheetOpen = ref(false);
+const waAccountsRaw = ref([]);
+const waAccountsLoading = ref(false);
+async function loadWaAccounts() {
+  try {
+    waAccountsLoading.value = true;
+    const { data } = await api.get('/accounts');
+    waAccountsRaw.value = (data || []).filter(a => a.platform === 'whatsapp');
+  } catch(e) {
+    console.warn('[Layout] loadWaAccounts error:', e.message);
+  } finally {
+    waAccountsLoading.value = false;
+  }
+}
 const waAccounts = computed(() => {
-  // TODO: v9.6 多账号正式接入后从store读取
-  return chatStore.isConnected ? [{
-    id: 'wa-main',
-    name: chatStore.pushName || chatStore.connectedPhone || 'WhatsApp 主号',
-    avatar: chatStore.selfAvatarUrl || null,
-    color: '#00a884',
-    online: chatStore.isConnected,
-  }] : [];
+  return waAccountsRaw.value.map(a => ({
+    id: a.id,
+    name: a.name || a.phone || 'WhatsApp',
+    phone: a.phone || '',
+    avatar: a.profilePicUrl || null,
+    color: '#' + ((a.id * 2654435761) >>> 0).toString(16).slice(-6).padStart(6, '0'),
+    online: a.status === 'connected' || a.connectionStatus === 'open',
+    instanceName: a.instanceName,
+    proxyIp: a.proxyIp || null,
+    proxyPort: a.proxyPort || null,
+    connectionStatus: a.connectionStatus || a.status,
+    profilePicUrl: a.profilePicUrl || null,
+  }));
 });
-const currentWaAccountId = ref('wa-main');
+const currentWaAccountId = ref(null);
+const accColors = ['#4A90D9', '#50C878', '#FF6B6B', '#FFB347', '#9B59B6', '#1ABC9C'];
+function accColor(accId) {
+  if (!accId) return '#888';
+  return accColors[(accId - 1) % accColors.length];
+}
 function switchWaAccount(id) {
-  // TODO: v9.6 切换Evo instance
-  currentWaAccountId.value = id;
-  $message?.info?.('多账号功能开发中');
+  const newId = (currentWaAccountId.value === id) ? null : id;
+  currentWaAccountId.value = newId;
+  // 切换账号时清空当前会话，避免显示上一个账号的对话
+  chatStore.activeJid = null;
+  // 清除消息缓存，避免残留旧数据
+  chatStore.messages = {};
+  // 更新连接状态：根据选中账号的在线状态设置
+  if (newId != null) {
+    const acc = waAccounts.value.find(a => a.id === newId);
+    chatStore.connectionStatus = (acc && acc.online) ? 'connected' : 'disconnected';
+    chatStore.connectedPhone = acc ? (acc.phone || null) : null;
+    chatStore.pushName = acc ? (acc.name || acc.phone || null) : null;
+  } else {
+    // null = 全部账号，任一在线即视为已连接
+    const anyOnline = waAccounts.value.some(a => a.online);
+    chatStore.connectionStatus = anyOnline ? 'connected' : 'disconnected';
+    chatStore.connectedPhone = null;
+    chatStore.pushName = null;
+  }
+  // Filter conversations by accountId - null means show all
+  if (chatStore.setAccountFilter) {
+    chatStore.setAccountFilter(newId);
+  }
 }
 const mobileChannelBadge = computed(() => {
   if (activeChannel.value === 'whatsapp') return (chatStore.followupCounts?.firstResponse || 0) + (chatStore.followupCounts?.total || 0);
@@ -3447,6 +3833,9 @@ const customerAskLoading = ref(false);
 const customerAskReplies = ref([]);
 const bgCheckLoading = ref(false);
 const bgCheckReport = ref('');
+const bgRatingMap = reactive({}); // jid -> A/B/C/D rating
+const bantScoreMap = reactive({}); // jid -> { level, totalScore }
+const bantDetailMap = reactive({}); // jid -> full details
 const bgMissingInfo = ref([]);
 const bgAskReply = ref('');
 const bgAskInserted = ref(false);
@@ -3897,7 +4286,7 @@ async function runDocGenerate() {
   docError.value = '';
   try {
     const { data } = await api.post('/ai/generate-document', {
-      accountId: 1, jid: chatStore.activeJid, docType: selectedDocType.value,
+      accountId: chatStore.activeConversation?.accountId || 1, jid: chatStore.activeJid, docType: selectedDocType.value,
     });
     if (data?.success && typeof data.content === 'string') {
       const meta = docCurrentTypeMeta.value;
@@ -3937,7 +4326,7 @@ async function sendDocChat() {
       .filter(m => !m.loading && typeof m.content === 'string' && m.content.trim())
       .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
     const { data } = await api.post('/ai/generate-document', {
-      accountId: 1, jid: chatStore.activeJid, docType: selectedDocType.value, messages: hist,
+      accountId: chatStore.activeConversation?.accountId || 1, jid: chatStore.activeJid, docType: selectedDocType.value, messages: hist,
     });
     if (data?.success && typeof data.content === 'string') {
       const idx = docMessages.value.indexOf(loadMsg);
@@ -4014,7 +4403,7 @@ async function applyDocEdit() {
       .filter(m => !m.loading && typeof m.content === 'string' && m.content.trim())
       .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
     const { data } = await api.post('/ai/generate-document', {
-      accountId: 1, jid: chatStore.activeJid, docType: selectedDocType.value, messages: hist,
+      accountId: chatStore.activeConversation?.accountId || 1, jid: chatStore.activeJid, docType: selectedDocType.value, messages: hist,
     });
     if (data?.success && typeof data.content === 'string') {
       const idx = docMessages.value.indexOf(loadMsg);
@@ -4073,7 +4462,7 @@ async function switchDocLang(lang) {
       .filter(m => !m.loading && typeof m.content === 'string' && m.content.trim())
       .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
     const { data } = await api.post('/ai/generate-document', {
-      accountId: 1, jid: chatStore.activeJid, docType: selectedDocType.value, messages: hist,
+      accountId: chatStore.activeConversation?.accountId || 1, jid: chatStore.activeJid, docType: selectedDocType.value, messages: hist,
     });
     if (data?.success && typeof data.content === 'string') {
       const idx = docMessages.value.indexOf(loadMsg);
@@ -4231,6 +4620,11 @@ async function loadCustomer(jid) {
     bgMissingInfo.value = []; bgAskReply.value = ''; bgAskInserted.value = false;
     customerTab.value = 'basic';
     loadFollowUps();
+    // Load bg rating from structured check
+    try {
+      const { data: bgData } = await api.get(`/customers/by-jid/${encodeURIComponent(jid)}/bg-check`);
+      if (bgData && bgData.rating) bgRatingMap[jid] = bgData.rating;
+    } catch {}
   } catch (e) {
     console.error('loadCustomer error', e);
     customerData.value = { ...emptyCustomer(), jid, phone: jid.split('@')[0] };
@@ -4414,6 +4808,122 @@ watch([() => activePanel.value, () => chatStore.activeJid], ([panel, jid]) => {
   }
 }, { immediate: true });
 
+// ── 📈 效果追踪面板状态 ──
+const trackingData = ref(null);
+const trackingLoading = ref(false);
+
+async function loadTrackingData() {
+  const jid = chatStore.activeJid;
+  if (!jid) { trackingData.value = null; return; }
+  trackingLoading.value = true;
+  try {
+    const { data } = await api.get(`/effectiveness/customer/${encodeURIComponent(jid)}`);
+    // Also try to load attitude data
+    try {
+      const attRes = await api.get(`/attitude/by-jid/${encodeURIComponent(jid)}`);
+      if (attRes.data) data.lastAttitude = attRes.data;
+    } catch(e) { /* attitude may not exist yet */ }
+    // Load trend
+    try {
+      const trendRes = await api.get(`/attitude/by-jid/${encodeURIComponent(jid)}/trend`);
+      if (trendRes.data && Array.isArray(trendRes.data)) data.recentTrend = trendRes.data;
+    } catch(e) { /* trend may not exist */ }
+    trackingData.value = data;
+  } catch (e) {
+    if (e.response?.status === 404) {
+      trackingData.value = null;
+    } else {
+      console.error('加载效果追踪失败', e);
+      trackingData.value = null;
+    }
+  } finally {
+    trackingLoading.value = false;
+  }
+}
+
+function fmtTrackTime(ms) {
+  if (ms == null || isNaN(ms)) return '--';
+  if (ms < 1000) return ms + 'ms';
+  if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+  return (ms / 60000).toFixed(1) + 'min';
+}
+function fmtTrackPercent(v) {
+  if (v == null || isNaN(v)) return '--';
+  return (v * 100).toFixed(1) + '%';
+}
+function fmtTrackScore(v) {
+  if (v == null || isNaN(v)) return '--';
+  return Number(v).toFixed(1);
+}
+
+// ── 📚 话术库面板状态 ──
+const aitalkTab = ref('ai'); // 'ai' | 'library'
+const speechLibSamples = ref([]);
+const speechLibMatched = ref([]);
+const speechLibTotal = ref(0);
+const speechLibLoading = ref(false);
+const speechLibSearched = ref(false);
+
+async function loadSpeechSamples() {
+  speechLibLoading.value = true;
+  try {
+    const { data } = await api.get('/speech-library', { params: { pageSize: 50 } });
+    speechLibSamples.value = data.samples || [];
+    speechLibTotal.value = data.pagination?.total || 0;
+  } catch(e) {
+    console.error('加载话术库失败', e);
+  } finally {
+    speechLibLoading.value = false;
+  }
+}
+
+async function smartMatchSpeech() {
+  const jid = chatStore.activeJid;
+  if (!jid) return;
+  speechLibLoading.value = true;
+  speechLibSearched.value = true;
+  try {
+    const { data } = await api.post('/speech-library/match', { jid });
+    speechLibMatched.value = data.samples || [];
+  } catch(e) {
+    console.error('智能匹配失败', e);
+    speechLibMatched.value = [];
+  } finally {
+    speechLibLoading.value = false;
+  }
+}
+
+function copySpeechReply(text) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制到剪贴板');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    ElMessage.success('已复制');
+  });
+}
+
+// Auto-load tracking when panel opens or JID changes
+watch([() => activePanel.value, () => chatStore.activeJid], ([panel, jid]) => {
+  if (panel === 'tracking' && jid) {
+    loadTrackingData();
+  } else {
+    trackingData.value = null;
+  }
+  // Reset speech lib match when JID changes
+  if (panel === 'aitalk') {
+    speechLibMatched.value = [];
+    speechLibSearched.value = false;
+    if (aitalkTab.value === 'library') loadSpeechSamples();
+  }
+});
+
 watch(() => customerEditMode.value, (v) => {
   if (v) {
     customerBackup = JSON.parse(JSON.stringify(customerData.value));
@@ -4425,6 +4935,138 @@ watch(() => customerEditMode.value, (v) => {
 function formatBgTime(v) {
   if (!v) return '';
   try { return new Date(v).toLocaleString('zh-CN', { hour12: false }); } catch { return String(v); }
+}
+
+function getBgRating(jid) {
+  return bgRatingMap[jid] || null;
+}
+
+function bgRatingColor(rating) {
+  const map = { A: '#10b981', B: '#3b82f6', C: '#f59e0b', D: '#ef4444' };
+  return map[rating] || '#9ca3af';
+}
+
+// ── BANT Score functions ──
+function getBantLevel(jid) {
+  return bantScoreMap[jid]?.level || null;
+}
+
+function openBantDetail(jid) {
+  bantDetailJid.value = jid;
+  showBantDetailDialog.value = true;
+  loadBantScoreDetail(jid);
+}
+
+async function loadBantScoreDetail(jid) {
+  try {
+    const { data } = await api.get(`/customers/by-jid/${encodeURIComponent(jid)}/bant-score`);
+    if (data && data.exists) {
+      bantDetailMap[jid] = data;
+    }
+  } catch (e) {
+    console.warn('[BANT] load detail error:', e.message);
+  }
+}
+
+async function loadBantScore(jid) {
+  if (!jid) return;
+  try {
+    const { data } = await api.get(`/customers/by-jid/${encodeURIComponent(jid)}/bant-score`);
+    if (data && data.exists) {
+      bantScoreMap[jid] = { level: data.level, totalScore: data.totalScore };
+      bantDetailMap[jid] = data;
+    }
+  } catch {}
+}
+
+async function triggerBantRescore(jid) {
+  bantRescoreLoading.value = true;
+  try {
+    const { data } = await api.post(`/customers/by-jid/${encodeURIComponent(jid)}/bant-score`);
+    if (data && data.success) {
+      bantScoreMap[jid] = { level: data.level, totalScore: data.totalScore };
+      await loadBantScoreDetail(jid);
+      ElMessage.success('BANT 评分完成: ' + data.level + ' · ' + data.totalScore);
+    } else {
+      ElMessage.warning('评分未完成: ' + (data?.reason || '数据不足'));
+    }
+  } catch (e) {
+    ElMessage.error('评分失败: ' + e.message);
+  } finally {
+    bantRescoreLoading.value = false;
+  }
+}
+
+function onBantScoreDone(event) {
+  const data = event.detail;
+  if (data && data.jid) {
+    bantScoreMap[data.jid] = { level: data.level, totalScore: data.totalScore };
+    if (chatStore.activeJid === data.jid) {
+      loadBantScoreDetail(data.jid);
+    }
+  }
+}
+
+// BANT Config
+const showBantConfigDialog = ref(false);
+const bantConfigForm = reactive({
+  weights: { budget: 25, authority: 25, need: 25, timeline: 25 },
+  highThreshold: 7,
+  lowThreshold: 4,
+});
+
+async function loadBantConfig() {
+  try {
+    const jid = chatStore.activeJid || 'default';
+    const { data } = await api.get(`/customers/by-jid/${encodeURIComponent(jid)}/bant-score/config`);
+    if (data) {
+      bantConfigForm.weights.budget = Math.round((data.weights?.budget || 0.25) * 100);
+      bantConfigForm.weights.authority = Math.round((data.weights?.authority || 0.25) * 100);
+      bantConfigForm.weights.need = Math.round((data.weights?.need || 0.25) * 100);
+      bantConfigForm.weights.timeline = Math.round((data.weights?.timeline || 0.25) * 100);
+      bantConfigForm.highThreshold = data.thresholds?.high || 7;
+      bantConfigForm.lowThreshold = data.thresholds?.low || 4;
+    }
+  } catch {}
+}
+
+async function saveBantConfig() {
+  try {
+    const jid = chatStore.activeJid || 'default';
+    const payload = {
+      weights: {
+        budget: bantConfigForm.weights.budget / 100,
+        authority: bantConfigForm.weights.authority / 100,
+        need: bantConfigForm.weights.need / 100,
+        timeline: bantConfigForm.weights.timeline / 100,
+      },
+      thresholds: {
+        high: bantConfigForm.highThreshold,
+        low: bantConfigForm.lowThreshold,
+      }
+    };
+    await api.post(`/customers/by-jid/${encodeURIComponent(jid)}/bant-score/config`, payload);
+    ElMessage.success('BANT 配置已保存');
+    showBantConfigDialog.value = false;
+  } catch (e) {
+    ElMessage.error('保存失败: ' + e.message);
+  }
+}
+
+const bantDetailJid = ref(null);
+const showBantDetailDialog = ref(false);
+const bantRescoreLoading = ref(false);
+
+function onBgCheckDone(event) {
+  const data = event.detail;
+  if (data && data.jid && data.rating) {
+    bgRatingMap[data.jid] = data.rating;
+    // If currently viewing this customer, refresh
+    if (chatStore.activeJid === data.jid) {
+      loadCustomer(data.jid);
+      ElMessage.success('🔍 自动背调完成，评级: ' + data.rating);
+    }
+  }
 }
 
 async function runBgCheck() {
@@ -4510,22 +5152,28 @@ onMounted(async () => {
   // 启动首响/待跟进轮询
   scheduleFollowupPoll();
   // 加载TG Bot账号列表
-  try { await loadTgAccounts(); } catch(e) { console.warn('loadTgAccounts failed', e); }
+  try { await loadTgAccounts();
+  loadWaAccounts(); } catch(e) { console.warn('loadTgAccounts failed', e); }
   if (activeChannel.value === 'telegram') {
     loadTgConversations();
   }
 
   // TG socket实时事件监听
   window.addEventListener('tg:message', onTgSocketMessage);
+  window.addEventListener('tg:translation', onTgTranslationUpdate);
   window.addEventListener('tg:conv-update', onTgSocketConvUpdate);
 
-  // TG兜底轮询（仅在TG tab激活时，2秒一次，保险）
+  // Background check done event
+  window.addEventListener('customer:bgcheck:done', onBgCheckDone);
+
+  // TG兜底轮询（仅在TG tab激活时，10秒刷新会话列表；消息靠socket实时推送）
   tgPollTimer = setInterval(() => {
     if (activeChannel.value === 'telegram') {
       loadTgConversations();
-      if (tgActiveJid.value) loadTgMessages(tgActiveJid.value);
+      // 不再每2秒轮询消息列表，避免覆盖socket实时消息和乐观消息
+      // 消息通过socket事件(tg:message)实时追加，打开会话时loadTgMessages一次性加载
     }
-  }, 2000);
+  }, 10000);
 
   // Auto-open TG conversation from customer list jump
   try {
@@ -4615,7 +5263,9 @@ onUnmounted(() => {
   if (inPageFlashTimer) clearInterval(inPageFlashTimer);
   updateTitleBadge();
   window.removeEventListener('tg:message', onTgSocketMessage);
+    window.removeEventListener('tg:translation', onTgTranslationUpdate);
   window.removeEventListener('tg:conv-update', onTgSocketConvUpdate);
+  window.removeEventListener('customer:bgcheck:done', onBgCheckDone);
   if (tgPollTimer) clearInterval(tgPollTimer);
 });
 
@@ -4663,12 +5313,12 @@ watch(showSettings, (v) => {
   if (v) loadUnattended();
 });
 
-const platformItems = [
-  { key: 'assistant', label: '外贸Agent', icon: '🤖' },
-  { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
+const platformItems = [  { key: 'assistant', label: '外贸Agent', icon: '🤖' },
   { key: 'communication', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
   { key: 'customers', label: '客户管理', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
   { key: 'pipeline', label: '销售看板', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-4h2v12H7V9zm4-4h2v16h-2V5zm4 6h2v10h-2V11zm4-4h2v14h-2V7z"/></svg>' },
+  { key: 'product-knowledge', label: '产品知识', icon: '📦' },
+  { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
   { key: 'skills', label: '技能商店', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>' },
 ];
 
@@ -4717,6 +5367,7 @@ const MH_GROUPS = [
     {key:'requirement', icon:'🎯', label:'需求总结'},
   ]},
   { key:'customer', icon:'👤', items:[
+    {key:'tracking', icon:'📈', label:'效果追踪'},
     {key:'customer', icon:'👤', label:'客户画像'},
     {key:'company', icon:'🏢', label:'公司资料'},
     {key:'freight', icon:'🚢', label:'运费查询'},
@@ -4734,10 +5385,11 @@ function toggleMhMenu(key) {
 // 移动端栏目抽屉菜单
 const mobileDrawerItems = [
   { key: 'assistant', label: '外贸Agent', icon: '🤖' },
-  { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
   { key: 'chatlist', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
   { key: 'customers', label: '客户管理', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
   { key: 'pipeline', label: '销售看板', icon: '📊' },
+  { key: 'product-knowledge', label: '产品知识', icon: '📦' },
+  { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
   { key: 'skills', label: '技能商店', icon: '🧩' },
 ];
 const mobileHeaderTitle = computed(() => {
@@ -4749,6 +5401,8 @@ const mobileHeaderTitle = computed(() => {
   if (activePlatform.value === 'communication') return currentChannel.value?.name || '客户沟通';
   if (activePlatform.value === 'customers') return '客户管理';
   if (activePlatform.value === 'pipeline') return '销售看板';
+  if (activePlatform.value === 'product-knowledge') return '产品知识';
+  if (activePlatform.value === 'speech-library') return '话术库';
   if (activePlatform.value === 'skills') return '技能商店';
   return 'TradeAgent';
 });
@@ -4786,7 +5440,11 @@ function onDrawerItemClick(item) {
 }
 function checkMobile() {
   const wasMobile = isMobile.value;
-  isMobile.value = window.innerWidth <= 768;
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(ua);
+  isMobile.value = window.innerWidth <= 900 || isMobileUA;
+  // 给 html 根元素加 is-mobile class，CSS 用此 class 兜底移动端布局（解决部分浏览器媒体查询不匹配问题）
+  document.documentElement.classList.toggle('is-mobile', isMobile.value);
   // 仅在真正跨断点切换时重置面板状态；输入法弹起/收起引起的高度变化(宽度不变)不打断当前会话
   if (!wasMobile && isMobile.value) {
     // PC → 移动端
@@ -4818,6 +5476,8 @@ function switchPlatform(item) {
     automation: '/automation',
     emails: '/emails',
     data: '/dashboard',
+    'product-knowledge': '/product-knowledge',
+    'speech-library': '/speech-library',
     skills: '/skill-store',
   };
   const target = routeMap[item.key] || '/';
@@ -4828,7 +5488,7 @@ function openMobilePanel(key) {
       mhMenuOpen.value = null;
       // 点击已激活的顶部快捷按钮 → 关闭
       if (mobilePanel.value === key) { mobilePanel.value = null; activePanel.value = null; return; }
-      if (!chatStore.activeJid && (key === 'aitalk' || key === 'customer' || key === 'translate' || key === 'worldclock')) {
+      if (!chatStore.activeJid && (key === 'aitalk' || key === 'customer' || key === 'translate' || key === 'worldclock' || key === 'tracking' || key === 'speechlib')) {
         ElMessage.warning('请先选择一个会话'); return;
       }
       activePanel.value = key;
@@ -4864,8 +5524,10 @@ function handleMobileTab(tab) {
     return;
   }
   if (tab.key === 'chatlist') {
+    activePlatform.value = 'communication';
+    if (route.path !== '/chat') router.push('/chat');
     popupSelected.value = false;
-    channelPopupOpen.value = !channelPopupOpen.value;
+    channelSheetOpen.value = true;
     return;
   }
   if (tab.key === 'customers') {
@@ -4894,6 +5556,8 @@ watch(() => route.path, (p) => {
   else if (p.startsWith('/customers')) activePlatform.value = 'customers';
   else if (p.startsWith('/pipeline')) activePlatform.value = 'pipeline';
   else if (p.startsWith('/automation')) activePlatform.value = 'automation';
+  else if (p.startsWith('/product-knowledge')) activePlatform.value = 'product-knowledge';
+  else if (p.startsWith('/speech-library')) activePlatform.value = 'speech-library';
   else if (p.startsWith('/skill-store')) activePlatform.value = 'skills';
   else if (p.startsWith('/settings')) { activePlatform.value = 'dashboard'; showSettings.value = true; }
 }, { immediate: true });
@@ -4988,6 +5652,19 @@ function _letterOf(name) {
 const selfInitial = computed(() => _letterOf(chatStore.pushName || chatStore.connectedPhone || 'W'));
 const unreadTotal = computed(() => conversations.value.reduce((s, c) => s + (c.unreadCount||0), 0));
 const tgUnreadTotal = computed(() => tgConversations.value.reduce((s, c) => s + (c.unread||0), 0));
+// TG聊天头部：国家+时间badge
+const tgActiveConv = computed(() => tgConversations.value.find(c => c.jid === tgActiveJid.value));
+const tgCultureIso = computed(() => {
+  if (!tgActiveJid.value) return null;
+  return cultureGetAutoIso(tgActiveJid.value, tgActiveConv.value);
+});
+const tgCultureInfo = computed(() => tgCultureIso.value ? getCulture(tgCultureIso.value) : null);
+const tgCultureWorkStatus = computed(() => {
+  if (!tgCultureIso.value) return { status:'none', icon:'', tip:'', localTime:'', hour:0, weekday:'', isWeekend:false };
+  const info = tgCultureInfo.value;
+  if (!info) return { status:'none', icon:'', tip:'', localTime:'', hour:0, weekday:'', isWeekend:false };
+  return getLocalWorkStatus(info.tz, info.workHours) || { status:'none', icon:'', tip:'', localTime:'', hour:0, weekday:'', isWeekend:false };
+});
 const emailUnreadTotal = ref(0); // TODO: email unread
 function convInitial(conv) { return _letterOf(conv?.pushName || conv?.name || '?'); }
 const selfAvatarBg = computed(() => {
@@ -5010,7 +5687,21 @@ async function loadTgMessages(jid) {
     const { data } = await api.get('/whatsapp/messages', { params: { jid } });
     tgMessages.value = (data || []).slice().reverse().map(m => {
       let transObj = null;
-      if (m.translation) { try { transObj = typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation; } catch(e) {} }
+      if (m.translation) {
+        if (typeof m.translation === 'string') {
+          // API may return either a JSON string or a plain translation string
+          const trimmed = m.translation.trim();
+          if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+            try { transObj = JSON.parse(trimmed); } catch(e) { /* plain string, treat as translated */ }
+          }
+          if (!transObj) {
+            // API already extracted the correct string based on direction
+            transObj = { translated: m.translation };
+          }
+        } else {
+          transObj = m.translation;
+        }
+      }
       return {
         ...m,
         text: m.body || m.content || '',
@@ -5029,33 +5720,52 @@ async function sendTgMessage() {
   const text = tgInputText.value.trim();
   if (!text || tgSending.value || !tgActiveJid.value) return;
   tgSending.value = true;
+  tgInputText.value = '';
+  // 乐观消息：立即显示，不等API返回
+  const tempId = 'tmp-tg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  tgMessages.value.push({
+    id: tempId,
+    fromMe: true,
+    body: text,
+    text: text,
+    timestamp: new Date().toISOString(),
+    direction: 'outbound',
+    time: formatMsgTime(new Date()),
+    platform: 'telegram',
+    waMessageId: '',
+    translationObj: null,
+    _tempId: tempId,
+  });
+  nextTick(() => {
+    const box = document.querySelector('.tg-msgs');
+    if (box) box.scrollTop = box.scrollHeight;
+  });
   try {
     const { data } = await api.post('/whatsapp/send', { to: tgActiveJid.value, message: text });
-    // Use server response to avoid duplicate + include translation
-    const savedId = data?.savedId || Date.now();
-    const msgBody = text;
+    // API返回后，更新乐观消息（加翻译、真实ID）
     let localTrans = null;
-    if (data?.translation) { try { localTrans = typeof data.translation === 'string' ? JSON.parse(data.translation) : data.translation; } catch(e){} }
-    tgMessages.value.push({
-      id: savedId,
-      fromMe: true,
-      body: msgBody,
-      text: msgBody,
-      timestamp: new Date().toISOString(),
-      direction: 'outbound',
-      time: formatMsgTime(new Date()),
-      platform: 'telegram',
-      waMessageId: data?.waMessageId || '',
-      translationObj: localTrans,
-    });
-    tgInputText.value = '';
-    nextTick(() => {
-      const box = document.querySelector('.tg-msgs');
-      if (box) box.scrollTop = box.scrollHeight;
-    });
-    // 刷新会话列表
+    if (data?.translation) {
+      if (typeof data.translation === 'string') {
+        const ts = data.translation.trim();
+        if (ts.startsWith('{') && ts.endsWith('}')) { try { localTrans = JSON.parse(ts); } catch(e){} }
+        if (!localTrans) localTrans = { translated: data.translation };
+      } else { localTrans = data.translation; }
+    }
+    const idx = tgMessages.value.findIndex(m => m._tempId === tempId);
+    if (idx >= 0) {
+      tgMessages.value[idx] = {
+        ...tgMessages.value[idx],
+        id: data?.savedId || tgMessages.value[idx].id,
+        waMessageId: data?.waMessageId || '',
+        translationObj: localTrans,
+        _tempId: tempId,
+      };
+    }
     loadTgConversations();
   } catch(e) {
+    // 发送失败，移除乐观消息
+    const idx = tgMessages.value.findIndex(m => m._tempId === tempId);
+    if (idx >= 0) tgMessages.value.splice(idx, 1);
     ElMessage.error('发送失败：' + (e.response?.data?.error || e.message));
   } finally { tgSending.value = false; }
 }
@@ -5097,6 +5807,25 @@ function selectConv(conv) {
 
 // ─── 会话操作 ActionSheet ───
 const convMenu = reactive({ visible: false, conv: null });
+function handleConvTouchStart(conv, e) {
+  // 阻止移动端长按默认菜单
+  if (e.touches && e.touches.length === 1) {
+    const touch = e.touches[0];
+    // 记录触摸起始位置，用于长按检测
+    convMenu._touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now(), conv };
+  }
+}
+// 长按检测
+let touchTimer = null;
+document.addEventListener('touchend', (e) => {
+  if (convMenu._touchStart) {
+    const elapsed = Date.now() - convMenu._touchStart.time;
+    if (elapsed >= 500) { // 500ms 视为长按
+      openConvMenu(convMenu._touchStart.conv, { clientX: convMenu._touchStart.x, clientY: convMenu._touchStart.y, preventDefault: ()=>{} });
+    }
+    convMenu._touchStart = null;
+  }
+});
 let _lpTimer = null;
 let _lpMoved = false;
 const LONG_PRESS_MS = 600;
@@ -5185,10 +5914,10 @@ async function doDeleteConv() {
   if (!convMenu.conv) return;
   const jid = convMenu.conv.jid;
   const name = convMenu.conv.name || jid;
-  if (!confirm(`确定删除与 ${name} 的所有聊天记录？此操作不可恢复`)) return;
+  if (!confirm(`确定要删除联系人「${name}」吗？\n将同时清除该联系人的所有聊天记录、客户资料和跟进数据，此操作不可恢复！`)) return;
   try {
-    await chatStore.deleteConversation(jid);
-  } catch(e) { alert('删除失败'); }
+    await chatStore.deleteConversation(jid, true);
+  } catch(e) { alert('删除失败: ' + (e.response?.data?.error || e.message)); }
   closeConvMenu();
 }
 
@@ -5305,6 +6034,10 @@ function switchChannel(ch) {
     tgActiveJid.value = null;
     router.push('/chat');
   }
+  // 切回WA时清除TG残留状态，避免移动端布局异常
+  if (ch.id === 'whatsapp') {
+    tgActiveJid.value = null;
+  }
   if (ch.id === 'telegram') {
     loadTgConversations();
   }
@@ -5324,6 +6057,9 @@ function selectChannel(id) {
     activeConv.value = null;
     router.push('/chat');
   }
+  if (id === 'whatsapp') {
+    tgActiveJid.value = null;
+  }
   if (id === 'telegram') {
     loadTgConversations();
   }
@@ -5331,10 +6067,9 @@ function selectChannel(id) {
 
 const currentChannelAccounts = computed(() => {
   if (activeChannel.value === 'whatsapp') {
-    // Real WA account - only one account supported currently
-    if (chatStore.isConnected && waAccountCard.value) {
-      return [waAccountCard.value];
-    }
+    // Multi-account: show all connected WA accounts
+    const connected = waAccounts.value.filter(a => a.online);
+    if (connected.length > 0) return connected;
     return [];
   }
   if (activeChannel.value === 'email') {
@@ -5377,10 +6112,23 @@ function onTgSocketMessage(e) {
     const body = m.body || m.content || m.text || '';
     const fromMe = !!m.fromMe;
     const waId = m.waMessageId || String(m.id || Date.now());
-    const exists = tgMessages.value.some(x => x.waMessageId === waId || x.id === m.id);
+    // 出站消息去重：匹配waMessageId/id，同时检查_tempId（乐观消息）
+    const exists = tgMessages.value.some(x => {
+      if (x.waMessageId && x.waMessageId === waId) return true;
+      if (x.id === m.id) return true;
+      // 出站乐观消息：用body+方向匹配（socket还没带tempId）
+      if (fromMe && x._tempId && x.direction === 'outbound') return true;
+      return false;
+    });
     if (!exists && body) {
       let tgTransObj = null;
-      if (m.translation) { try { tgTransObj = typeof m.translation==='string' ? JSON.parse(m.translation) : m.translation; } catch(e){} }
+      if (m.translation) {
+        if (typeof m.translation === 'string') {
+          const ts = m.translation.trim();
+          if (ts.startsWith('{') && ts.endsWith('}')) { try { tgTransObj = JSON.parse(ts); } catch(e){} }
+          if (!tgTransObj) tgTransObj = { translated: m.translation };
+        } else { tgTransObj = m.translation; }
+      }
       tgMessages.value.push({
         id: m.id || Date.now(),
         from: fromMe ? 'me' : jid.split('@')[0],
@@ -5393,12 +6141,55 @@ function onTgSocketMessage(e) {
         waMessageId: waId,
         platform: 'telegram',
         translationObj: tgTransObj,
+        mediaUrl: m.mediaUrl || null,
+        messageType: m.messageType || 'text',
       });
+    } else if (exists && fromMe && body) {
+      // 出站消息已存在（乐观消息），更新其真实ID/翻译
+      let tgTransObj2 = null;
+      if (m.translation) {
+        if (typeof m.translation === 'string') {
+          const ts2 = m.translation.trim();
+          if (ts2.startsWith('{') && ts2.endsWith('}')) { try { tgTransObj2 = JSON.parse(ts2); } catch(e){} }
+          if (!tgTransObj2) tgTransObj2 = { translated: m.translation };
+        } else { tgTransObj2 = m.translation; }
+      }
+      const existIdx = tgMessages.value.findIndex(x => {
+        if (x.waMessageId && x.waMessageId === waId) return true;
+        if (x.id === m.id) return true;
+        if (x._tempId && x.direction === 'outbound') return true;
+        return false;
+      });
+      if (existIdx >= 0) {
+        tgMessages.value[existIdx] = {
+          ...tgMessages.value[existIdx],
+          id: m.id || tgMessages.value[existIdx].id,
+          waMessageId: waId,
+          translationObj: tgTransObj2 || tgMessages.value[existIdx].translationObj,
+          mediaUrl: m.mediaUrl || tgMessages.value[existIdx].mediaUrl || null,
+          messageType: m.messageType || tgMessages.value[existIdx].messageType || 'text',
+        };
+      }
       nextTick(() => {
         const box = document.querySelector('.tg-msgs');
         if (box) box.scrollTop = box.scrollHeight;
       });
     }
+  }
+}
+function onTgTranslationUpdate(e) {
+  const data = e.detail;
+  if (!data) return;
+  const { id: msgId, waId, jid, translation } = data;
+  // Find and update the matching message in tgMessages
+  const idx = tgMessages.value.findIndex(m => 
+    (waId && m.waMessageId === waId) || 
+    (msgId && m.id === msgId)
+  );
+  if (idx >= 0 && translation) {
+    tgMessages.value[idx].translationObj = translation;
+    // Trigger reactivity
+    tgMessages.value = [...tgMessages.value];
   }
 }
 function onTgSocketConvUpdate(e) {
@@ -5484,6 +6275,9 @@ const conversations = computed(() => {
       pinned: !!c.pinned,
       starred: !!c.starred,
       blocked: !!c.blocked,
+      accountId: c.accountId || null,
+      accountName: c.accountName || null,
+      platform: c.platform || 'whatsapp',
     };
   });
   // 首响客户永远排最前（按等待时间最久在前）
@@ -6009,9 +6803,19 @@ const summaryFieldLabels = {
   concerns: '关注点/顾虑',
 };
 
+// Phase 5: reply length + context state
+const replyLength = ref('medium');
+const replyIncludeContext = ref(true);
+const replyLengths = [
+  { key: 'short', label: '短', icon: '⚡' },
+  { key: 'medium', label: '中', icon: '📝' },
+  { key: 'long', label: '长', icon: '📧' },
+];
+const lengthLabels = { short: '短', medium: '中', long: '长' };
+
 async function handleGenerateReplies() {
   if (!chatStore.activeJid) return;
-  await chatStore.generateAiReplies();
+  await chatStore.generateAiReplies(null, { length: replyLength.value, includeContext: replyIncludeContext.value });
   scrollAiChatBottom();
 }
 async function handleGenerateSummary() {
@@ -6028,7 +6832,7 @@ async function handleGenerateProfile() {
 async function generateReplies() {
   const extra = (aiInputText.value || '').trim();
   if (extra) aiInputText.value = '';
-  await chatStore.generateAiReplies(extra || null);
+  await chatStore.generateAiReplies(extra || null, { length: replyLength.value, includeContext: replyIncludeContext.value });
   scrollAiChatBottom();
   nextTick(() => { aiInputEl.value && aiInputEl.value.focus(); });
 }
@@ -6062,6 +6866,17 @@ async function sendAiChat() {
 function fillAiInput(text) {
   if (!text) return;
   chatStore.insertToInput(text);
+}
+
+// Phase 5: Copy to clipboard helper
+function copyToClipboard(text) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    // Use a simple toast if available
+    if (typeof ElMessage !== 'undefined') {
+      ElMessage.success('已复制到剪贴板');
+    }
+  }).catch(() => {});
 }
 
 function onOpenAIPanel() { if (isMobile.value) { openMobilePanel('aitalk'); return; } switchPanel('aitalk'); }
@@ -7723,6 +8538,79 @@ function detectCountryFromJid(jid) {
   return null;
 }
 
+// \u4ece\u8054\u7cfb\u4eba\u540d\u5b57\u63a8\u65ad\u56fd\u5bb6ISO\u7801\uff08\u652f\u6301\u4e2d\u82f1\u6587\u5173\u952e\u8bcd\uff09
+const countryNameMap = {
+  '\u80af\u5c3c\u4e9a':'KE','\u5766\u6851\u5c3c\u4e9a':'TZ','\u4e4c\u5e72\u8fbe':'UG','\u5362\u65fa\u8fbe':'RW','\u57c3\u585e\u4fc4\u6bd4\u4e9a':'ET',
+  '\u5357\u975e':'ZA','\u5c3c\u65e5\u5229\u4e9a':'NG','\u52a0\u7eb3':'GH','\u57c3\u53ca':'EG','\u6469\u6d1b\u54e5':'MA','\u963f\u5c14\u53ca\u5229\u4e9a':'DZ',
+  '\u7a81\u5c3c\u65af':'TN','\u5580\u9ea6\u9686':'CM','\u79d1\u7279\u8fea\u74e6':'CI','\u585e\u5185\u52a0\u5c14':'SN','\u9a6c\u91cc':'ML',
+  '\u521a\u679c':'CD','\u5b89\u54e5\u62c9':'AO','\u83ab\u6851\u6bd4\u514b':'MZ','\u8d5e\u6bd4\u4e9a':'ZM','\u6d25\u5df4\u5e03\u97e6':'ZW',
+  '\u7eb3\u7c73\u6bd4\u4e9a':'NA','\u535a\u8328\u74e6\u7eb3':'BW','\u9a6c\u62c9\u7ef4':'MW','\u9a6c\u8fbe\u52a0\u65af\u52a0':'MG','\u82cf\u4e39':'SD',
+  '\u5229\u6bd4\u4e9a':'LY','\u6bdb\u91cc\u6c42\u65af':'MU','\u52a0\u84ec':'GA','\u591a\u54e5':'TG','\u8d1d\u5b81':'BJ',
+  '\u5e03\u57fa\u7eb3\u6cd5\u7d22':'BF','\u51e0\u5185\u4e9a':'GN','\u585e\u62c9\u5229\u6602':'SL','\u5229\u6bd4\u91cc\u4e9a':'LR',
+  '\u4e2d\u56fd':'CN','\u5370\u5ea6':'IN','\u5df4\u57fa\u65af\u5766':'PK','\u5b5f\u52a0\u62c9':'BD','\u65af\u91cc\u5170\u5361':'LK',
+  '\u7f05\u7538':'MM','\u6cf0\u56fd':'TH','\u8d8a\u5357':'VN','\u67ec\u57d4\u5be8':'KH','\u8001\u631d':'LA',
+  '\u9a6c\u6765\u897f\u4e9a':'MY','\u65b0\u52a0\u5761':'SG','\u5370\u5c3c':'ID','\u5370\u5ea6\u5c3c\u897f\u4e9a':'ID','\u83f2\u5f8b\u5bbe':'PH',
+  '\u65e5\u672c':'JP','\u97e9\u56fd':'KR','\u671d\u9c9c':'KP','\u8499\u53e4':'MN','\u5c3c\u6cca\u5c14':'NP',
+  '\u4f0a\u6717':'IR','\u4f0a\u62c9\u514b':'IQ','\u6c99\u7279':'SA','\u6c99\u7279\u963f\u62c9\u4f2f':'SA','\u963f\u8054\u914b':'AE',
+  '\u8fea\u62dc':'AE','\u5361\u5854\u5c14':'QA','\u79d1\u5a01\u7279':'KW','\u5df4\u6797':'BH','\u963f\u66fc':'OM',
+  '\u4ee5\u8272\u5217':'IL','\u571f\u8033\u5176':'TR','\u7ea6\u65e6':'JO','\u9ece\u5df4\u5ae9':'LB','\u53d9\u5229\u4e9a':'SY',
+  '\u4e5f\u95e8':'YE','\u963f\u5bcc\u6c57':'AF','\u683c\u9c81\u5409\u4e9a':'GE','\u4e9a\u7f8e\u5c3c\u4e9a':'AM','\u963f\u585e\u62dc\u7586':'AZ',
+  '\u4fc4\u7f57\u65af':'RU','\u4e4c\u514b\u5170':'UA','\u767d\u4fc4\u7f57\u65af':'BY','\u6ce2\u5170':'PL','\u6377\u514b':'CZ',
+  '\u65af\u6d1b\u4f10\u514b':'SK','\u5308\u7259\u5229':'HU','\u7f57\u9a6c\u5c3c\u4e9a':'RO','\u4fdd\u52a0\u5229\u4e9a':'BG','\u585e\u5c14\u7ef4\u4e9a':'RS',
+  '\u514b\u7f57\u5730\u4e9a':'HR','\u65af\u6d1b\u6587\u5c3c\u4e9a':'SI','\u5e0c\u814a':'GR','\u610f\u5927\u5229':'IT','\u897f\u73ed\u7259':'ES',
+  '\u8461\u8404\u7259':'PT','\u6cd5\u56fd':'FR','\u5fb7\u56fd':'DE','\u82f1\u56fd':'GB','\u7231\u5c14\u5170':'IE',
+  '\u8377\u5170':'NL','\u6bd4\u5229\u65f6':'BE','\u5362\u68ee\u5821':'LU','\u745e\u58eb':'CH','\u5965\u5730\u5229':'AT',
+  '\u745e\u5178':'SE','\u631a\u5a01':'NO','\u4e39\u9ea6':'DK','\u82ac\u5170':'FI','\u51b0\u5c9b':'IS',
+  '\u7f8e\u56fd':'US','\u52a0\u62ff\u5927':'CA','\u58a8\u897f\u54e5':'MX','\u5df4\u897f':'BR','\u963f\u6839\u5ef7':'AR',
+  '\u667a\u5229':'CL','\u79d8\u9c81':'PE','\u54e5\u4f26\u6bd4\u4e9a':'CO','\u59d4\u5185\u745e\u62c9':'VE','\u5384\u74dc\u591a\u5c14':'EC',
+  '\u73bb\u5229\u7ef4\u4e9a':'BO','\u5df4\u62c9\u572d':'PY','\u4e4c\u62c9\u572d':'UY','\u53e4\u5df4':'CU','\u5df4\u62ff\u9a6c':'PA',
+  '\u54e5\u65af\u8fbe\u9ece\u52a0':'CR','\u5371\u5730\u9a6c\u62c9':'GT','\u6d2a\u90fd\u62c9\u65af':'HN','\u8428\u5c14\u74e6\u591a':'SV','\u5c3c\u52a0\u62c9\u74dc':'NI',
+  '\u591a\u660e\u5c3c\u52a0':'DO','\u7259\u4e70\u52a0':'JM','\u6d77\u5730':'HT','\u7279\u7acb\u5c3c\u8fbe':'TT',
+  '\u6fb3\u5927\u5229\u4e9a':'AU','\u65b0\u897f\u5170':'NZ','\u6590\u6d4e':'FJ',
+  'Kenya':'KE','Tanzania':'TZ','Uganda':'UG','Rwanda':'RW','Ethiopia':'ET',
+  'South Africa':'ZA','Nigeria':'NG','Ghana':'GH','Egypt':'EG','Morocco':'MA','Algeria':'DZ',
+  'Tunisia':'TN','Cameroon':'CM','Ivory Coast':'CI','Senegal':'SN','Mali':'ML',
+  'Congo':'CD','Angola':'AO','Mozambique':'MZ','Zambia':'ZM','Zimbabwe':'ZW',
+  'Namibia':'NA','Botswana':'BW','Malawi':'MW','Madagascar':'MG','Sudan':'SD',
+  'Libya':'LY','Mauritius':'MU','Gabon':'GA','Togo':'TG','Benin':'BJ',
+  'Burkina Faso':'BF','Guinea':'GN','Sierra Leone':'SL','Liberia':'LR',
+  'China':'CN','India':'IN','Pakistan':'PK','Bangladesh':'BD','Sri Lanka':'LK',
+  'Myanmar':'MM','Thailand':'TH','Vietnam':'VN','Cambodia':'KH','Laos':'LA',
+  'Malaysia':'MY','Singapore':'SG','Indonesia':'ID','Philippines':'PH',
+  'Japan':'JP','Korea':'KR','Mongolia':'MN','Nepal':'NP',
+  'Iran':'IR','Iraq':'IQ','Saudi Arabia':'SA','UAE':'AE','Dubai':'AE',
+  'Qatar':'QA','Kuwait':'KW','Bahrain':'BH','Oman':'OM',
+  'Israel':'IL','Turkey':'TR','Jordan':'JO','Lebanon':'LB','Syria':'SY',
+  'Yemen':'YE','Afghanistan':'AF','Georgia':'GE','Armenia':'AM','Azerbaijan':'AZ',
+  'Russia':'RU','Ukraine':'UA','Belarus':'BY','Poland':'PL','Czech':'CZ',
+  'Slovakia':'SK','Hungary':'HU','Romania':'RO','Bulgaria':'BG','Serbia':'RS',
+  'Croatia':'HR','Slovenia':'SI','Greece':'GR','Italy':'IT','Spain':'ES',
+  'Portugal':'PT','France':'FR','Germany':'DE','United Kingdom':'GB','UK':'GB','Britain':'GB',
+  'Ireland':'IE','Netherlands':'NL','Belgium':'BE','Luxembourg':'LU','Switzerland':'CH','Austria':'AT',
+  'Sweden':'SE','Norway':'NO','Denmark':'DK','Finland':'FI','Iceland':'IS',
+  'United States':'US','USA':'US','America':'US','Canada':'CA','Mexico':'MX',
+  'Brazil':'BR','Argentina':'AR','Chile':'CL','Peru':'PE','Colombia':'CO',
+  'Venezuela':'VE','Ecuador':'EC','Bolivia':'BO','Paraguay':'PY','Uruguay':'UY',
+  'Cuba':'CU','Panama':'PA','Costa Rica':'CR','Guatemala':'GT','Honduras':'HN',
+  'El Salvador':'SV','Nicaragua':'NI','Dominican Republic':'DO','Jamaica':'JM','Haiti':'HT',
+  'Australia':'AU','New Zealand':'NZ','Fiji':'FJ',
+};
+
+function detectCountryFromName(name) {
+  if (!name) return null;
+  const trimmed = name.trim();
+  if (countryNameMap[trimmed]) return countryNameMap[trimmed];
+  for (const [key, val] of Object.entries(countryNameMap)) {
+    if (key.length >= 2 && trimmed.toLowerCase().includes(key.toLowerCase())) {
+      return val;
+    }
+  }
+  for (const [key, val] of Object.entries(countryNameMap)) {
+    if (trimmed.includes(key)) return val;
+  }
+  return null;
+}
+
 function getCulture(iso) {
   if (!iso) return null;
   return CULTURE_DATA[iso.toUpperCase()] || null;
@@ -7814,13 +8702,33 @@ function cultureGetAutoIso(jid, conv) {
   // 2. 从jid推断国家码（WA格式 86xxx@s.whatsapp.net 直接匹配）
   let iso = detectCountryFromJid(jid);
   if (iso) return iso;
-  // 3. TG jid无法从userId匹配，回退到customerData的phone字段
+  // 2.5 TG JID: 从jid中提取电话号码（格式：123456789@telegram）
+  if (jid.endsWith('@telegram')) {
+    const tgPhone = jid.split('@')[0];
+    if (tgPhone) {
+      iso = detectCountryFromJid(tgPhone + '@s.whatsapp.net');
+      if (iso) return iso;
+    }
+  }
+  // 3. 从conversation对象的contactPhone字段（后端从Contact表获取）
+  const convPhone = conv?.contactPhone;
+  if (convPhone) {
+    iso = detectCountryFromJid(convPhone + '@s.whatsapp.net');
+    if (iso) return iso;
+  }
+  // 4. 回退到customerData的phone字段
   const phone = customerData.value?.phone;
   if (phone) {
     iso = detectCountryFromJid(phone + '@s.whatsapp.net');
     if (iso) return iso;
   }
-  // 4. 客户档案country字段
+  // 3.5 从联系人名字推断国家（中英文关键词）
+  const nameCandidate = conv?.name || customerData.value?.contactName || customerData.value?.name || '';
+  if (nameCandidate) {
+    const nameIso = detectCountryFromName(nameCandidate);
+    if (nameIso) return nameIso;
+  }
+  // 5. 客户档案country字段
   const country = customerData.value?.country;
   if (country) return country.toUpperCase();
   return null;
@@ -9321,6 +10229,27 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .acc-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
 .acc-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
 .acc-meta.online-text { color: var(--accent); }
+.acc-meta.offline-text { color: var(--text-muted); }
+.wa-account-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  transition: background 0.15s; position: relative;
+  margin-bottom: 4px;
+}
+.wa-account-item:hover { background: var(--panel-header-bg); }
+.wa-account-item.active { background: var(--sidebar-active); }
+.acc-check {
+  color: var(--accent); font-weight: 700; font-size: 14px;
+  flex-shrink: 0;
+}
+.acc-proxy-tag {
+  display: inline-block; font-size: 10px;
+  color: var(--text-secondary); opacity: 0.7;
+  margin-left: 4px;
+}
+.acc-avatar-img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+}
 .wa-account-card {
   display: flex; align-items: center; gap: 10px;
   padding: 10px; border-radius: 8px;
@@ -9361,6 +10290,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 /* 折叠态账号头像按钮 */
 .ch-avatar-btn{width:40px;height:40px;margin:8px auto 0;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;position:relative;transition:transform .15s}
 .ch-avatar-btn:hover{transform:scale(1.08)}
+.ch-avatar-stack{display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0;}
 .ch-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:15px;overflow:hidden;border:2px solid var(--border-color);transition:border-color .15s}
 .ch-avatar-btn.active .ch-avatar{border-color:var(--accent,#00a884)}
 .ch-avatar-img{width:100%;height:100%;object-fit:cover}
@@ -9523,6 +10453,10 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .filter-tab-more { padding: 5px 10px; }
 .chatlist-body { flex: 1; overflow-y: auto; }
 .conv-item {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-y;
   display: flex; gap: 10px; padding: 10px 12px;
   cursor: pointer; border-bottom: 1px solid #222d3430;
   transition: background 0.15s;
@@ -9648,7 +10582,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 }
 .frb-btn-dismiss:hover { background: rgba(255,255,255,0.35) !important; }
 /* 移动端适配：名字超长时截断，确保按钮可见 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .first-response-bar { gap: 6px; padding: 8px 10px; font-size: 12px; flex-wrap: nowrap; overflow: hidden; }
   .first-response-bar .frb-icon { font-size: 16px; }
   .first-response-bar .frb-text { font-size: 12px; flex-shrink: 1; min-width: 0; }
@@ -9952,7 +10886,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* Mobile */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .ai-actions { gap: 6px; padding: 6px; }
   .ai-action-btn { height: 40px; font-size: 13px; border-radius: 8px; }
 }
@@ -10176,7 +11110,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .mh-menu-mask{position:fixed;top:60px;left:0;right:0;bottom:0;z-index:90;background:transparent}
 
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   html, body, #app { height: 100%; overflow: hidden; }
 
   .crm-layout { flex-direction: column; height: 100vh; height: 100dvh; }
@@ -11124,6 +12058,41 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 }
 .aitalk-switch-mode-link:hover { color: var(--accent); }
 
+
+/* ── 紧凑顶栏 ── */
+.aitalk-top-bar-compact { padding: 8px 10px 6px !important; gap: 4px !important; }
+.aitalk-top-bar-compact .aitalk-top-first-row { gap: 6px; }
+.aitalk-top-bar-compact .aitalk-model-select { max-width: 120px; flex: 0 0 auto; }
+.aitalk-lang-select-compact { max-width: 90px; flex: 0 0 auto; }
+.aitalk-lang-select-compact .el-select__placeholder, .aitalk-lang-select-compact .el-select__selected-item { color: var(--text-primary) !important; font-size: 12px; }
+
+/* ── 产品分析卡片 ── */
+.aitalk-product-card {
+  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 10px;
+}
+.aitalk-product-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.aitalk-product-icon { font-size: 16px; }
+.aitalk-product-title { color: #60a5fa; font-size: 13px; font-weight: 600; flex: 1; }
+.aitalk-match-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+}
+.aitalk-match-badge.match-high { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.aitalk-match-badge.match-medium { background: rgba(234,179,8,0.15); color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+.aitalk-match-badge.match-low { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.aitalk-product-body { }
+.aitalk-product-explain { color: var(--text-primary); font-size: 13px; line-height: 1.5; margin-bottom: 8px; white-space: pre-wrap; }
+.aitalk-product-matched, .aitalk-product-params { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; }
+.aitalk-pm-label, .aitalk-pp-label { color: var(--text-secondary); font-size: 11px; white-space: nowrap; }
+.aitalk-pm-chip {
+  background: rgba(34,197,94,0.12); color: #22c55e; font-size: 11px; padding: 2px 8px;
+  border-radius: 10px; border: 1px solid rgba(34,197,94,0.2);
+}
+.aitalk-pp-chip {
+  background: rgba(234,179,8,0.12); color: #eab308; font-size: 11px; padding: 2px 8px;
+  border-radius: 10px; border: 1px solid rgba(234,179,8,0.2);
+}
+
 .aitalk-scroll-down {
   position: absolute; right: 16px; bottom: 8px; width: 32px; height: 32px;
   border-radius: 50%; background: var(--panel-header-bg); border: 1px solid var(--text-muted); color: var(--accent);
@@ -11234,7 +12203,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .followup-add { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .followup-add-btn { height: 38px; }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .customer-panel-body .customer-header { padding: 10px 12px; gap: 8px; }
   .customer-hero-avatar { width: 48px !important; height: 48px !important; }
   .customer-hero-fallback { font-size: 18px; }
@@ -11264,6 +12233,38 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .customer-bg-btn:hover { background: #008c6e; }
 .customer-bg-btn:disabled { opacity: 0.7; cursor: wait; }
 .bg-check-time { font-size: 11px; color: var(--text-secondary); text-align: center; padding: 0 12px; margin-top: -4px; }
+
+/* Background check rating badges */
+.conv-bg-rating {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--sidebar-bg, #0b141a);
+  line-height: 1;
+  z-index: 2;
+}
+.mh-bg-rating {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+  line-height: 1;
+}
 .bg-report-card { background: transparent; border: none; border-radius: 0; margin: 8px 0 0; overflow: visible; }
 .bg-report-head { display: flex; align-items: center; justify-content: space-between; padding: 0 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--sidebar-active); }
 .bg-report-body { padding: 0; font-size: 13.5px; line-height: 1.75; color: var(--text-primary); max-height: none; overflow: visible; white-space: normal; word-break: break-word; }
@@ -11274,6 +12275,72 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .bg-missing-tags { color: #f59e0b; }
 .bg-ask-btn { background: #6366f1; }
 .bg-ask-btn:hover:not(:disabled) { background: #4f46e5; }
+
+/* ── BANT Score Styles ── */
+.conv-bant-level {
+  position: absolute; top: -2px; right: -2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  color: #fff; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--sidebar-bg, #0b141a);
+  line-height: 1; z-index: 2; cursor: pointer; transition: transform 0.15s;
+}
+.conv-bant-level:hover { transform: scale(1.15); }
+.conv-bant-level.bant-high { background: #22c55e; }
+.conv-bant-level.bant-medium { background: #eab308; }
+.conv-bant-level.bant-low { background: #94a3b8; }
+.mh-bant-level {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 8px; border-radius: 20px;
+  color: #fff; font-size: 11px; font-weight: 600;
+  margin-left: 6px; line-height: 1.4; cursor: pointer; transition: opacity 0.15s;
+}
+.mh-bant-level:hover { opacity: 0.85; }
+.mh-bant-level.bant-high { background: #22c55e; }
+.mh-bant-level.bant-medium { background: #eab308; }
+.mh-bant-level.bant-low { background: #94a3b8; }
+.bant-dialog .el-dialog { background: var(--panel-header-bg, #202c33); border-radius: 12px; }
+.bant-dialog .el-dialog__title { color: var(--text-primary, #e9edef); }
+.bant-dialog .el-dialog__header { border-bottom: 1px solid var(--border-color, #2a3942); padding-bottom: 12px; }
+.bant-detail-body { padding: 0; }
+.bant-summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; margin-bottom: 16px;
+  background: var(--sidebar-active, #2a3942); border-radius: 10px;
+}
+.bant-level-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 48px; height: 28px; padding: 0 10px;
+  border-radius: 20px; color: #fff; font-size: 13px; font-weight: 700;
+}
+.bant-level-badge.bant-high { background: #22c55e; }
+.bant-level-badge.bant-medium { background: #eab308; color: #1a1a1a; }
+.bant-level-badge.bant-low { background: #94a3b8; }
+.bant-total-score { font-size: 22px; font-weight: 700; color: var(--text-primary, #e9edef); }
+.bant-dimensions { display: flex; flex-direction: column; gap: 14px; }
+.bant-dim-item { padding: 0; }
+.bant-dim-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.bant-dim-label { font-size: 13px; color: var(--text-primary, #e9edef); font-weight: 500; }
+.bant-dim-score { font-size: 14px; font-weight: 700; color: var(--accent-info, #53bdeb); }
+.bant-dim-bar { height: 6px; border-radius: 3px; background: var(--sidebar-active, #2a3942); overflow: hidden; margin-bottom: 4px; }
+.bant-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.bant-bar-budget { background: linear-gradient(90deg, #22c55e, #16a34a); }
+.bant-bar-authority { background: linear-gradient(90deg, #53bdeb, #027eb5); }
+.bant-bar-need { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.bant-bar-timeline { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
+.bant-dim-reason { font-size: 12px; color: var(--text-secondary, #8696a0); margin: 2px 0 0; line-height: 1.5; }
+.bant-summary-text { font-size: 13px; color: var(--text-primary, #e9edef); margin: 16px 0 8px; padding: 10px 12px; background: var(--chat-bg, #0b141a); border-radius: 8px; line-height: 1.6; }
+.bant-eval-time { font-size: 11px; color: var(--text-muted, #667781); margin: 8px 0 0; }
+.bant-detail-empty { text-align: center; padding: 32px 0; color: var(--text-secondary, #8696a0); }
+.bant-empty-hint { font-size: 12px; color: var(--text-muted, #667781); margin-top: 8px; }
+.bant-config-dialog .el-dialog { background: var(--panel-header-bg, #202c33); border-radius: 12px; }
+.bant-config-dialog .el-dialog__title { color: var(--text-primary, #e9edef); }
+.bant-config-body { padding: 0; }
+.bant-config-section { margin-bottom: 20px; }
+.bant-config-section h4 { font-size: 13px; color: var(--text-secondary, #8696a0); margin: 0 0 12px; font-weight: 600; }
+.bant-config-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.bant-config-row label { font-size: 13px; color: var(--text-primary, #e9edef); min-width: 100px; }
+.bant-config-row .el-slider { flex: 1; }
 
 
 .customer-ask-list { padding: 0 12px; display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
@@ -11368,7 +12435,7 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 
 
 /* ===== 2026-07-13 移动端响应式补丁（追加） ===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   /* 平台侧栏永远隐藏 */
   .platform-nav { display: none !important; }
 
@@ -11456,7 +12523,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
     top: 60px; right: 0; bottom: 0; left: 0 !important;
     width: 100vw !important;
     max-width: none !important;
-    height: calc(100dvh - 60px) !important;
+    height: calc(100dvh - 60px - 62px) !important;
     z-index: 80;
     transform: translateX(100%);
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
@@ -11608,7 +12675,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 
 /* ===== 手机端ch-switch强力修复（最高优先级）===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .comm-module .ch-switch {
     position: absolute !important;
     top: 12px !important;
@@ -11657,7 +12724,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   }
 }
 
-@media(max-width:768px){
+@media(max-width:900px){
   .crm-layout{padding-top:0!important}
   .ch-switch{top:12px!important;height:56px!important}
   .col-chatlist{top:68px!important}
@@ -11674,7 +12741,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   .ch-switch .ch-sw-btn{width:44px!important;height:44px!important}
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .conv-chevron { display: none !important; }
 }
 
@@ -11767,7 +12834,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .inq-cat-icon { font-size: 18px; flex-shrink:0; }
 .inq-cat-label { font-weight: 700; flex-shrink:0; font-size:13px; }
 .inq-cat-tip { color: var(--text-secondary); flex:1; font-size: 12px; }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .aitalk-inquiry-badge { padding: 8px 10px; font-size: 12px; gap:6px; flex-wrap: wrap; }
   .inq-cat-icon { font-size: 16px; }
   .inq-cat-sep { display: none; }
@@ -11776,7 +12843,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 
 /* ===== 手机端紧凑列表（WhatsApp风格） ===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   /* 隐藏渠道切换条和账号栏（走☰抽屉） */
   .comm-module .ch-switch { display: none !important; }
   .col-accounts { display: none !important; }
@@ -11950,7 +13017,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 
 /* ===== 手机端顶栏渠道切换 ===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .mh-title { cursor: pointer; }
   /* 列表视图：标题组紧凑靠左，不撑满 */
   .mh-title.mh-title-list { flex: 0 1 auto !important; gap: 6px; }
@@ -12054,6 +13121,26 @@ body.dark .mh-dd-item:active { background:#2a3942; }
     border-top: 8px solid var(--sidebar-active, #f0f2f5);
     padding-top: 4px;
   }
+.as-sub-accounts.as-sub-menu {
+  padding-left: 12px;
+  border-left: 2px solid rgba(255,255,255,0.1);
+  margin-left: 16px;
+  margin-bottom: 8px;
+}
+.as-sub-accounts.as-sub-menu .action-sheet-item {
+  font-size: 13px;
+  padding: 10px 16px;
+}
+.as-sub-accounts.as-sub-menu .asi-icon {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
   body.dark .as-sub-accounts { border-top-color: #1a2329; }
   .as-sub-title {
     font-size: 12px;
@@ -12081,8 +13168,8 @@ body.dark .mh-dd-item:active { background:#2a3942; }
     padding: 4px 8px;
   }
   .as-acc-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
     display: inline-block;
@@ -12098,7 +13185,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 
 /* 非手机端隐藏新按钮（PC端用胶囊Tab） */
-@media (min-width: 769px) {
+@media (min-width: 901px) {
   .col-filter-btn { display: none !important; }
   .mobile-filter-menu { display: none !important; }
   .search-fu-badge { display: none !important; }
@@ -12298,7 +13385,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .doc-type-cancel:hover { color: var(--text-primary); }
 
 /* 移动端：req/doc 面板全屏 */
-@media (max-width: 767px) {
+@media (max-width: 900px) {
   .req-grid2 { grid-template-columns: 1fr; }
   .req-row { flex-direction: column; gap: 4px; }
   .req-label { min-width: auto; }
@@ -12319,7 +13406,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 /* ========== 移动端栏目抽屉 ========== */
 .mobile-drawer {
-  position: fixed; inset: 0; z-index: 200;
+  position: fixed; inset: 0; z-index: 1002;
   background: rgba(0,0,0,0.5);
   display: flex;
 }
@@ -12742,7 +13829,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 
 /* 手机端全局：顶部栏所有平台显示 + 底部tabbar留空间 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .mobile-header {
     display: flex !important;
     position: relative;
@@ -12787,7 +13874,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 
 /* 手机端ch-switch和email模式 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .ch-switch {
     flex-direction: row;
     gap: 12px;
@@ -12823,7 +13910,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 
 /* 移动端非聊天页面：workspace改column方向，module-full作为flex子项占满剩余空间可滚动 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .workspace.full-page {
     flex-direction: column !important;
     padding-top: 0 !important;
@@ -12848,14 +13935,14 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .comm-module.email-active .col-chatlist { display: none !important; }
 /* .ch-switch PC email-active: already handled by base vertical sidebar */
 .comm-module.email-active .col-conversation { margin-left: 0; padding-top: 0; flex: 1; min-width: 0; }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .comm-module.email-active .col-chatlist { display: none !important; }
   .comm-module.email-active .col-accounts { display: none !important; }
   .comm-module.email-active .col-conversation { transform: translateX(0) !important; padding-top: 0; margin-left: 0; position: absolute; top: 60px; left: 0; right: 0; bottom: 0; }
 }
 .comm-module.email-active .col-iconbar { display: none !important; }
 .col-conversation.email-conv { background: var(--panel-bg); }
-@media (min-width: 769px) {
+@media (min-width: 901px) {
   .comm-module.email-active .col-accounts { display: none !important; }
 }
 
@@ -12953,7 +14040,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .col-function-panel.companying .panel-col-header { background:var(--panel-header-bg); color:var(--text-primary); border-bottom:1px solid var(--border-color); }
 
 /* 手机端底部 padding */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .col-function-panel.m-panel .cm-panel-body {
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
   }
@@ -13084,6 +14171,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 /* ─── 会话置顶/特别关注标识 ─── */
 .conv-badge { display:inline-block; font-size:11px; margin-left:4px; vertical-align:middle; line-height:1; }
+.conv-acc-badge { color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-right:4px;font-weight:700;line-height:1.4; }
 .conv-badge-pin { opacity:0.85; }
 .conv-badge-star { opacity:0.95; }
 .conv-item { position: relative; }
@@ -13237,7 +14325,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
 /* ─── 🕰️ 时间与文化面板 ─── */
 .culture-panel { padding: 0; overflow-y: auto; }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .culture-panel { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px) !important; }
 }
 .cul-hero {
@@ -13344,7 +14432,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .col-function-panel.clocking .panel-col-header { background: var(--panel-header-bg); color: var(--text-primary); border-bottom: 1px solid var(--border-color); }
 
 /* 手机端 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .wc-card-mid { gap: 12px; }
   .wc-time { font-size: 24px; }
   .wc-analog svg { width: 64px; height: 64px; }
@@ -13375,7 +14463,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .ex-qc-rate { font-size: 16px; font-weight: 700; color: var(--accent-color, #00a884); margin: 4px 0; font-variant-numeric: tabular-nums; }
 .ex-qc-name { font-size: 10px; color: var(--text-secondary); }
 .col-function-panel.forexing .panel-col-header { background: var(--panel-header-bg); color: var(--text-primary); border-bottom: 1px solid var(--border-color); }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .ex-quick-grid { grid-template-columns: repeat(2, 1fr); }
   .ex-amount { font-size: 16px; padding: 8px 10px; }
 }
@@ -13426,7 +14514,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .inq-cat-icon { font-size: 18px; flex-shrink:0; }
 .inq-cat-label { font-weight: 700; flex-shrink:0; font-size:13px; }
 .inq-cat-tip { color: var(--text-secondary); flex:1; font-size: 12px; }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .aitalk-inquiry-badge { padding: 8px 10px; font-size: 12px; gap:6px; flex-wrap: wrap; }
   .inq-cat-icon { font-size: 16px; }
   .inq-cat-sep { display: none; }
@@ -13435,7 +14523,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
 
 /* ===== 手机端紧凑列表（WhatsApp风格） ===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   /* 隐藏渠道切换条和账号栏（走☰抽屉） */
   .comm-module .ch-switch { display: none !important; }
   .col-accounts { display: none !important; }
@@ -13609,7 +14697,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
 
 /* ===== 手机端顶栏渠道切换 ===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .mh-title { cursor: pointer; }
   /* 列表视图：标题组紧凑靠左 */
   .mh-title.mh-title-list { flex: 0 1 auto !important; gap: 6px; }
@@ -13739,8 +14827,8 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     padding: 4px 8px;
   }
   .as-acc-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     object-fit: cover;
     display: inline-block;
@@ -13756,7 +14844,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 }
 
 /* 非手机端隐藏新按钮（PC端用胶囊Tab） */
-@media (min-width: 769px) {
+@media (min-width: 901px) {
   .col-filter-btn { display: none !important; }
   .mobile-filter-menu { display: none !important; }
   .search-fu-badge { display: none !important; }
@@ -13764,4 +14852,233 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 }
 
 .mh-ch-arrow { opacity: 0.6; margin-left: 2px; flex-shrink: 0; }
+
+/* ═══ Phase 5: Reply length chips + bilingual ═══ */
+.ai-length-chips {
+  display: flex; gap: 6px; margin-top: 4px;
+}
+.ai-length-chip {
+  padding: 4px 12px; border-radius: 16px; border: 1px solid #ddd;
+  background: #f8f8f8; cursor: pointer; font-size: 12px;
+  transition: all .2s; color: #555;
+}
+.ai-length-chip.active {
+  background: #0088cc; color: #fff; border-color: #0088cc;
+}
+.ai-length-chip:hover:not(.active) {
+  border-color: #0088cc; color: #0088cc;
+}
+.ai-context-toggle {
+  margin-top: 6px; font-size: 12px;
+}
+.ai-toggle-label {
+  display: flex; align-items: center; gap: 6px; cursor: pointer; color: #666;
+}
+.ai-toggle-label input[type="checkbox"] {
+  accent-color: #0088cc;
+}
+.ai-context-banner {
+  background: #f0f7ff; border-radius: 8px; padding: 8px 12px;
+  margin-bottom: 8px; border-left: 3px solid #0088cc; font-size: 12px;
+}
+.ai-context-line {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 2px; flex-wrap: wrap;
+}
+.ai-ctx-tag {
+  padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.ai-ctx-tag.tag-quote { background: #fff3cd; color: #856404; }
+.ai-ctx-tag.tag-ask { background: #d1ecf1; color: #0c5460; }
+.ai-ctx-text { color: #555; font-size: 11px; }
+.ai-reply-cn-block {
+  background: #f9f9f9; border-left: 3px solid #ccc; padding: 6px 10px;
+  margin: 6px 0 2px; border-radius: 0 4px 4px 0;
+}
+.ai-reply-cn-text {
+  font-size: 12px; color: #666; line-height: 1.5;
+  font-family: "KaiTi", "Microsoft YaHei", "STKaiti", serif;
+}
+.ai-reply-actions {
+  display: flex; gap: 4px;
+}
+.ai-copy-btn {
+  padding: 2px 8px; border-radius: 4px; border: 1px solid #ddd;
+  background: #fff; cursor: pointer; font-size: 11px; color: #666;
+  transition: all .2s;
+}
+.ai-copy-btn:hover {
+  border-color: #0088cc; color: #0088cc; background: #f0f7ff;
+}
+.ai-reply-meta-tag.length-tag {
+  background: #e8f4fd; color: #0088cc; padding: 1px 6px; border-radius: 8px; font-size: 10px;
+}
+
+
+/* ── 📈 效果追踪面板 ── */
+/* ── 📚 话术库面板 ── */
+.aitalk-tabs { flex-shrink: 0; margin: 0 12px; border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.08)); }
+.speechlib-panel { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
+.speechlib-match-section { padding: 12px; border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.06)); }
+.speechlib-match-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.speechlib-match-title { font-size: 13px; font-weight: 600; color: var(--text-primary, #e9edef); }
+.speechlib-match-btn { background: var(--accent, #00a884); color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.speechlib-match-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.speechlib-match-list { display: flex; flex-direction: column; gap: 8px; }
+.speechlib-card { background: var(--sidebar-active, rgba(255,255,255,0.06)); border-radius: 10px; padding: 10px 12px; border: 1px solid transparent; transition: border-color 0.15s; }
+.speechlib-card:hover { border-color: var(--accent, #00a884); }
+.speechlib-card-q { font-size: 12px; color: var(--text-secondary, #8696a0); margin-bottom: 6px; line-height: 1.4; word-break: break-all; }
+.speechlib-card-a { font-size: 13px; color: var(--text-primary, #e9edef); line-height: 1.5; margin-bottom: 6px; word-break: break-all; }
+.speechlib-card-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.speechlib-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.08); color: var(--text-secondary, #8696a0); }
+.speechlib-tag-score { background: rgba(255,165,0,0.15); color: #f5a623; }
+.speechlib-tag-fav { background: rgba(255,215,0,0.12); color: #f5c518; }
+.speechlib-copy-btn { background: transparent; border: 1px solid var(--accent, #00a884); color: var(--accent, #00a884); border-radius: 6px; padding: 3px 10px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.speechlib-copy-btn:hover { background: var(--accent, #00a884); color: #fff; }
+.speechlib-list-section { flex: 1; padding: 12px; overflow-y: auto; }
+.speechlib-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.speechlib-list-title { font-size: 13px; font-weight: 600; color: var(--text-primary, #e9edef); }
+.speechlib-refresh-btn { background: transparent; border: none; color: var(--text-secondary, #8696a0); font-size: 16px; cursor: pointer; padding: 2px 6px; }
+.speechlib-refresh-btn:hover { color: var(--accent, #00a884); }
+.speechlib-sample-list { display: flex; flex-direction: column; gap: 8px; }
+.speechlib-card-compact { padding: 8px 10px; }
+.speechlib-loading { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px 0; }
+.speechlib-empty { text-align: center; color: var(--text-secondary, #8696a0); font-size: 13px; padding: 20px 0; }
+
+.tracking-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tracking-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--text-secondary, #8696a0);
+}
+.tracking-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  color: var(--text-secondary, #8696a0);
+  text-align: center;
+}
+.tracking-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.6; }
+.tracking-empty p { margin: 4px 0; font-size: 14px; }
+
+.tracking-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.tracking-stat-card {
+  background: var(--panel-card-bg, #202c33);
+  border: 1px solid var(--border-color, #222d34);
+  border-radius: 12px;
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: border-color .15s;
+}
+.tracking-stat-card:hover { border-color: var(--accent); }
+.tracking-stat-icon { font-size: 20px; margin-bottom: 6px; }
+.tracking-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary, #e9edef);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.tracking-stat-label { font-size: 11px; color: var(--text-secondary, #8696a0); }
+.tracking-green { color: #25D366; }
+.tracking-orange { color: #f59e0b; }
+
+.tracking-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #e9edef);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color, #222d34);
+}
+
+.tracking-trend-list { display: flex; flex-direction: column; gap: 6px; }
+.tracking-trend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.tracking-trend-date { color: var(--text-secondary, #8696a0); min-width: 44px; }
+.tracking-trend-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--border-color, #222d34);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tracking-trend-bar {
+  height: 100%;
+  background: var(--accent, #00a884);
+  border-radius: 3px;
+  transition: width .3s;
+}
+.tracking-trend-rate { min-width: 40px; text-align: right; color: var(--text-primary, #e9edef); font-weight: 500; }
+
+.tracking-attitude-card {
+  background: var(--panel-card-bg, #202c33);
+  border: 1px solid var(--border-color, #222d34);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tracking-att-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-primary, #e9edef);
+}
+.tracking-att-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.att-intent-high { background: rgba(37,211,102,.15); color: #25D366; }
+.att-intent-medium { background: rgba(245,158,11,.15); color: #f59e0b; }
+.att-intent-low { background: rgba(134,150,160,.15); color: #8696a0; }
+.att-sent-positive { background: rgba(37,211,102,.15); color: #25D366; }
+.att-sent-neutral { background: rgba(134,150,160,.15); color: #8696a0; }
+.att-sent-negative { background: rgba(234,76,97,.15); color: #ea4c61; }
+.att-urg-high { background: rgba(234,76,97,.15); color: #ea4c61; }
+.att-urg-medium { background: rgba(245,158,11,.15); color: #f59e0b; }
+.att-urg-low { background: rgba(134,150,160,.15); color: #8696a0; }
+
+/* ═══ 移动端布局兜底：JS is-mobile class 驱动（解决 Via 等浏览器媒体查询不匹配问题） ═══ */
+html.is-mobile .platform-nav { display: none !important; }
+html.is-mobile .workspace { overflow: hidden !important; }
+html.is-mobile .comm-module { display: flex !important; position: relative !important; width: 100% !important; height: 100% !important; overflow: hidden !important; }
+html.is-mobile .col-accounts { position: absolute !important; left: 0; top: 0; bottom: 0; z-index: 35; width: 82vw !important; max-width: 320px !important; transform: translateX(-100%) !important; box-shadow: 2px 0 16px rgba(0,0,0,.4) !important; }
+html.is-mobile .col-accounts.m-open { transform: translateX(0) !important; }
+html.is-mobile .col-chatlist { width: 100% !important; max-width: none !important; border-right: none !important; position: relative !important; flex: 1 1 auto !important; min-height: 0 !important; min-width: 0 !important; overflow: hidden !important; height: 100% !important; }
+html.is-mobile .col-chatlist .chatlist-body { -webkit-overflow-scrolling: touch !important; overscroll-behavior-y: contain !important; overflow-y: auto !important; }
+html.is-mobile .col-chatlist.m-hidden { transform: translateX(-100%) !important; pointer-events: none !important; display: none !important; visibility: hidden !important; }
+html.is-mobile .col-conversation { position: absolute !important; left: 0; right: 0; top: 0; bottom: 0; z-index: 45; background: var(--chat-bg); transform: translateX(100%) !important; display: flex !important; flex-direction: column !important; }
+html.is-mobile .col-conversation.m-in { transform: none !important; }
+html.is-mobile .col-iconbar { display: none !important; }
+html.is-mobile .col-function-panel { display: none !important; }
+html.is-mobile .col-function-panel.m-panel { display: flex !important; position: fixed !important; right: 0; top: 60px; bottom: 56px; width: 86vw !important; max-width: 360px; z-index: 55; transform: translateX(100%); transition: transform .28s; box-shadow: -2px 0 16px rgba(0,0,0,.4); background: var(--panel-bg); }
+html.is-mobile .col-function-panel.m-panel.m-panel-show { transform: translateX(0) !important; }
+html.is-mobile .mobile-tabbar { display: flex !important; }
+html.is-mobile .mobile-header { display: flex !important; }
 </style>

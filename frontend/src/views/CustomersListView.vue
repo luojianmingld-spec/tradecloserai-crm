@@ -12,7 +12,7 @@
     <!-- KPI 统计条 -->
     <div class="kpi-bar">
       <div class="kpi-item" @click="switchTab('all')" :class="{active: activeTab==='all' && !filters.level && !filters.status}">
-        <span class="kpi-num">{{ total || 0 }}</span>
+        <span class="kpi-num">{{ stats.total || total || 0 }}</span>
         <span class="kpi-label">全部</span>
       </div>
       <div class="kpi-item" @click="filterByLevel('A')" :class="{active: filters.level==='A'}">
@@ -522,16 +522,8 @@ function clearSearch() { searchInput.value = ''; reload(1); }
 
 function goDetail(c) { router.push(`/customers/${c.id}`); }
 function jumpToChat(c) {
-  if (c.jid && c.jid.includes('@telegram')) {
-    // Jump to Telegram chat: store target jid then navigate
-    sessionStorage.setItem('tg_open_jid', c.jid);
-    router.push('/chat');
-    return;
-  }
-
   if (!c.jid) { ElMessage.warning('该客户无WhatsApp号码'); return; }
-  router.push('/chat');
-  sessionStorage.setItem('wa-open-jid', c.jid);
+  router.push({ path: '/chat', query: { jid: c.jid } });
 }
 async function doAdd() {
   if (!addForm.value.companyName?.trim()) { ElMessage.warning('请填写公司名称'); return; }

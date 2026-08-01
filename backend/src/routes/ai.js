@@ -3,6 +3,7 @@
  * 
  * POST /api/ai/translate    — AI 翻译
  * POST /api/ai/reply        — AI 话术生成
+ * POST /api/ai/closing-reply — AI 成交模式回复
  * POST /api/ai/summarize    — AI 需求总结
  * POST /api/ai/extract-info — 提取客户信息
  * POST /api/ai/generate-document — 生成单证
@@ -23,6 +24,7 @@ import {
   chatWithContext,
 } from '../services/ai.service.js';
 import { chatComplete as rawChatComplete, getActiveProvider } from '../services/ai-client.js';
+import { generateClosingReply } from '../services/closing-reply.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -94,10 +96,10 @@ router.post('/translate', auth, async (req, res) => {
   }
 });
 
-// ─── POST /api/ai/reply — AI 话术生成 ───
+// ─── POST /api/ai/reply — AI 话术生成 (Phase 5: +length, +includeContext) ───
 router.post('/reply', auth, async (req, res) => {
   try {
-    const { accountId, jid, style, model, messages } = req.body;
+    const { accountId, jid, style, model, messages, length, includeContext, extraPrompt } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
     // Support either direct messages array or jid to fetch from DB
     if (!messages?.length && !jid) {
@@ -111,11 +113,70 @@ router.post('/reply', auth, async (req, res) => {
       style: style || 'formal',
       model: model || 'doubao-lite',
       messages,
+      length: length || 'medium',
+      includeContext: !!includeContext,
+      extraPrompt: typeof extraPrompt === 'string' ? extraPrompt.trim() : undefined,
     });
     res.json(result);
   } catch (err) {
     console.error('[AI Reply Error]', err);
     res.status(500).json({ error: '话术生成失败: ' + err.message });
+  }
+});
+
+// ─── POST /api/ai/reply/all-lengths — Phase 5: 一次生成短/中/长三种长度 ───
+router.post('/reply/all-lengths', auth, async (req, res) => {
+  try {
+    const { accountId, jid, style, model, messages, includeContext } = req.body;
+    const acctId = accountId ? parseInt(accountId) : req.userId;
+    if (!messages?.length && !jid) {
+      return res.status(400).json({ error: 'Provide jid or messages array' });
+    }
+
+    const lengths = ['short', 'medium', 'long'];
+    const results = {};
+    for (const len of lengths) {
+      try {
+        const r = await generateReply({
+          userId: req.userId,
+          accountId: acctId,
+          jid: jid || null,
+          style: style || 'formal',
+          model: model || 'doubao-lite',
+          messages,
+          length: len,
+          includeContext: !!includeContext,
+        });
+        results[len] = { replies: r.replies || [], context: r.context || null, length: len };
+      } catch (e) {
+        results[len] = { replies: [], error: e.message, length: len };
+      }
+    }
+    res.json(results);
+  } catch (err) {
+    console.error('[AI Reply All-Lengths Error]', err);
+    res.status(500).json({ error: '生成失败: ' + err.message });
+  }
+});
+
+
+// ─── POST /api/ai/closing-reply — AI 成交模式回复（感知 Pipeline 阶段） ───
+router.post('/closing-reply', auth, async (req, res) => {
+  try {
+    const { accountId, jid } = req.body;
+    if (!jid) {
+      return res.status(400).json({ error: 'jid is required' });
+    }
+    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const result = await generateClosingReply({
+      userId: req.userId,
+      accountId: acctId,
+      jid,
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('[AI Closing Reply Error]', err);
+    res.status(500).json({ error: '成交回复生成失败: ' + err.message });
   }
 });
 

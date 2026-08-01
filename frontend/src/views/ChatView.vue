@@ -161,7 +161,7 @@
     <template v-else>
       <div class="conv-header" v-if="chatStore.activeConversation">
         <button class="back-btn mobile-only" @click="goBack"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-        <div class="ch-avatar ch-avatar-clickable" @click="openProfile" :style="!chAvatarOk ? {background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)} : {}"><img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid) && chAvatarOk" class="ch-avatar-img" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="onChAvatarError" alt="" /><span v-else>{{ (chatStore.activeConversation.name || '?')[0] }}</span></div>
+        <div class="ch-avatar ch-avatar-clickable" @click="openProfile" :style="!chAvatarOk ? {background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)} : {}"><img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar) && chAvatarOk" class="ch-avatar-img" :src="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar)" @load="onChAvatarLoad" @error="onChAvatarError" alt="" /><span v-else>{{ (chatStore.activeConversation.name || '?')[0] }}</span></div>
         <div class="ch-info">
           <div class="ch-name-row">
             <div class="ch-name">{{ chatStore.activeConversation.name }}</div>
@@ -170,6 +170,28 @@
             </span>
           </div>
           <div class="ch-status"><span class="online-dot offline"></span>{{ chatStore.activeConversation.phone ? chatStore.activeConversation.phone + ' · ' : '' }}最近在线</div>
+          <!-- Phase 4: Conversation Status Indicators -->
+          <div class="ch-conv-status" v-if="convStatus && !convStatus.error" @click="convDetailOpen = true">
+            <div class="ch-conv-progress">
+              <div class="ch-conv-bar">
+                <div class="ch-conv-bar-fill" :style="{width: Math.round(convStatus.completeness * 100) + '%', background: completenessColor(convStatus.completeness)}"></div>
+              </div>
+              <span class="ch-conv-pct" :style="{color: completenessColor(convStatus.completeness)}">{{ Math.round(convStatus.completeness * 100) }}%</span>
+            </div>
+            <span class="ch-conv-chip ch-conv-strategy" :class="'strat-' + (convStatus.strategy === 'PROVIDE_QUOTE' ? 'quote' : 'ask')">
+              {{ convStatus.strategy === 'PROVIDE_QUOTE' ? '💰 报价' : '🔍 询问' }}
+            </span>
+            <span class="ch-conv-chip ch-conv-stage">{{ stageLabel(convStatus.stage) }}</span>
+            <span class="ch-conv-chip ch-conv-rounds" v-if="convStatus.askedRounds > 0">追问 {{ convStatus.askedRounds }}/{{ convStatus.maxRounds }}</span>
+            <button class="ch-conv-gen-btn" @click.stop="generateConvScript()" :disabled="convScriptLoading" title="生成话术">
+              <svg v-if="convScriptLoading" class="wa-spin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+              <span v-else>✍️ 话术</span>
+            </button>
+            <button class="ch-conv-gen-btn closing-btn" @click.stop="generateClosingReply()" :disabled="closingReplyLoading" title="成交回复">
+              <svg v-if="closingReplyLoading" class="wa-spin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
+              <span v-else>🎯 成交</span>
+            </button>
+          </div>
         </div>
         <div class="ch-actions">
           <button title="搜索"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
@@ -177,7 +199,179 @@
         </div>
       </div>
 
-          <!-- ========== 客户档案右侧抽屉 ========== -->
+          <!-- ========== Phase 4: Conversation Detail Dialog ========== -->
+    <transition name="fade">
+    <div v-if="convDetailOpen" class="conv-dialog-overlay" @click.self="convDetailOpen = false">
+      <div class="conv-dialog">
+        <div class="conv-dialog-header">
+          <h3>📊 对话状态详情</h3>
+          <button class="conv-dialog-close" @click="convDetailOpen = false">✕</button>
+        </div>
+        <div class="conv-dialog-body" v-if="convStatus">
+          <div class="conv-dialog-section">
+            <div class="cds-title">产品: {{ convStatus.productName }}</div>
+            <div class="cds-progress-row">
+              <span>信息完整度</span>
+              <div class="cds-bar"><div class="cds-bar-fill" :style="{width: Math.round(convStatus.completeness*100)+'%', background: completenessColor(convStatus.completeness)}"></div></div>
+              <span class="cds-pct" :style="{color: completenessColor(convStatus.completeness)}">{{ Math.round(convStatus.completeness*100) }}%</span>
+            </div>
+            <div class="cds-meta">
+              <span class="cds-chip" :class="'strat-' + (convStatus.strategy === 'PROVIDE_QUOTE' ? 'quote' : 'ask')">{{ convStatus.strategy === 'PROVIDE_QUOTE' ? '💰 报价策略' : '🔍 询问策略' }}</span>
+              <span class="cds-chip stage">{{ stageLabel(convStatus.stage) }}</span>
+              <span class="cds-chip rounds">追问 {{ convStatus.askedRounds }}/{{ convStatus.maxRounds }}</span>
+            </div>
+          </div>
+          <div class="conv-dialog-section">
+            <div class="cds-title">必问问题 ({{ convStatus.requiredQuestions?.filter(q=>q.answered).length || 0 }}/{{ convStatus.requiredQuestions?.length || 0 }})</div>
+            <div class="cds-q-list">
+              <div v-for="q in convStatus.requiredQuestions" :key="q.id" class="cds-q-item" :class="{answered: q.answered}">
+                <span class="cds-q-check">{{ q.answered ? '✅' : '⬜' }}</span>
+                <div class="cds-q-content">
+                  <div class="cds-q-text">{{ q.questionEn }}</div>
+                  <div class="cds-q-text-cn">{{ q.questionCn }}</div>
+                  <div v-if="q.answer" class="cds-q-answer">💬 {{ q.answer }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="conv-dialog-section" v-if="convStatus.followUpQuestions?.length">
+            <div class="cds-title">进阶问题</div>
+            <div class="cds-q-list">
+              <div v-for="q in convStatus.followUpQuestions" :key="q.id" class="cds-q-item" :class="{answered: q.answered}">
+                <span class="cds-q-check">{{ q.answered ? '✅' : '⬜' }}</span>
+                <div class="cds-q-content">
+                  <div class="cds-q-text">{{ q.questionEn }}</div>
+                  <div class="cds-q-text-cn">{{ q.questionCn }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="conv-dialog-section" v-if="convStatus.bantScore">
+            <div class="cds-title">BANT 评分</div>
+            <div class="cds-bant">
+              <div class="cds-bant-item"><span>预算</span><b>{{ convStatus.bantScore.budgetScore }}/10</b></div>
+              <div class="cds-bant-item"><span>权限</span><b>{{ convStatus.bantScore.authorityScore }}/10</b></div>
+              <div class="cds-bant-item"><span>需求</span><b>{{ convStatus.bantScore.needScore }}/10</b></div>
+              <div class="cds-bant-item"><span>时间</span><b>{{ convStatus.bantScore.timelineScore }}/10</b></div>
+              <div class="cds-bant-total"><span>综合</span><b>{{ convStatus.bantScore.totalScore }}/10 ({{ convStatus.bantScore.level }})</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="conv-dialog-footer">
+          <button class="cd-btn" @click="resetConvState()">🔄 重置对话</button>
+          <button class="cd-btn primary" @click="convDetailOpen = false; generateConvScript()">✍️ 重新生成话术</button>
+        </div>
+      </div>
+    </div>
+    </transition>
+
+    <!-- ========== Phase 4+5: Script Generation Dialog ========== -->
+    <transition name="fade">
+    <div v-if="convScriptOpen && convScript" class="conv-dialog-overlay" @click.self="convScriptOpen = false">
+      <div class="conv-dialog script-dialog">
+        <div class="conv-dialog-header">
+          <h3>{{ convScript.strategy === 'PROVIDE_QUOTE' ? '💰 报价话术' : '🔍 询问话术' }}</h3>
+          <button class="conv-dialog-close" @click="convScriptOpen = false">✕</button>
+        </div>
+        <!-- Phase 5: Context summary bar -->
+        <div class="script-context-bar" v-if="convStatus">
+          <span class="script-strategy-tag" :class="convScript.strategy">
+            {{ convScript.strategy === 'PROVIDE_QUOTE' ? '💰 报价阶段' : '🔍 信息收集' }}
+          </span>
+          <span class="script-ctx-item">📊 完整度 {{ Math.round((convScript.completeness || 0) * 100) }}%</span>
+          <span class="script-ctx-item" v-if="convStatus.stage">📍 {{ convStatus.stage }}</span>
+          <span class="script-ctx-item" v-if="convStatus.bantScore">⭐ BANT {{ convStatus.bantScore.totalScore || 0 }}/10</span>
+        </div>
+        <div class="conv-dialog-body">
+          <!-- Phase 5: Length selector tabs -->
+          <div class="script-length-tabs">
+            <button
+              v-for="ln in scriptLengths"
+              :key="ln.key"
+              class="script-length-chip"
+              :class="{ active: scriptLength === ln.key }"
+              @click="scriptLength = ln.key"
+            >{{ ln.icon }} {{ ln.label }}</button>
+          </div>
+          <div class="script-reason" v-if="convScript.reason">💡 {{ convScript.reason }}</div>
+          <div class="script-block">
+            <div class="script-label">外文 (发送给客户)</div>
+            <div class="script-text script-en">{{ convScript.script_en }}</div>
+            <div class="script-btn-row">
+              <button class="script-copy-btn" @click="copyScript('en')">📋 复制英文</button>
+            </div>
+          </div>
+          <div class="script-block">
+            <div class="script-label">中文 (内部参考)</div>
+            <div class="script-text script-cn">{{ convScript.script_cn }}</div>
+            <div class="script-btn-row">
+              <button class="script-copy-btn" @click="copyScript('cn')">📋 复制中文</button>
+            </div>
+          </div>
+          <div class="script-questions" v-if="convScript.questionsToAsk?.length">
+            <div class="script-label">本次询问的问题</div>
+            <div v-for="q in convScript.questionsToAsk" :key="q.id" class="script-q-item">• {{ q.questionEn }} ({{ q.questionCn }})</div>
+          </div>
+          <div class="script-meta">
+            <span>完整度: {{ Math.round((convScript.completeness || 0) * 100) }}%</span>
+            <span>追问轮数: {{ convScript.askedRounds || 0 }}</span>
+          </div>
+        </div>
+        <div class="conv-dialog-footer">
+          <button class="cd-btn" @click="generateConvScript(convScript.strategy === 'ASK_FOR_INFO' ? 'quote' : 'ask')">
+            🔄 {{ convScript.strategy === 'ASK_FOR_INFO' ? '改为报价话术' : '改为询问话术' }}
+          </button>
+          <button class="cd-btn" @click="regenerateConvScript()">
+            🔄 {{ scriptLength === 'short' ? '短版' : scriptLength === 'long' ? '长版' : '标准' }}重新生成
+          </button>
+          <button class="cd-btn primary" @click="insertScriptToInput()">📩 插入聊天框</button>
+        </div>
+      </div>
+    </div>
+    </transition>
+
+      <!-- ========== 🎯 成交回复弹窗 ========== -->
+    <transition name="fade">
+    <div v-if="closingReplyOpen && closingReplyResult" class="conv-dialog-overlay" @click.self="closingReplyOpen = false">
+      <div class="conv-dialog closing-dialog">
+        <div class="conv-dialog-header">
+          <h3>🎯 成交回复</h3>
+          <button class="conv-dialog-close" @click="closingReplyOpen = false">✕</button>
+        </div>
+        <div class="closing-strategy-bar">
+          <span class="closing-stage-tag">📍 {{ closingReplyResult.stageName || closingReplyResult.stage }}</span>
+          <span class="closing-strategy-tag">🎯 {{ closingReplyResult.closingStrategy || '' }}</span>
+          <span class="closing-attitude-tag" v-if="closingReplyResult.attitudeSummary">💬 {{ closingReplyResult.attitudeSummary }}</span>
+        </div>
+        <div class="conv-dialog-body">
+          <div v-for="(reply, idx) in closingReplyResult.replies" :key="idx" class="closing-reply-card">
+            <div class="closing-tactic-badge">💡 {{ reply.tactic }}</div>
+            <div class="closing-stage-advice" v-if="reply.stageAdvice">📌 {{ reply.stageAdvice }}</div>
+            <div class="script-block">
+              <div class="script-label">外文 (发送给客户)</div>
+              <div class="script-text script-en">{{ reply.foreign }}</div>
+              <div class="script-btn-row">
+                <button class="script-copy-btn" @click="copyClosingReply(reply.foreign)">📋 复制</button>
+                <button class="script-copy-btn primary" @click="insertClosingToInput(reply.foreign)">📩 插入聊天框</button>
+              </div>
+            </div>
+            <div class="script-block">
+              <div class="script-label">中文 (内部参考)</div>
+              <div class="script-text script-cn">{{ reply.zh }}</div>
+              <div class="script-btn-row">
+                <button class="script-copy-btn" @click="copyClosingReply(reply.zh)">📋 复制中文</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="conv-dialog-footer">
+          <button class="cd-btn primary" @click="generateClosingReply()">🔄 重新生成</button>
+        </div>
+      </div>
+    </div>
+    </transition>
+
+      <!-- ========== 客户档案右侧抽屉 ========== -->
     <transition name="profile-slide">
     <div v-if="profileOpen" class="profile-drawer" @click.self="closeProfile">
       <div class="profile-panel">
@@ -192,7 +386,7 @@
           <!-- 头像区 -->
           <div class="pp-avatar-area">
             <div class="pp-avatar" :style="!chAvatarOk ? {background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)} : {}">
-              <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid) && chAvatarOk" class="pp-avatar-img" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="onChAvatarError" alt=""/>
+              <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar) && chAvatarOk" class="pp-avatar-img" :src="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar)" @load="onChAvatarLoad" @error="onChAvatarError" alt=""/>
               <span v-else style="font-size:56px;font-weight:500">{{ (chatStore.activeConversation.name || '?')[0] }}</span>
             </div>
             <div class="pp-name">{{ profileForm.name || chatStore.activeConversation.name || chatStore.activeConversation.jid.split('@')[0] }}</div>
@@ -376,7 +570,25 @@
           <div v-if="chatStore.loadingMessages" class="msgs-loading"><span class="loading-dots">加载消息中</span></div>
           <template v-for="(group, gIdx) in groupedMessages" :key="gIdx">
             <div class="msg-date-divider"><span>{{ group.label }}</span></div>
-            <div v-for="msg in group.msgs" :key="msg.id" class="msg" :class="{ incoming: !msg.fromMe, outgoing: msg.fromMe }">
+            <div v-for="msg in group.msgs" :key="msg.id" class="msg"
+              :class="{ incoming: !msg.fromMe, outgoing: msg.fromMe, 'msg-selected': selectedMsgIds.has(msg.id), 'msg-editing': chatStore.editingMsgId===msg.id }"
+              @contextmenu.prevent="onMsgContextMenu($event, msg)"
+              @touchstart.passive="onMsgTouchStart($event, msg)"
+              @touchend="onMsgTouchEnd"
+              @touchmove="onMsgTouchMove"
+              @mouseenter="onMsgHoverIn(msg)"
+              @mouseleave="onMsgHoverOut(msg)"
+            >
+              <!-- Multi-select checkbox -->
+              <div v-if="multiSelectMode" class="msg-select-check" @click.stop="toggleSelectMsg(msg)">
+                <span class="msc-box" :class="{checked: selectedMsgIds.has(msg.id)}">
+                  <svg v-if="selectedMsgIds.has(msg.id)" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                </span>
+              </div>
+              <!-- Emoji quick reaction bar on hover -->
+              <div v-if="hoveredMsgId===msg.id && !multiSelectMode" class="msg-quick-reactions">
+                <button v-for="e in hoverEmojis" :key="e" class="mqr-btn" @click.stop="onReaction(msg, e)">{{e}}</button>
+              </div>
               <!-- reactions row on bubble -->
               <div v-if="msg.reactions && msg.reactions.length" class="msg-reactions-row">
                 <span v-for="(r,i) in msg.reactions" :key="i" class="msg-reaction-chip" :class="{'mine': r.fromMe}">{{r.emoji}}</span>
@@ -507,6 +719,14 @@
         </div>
       </div>
 
+      <!-- 多选操作栏 -->
+      <div v-if="multiSelectMode" class="multi-select-bar">
+        <button class="msb-btn" @click="selectAllMsgs">全选</button>
+        <button class="msb-btn" @click="cancelMultiSelect">取消</button>
+        <span class="msb-count">已选 {{ selectedMsgIds.size }} 条</span>
+        <button class="msb-btn msb-danger" @click="deleteSelectedMsgs" :disabled="selectedMsgIds.size===0">删除</button>
+      </div>
+
       <!-- 输入区 -->
       <!-- 回复引用条（在输入框上方） -->
       <div v-if="chatStore.replyTo" class="reply-quote-bar">
@@ -577,7 +797,21 @@
           <input ref="inputEl" type="text" v-model="draftMsg" placeholder="输入消息... (Enter发送)" @keydown="onInputKeydown" @input="onDraftInput"/>
           <button class="emoji-btn" title="表情">😊</button>
         </div>
-        <button v-if="!pendingFile" class="send-btn" :class="{disabled: !draftMsg.trim()}" :disabled="!draftMsg.trim()" @click="onSendClick"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+        <!-- Voice recording state bar -->
+        <div v-if="isRecording" class="recording-bar">
+          <span class="rec-dot"></span>
+          <span class="rec-time">{{ formatRecTime(recordingDuration) }}</span>
+          <button class="rec-cancel-btn" @click="cancelRecording">取消</button>
+          <button class="rec-send-btn" @click="stopRecording">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+        <!-- Mic button (when no text) -->
+        <button v-if="!pendingFile && !draftMsg.trim() && !isRecording" class="send-btn mic-btn" @click="startRecording" title="语音输入">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+        </button>
+        <!-- Send button (when has text) -->
+        <button v-if="!pendingFile && draftMsg.trim() && !isRecording" class="send-btn" :class="{disabled: !draftMsg.trim()}" :disabled="!draftMsg.trim()" @click="onSendClick"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
       </div>
 
 
@@ -653,6 +887,176 @@ watch(activeFirstResponse, (v) => {
 }, { immediate: true });
 onBeforeUnmount(() => { if (frLiveTimer) clearInterval(frLiveTimer); });
 
+
+// ── Phase 4: Conversation Manager ──
+const convStatus = ref(null);
+const convStatusLoading = ref(false);
+const convDetailOpen = ref(false);
+const convScriptOpen = ref(false);
+const convScript = ref(null);
+const convScriptLoading = ref(false);
+const closingReplyLoading = ref(false);
+const closingReplyResult = ref(null);
+const closingReplyOpen = ref(false);
+// Phase 5: Script length selector
+const scriptLength = ref('medium');
+const scriptLengths = [
+  { key: 'short', label: '短版', icon: '⚡' },
+  { key: 'medium', label: '标准', icon: '📝' },
+  { key: 'long', label: '长版', icon: '📧' },
+];
+
+async function fetchConvStatus() {
+  if (!chatStore.activeJid) return;
+  convStatusLoading.value = true;
+  try {
+    const encoded = encodeURIComponent(chatStore.activeJid);
+    const res = await api.get(`/customers/by-jid/${encoded}/conversation-status`);
+    convStatus.value = res.data;
+  } catch (e) {
+    console.warn('[ConvStatus] fetch error:', e.message);
+    convStatus.value = null;
+  } finally {
+    convStatusLoading.value = false;
+  }
+}
+
+async function generateConvScript(type = null) {
+  if (!chatStore.activeJid) return;
+  convScriptLoading.value = true;
+  try {
+    const encoded = encodeURIComponent(chatStore.activeJid);
+    const body = type ? { type } : {};
+    const res = await api.post(`/customers/by-jid/${encoded}/generate-script`, body);
+    convScript.value = res.data;
+    convScriptOpen.value = true;
+  } catch (e) {
+    console.error('[ConvScript] error:', e.message);
+    ElMessage.error('生成话术失败: ' + (e.response?.data?.error || e.message));
+  } finally {
+    convScriptLoading.value = false;
+  }
+}
+
+async function generateClosingReply() {
+  if (!chatStore.activeJid) return;
+  closingReplyLoading.value = true;
+  try {
+    const res = await api.post('/ai/closing-reply', { jid: chatStore.activeJid });
+    if (res.data.replies && res.data.replies.length > 0) {
+      closingReplyResult.value = res.data;
+      closingReplyOpen.value = true;
+    } else {
+      ElMessage.warning(res.data.error || '暂无足够信息生成成交回复');
+    }
+  } catch (e) {
+    console.error('[ClosingReply] error:', e.message);
+    ElMessage.error('生成成交回复失败: ' + (e.response?.data?.error || e.message));
+  } finally {
+    closingReplyLoading.value = false;
+  }
+}
+
+function copyClosingReply(text) {
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制到剪贴板');
+  }).catch(() => {
+    ElMessage.error('复制失败');
+  });
+}
+
+function insertClosingToInput(text) {
+  if (!text) return;
+  const input = document.querySelector('.chat-input textarea') || document.querySelector('#chatInput');
+  if (input) {
+    input.value = text;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+    ElMessage.success('已插入聊天框');
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      ElMessage.success('已复制到剪贴板');
+    });
+  }
+}
+
+async function resetConvState() {
+  if (!chatStore.activeJid) return;
+  try {
+    const encoded = encodeURIComponent(chatStore.activeJid);
+    await api.post(`/customers/by-jid/${encoded}/conversation-status/reset`);
+    convStatus.value = null;
+    await fetchConvStatus();
+    ElMessage.success('对话状态已重置');
+  } catch (e) {
+    ElMessage.error('重置失败');
+  }
+}
+
+function copyScript(lang) {
+  const text = lang === 'en' ? convScript.value?.script_en : convScript.value?.script_cn;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success(lang === 'en' ? '英文话术已复制' : '中文话术已复制');
+  }).catch(() => {
+    ElMessage.error('复制失败');
+  });
+}
+
+function insertScriptToInput() {
+  if (convScript.value?.script_en) {
+    draftMsg.value = convScript.value.script_en;
+    convScriptOpen.value = false;
+    nextTick(() => { inputEl.value?.focus(); });
+  }
+}
+
+// Phase 5: Re-generate script with current length preference
+async function regenerateConvScript() {
+  if (!chatStore.activeJid) return;
+  convScriptLoading.value = true;
+  try {
+    const encoded = encodeURIComponent(chatStore.activeJid);
+    // Pass length hint to the generate-script endpoint
+    const type = convScript.value?.strategy === 'PROVIDE_QUOTE' ? 'quote' : 'ask';
+    const res = await api.post(`/customers/by-jid/${encoded}/generate-script`, { type, length: scriptLength.value });
+    convScript.value = res.data;
+  } catch (e) {
+    ElMessage.error('生成话术失败: ' + (e.response?.data?.error || e.message));
+  } finally {
+    convScriptLoading.value = false;
+  }
+}
+
+function completenessColor(val) {
+  if (val >= 0.8) return '#00a884';
+  if (val >= 0.5) return '#f0b429';
+  return '#e74c3c';
+}
+
+function stageLabel(stage) {
+  const map = {
+    '首次询盘': '🆕 First Inquiry',
+    '需求明确': '📋 Needs Clear',
+    '报价阶段': '💰 Quoting',
+    '谈判阶段': '🤝 Negotiating',
+    '已成交': '✅ Won',
+  };
+  return map[stage] || stage;
+}
+
+// Watch active conversation changes
+watch(() => chatStore.activeJid, () => {
+  convStatus.value = null;
+  convScript.value = null;
+  convScriptOpen.value = false;
+  convDetailOpen.value = false;
+  if (chatStore.activeJid) {
+    fetchConvStatus();
+  }
+}, { immediate: true });
+
 const draftMsg = ref('');
 const msgArea = ref(null);
 const inputEl = ref(null);
@@ -668,6 +1072,177 @@ const hoveredMsgId = ref(null);
 const msgMenuOpenFor = ref(null);
 const emojiPickerFor = ref(null);
 const quickEmojis = ['👍','❤️','😂','😮','😢','🙏'];
+const hoverEmojis = ['❤️','👍','🔥','😍','😄'];
+
+// ── Multi-select mode ──
+const multiSelectMode = ref(false);
+const selectedMsgIds = reactive(new Set());
+function toggleSelectMsg(msg) {
+  if (selectedMsgIds.has(msg.id)) selectedMsgIds.delete(msg.id);
+  else selectedMsgIds.add(msg.id);
+}
+function selectAllMsgs() {
+  const msgs = chatStore.currentMessages || [];
+  msgs.forEach(m => selectedMsgIds.add(m.id));
+}
+function cancelMultiSelect() {
+  multiSelectMode.value = false;
+  selectedMsgIds.clear();
+}
+function deleteSelectedMsgs() {
+  if (selectedMsgIds.size === 0) return;
+  const count = selectedMsgIds.size;
+  if (!confirm(`确定删除 ${count} 条消息？（仅本地隐藏，对方仍可见）`)) return;
+  const jid = chatStore.activeJid;
+  for (const id of selectedMsgIds) {
+    chatStore.localDeleteMessage(jid, id);
+  }
+  cancelMultiSelect();
+}
+function onSelectMsg(msg) {
+  msgMenuOpenFor.value = null;
+  emojiPickerFor.value = null;
+  multiSelectMode.value = true;
+  selectedMsgIds.add(msg.id);
+}
+
+// ── Long-press (mobile context menu) ──
+let longPressTimer = null;
+let longPressFired = false;
+function onMsgTouchStart(e, msg) {
+  longPressFired = false;
+  longPressTimer = setTimeout(() => {
+    longPressFired = true;
+    onMsgContextMenu(e.touches ? e : { clientX: 0, clientY: 0, target: e.target }, msg);
+  }, 500);
+}
+function onMsgTouchEnd() {
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}
+function onMsgTouchMove() {
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}
+
+// ── Right-click context menu (desktop) ──
+const contextMenuPos = reactive({ x: 0, y: 0 });
+const contextMenuMsg = ref(null);
+function onMsgContextMenu(e, msg) {
+  // Close any existing bubble menu, open new one
+  msgMenuOpenFor.value = msg.id;
+  emojiPickerFor.value = null;
+  contextMenuMsg.value = msg;
+  // Position context menu at cursor
+  if (e.clientX !== undefined) {
+    contextMenuPos.x = e.clientX;
+    contextMenuPos.y = e.clientY;
+  }
+}
+
+// ── Hover emoji quick reactions ──
+let hoverTimer = null;
+function onMsgHoverIn(msg) {
+  if (multiSelectMode.value) return;
+  if (hoverTimer) clearTimeout(hoverTimer);
+  hoverTimer = setTimeout(() => { hoveredMsgId.value = msg.id; }, 300);
+}
+function onMsgHoverOut(msg) {
+  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+  // Small delay so user can move to reaction buttons
+  setTimeout(() => {
+    if (hoveredMsgId.value === msg.id) hoveredMsgId.value = null;
+  }, 200);
+}
+
+// ── Voice recording (MediaRecorder API) ──
+const isRecording = ref(false);
+const recordingDuration = ref(0);
+let mediaRecorder = null;
+let audioChunks = [];
+let recTimer = null;
+
+function getSupportedMimeType() {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4'];
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return '';
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = getSupportedMimeType();
+    const options = mimeType ? { mimeType } : {};
+    mediaRecorder = new MediaRecorder(stream, options);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      if (audioChunks.length > 0) {
+        const blob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+        const ext = mimeType.includes('ogg') ? 'ogg' : (mimeType.includes('mp4') ? 'mp4' : 'webm');
+        const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mimeType || 'audio/webm' });
+        // Use existing sendMedia flow
+        chatStore.sendMedia(chatStore.activeJid, file, 'audio', '');
+        scrollToBottom();
+      }
+      audioChunks = [];
+      mediaRecorder = null;
+    };
+    mediaRecorder.start();
+    isRecording.value = true;
+    recordingDuration.value = 0;
+    recTimer = setInterval(() => { recordingDuration.value++; }, 1000);
+  } catch (err) {
+    console.error('Microphone access denied:', err);
+    ElMessage.error('无法访问麦克风，请检查浏览器权限');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  isRecording.value = false;
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+  recordingDuration.value = 0;
+}
+
+function formatRecTime(sec) {
+  const m = Math.floor(sec / 60).toString().padStart(2, 0);
+  const s = (sec % 60).toString().padStart(2, 0);
+  return `${m}:${s}`;
+}
+
+function cancelRecording() {
+  audioChunks = [];
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.onstop = null; // Prevent sending
+    mediaRecorder.stop();
+  }
+  isRecording.value = false;
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+  recordingDuration.value = 0;
+  mediaRecorder = null;
+}
+
+// ── Translate message (context menu action) ──
+async function onTranslateMsg(msg) {
+  msgMenuOpenFor.value = null;
+  emojiPickerFor.value = null;
+  const text = msg.body || msg.content || '';
+  if (!text) return;
+  try {
+    const apiMod = await getApi();
+    await apiMod.post('/whatsapp/retranslate', { messageId: msg.id });
+    showToast('翻译已请求');
+  } catch (e) {
+    console.error('Translate msg failed:', e);
+    ElMessage.error('翻译失败');
+  }
+}
 const editingText = ref('');
 const editInputEl = ref(null);
 const canEditMsg = (msg) => {
@@ -885,7 +1460,7 @@ function onMediaDocClick(msg) {
     // 浏览器原生PDF阅读器负责预览；用户可在预览页下载
     const inlineUrl = mediaBase + '&inline=1&download=0';
     // 检测是否移动端
-    const isMobileView = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const isMobileView = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth <= 900;
     if (isMobileView) {
       // 手机端：新标签页打开（浏览器自带PDF阅读器）
       window.open(inlineUrl, '_blank', 'noopener');
@@ -923,9 +1498,13 @@ function onImgError(e) {
   e.target.style.display = 'none';
 }
 
-// Close attach menu on outside click
+// Close attach menu & context menu on outside click
 function onDocClick(e) {
   if (attachMenuOpen.value && !e.target.closest('.attach-wrap')) attachMenuOpen.value = false;
+  if (msgMenuOpenFor.value !== null && !e.target.closest('.msg-menu-btn') && !e.target.closest('.msg-context-menu') && !e.target.closest('.emoji-picker-pop')) {
+    msgMenuOpenFor.value = null;
+    emojiPickerFor.value = null;
+  }
 }
 onMounted(() => { document.addEventListener('click', onDocClick); });
 onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); });
@@ -1116,6 +1695,11 @@ async function submitEdit(msg) {
 }
 function onDeleteMsg(msg) {
   msgMenuOpenFor.value = null;
+  emojiPickerFor.value = null;
+  if (!msg.fromMe) {
+    showToast('只能删除自己发送的消息');
+    return;
+  }
   if (confirm('确定删除这条消息？（仅本地隐藏，对方仍可见）')) {
     chatStore.localDeleteMessage(chatStore.activeJid, msg.id);
     if (chatStore.replyTo && chatStore.replyTo.msgId === msg.id) chatStore.clearReplyTo();
@@ -1199,12 +1783,15 @@ function getTranslationText(msg) {
   if (!t) return "";
   if (typeof t === "string") return t;
   // 我方发出去的：
-  //   气泡显示外发出文本(t.translated=外文，body=外发出文本)
-  //   虚线译文显示【中文原文】(t.original=中文/输入原文)
-  //   但若原输入就是外文(同语言发送)，t.original 会等于 body，已在 normalizeMessage 里清掉 translation，不会到这里
+  //   气泡显示发出文本（body）
+  //   虚线译文显示中文（优先 translated 如果是中文，否则 original 如果是中文）
   if (msg.fromMe) {
-    // 优先显示 original（中文原文），如果 original 为空则显示 translated
-    return t.original || t.translated || "";
+    // 优先显示中文内容（可能是 translated 回译或 original 原文）
+    const hasChineseInOriginal = /[\u4e00-\u9fff]/.test(t.original || "");
+    const hasChineseInTranslated = /[\u4e00-\u9fff]/.test(t.translated || "");
+    if (hasChineseInTranslated) return t.translated;
+    if (hasChineseInOriginal) return t.original;
+    return t.translated || t.original || "";
   }
   // 对方发进来的：气泡显示原文外文，虚线显示中文译文 t.translated
   return t.translated || t.text || "";
@@ -1256,6 +1843,7 @@ const colorPalette = ['#00a884','#4FC3F7','#AB47BC','#FF7043','#66BB6A','#FFA726
 // header头像状态
 // chAvatarOk moved to profile block
 function onChAvatarError() { chAvatarOk.value = false; }
+function onChAvatarLoad() { chAvatarOk.value = true; }
 
 // ── 客户档案抽屉 ──
 const profileOpen = ref(false);
@@ -1367,7 +1955,7 @@ async function saveProfile() {
 }
 
 // 切换会话时重置头像加载状态
-watch(() => chatStore.activeConversation?.jid, () => { chAvatarOk.value = true; });
+watch(() => chatStore.activeConversation?.jid, (newJid) => { chAvatarOk.value = false; const av = chatStore.activeConversation?.avatar || undefined; if (newJid && chatStore.loadAvatar(newJid, av)) { const preImg = new Image(); preImg.onload = () => { chAvatarOk.value = true; }; preImg.onerror = () => { chAvatarOk.value = false; }; preImg.src = chatStore.loadAvatar(newJid, av); } });
 
 function avatarColor(name) {
   if (!name) return '#00a884';
@@ -1408,6 +1996,7 @@ function scrollToBottom() { nextTick(() => { if (msgArea.value) msgArea.value.sc
 watch(() => chatStore.currentMessages?.length, () => scrollToBottom());
 watch(() => chatStore.activeJid, () => {
   draftMsg.value = '';
+  cancelMultiSelect();
   aiSuggestHiddenByInput.value = false;
   aiSuggestReplies.value = [];
   scrollToBottom();
@@ -1533,9 +2122,17 @@ onMounted(async () => {
     console.log('[ChatView] Auto-starting QR login...');
     qrViewVisible.value = true;
     chatStore.requestQR().catch(e => console.error('Auto QR failed:', e));
-  } else if (chatStore.activeJid && isMobileView.value) {
-    // 已连接且存在会话时，移动端首次加载也拉一次建议
-    refreshAiSuggests();
+  } else {
+    // 已连接：从其他页面导航过来时 socket 早就 connected，
+    // whatsapp:status 不会重复触发，需主动拉一次会话列表
+    if (!chatStore.conversations || chatStore.conversations.length === 0) {
+      console.log('[ChatView] Already connected but no conversations loaded, fetching now...');
+      chatStore.fetchConversations().catch(e => console.warn('[ChatView] initial fetchConversations failed:', e));
+    }
+    if (chatStore.activeJid && isMobileView.value) {
+      // 移动端首次加载也拉一次建议
+      refreshAiSuggests();
+    }
   }
 });
 onUnmounted(() => {
@@ -1543,6 +2140,9 @@ onUnmounted(() => {
   window.removeEventListener('wa:open-profile', onMhOpenProfileEvent);
   window.removeEventListener('keydown', onPdfKeydown);
   window.removeEventListener('resize', updateMobileView);
+  // Cleanup recording state
+  cancelRecording();
+  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
   try {
     const sock = useSocket();
     if (sock && aiSuggestSocketHandler) sock.off('whatsapp:message', aiSuggestSocketHandler);
@@ -1777,7 +2377,7 @@ onUnmounted(() => {
 .tcp-tips { margin-top:8px; text-align:right; font-size:11px; color:var(--text-secondary); line-height:1.5; }
 
 /* ── 移动端适配 ── *//* ── 移动端适配 ── */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .conv-header, .conv-input-area { padding-right:16px !important; }
   .conv-messages { padding-right:12px !important; }
   .trans-confirm-panel { margin-right:16px !important; }
@@ -1796,7 +2396,7 @@ onUnmounted(() => {
 }
 
 /* ===== 2026-07-13 移动端响应式补丁（追加） ===== */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   /* 顶部header - 手机端由LayoutView的mobile-header承载,隐藏原header避免双层 */
   .conv-header {
     display: none !important;
@@ -1995,7 +2595,7 @@ onUnmounted(() => {
 .mmd-name { font-size:14px; color:var(--text-primary); word-break:break-all; }
 .mmd-size { font-size:11px; color:var(--text-secondary); margin-top:2px; }
 .msg-caption { font-size:13px; color:var(--text-primary); margin-top:4px; padding-right:0; white-space:pre-wrap; line-height:1.4; }
-@media (max-width:768px) {
+@media (max-width:900px) {
   .msg-media-img { max-width:220px; max-height:220px; margin-right:46px; }
   .msg-media-img img { max-height:220px; }
   .msg-media-video { max-width:240px; margin-right:46px; }
@@ -2007,7 +2607,7 @@ onUnmounted(() => {
 
 /* ── AI 快捷建议条（默认隐藏，仅移动端显示） ── */
 .ai-suggest-bar { display: none !important; }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .ai-suggest-bar {
     display: none !important;
   }
@@ -2192,7 +2792,7 @@ onUnmounted(() => {
 .profile-slide-enter-active .profile-panel,.profile-slide-leave-active .profile-panel{transition:transform .25s ease}
 .profile-slide-enter-from .profile-panel,.profile-slide-leave-to .profile-panel{transform:translateX(100%)}
 /* 手机端抽屉铺满 */
-@media (max-width:768px){
+@media (max-width:900px){
   .profile-drawer{max-width:100%}
   .profile-panel{max-width:100%}
 }
@@ -2325,11 +2925,548 @@ onUnmounted(() => {
 .wa-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
 /* ── 手机端消息菜单适配 ── */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .msg-menu-btn { opacity:0.7; } /* 手机端菜单按钮默认半可见，不依赖hover */
   .msg-context-menu { min-width:130px; }
   .emoji-picker-pop { right:0; top:calc(100% + 4px); }
   .msg.incoming { padding-right:0; }
 }
 
-</style>
+
+/* ── Voice recording ── */
+.recording-bar { display:flex; align-items:center; gap:10px; padding:0 8px; flex:1; }
+.rec-time { font-size:14px; color:#ea4335; font-weight:600; font-variant-numeric:tabular-nums; min-width:42px; }
+.rec-send-btn { width:40px; height:40px; border-radius:50%; background:#ea4335; color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:auto; transition:background .15s; }
+.rec-send-btn:hover { background:#c62828; }
+
+.mic-btn { background: var(--accent) !important; }
+.mic-btn.rec-active { background: #ea4335 !important; animation: rec-pulse 1s ease-in-out infinite; }
+@keyframes rec-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(234,67,53,0.4); } 50% { box-shadow: 0 0 0 10px rgba(234,67,53,0); } }
+.recording-indicator { display:flex; align-items:center; gap:6px; padding:0 8px; }
+.rec-dot { width:10px; height:10px; border-radius:50%; background:#ea4335; animation: rec-blink 1s ease-in-out infinite; }
+@keyframes rec-blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.rec-timer { font-size:13px; color:#ea4335; font-weight:600; font-variant-numeric:tabular-nums; }
+.rec-cancel-btn { background:none; border:1px solid var(--text-secondary); color:var(--text-secondary); border-radius:50%; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; transition:border-color .15s, color .15s; }
+.rec-cancel-btn:hover { border-color:#ea4335; color:#ea4335; }
+
+/* ── Multi-select ── */
+.multi-select-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--panel-header-bg); border-top:1px solid var(--border-color); flex-shrink:0; }
+.msb-btn { background:var(--sidebar-active); border:none; color:var(--text-primary); padding:6px 14px; border-radius:6px; font-size:13px; cursor:pointer; transition:background .15s; font-family:inherit; }
+.msb-btn:hover { background:var(--accent); color:#fff; }
+.msb-count { flex:1; text-align:center; font-size:13px; color:var(--text-secondary); }
+.msb-danger { background:rgba(234,67,53,0.15) !important; color:#ea4335 !important; }
+.msb-danger:hover { background:#ea4335 !important; color:#fff !important; }
+.msb-danger:disabled { opacity:.4; cursor:not-allowed; }
+.msg-select-check { position:absolute; left:-28px; top:50%; transform:translateY(-50%); z-index:5; }
+.msc-box { width:20px; height:20px; border-radius:4px; border:2px solid var(--text-secondary); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s; background:transparent; }
+.msc-box.checked { background:var(--accent); border-color:var(--accent); }
+.msg-selected { background:rgba(0,168,132,0.08) !important; }
+
+/* ── Emoji quick reactions on hover ── */
+.msg-quick-reactions { position:absolute; top:-32px; left:50%; transform:translateX(-50%); display:flex; gap:2px; background:var(--panel-header-bg,#202c33); border:1px solid var(--sidebar-active,#2a3942); border-radius:20px; padding:4px 6px; box-shadow:0 2px 8px rgba(0,0,0,.3); z-index:10; white-space:nowrap; }
+.msg.outgoing .msg-quick-reactions { left:auto; right:8px; transform:none; }
+.msg.incoming .msg-quick-reactions { left:8px; transform:none; }
+.mqr-btn { background:transparent; border:none; font-size:18px; cursor:pointer; padding:2px 3px; border-radius:50%; transition:background .15s, transform .15s; line-height:1; }
+.mqr-btn:hover { background:var(--sidebar-active,#2a3942); transform:scale(1.25); }
+
+/* ── Mobile adjustments ── */
+@media (max-width: 900px) {
+  .msg-quick-reactions { top:-30px; }
+  .msg-select-check { left:-24px; }
+  .msc-box { width:18px; height:18px; }
+  .recording-indicator { font-size:12px; }
+}
+
+/* ═══ Phase 4: Conversation Manager Styles ═══ */
+.ch-conv-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.ch-conv-progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ch-conv-bar {
+  width: 48px;
+  height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ch-conv-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.ch-conv-pct {
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 24px;
+}
+.ch-conv-chip {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.ch-conv-strategy.strat-ask {
+  background: rgba(0,168,132,0.15);
+  color: #00a884;
+}
+.ch-conv-strategy.strat-quote {
+  background: rgba(240,180,41,0.15);
+  color: #f0b429;
+}
+.ch-conv-stage {
+  background: rgba(100,150,255,0.12);
+  color: #8696a0;
+}
+.ch-conv-rounds {
+  background: rgba(231,76,60,0.12);
+  color: #e74c3c;
+  font-size: 9px;
+}
+.ch-conv-gen-btn {
+  background: rgba(0,168,132,0.12);
+  border: none;
+  color: #00a884;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: background 0.2s;
+}
+.ch-conv-gen-btn:hover {
+  background: rgba(0,168,132,0.25);
+}
+.ch-conv-gen-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dialog overlay */
+.conv-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.conv-dialog {
+  background: #111b21;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.conv-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.conv-dialog-header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #e9edef;
+  font-weight: 600;
+}
+.conv-dialog-close {
+  background: none;
+  border: none;
+  color: #8696a0;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.conv-dialog-close:hover {
+  background: rgba(255,255,255,0.08);
+  color: #e9edef;
+}
+.conv-dialog-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.conv-dialog-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  justify-content: flex-end;
+}
+.cd-btn {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #e9edef;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+.cd-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+.cd-btn.primary {
+  background: #00a884;
+  border-color: #00a884;
+  color: #fff;
+}
+.cd-btn.primary:hover {
+  background: #009172;
+}
+
+/* Dialog sections */
+.conv-dialog-section {
+  margin-bottom: 16px;
+}
+.cds-title {
+  font-size: 12px;
+  color: #8696a0;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cds-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cds-progress-row span:first-child {
+  font-size: 12px;
+  color: #8696a0;
+  min-width: 60px;
+}
+.cds-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.cds-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.cds-pct {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+.cds-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cds-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  color: #8696a0;
+}
+.cds-chip.strat-ask {
+  background: rgba(0,168,132,0.15);
+  color: #00a884;
+}
+.cds-chip.strat-quote {
+  background: rgba(240,180,41,0.15);
+  color: #f0b429;
+}
+.cds-chip.stage {
+  background: rgba(100,150,255,0.12);
+}
+.cds-chip.rounds {
+  background: rgba(231,76,60,0.12);
+  color: #e74c3c;
+}
+
+/* Question list */
+.cds-q-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cds-q-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.cds-q-item.answered {
+  background: rgba(0,168,132,0.06);
+  border-color: rgba(0,168,132,0.15);
+}
+.cds-q-check {
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.cds-q-content {
+  flex: 1;
+  min-width: 0;
+}
+.cds-q-text {
+  font-size: 13px;
+  color: #e9edef;
+  line-height: 1.3;
+}
+.cds-q-text-cn {
+  font-size: 11px;
+  color: #8696a0;
+  margin-top: 1px;
+}
+.cds-q-answer {
+  font-size: 12px;
+  color: #00a884;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(0,168,132,0.08);
+  border-radius: 6px;
+}
+
+/* BANT section */
+.cds-bant {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.cds-bant-item, .cds-bant-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.cds-bant-item span, .cds-bant-total span {
+  color: #8696a0;
+}
+.cds-bant-item b, .cds-bant-total b {
+  color: #e9edef;
+}
+.cds-bant-total {
+  grid-column: 1 / -1;
+  background: rgba(0,168,132,0.08);
+}
+
+/* Script dialog */
+.script-dialog {
+  max-width: 560px;
+}
+.script-reason {
+  background: rgba(240,180,41,0.08);
+  border: 1px solid rgba(240,180,41,0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #f0b429;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+.script-block {
+  margin-bottom: 14px;
+}
+.script-label {
+  font-size: 11px;
+  color: #8696a0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.script-text {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #e9edef;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.script-en {
+  border-left: 3px solid #00a884;
+}
+.script-cn {
+  border-left: 3px solid #8696a0;
+}
+.script-copy-btn {
+  margin-top: 6px;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #8696a0;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.script-copy-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: #e9edef;
+}
+.script-questions {
+  margin-bottom: 12px;
+}
+.script-q-item {
+  font-size: 12px;
+  color: #8696a0;
+  padding: 3px 0;
+}
+.script-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #8696a0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Fade transition */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+
+/* ═══ Phase 5: Script dialog enhancements ═══ */
+.script-context-bar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+  background: #f0f7ff; border-bottom: 1px solid #e0e0e0; flex-wrap: wrap;
+}
+.script-strategy-tag {
+  padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+}
+.script-strategy-tag.PROVIDE_QUOTE { background: #fff3cd; color: #856404; }
+.script-strategy-tag.ASK_FOR_INFO { background: #d1ecf1; color: #0c5460; }
+.script-ctx-item { font-size: 12px; color: #555; }
+.script-length-tabs {
+  display: flex; gap: 6px; margin-bottom: 12px;
+}
+.script-length-chip {
+  padding: 4px 14px; border-radius: 16px; border: 1px solid #ddd;
+  background: #f8f8f8; cursor: pointer; font-size: 12px;
+  transition: all .2s; color: #555;
+}
+.script-length-chip.active {
+  background: #0088cc; color: #fff; border-color: #0088cc;
+}
+.script-length-chip:hover:not(.active) {
+  border-color: #0088cc; color: #0088cc;
+}
+.script-btn-row {
+  display: flex; gap: 6px; margin-top: 4px;
+}
+
+/* ===== 🎯 成交按钮 ===== */
+.closing-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+.closing-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%) !important;
+  transform: scale(1.02);
+}
+.closing-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ===== 🎯 成交弹窗 ===== */
+.closing-dialog {
+  max-width: 560px;
+  width: 92%;
+  max-height: 80vh;
+}
+.closing-strategy-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--bg-secondary, #f8fafc);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+.closing-stage-tag,
+.closing-strategy-tag,
+.closing-attitude-tag {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--bg-tertiary, #e2e8f0);
+  color: var(--text-secondary, #475569);
+  white-space: nowrap;
+}
+.closing-strategy-tag {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+.closing-reply-card {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.closing-reply-card:last-child {
+  margin-bottom: 0;
+}
+.closing-tactic-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+  background: #d1fae5;
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.closing-stage-advice {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  background: var(--bg-secondary, #f1f5f9);
+  padding: 6px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.script-copy-btn.primary {
+  background: var(--color-primary, #2563eb) !important;
+  color: white !important;
+}
+
+    </style>

@@ -25,6 +25,7 @@ import aiRoutes from './routes/ai.js';
 import customerRoutes from './routes/customers.js';
 import emailRoutes from './routes/emails.js';
 import bgCheckRoutes from './routes/background-check.js';
+import bantScoreRoutes from './routes/bant-score.js';
 import automationRoutes from './routes/automation.js';
 import dashboardRoutes from './routes/dashboard.js';
 import evolutionWebhookRoutes from './routes/evolution-webhook.js';
@@ -37,11 +38,22 @@ import { autoConnectUserBot } from './services/tg-userbot-connector.js';
 import companyMaterialsRouter from './routes/companyMaterials.js';
 import assistantRoutes from './routes/assistant.js';
 import trackingRoutes from './routes/tracking.js';
+import productKnowledgeRoutes from './routes/product-knowledge.js';
+import conversationManagerRoutes from './routes/conversation-manager.js';
+import attitudeAnalysisRoutes from './routes/attitude-analysis.js';
+import actionSuggestionsRoutes from './routes/action-suggestions.js';
+import speechLibraryRoutes from './routes/speech-library.js';
+import effectTrackingRoutes from './routes/effect-tracking.js';
 import { getPendingFollowups } from './services/followup.service.js';
 import { readTranslationSettings, getTranslationSettings } from "./routes/translation.js";
 import { detectLanguage as _detectLangForSend, translateText as _translateTextForSend } from "./services/ai.service.js";
 import { authMiddleware } from './middleware/auth.js';
-import { recordSample } from "./services/speech-collector.js"; // Phase1 AI话术库采集
+import { resolveToPhoneJid } from './services/lid-mapping.js';
+import { decrypt as dec, isEncrypted as isEnc } from './utils/encryption.js';
+function decToken(t) { return t && isEnc(t) ? dec(t) : t; }
+import { recordSample } from "./services/speech-collector.js";
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit'; // Phase1 AI话术库采集
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,6 +83,20 @@ const isProduction = process.env.NODE_ENV === 'production';
 const LISTEN_PORT = isProduction ? (parseInt(process.env.DEPLOY_RUN_PORT, 10) || 5000) : PORT;
 const DEFAULT_SESSION_ID = "user_1";
 
+// ─── Multi-account sessionId resolver ───
+async function resolveSessionIdForAccount(accountId) {
+  try {
+    const acc = await prisma.whatsAppAccount.findUnique({ where: { id: accountId } });
+    if (!acc || !acc.phone) return DEFAULT_SESSION_ID;
+    const conn = await prisma.wAConnection.findFirst({ where: { userId: acc.userId || 1, phone: acc.phone, sessionId: { startsWith: 'user_' } } });
+    if (conn) return conn.sessionId;
+  } catch (e) {}
+  // fallback: user_1 for account 1, user_N for others
+  if (accountId === 1) return "user_1";
+  return `user_${accountId}`;
+}
+
+
 // ─── 会话操作辅助函数 ───
 async function _ensureConversation(accountId, jid, platform = "whatsapp") {
   try {
@@ -78,6 +104,18 @@ async function _ensureConversation(accountId, jid, platform = "whatsapp") {
     const _ph = jid.split("@")[0];
     // telegram的jid是纯数字+@telegram，不需要/^[0-9]+$/校验
     if (platform === "whatsapp" && (!_ph || _ph === "0" || _ph.length < 5 || !/^[0-9]+$/.test(_ph))) return null;
+    // 检查是否在已删除名单中，防止webhook重建已删除的联系人
+    const _phoneForCheck = jid.split("@")[0];
+    try {
+      const deleted = await prisma.$queryRawUnsafe(
+        `SELECT 1 FROM "DeletedContact" WHERE "accountId" = ? AND ("jid" = ? OR "jid" LIKE ? OR "jid" LIKE ?)`,
+        accountId, jid, _phoneForCheck + '@%', _phoneForCheck + '@lid'
+      );
+      if (deleted.length > 0) {
+        console.log('[_ensureConversation] Skipping deleted contact:', jid, 'accountId:', accountId);
+        return null;
+      }
+    } catch(_e) { /* table may not exist yet */ }
     const cwhere = { accountId_platform_jid: { accountId, platform, jid } };
     let contact = await prisma.contact.findUnique({ where: cwhere });
     if (!contact) {
@@ -136,6 +174,36 @@ app.use(cors({
   origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
   credentials: true,
 }));
+
+// ── Security: Helmet (HTTP security headers) ──
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// ── Security: Rate Limiting ──
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '请求过于频繁，请稍后再试' },
+  skip: (req) => {
+    // 跳过健康检查和 WebSocket 升级请求
+    if (req.path === '/api/health' || req.path === '/health') return true;
+    if (req.headers?.upgrade?.toLowerCase() === 'websocket') return true;
+    return false;
+  },
+});
+app.use(apiLimiter);
+
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '登录尝试过于频繁，请1分钟后重试' },
+});
 
 // ── Custom multipart parser for /api/whatsapp/send-media (no multer dependency) ──
 // Uses Node v22's built-in Request/FormData via undici.
@@ -197,7 +265,7 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 
 // ─── API Routes ───
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', loginLimiter, authRoutes);
 app.use('/api/accounts', authMiddleware, accountRoutes);
 app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/messages', authMiddleware, messageRoutes);
@@ -207,10 +275,19 @@ app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/customers', authMiddleware, customerRoutes);
 app.use('/api/emails', authMiddleware, emailRoutes);
 app.use('/api/background-check', authMiddleware, bgCheckRoutes);
+app.use('/api/customers', authMiddleware, bantScoreRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/automation", authMiddleware, automationRoutes);
 app.use("/api/assistant", authMiddleware, assistantRoutes);
 app.use("/api/tracking", trackingRoutes);
+app.use("/api/product-knowledge", authMiddleware, productKnowledgeRoutes);
+app.use("/api/customers", authMiddleware, conversationManagerRoutes);
+
+// Phase 6-9: AI Sales Enhancement Routes
+app.use('/api/attitude', authMiddleware, attitudeAnalysisRoutes);
+app.use('/api/suggestions', authMiddleware, actionSuggestionsRoutes);
+app.use('/api/speech-library', authMiddleware, speechLibraryRoutes);
+app.use('/api/effectiveness', authMiddleware, effectTrackingRoutes);
 app.use("/api/documents", authMiddleware, documentRoutes);
 app.use("/api/company-materials", companyMaterialsRouter);
 app.use('/', waAvatarRoutes);
@@ -485,21 +562,27 @@ app.post("/api/whatsapp/admin/reset", authMiddleware, async (req, res) => {
       });
     } catch(e){}
 
-    // 设置webhook
-    try {
-      await fetch(EVO_API + "/webhook/set/" + EVO_INST, {
-        method: "POST",
-        headers: { apikey: EVO_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          webhook: {
-            enabled: true,
-            url: "http://host.docker.internal:3000/api/evolution/webhook",
-            byEvents: true,
-            events: ["MESSAGES_UPSERT","MESSAGES_UPDATE","MESSAGES_DELETE","CONNECTION_UPDATE","SEND_MESSAGE"]
-          }
-        })
-      });
-    } catch(e){}
+    // 设置webhook — 多实例支持
+    const webhookPort = process.env.DEPLOY_RUN_PORT || 3000;
+    const webhookUrl = `http://host.docker.internal:${webhookPort}/api/evolution/webhook`;
+    const waInstances = ["jeremy-main", "jeremy-eric"];
+    for (const inst of waInstances) {
+      try {
+        await fetch(EVO_API + "/webhook/set/" + inst, {
+          method: "POST",
+          headers: { apikey: EVO_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            webhook: {
+              enabled: true,
+              url: webhookUrl,
+              byEvents: true,
+              events: ["MESSAGES_UPSERT","MESSAGES_UPDATE","MESSAGES_DELETE","CONNECTION_UPDATE","SEND_MESSAGE"]
+            }
+          })
+        });
+        console.log(`[Server] webhook set for ${inst} -> ${webhookUrl}`);
+      } catch(e){ console.warn(`[Server] webhook set ${inst} failed:`, e.message); }
+    }
 
     // 如果是QR模式，获取QR
     let qr = null, pairCode = null;
@@ -568,6 +651,34 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     let toJid = to;
     if (!toJid.includes("@")) toJid = `${toJid.replace(/\D/g, "")}@s.whatsapp.net`;
     const toPhone = toJid.split("@")[0];
+
+    // ─── Multi-instance: resolve correct Evolution connector based on accountId or conversation ───
+    let sendConnector = evoConnector; // default to jeremy-main
+    let sendAccountId = body.accountId || null;
+    if (!sendAccountId) {
+      // Try to find which account this conversation belongs to
+      try {
+        const existingConv = await prisma.conversation.findFirst({
+          where: { platform: 'whatsapp', jid: toJid },
+          select: { accountId: true },
+        });
+        if (existingConv) sendAccountId = existingConv.accountId;
+      } catch (_) {}
+    }
+    if (sendAccountId) {
+      try {
+        const waAccount = await prisma.whatsAppAccount.findFirst({
+          where: { id: sendAccountId, platform: 'whatsapp', instanceName: { not: null } },
+          select: { instanceName: true },
+        });
+        if (waAccount && waAccount.instanceName) {
+          sendConnector = getEvolutionConnector(waAccount.instanceName);
+          console.log(`[WA Send] Using instance ${waAccount.instanceName} for accountId=${sendAccountId}`);
+        }
+      } catch (e) {
+        console.warn('[WA Send] resolve account failed:', e.message);
+      }
+    }
 
     // ─── Telegram 账号分发（jid带@telegram后缀时） ───
     if (toJid.endsWith("@telegram")) {
@@ -665,7 +776,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           sent = await ubConnector.sendMessage(tgChatId, textMsg);
         } else {
           // 使用 Bot API 发送
-          const connector = getTelegramConnector(tgAccount.telegramBotToken);
+          const connector = getTelegramConnector(decToken(tgAccount.telegramBotToken));
           sent = await connector.sendMessage(tgChatId, textMsg);
         }
         // 写入/复用 contact + conversation
@@ -721,7 +832,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           });
           io.emit("conversation:update", { accountId: tgAccount.id, conversation: { id: conv.id, jid: toJid, platform: "telegram", lastMessage: textMsg.slice(0,200), lastMessageAt: new Date() } });
         }
-        return res.json({ ok: true, messageId: String(tgSentMsgId), platform: "telegram", waMessageId: savedWa.waMessageId, savedId: savedWa.id, translation: translationObj });
+        return res.json({ ok: true, messageId: String(tgSentMsgId), platform: "telegram", waMessageId: savedWa.waMessageId, savedId: savedWa.id, translation: translationObj || null });
       } catch (err) {
         console.error("[TG send] error:", err);
         return res.status(500).json({ error: "Telegram send failed: " + err.message });
@@ -828,24 +939,25 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     }
     // 1. 通过Evolution发消息（用译文或原文）
     const quoted = body.quoted || null;
-    const result = await evoConnector.sendTextMessage(toJid, sendText, { quoted });
+    const result = await sendConnector.sendTextMessage(toJid, sendText, { quoted });
 
-    // 2. 我自己的JID
-    const info = await evoConnector.getInstanceInfo().catch(() => null);
-    const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
+    // 2. 我自己的JID + resolve sessionId for outbound
+    const outSessionId = sendConnector.instance === "jeremy-eric" ? "user_2" : "user_1";
+    const info = await sendConnector.getInstanceInfo().catch(() => null);
+    const ownerJid = info?.ownerJid || (sendConnector.instance === "jeremy-eric" ? "8618038118960@s.whatsapp.net" : "8613016242602@s.whatsapp.net");
 
     // 3. 落库：body 保存原文，translation 保存译文
     let saved = null;
     try {
       const waMessageId = result?.key?.id || result?.messageId || null;
       if (waMessageId) {
-        const exists = await prisma.wAMessage.findFirst({ where: { sessionId: DEFAULT_SESSION_ID, waMessageId } });
+        const exists = await prisma.wAMessage.findFirst({ where: { sessionId: outSessionId, waMessageId } });
         if (exists) saved = exists;
       }
       if (!saved) {
         saved = await prisma.wAMessage.create({
           data: {
-            sessionId: DEFAULT_SESSION_ID,
+            sessionId: outSessionId,
             from: ownerJid,
             to: toJid,
             body: sendText,  // 气泡显示实际发出的文本（译文）
@@ -908,13 +1020,14 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           messageType: "text",
           timestamp: saved?.timestamp ? new Date(saved.timestamp).getTime() : Date.now(),
           contact: { name: toPhone, phone: toPhone },
-          instance: evoConnector.instance,
-          sessionId: DEFAULT_SESSION_ID,
+          instance: sendConnector.instance,
+          accountId: sendAccountId,
+          sessionId: outSessionId,
         });
       }
     } catch (e) {}
 
-    res.json({ success: result.success, key: result.key, savedId: saved?.id, messageId: result?.key?.id, translation: translationObj });
+    res.json({ success: result.success, key: result.key, savedId: saved?.id, messageId: result?.key?.id, translation: translationObj || null });
   } catch (err) {
     console.error("[WA Send Error]", err.message);
     res.status(500).json({ error: err.message });
@@ -940,6 +1053,25 @@ app.post("/api/whatsapp/reaction", authMiddleware, async (req, res) => {
       id: waMessageId,
     };
     const result = await evoConnector.sendReaction(toJid, msgKey, emoji);
+
+    // Save reaction to DB so followup service sees outbound and clears "待回复"
+    try {
+      const info = await evoConnector.getInstanceInfo().catch(() => null);
+      const ownerJid = info?.ownerJid || '8613016242602@s.whatsapp.net';
+      const sessionId = evoConnector.instance === 'jeremy-eric' ? 'user_2' : 'user_1';
+      const waMsgId = result?.key?.id || ('reaction_' + Date.now());
+      await prisma.wAMessage.create({
+        data: {
+          sessionId, from: ownerJid, to: toJid,
+          body: emoji, type: 'reaction', direction: 'outbound',
+          timestamp: new Date().toISOString(),
+          waMessageId: waMsgId,
+        },
+      });
+    } catch (dbErr) {
+      console.warn('[WA Reaction] DB save error:', dbErr.message);
+    }
+
     // Broadcast via socket so UI updates
     try {
       const io = req.app.get("io");
@@ -1153,6 +1285,7 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
     const jid = fields.jid || fields.to;
     const mediatype = fields.mediatype || (file && file.mimeType && file.mimeType.startsWith('video/') ? 'video' : (file && file.mimeType && file.mimeType.startsWith('image/') ? 'image' : 'document'));
     const caption = fields.caption || '';
+    const reqAccountId = fields.accountId ? parseInt(fields.accountId) : null;
     if (!jid) return res.status(400).json({ error: 'jid is required' });
     if (!file || !file.buffer || file.buffer.length === 0) return res.status(400).json({ error: 'file is required' });
     // WhatsApp官方大小限制：图片/视频/音频≤16MB，文档≤100MB
@@ -1170,7 +1303,117 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
     if (!toJid.includes('@')) toJid = toJid.replace(/\D/g, '') + '@s.whatsapp.net';
     const toPhone = toJid.split('@')[0];
 
-    const result = await evoConnector.sendMediaMessage(toJid, {
+    // ── Telegram media sending branch ──
+    if (toJid.endsWith('@telegram')) {
+      const tgChatId = toJid.split('@')[0];
+      let tgAccount = await prisma.whatsAppAccount.findFirst({
+        where: { userId: req.userId, platform: 'telegram', status: 'connected' },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!tgAccount) return res.status(400).json({ error: '未连接Telegram账号' });
+
+      const isUserBot = !tgAccount.telegramBotToken;
+      let tgSizeLimit = isUserBot ? 20 * 1024 * 1024 : 50 * 1024 * 1024;
+      if (mt.startsWith('image/') && !isUserBot) tgSizeLimit = 10 * 1024 * 1024;
+      if (file.buffer.length > tgSizeLimit) {
+        return res.status(413).json({ error: typeLabel + '超过' + Math.round(tgSizeLimit/1024/1024) + 'MB，Telegram无法发送' });
+      }
+
+      let sent;
+      try {
+        if (isUserBot) {
+          const ubConnector = await import('./services/tg-userbot-connector.js');
+          sent = await ubConnector.sendFile(tgChatId, file.buffer, file.fileName || 'file', { caption: caption || undefined });
+        } else {
+          const connector = getTelegramConnector(decToken(tgAccount.telegramBotToken));
+          const fileObj = { buffer: file.buffer, filename: file.fileName || 'file', contentType: file.mimeType || 'application/octet-stream' };
+          if (mt.startsWith('image/')) {
+            sent = await connector.sendPhoto(tgChatId, fileObj, { caption: caption || undefined });
+          } else if (mt.startsWith('video/')) {
+            sent = await connector.sendVideo(tgChatId, fileObj, { caption: caption || undefined });
+          } else {
+            sent = await connector.sendDocument(tgChatId, fileObj, { caption: caption || undefined });
+          }
+        }
+      } catch (sendErr) {
+        console.error('[TG SendMedia] send failed:', sendErr.message);
+        return res.status(500).json({ error: 'Telegram媒体发送失败: ' + sendErr.message });
+      }
+
+      const tgSessionId = 'tg_' + (tgAccount.telegramBotUsername || tgAccount.id);
+      const tgMsgId = sent?.message_id || sent?.result?.message_id || ('tg_media_' + Date.now());
+      const tgWaMsgId = 'tg_' + tgAccount.id + '_' + tgMsgId + '_out';
+      let saved = await prisma.wAMessage.findFirst({ where: { sessionId: tgSessionId, waMessageId: tgWaMsgId } });
+      if (!saved) {
+        let outboundMediaUrl = null;
+        try {
+          const crypto = await import('crypto');
+          const fsMod = await import('fs');
+          const pathMod = await import('path');
+          const extMatch = (file.fileName || '').match(/\.([a-zA-Z0-9]{1,5})$/);
+          const ext = extMatch ? extMatch[1].toLowerCase() : (mt.startsWith('image/') ? 'jpg' : mt.startsWith('video/') ? 'mp4' : 'bin');
+          const hashName = crypto.randomBytes(16).toString('hex') + '.' + ext;
+          const outDir = pathMod.join(__dirname, 'uploads/outbound');
+          if (!fsMod.existsSync(outDir)) fsMod.mkdirSync(outDir, { recursive: true });
+          fsMod.writeFileSync(pathMod.join(outDir, hashName), file.buffer);
+          outboundMediaUrl = '/uploads/outbound/' + hashName;
+        } catch (fsErr) { console.warn('[TG SendMedia] persist failed:', fsErr.message); }
+
+        saved = await prisma.wAMessage.create({
+          data: {
+            sessionId: tgSessionId, from: 'me', to: toJid,
+            body: caption || file.fileName || (mediatype === 'image' ? '[图片]' : mediatype === 'video' ? '[视频]' : '[文件]'),
+            type: mediatype, direction: 'outbound', timestamp: new Date(),
+            waMessageId: tgWaMsgId, mediaUrl: outboundMediaUrl,
+            fileName: file.fileName || null, mimeType: file.mimeType || null,
+            fileLength: file.buffer.length,
+          },
+        });
+      }
+
+      try {
+        let contact = await prisma.contact.findUnique({ where: { accountId_platform_jid: { accountId: tgAccount.id, platform: 'telegram', jid: toJid } } });
+        if (!contact) contact = await prisma.contact.create({ data: { accountId: tgAccount.id, platform: 'telegram', jid: toJid, name: tgChatId } });
+        let conv = await prisma.conversation.findUnique({ where: { accountId_platform_jid: { accountId: tgAccount.id, platform: 'telegram', jid: toJid } } });
+        if (conv) await prisma.conversation.update({ where: { id: conv.id }, data: { lastMessage: (caption || file.fileName || '[媒体]').slice(0, 200), lastMessageAt: new Date(), unreadCount: 0 } });
+      } catch (_) {}
+
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('whatsapp:message_sent', {
+            id: saved.id, body: caption || file.fileName || '', fromMe: true,
+            timestamp: saved.timestamp, platform: 'telegram', jid: toJid,
+            direction: 'outbound', messageType: mediatype, type: mediatype,
+            fileName: file.fileName || null, mimeType: file.mimeType || null,
+            mediaUrl: saved.mediaUrl,
+            previewDataUrl: mediatype === 'image' ? ('data:' + (file.mimeType || 'image/png') + ';base64,' + file.buffer.toString('base64')) : null,
+          });
+        }
+      } catch (_) {}
+
+      return res.json({ success: true, savedId: saved.id, messageId: tgMsgId, platform: 'telegram' });
+    }
+
+    // Multi-WA: resolve correct connector based on accountId or conversation
+    let mediaConnector = evoConnector;
+    let mediaAccountId = reqAccountId || null;
+    if (mediaAccountId) {
+      const waAcc = await prisma.whatsAppAccount.findFirst({ where: { id: mediaAccountId, platform: 'whatsapp' } });
+      if (waAcc?.instanceName) {
+        mediaConnector = getEvolutionConnector(waAcc.instanceName);
+        mediaAccountId = waAcc.id;
+      }
+    } else {
+      const existingConv = await prisma.conversation.findFirst({ where: { jid: toJid, platform: 'whatsapp' }, select: { accountId: true } });
+      if (existingConv) {
+        mediaAccountId = existingConv.accountId;
+        const waAcc = await prisma.whatsAppAccount.findFirst({ where: { id: mediaAccountId, platform: 'whatsapp' } });
+        if (waAcc?.instanceName) mediaConnector = getEvolutionConnector(waAcc.instanceName);
+      }
+    }
+
+    const result = await mediaConnector.sendMediaMessage(toJid, {
       mediaBuffer: file.buffer,
       fileName: file.fileName || 'file',
       mimeType: file.mimeType || 'application/octet-stream',
@@ -1182,14 +1425,15 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
       return res.status(500).json({ error: result.error || 'send failed', data: result.data });
     }
 
-    const info = await evoConnector.getInstanceInfo().catch(() => null);
-    const ownerJid = info?.ownerJid || '8613016242602@s.whatsapp.net';
+    const outMediaSessionId = mediaConnector.instance === 'jeremy-eric' ? 'user_2' : 'user_1';
+    const info = await mediaConnector.getInstanceInfo().catch(() => null);
+    const ownerJid = info?.ownerJid || (mediaConnector.instance === 'jeremy-eric' ? '8618038118960@s.whatsapp.net' : '8613016242602@s.whatsapp.net');
 
     let saved = null;
     let outboundMediaUrl = null;
     try {
       const waMessageId = result?.key?.id || result?.messageId || null;
-      const dup = waMessageId ? await prisma.wAMessage.findFirst({ where: { sessionId: DEFAULT_SESSION_ID, waMessageId } }) : null;
+      const dup = waMessageId ? await prisma.wAMessage.findFirst({ where: { sessionId: outMediaSessionId, waMessageId } }) : null;
       if (dup) {
         saved = dup;
         // If dup exists from a prior send (e.g., retry), still populate outboundMediaUrl if it was persisted
@@ -1217,7 +1461,7 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
         }
         saved = await prisma.wAMessage.create({
           data: {
-            sessionId: DEFAULT_SESSION_ID,
+            sessionId: outMediaSessionId,
             from: ownerJid,
             to: toJid,
             body: caption || file.fileName || (mediatype === 'image' ? '[图片]' : mediatype === 'video' ? '[视频]' : '[文件]'),
@@ -1273,8 +1517,9 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
       fileSize: file.buffer.length,
       timestamp: saved?.timestamp ? new Date(saved.timestamp).getTime() : Date.now(),
       contact: { name: toPhone, phone: toPhone },
-      instance: evoConnector.instance,
-      sessionId: DEFAULT_SESSION_ID,
+      instance: mediaConnector.instance,
+      accountId: mediaAccountId,
+      sessionId: outMediaSessionId,
       // Include a base64 data URL preview for immediate optimistic rendering
       mediaUrl: outboundMediaUrl,
       // Include a base64 data URL preview for immediate optimistic rendering
@@ -1347,9 +1592,10 @@ app.post("/api/ai/send-doc-pdf", authMiddleware, async (req, res) => {
       const waMessageId = result?.key?.id || result?.messageId || null;
       const docLabelMap = { quotation:"报价单", pi:"形式发票", ci:"商业发票", packing:"装箱单", contract:"销售合同", customs:"报关单" };
       const bodyLabel = (docLabelMap[docType] || "单证") + "(PDF)";
+      const docSessionId = evoConnector.instance === 'jeremy-eric' ? 'user_2' : 'user_1';
       const saved = await prisma.wAMessage.create({
         data: {
-          sessionId: DEFAULT_SESSION_ID,
+          sessionId: docSessionId,
           from: ownerJid,
           to: toJid,
           body: bodyLabel,
@@ -1366,7 +1612,7 @@ app.post("/api/ai/send-doc-pdf", authMiddleware, async (req, res) => {
           key: result.key, savedId: saved?.id, messageId: waMessageId,
           outPayload: {
             from: ownerJid, to: toJid, body: bodyLabel, type: "document", direction: "outbound",
-            timestamp: Date.now(), instance: evoConnector.instance, sessionId: DEFAULT_SESSION_ID,
+            timestamp: Date.now(), instance: evoConnector.instance, sessionId: docSessionId,
             previewDataUrl: null,
           }
         });
@@ -1462,7 +1708,7 @@ app.post('/api/whatsapp/retranslate', authMiddleware, async (req, res) => {
       io.to(sessionId).emit('whatsapp:message_translated', payload);
     }
     console.log(`[Retranslate] #${msg.id} ${msg.direction} ${sourceLang}->${targetLang}`);
-    return res.json({ success: true, translation: translationObj });
+    return res.json({ success: true, translation: translationObj || null });
   } catch (err) {
     console.error('[WA Retranslate Error]', err);
     res.status(500).json({ error: err.message });
@@ -1474,6 +1720,21 @@ app.post("/api/whatsapp/send-evo", authMiddleware, async (req, res) => {
   app(req, res);
 });
 
+
+// ── jid-agnostic contact lookup helper ──
+function _ctLookup(ctMap, jid) {
+  let ct = ctMap.get(jid);
+  if (!ct && jid) {
+    if (jid.endsWith('@lid')) ct = ctMap.get(jid.replace(/@lid$/, '@s.whatsapp.net'));
+    else if (jid.endsWith('@s.whatsapp.net')) ct = ctMap.get(jid.replace(/@s\.whatsapp\.net$/, '@lid'));
+    if (!ct) {
+      const _p = jid.split('@')[0];
+      for (const [k, v] of ctMap) { if (k.startsWith(_p)) { ct = v; break; } }
+    }
+  }
+  return ct;
+}
+
 // 聊天列表：GET /api/whatsapp/conversations
 // 策略：Evolution fetchChats + 本地DB合并，支持 filter=pinned/starred/unread、置顶排序、blocked过滤
 app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
@@ -1481,8 +1742,10 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
     const search = (req.query.search || "").toString().trim();
     const filter = (req.query.filter || "all").toString();
     const showBlocked = req.query.showBlocked === "1";
-    const platform = (req.query.platform || "whatsapp").toString();
-    const accountId = 1;
+    const platform = (req.query.platform || "").toString(); // "" = all platforms
+    // ── Multi-WA: resolve accountId from query ──
+    const accountIdParam = req.query.accountId;  // number string or 'all'
+    const showAllAccounts = !accountIdParam || accountIdParam === 'all';
 
     // ── Telegram 渠道分支 ──
     if (platform === "telegram") {
@@ -1516,7 +1779,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         if (cv.blocked && !showBlocked) continue;
         if (selfJid && cv.jid === selfJid) continue; // 跳过自聊天
         const chatId = cv.jid.replace("@telegram", "");
-        const ct = ctMap.get(cv.jid);
+        const ct = _ctLookup(ctMap, cv.jid);
         // 尝试从 Message 表获取最新消息（比 Conversation.lastMessage 更准确）
         let lastMsg = cv.lastMessage || "";
         let lastMsgTime = cv.lastMessageAt;
@@ -1524,7 +1787,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         try {
           const latestMsg = await prisma.message.findFirst({
             where: { accountId: cv.accountId, platform: "telegram", jid: cv.jid },
-            orderBy: { timestamp: "desc" },
+            orderBy: { id: "desc" },
           });
           if (latestMsg && (!lastMsgTime || new Date(latestMsg.timestamp) > new Date(lastMsgTime))) {
             lastMsg = latestMsg.content || "";
@@ -1535,7 +1798,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         out.push({
           jid: cv.jid, platform: "telegram", phone: chatId,
           name: ct?.displayName || ct?.name || chatId,
-          avatar: ct?.avatar || null,
+          avatar: ct?.avatarUrl || null,
           lastMessage: lastMsg,
           lastMessageTime: lastMsgTime,
           direction,
@@ -1557,78 +1820,128 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
       return raw;
     };
 
-    // 拿自己的JID
-    let ownerJid = "8613016242602@s.whatsapp.net";
-    try {
-      const info = await evoConnector.getInstanceInfo();
-      if (info?.ownerJid) ownerJid = info.ownerJid;
-    } catch(e){}
-
-    // 1. 从本地DB聚合
-    const dbMsgs = await prisma.wAMessage.findMany({
-      where: { sessionId: DEFAULT_SESSION_ID },
-      orderBy: { timestamp: "desc" },
-      take: 1000,
-    });
-
-    const contactMap = new Map();
-    for (const msg of dbMsgs) {
-      let contactJid = null;
-      if (msg.direction === "inbound") contactJid = msg.from;
-      else if (msg.to && msg.to !== "me") contactJid = msg.to;
-      if (!contactJid || contactJid === "me" || !contactJid.includes("@")) continue;
-      if (contactJid.includes("@broadcast")) continue;
-      if (contactJid === ownerJid) continue;
-      if (contactJid.endsWith("@lid")) {
-        const other = msg.direction === "inbound" ? msg.to : msg.from;
-        if (other && other.endsWith("@s.whatsapp.net") && other !== ownerJid) contactJid = other;
-        else continue;
-      }
-      // 过滤无效jid（系统/协议/幽灵消息）
-      const _wmph = contactJid.split("@")[0];
-      if (!_wmph || _wmph === "0" || _wmph.length < 5 || !/^[0-9]+$/.test(_wmph)) continue;
-      if (!contactMap.has(contactJid)) {
-        contactMap.set(contactJid, {
-          jid: contactJid,
-          lastMsg: msg,
-          unread: msg.direction === "inbound" && !msg.read ? 1 : 0,
-        });
-      } else {
-        const entry = contactMap.get(contactJid);
-        if (new Date(msg.timestamp) > new Date(entry.lastMsg.timestamp)) entry.lastMsg = msg;
-        if (msg.direction === "inbound" && !msg.read) entry.unread += 1;
-      }
+    // ── Multi-WA: build list of accounts to process ──
+    let waAccountsList = [];
+    if (showAllAccounts) {
+      waAccountsList = await prisma.whatsAppAccount.findMany({
+        where: { userId: req.userId || 1, platform: "whatsapp", instanceName: { not: null } },
+      });
+    } else {
+      const acc = await prisma.whatsAppAccount.findFirst({
+        where: { id: parseInt(accountIdParam), platform: "whatsapp" },
+      });
+      if (acc) waAccountsList = [acc];
     }
+    if (!waAccountsList.length) return res.json([]);
 
-    // 2. 从Evolution拉取最新聊天
-    try {
-      const evoChats = await evoConnector.fetchChats();
-      for (const chat of evoChats) {
-        let jid = chat.remoteJid;
-        if (!jid || jid.includes("@g.us") || jid.includes("@broadcast")) continue;
-        const lastEv = chat.lastMessage;
-        jid = resolveJid(jid, lastEv);
-        if (jid === ownerJid) continue;
-        if (jid.endsWith("@lid")) continue;
-        // 过滤无效jid（系统/协议/幽灵消息如0@s.whatsapp.net）
-        const _eph = jid.split("@")[0];
-        if (!_eph || _eph === "0" || _eph.length < 5 || !/^[0-9]+$/.test(_eph)) continue;
-        const evoTs = lastEv?.messageTimestamp
-          ? new Date(lastEv.messageTimestamp > 1e12 ? lastEv.messageTimestamp : lastEv.messageTimestamp * 1000)
-          : new Date(chat.updatedAt || Date.now());
-        const body = lastEv?.message?.conversation || lastEv?.message?.extendedTextMessage?.text || "[新会话]";
-        const direction = lastEv?.key?.fromMe ? "outbound" : "inbound";
-        if (!contactMap.has(jid)) {
-          contactMap.set(jid, { jid, lastMsg: { body, timestamp: evoTs, direction }, unread: chat.unreadCount || 0, _evoOnly: true });
-        } else {
-          const entry = contactMap.get(jid);
-          if (evoTs > new Date(entry.lastMsg.timestamp)) {
-            entry.lastMsg = { body, timestamp: evoTs, direction };
+    // Build a merged contactMap across all WA accounts
+    const contactMap = new Map();  // key: jid, value: { jid, lastMsg, unread, accountId, accountName }
+
+    for (const waAcc of waAccountsList) {
+      const accId = waAcc.id;
+      const accName = waAcc.name || waAcc.instanceName || `WA-${accId}`;
+      const instanceName = waAcc.instanceName;
+      if (!instanceName) continue;
+
+      // Get the correct Evolution connector for this instance
+      let accConnector;
+      try { accConnector = getEvolutionConnector(instanceName); } catch(e) { continue; }
+
+      // Get ownerJid for this instance
+      let ownerJid = (waAcc.phone || "") + "@s.whatsapp.net";
+      try {
+        const info = await accConnector.getInstanceInfo();
+        if (info?.ownerJid) ownerJid = info.ownerJid;
+      } catch(e) {}
+
+      // Resolve sessionId for this WA account
+      const accSessionId = await resolveSessionIdForAccount(accId);
+
+      // Get jids belonging to this account from conversations table
+      const accConvJids = new Set(
+        (await prisma.conversation.findMany({
+          where: { accountId: accId, platform: "whatsapp" },
+          select: { jid: true },
+        })).map(c => c.jid)
+      );
+
+      // 1. From local DB: get messages for this account's conversations
+      const accJidList = [...accConvJids];
+      if (accJidList.length > 0) {
+        const dbMsgs = await prisma.wAMessage.findMany({
+          where: {
+            sessionId: accSessionId,
+            OR: [
+              { from: { in: accJidList } },
+              { to: { in: accJidList } },
+            ],
+          },
+          orderBy: { id: "desc" },
+          take: 500,
+        });
+        for (const msg of dbMsgs) {
+          let contactJid = null;
+          if (msg.direction === "inbound") contactJid = msg.from;
+          else if (msg.to && msg.to !== "me") contactJid = msg.to;
+          if (!contactJid || contactJid === "me" || !contactJid.includes("@")) continue;
+          if (contactJid.includes("@broadcast")) continue;
+          if (contactJid === ownerJid) continue;
+          // @lid JIDs are valid contacts - use them directly
+          if (!contactJid.endsWith("@lid")) {
+            const _wmph = contactJid.split("@")[0];
+            if (!_wmph || _wmph === "0" || _wmph.length < 5 || !/^[0-9]+$/.test(_wmph)) continue;
+          }
+          if (!contactMap.has(contactJid)) {
+            contactMap.set(contactJid, {
+              jid: contactJid, lastMsg: msg,
+              unread: msg.direction === "inbound" && !msg.read ? 1 : 0,
+              accountId: accId, accountName: accName,
+            });
+          } else {
+            const entry = contactMap.get(contactJid);
+            if (new Date(msg.timestamp) > new Date(entry.lastMsg.timestamp)) {
+              entry.lastMsg = msg;
+              entry.accountId = accId;
+              entry.accountName = accName;
+            }
+            if (msg.direction === "inbound" && !msg.read) entry.unread += 1;
           }
         }
       }
-    } catch (e) {
-      console.warn("[WA conversations] fetchChats failed:", e.message);
+
+      // 2. From Evolution: fetch chats for this instance
+      try {
+        const evoChats = await accConnector.fetchChats();
+        for (const chat of evoChats) {
+          let jid = chat.remoteJid;
+          if (!jid || jid.includes("@g.us") || jid.includes("@broadcast")) continue;
+          const lastEv = chat.lastMessage;
+          jid = resolveJid(jid, lastEv);
+          if (jid === ownerJid) continue;
+          // @lid JIDs are valid contacts - use them directly
+          if (!jid.endsWith("@lid")) {
+            const _eph = jid.split("@")[0];
+            if (!_eph || _eph === "0" || _eph.length < 5 || !/^[0-9]+$/.test(_eph)) continue;
+          }
+          const evoTs = lastEv?.messageTimestamp
+            ? new Date(lastEv.messageTimestamp > 1e12 ? lastEv.messageTimestamp : lastEv.messageTimestamp * 1000)
+            : new Date(chat.updatedAt || Date.now());
+          const body = lastEv?.message?.conversation || lastEv?.message?.extendedTextMessage?.text || "[新会话]";
+          const direction = lastEv?.key?.fromMe ? "outbound" : "inbound";
+          if (!contactMap.has(jid)) {
+            contactMap.set(jid, { jid, lastMsg: { body, timestamp: evoTs, direction }, unread: chat.unreadCount || 0, _evoOnly: true, accountId: accId, accountName: accName });
+          } else {
+            const entry = contactMap.get(jid);
+            if (evoTs > new Date(entry.lastMsg.timestamp)) {
+              entry.lastMsg = { body, timestamp: evoTs, direction };
+              entry.accountId = accId;
+              entry.accountName = accName;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[WA conversations] fetchChats failed for ${instanceName}:`, e.message);
+      }
     }
 
     // 3. 查联系人名
@@ -1641,27 +1954,43 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
       : [];
     const custMap = new Map(customers.map(c => [c.phone, c]));
 
-    // 3b. 批量查Contact表（拿头像、pushName）
+    // 3b. 批量查Contact表（拿头像、pushName）- 按accountId分组查询
     const jids = [...contactMap.keys()];
     let ctRecords = [];
     try {
-      ctRecords = jids.length
-        ? await prisma.contact.findMany({ where: { accountId, platform: 'whatsapp', jid: { in: jids } } })
-        : [];
+      // Group jids by accountId for efficient querying
+      const jidAccMap = new Map();
+      for (const jid of jids) {
+        const accId = contactMap.get(jid).accountId || 1;
+        if (!jidAccMap.has(accId)) jidAccMap.set(accId, []);
+        jidAccMap.get(accId).push(jid);
+      }
+      for (const [accId, accJids] of jidAccMap) {
+        const recs = await prisma.contact.findMany({ where: { accountId: accId, platform: 'whatsapp', jid: { in: accJids } } });
+        ctRecords.push(...recs);
+      }
     } catch (_) {}
     const ctMap = new Map(ctRecords.map(c => [c.jid, c]));
 
-    // 3c. 批量查Conversation标记 + 确保每条都有记录
+    // 3c. 批量查Conversation标记 + 确保每条都有记录 - 按accountId分组
     let convRecords = [];
     try {
-      convRecords = jids.length
-        ? await prisma.conversation.findMany({ where: { accountId, jid: { in: jids } } })
-        : [];
+      const jidAccMap2 = new Map();
+      for (const jid of jids) {
+        const accId = contactMap.get(jid).accountId || 1;
+        if (!jidAccMap2.has(accId)) jidAccMap2.set(accId, []);
+        jidAccMap2.get(accId).push(jid);
+      }
+      for (const [accId, accJids] of jidAccMap2) {
+        const recs = await prisma.conversation.findMany({ where: { accountId: accId, jid: { in: accJids } } });
+        convRecords.push(...recs);
+      }
     } catch (_) {}
     const convMap = new Map(convRecords.map(c => [c.jid, c]));
     for (const jid of jids) {
       if (!convMap.has(jid)) {
-        const c = await _ensureConversation(accountId, jid);
+        const accId = contactMap.get(jid).accountId || 1;
+        const c = await _ensureConversation(accId, jid);
         if (c) convMap.set(jid, c);
       }
     }
@@ -1673,7 +2002,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
       // 过滤无效jid（兜底）
       if (!phone || phone === "0" || phone.length < 5 || !/^[0-9]+$/.test(phone)) continue;
       const cust = custMap.get(phone);
-      const ct = ctMap.get(jid);
+      const ct = _ctLookup(ctMap, jid);
       const name = cust?.name || ct?.name || ct?.pushName || phone;
       const conv = convMap.get(jid) || { pinned: false, starred: false, blocked: false };
 
@@ -1692,7 +2021,97 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         pinned: !!conv.pinned,
         starred: !!conv.starred,
         blocked: !!conv.blocked,
+        accountId: entry.accountId || null,
+        accountName: entry.accountName || null,
       });
+    }
+    // ── Merge TG conversations when platform is "" (all) ──
+    if (platform === "") {
+      try {
+        const tgAccounts = await prisma.whatsAppAccount.findMany({
+          where: { userId: req.userId || 1, platform: "telegram", status: "connected" },
+        });
+        if (tgAccounts.length) {
+          const tgAccountIds = tgAccounts.map(a => a.id);
+          const tgConvRecs = await prisma.conversation.findMany({
+            where: { accountId: { in: tgAccountIds }, platform: "telegram" },
+            orderBy: { lastMessageAt: "desc" },
+          });
+          const tgJids = tgConvRecs.map(c => c.jid);
+          const tgCtRecs = tgJids.length ? await prisma.contact.findMany({
+            where: { accountId: { in: tgAccountIds }, platform: "telegram", jid: { in: tgJids } },
+          }) : [];
+          const tgCtMap = new Map(tgCtRecs.map(c => [c.jid, c]));
+          // Get customer names for TG contacts
+          const tgCustomers = await prisma.customer.findMany({
+            where: { userId: req.userId || 1, jid: { in: tgJids } },
+            select: { jid: true, name: true },
+          });
+          const tgCustMap = new Map(tgCustomers.map(c => [c.jid, c]));
+          for (const conv of tgConvRecs) {
+            const phone = conv.jid.split("@")[0];
+            if (!phone || !/^\d+$/.test(phone)) continue;
+            const cust = tgCustMap.get(conv.jid);
+            const ct = _ctLookup(tgCtMap, conv.jid);
+            const isRealName = (n) => n && !(n.replace(/[+\s\-()]/g, "").length >= 7 && /^\d+$/.test(n.replace(/[+\s\-()]/g, "")));
+            const name = isRealName(cust?.name) ? cust.name : (ct?.pushName && isRealName(ct.pushName) ? ct.pushName : phone);
+            if (conv.blocked && !showBlocked) continue;
+            if (filter === "unread" && conv.unreadCount === 0) continue;
+            if (filter === "starred" && !conv.starred) continue;
+            if (search && !name.includes(search) && !phone.includes(search)) continue;
+            conversations.push({
+              jid: conv.jid, phone, name, platform: "telegram",
+              avatar: ct?.avatarUrl || null,
+              lastMessage: conv.lastMessage || "",
+              lastMessageTime: conv.lastMessageAt,
+              direction: "inbound",
+              unreadCount: conv.unreadCount || 0,
+              pinned: !!conv.pinned,
+              starred: !!conv.starred,
+              blocked: !!conv.blocked,
+              accountId: conv.accountId,
+              accountName: tgAccounts.find(a => a.id === conv.accountId)?.name || null,
+            });
+          }
+        }
+      } catch (tgErr) {
+        console.warn("[WA Conversations] TG merge error:", tgErr.message);
+      }
+    }
+
+    // ─ 按 avatar 去重（跨Evolution实例同人，名字可能不同）──
+    {
+      const avatarSeen = new Map();
+      const noAvatar = [];
+      const avKey = (av) => (av || '').substring(0, 150);
+      const nameQuality = (n) => {
+        if (!n || n.length < 2) return 0;
+        const digits = n.replace(/[^0-9]/g, '');
+        if (digits.length > 10 && digits.length >= n.replace(/\s/g,'').length * 0.7) return 1;
+        return 2;
+      };
+      for (const c of conversations) {
+        if (!c.name || c.name.length < 2) { noAvatar.push(c); continue; }
+        const key = avKey(c.avatar);
+        if (!key) { noAvatar.push(c); continue; }
+        if (avatarSeen.has(key)) {
+          const prev = avatarSeen.get(key);
+          const pq = nameQuality(prev.name);
+          const cq = nameQuality(c.name);
+          if (cq > pq || (cq === pq && new Date(c.lastMessageTime) > new Date(prev.lastMessageTime))) {
+            avatarSeen.set(key, c);
+          }
+        } else {
+          avatarSeen.set(key, c);
+        }
+      }
+      const kept = new Set(avatarSeen.values());
+      const result = [...noAvatar];
+      for (const c of conversations) {
+        if (kept.has(c) && !noAvatar.includes(c) && !result.includes(c)) result.push(c);
+      }
+      conversations.length = 0;
+      conversations.push(...result);
     }
     conversations.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -1750,25 +2169,117 @@ app.post("/api/whatsapp/conversations/:jid/block", authMiddleware, async (req, r
 app.delete("/api/whatsapp/conversations/:jid", authMiddleware, async (req, res) => {
   try {
     const jid = decodeURIComponent(req.params.jid);
+    const force = req.query.force === 'true';
+    const rawPhone = jid.split('@')[0].replace(/[^0-9]/g, '');
+    const resolvedJid = jid.includes('@lid') ? resolveToPhoneJid(jid) : jid;
+    const phone = resolvedJid.split('@')[0];
+
+    // 删该会话所有消息（所有平台）
     const result = await prisma.wAMessage.deleteMany({
       where: {
-        sessionId: DEFAULT_SESSION_ID,
         OR: [
-          { from: jid, direction: "inbound" },
-          { to: jid, direction: "outbound" },
+          { from: resolvedJid, direction: 'inbound' },
+          { to: resolvedJid, direction: 'outbound' },
+          { from: { startsWith: phone + '@' }, direction: 'inbound' },
+          { to: { startsWith: phone + '@' }, direction: 'outbound' },
         ],
       },
     });
-    try {
-      const conv = await prisma.conversation.findUnique({ where: { accountId_platform_jid: { accountId: 1, platform: "whatsapp", jid } } });
-      if (conv) {
-        await prisma.conversation.update({
-          where: { id: conv.id },
-          data: { unreadCount: 0, lastMessage: null, lastMessageAt: null, updatedAt: new Date() },
-        });
+
+    // 动态查找该jid对应的所有accountId（支持多账号+TG）
+    const platform = jid.includes('@telegram') ? 'telegram' : 'whatsapp';
+    const matchingConvs = await prisma.conversation.findMany({
+      where: { jid, platform },
+      select: { accountId: true, id: true },
+    });
+    const accountIds = [...new Set(matchingConvs.map(c => c.accountId))];
+    if (!accountIds.length) {
+      // 兜底：尝试用phone前缀匹配
+      const fallbackConvs = await prisma.conversation.findMany({
+        where: { jid: { contains: phone + '@' } },
+        select: { accountId: true, id: true },
+      });
+      accountIds.push(...[...new Set(fallbackConvs.map(c => c.accountId))]);
+    }
+    if (!accountIds.length) accountIds.push(1); // 最终兜底
+
+    if (force) {
+      // force模式：彻底删除联系人+客户+会话+消息
+      const phonePatterns = [...new Set([rawPhone, phone].filter(p => p && p.length >= 5))];
+      console.log('[Delete Conv] force=true, jid=' + jid + ', rawPhone=' + rawPhone + ', resolvedPhone=' + phone + ', accountIds=' + JSON.stringify(accountIds));
+      
+      // 对每个accountId都记录已删除的jid，防止webhook重建
+      for (const accId of accountIds) {
+        for (const p of phonePatterns) {
+          await prisma.$executeRawUnsafe(
+            `INSERT OR IGNORE INTO "DeletedContact" ("accountId", "jid") VALUES (?, ?)`,
+            accId, p + '@s.whatsapp.net'
+          ).catch(()=>{});
+          await prisma.$executeRawUnsafe(
+            `INSERT OR IGNORE INTO "DeletedContact" ("accountId", "jid") VALUES (?, ?)`,
+            accId, p + '@'
+          ).catch(()=>{});
+        }
+        await prisma.$executeRawUnsafe(
+          `INSERT OR IGNORE INTO "DeletedContact" ("accountId", "jid") VALUES (?, ?)`,
+          accId, jid
+        ).catch(()=>{});
+        if (resolvedJid !== jid) {
+          await prisma.$executeRawUnsafe(
+            `INSERT OR IGNORE INTO "DeletedContact" ("accountId", "jid") VALUES (?, ?)`,
+            accId, resolvedJid
+          ).catch(()=>{});
+        }
+
+        // 删除该account下的Conversation
+        await prisma.conversation.deleteMany({ 
+          where: { accountId: accId, OR: phonePatterns.map(p => ({ jid: { contains: p + '@' } })) } 
+        }).catch(()=>{});
+        
+        // 删除该account下的Contact
+        await prisma.contact.deleteMany({ 
+          where: { accountId: accId, OR: phonePatterns.map(p => ({ jid: { contains: p + '@' } })) } 
+        }).catch(()=>{});
       }
-    } catch (_) {}
-    res.json({ success: true, jid, deletedCount: result.count });
+      
+      // 删除Customer（全局，不按account）
+      await prisma.customer.deleteMany({ 
+        where: { OR: [{ phone: rawPhone }, { phone: phone }, { jid: { contains: phone + '@' } }] } 
+      }).catch(()=>{});
+      
+      // 清理关联数据
+      const deletedCustomers = await prisma.customer.findMany({ 
+        where: { OR: [{ phone: rawPhone }, { phone: phone }] }, 
+        select: { id: true } 
+      }).catch(()=>[]);
+      
+      if (deletedCustomers.length > 0) {
+        const cids = deletedCustomers.map(c => c.id);
+        await prisma.customerFollowUp.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customerAttitude.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customerBantScore.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customerBackgroundCheck.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.document.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.automationCustomer.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customer.deleteMany({ where: { id: { in: cids } } }).catch(()=>{});
+      }
+      
+      res.json({ success: true, jid, deletedCount: result.count, force: true, accountIds });
+    } else {
+      // 普通模式：只清unread和最后消息
+      try {
+        const conv = await prisma.conversation.findUnique({ 
+          where: { accountId_platform_jid: { accountId: accountIds[0], platform, jid } } 
+        });
+        if (conv) {
+          await prisma.conversation.update({
+            where: { id: conv.id },
+            data: { unreadCount: 0, lastMessage: null, lastMessageAt: null, updatedAt: new Date() },
+          });
+        }
+      } catch (_) {}
+      res.json({ success: true, jid, deletedCount: result.count });
+    }
   } catch (err) {
     console.error("[WA Delete Conv Error]", err.message);
     res.status(500).json({ error: err.message });
@@ -1792,101 +2303,140 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
       if (!tgAccounts.length) return res.json([]);
       const sessions = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
       const tgWhere = { sessionId: { in: sessions }, OR: [{ from: targetJid }, { to: targetJid }] };
-      if (before) tgWhere.timestamp = { lt: new Date(before) };
+      if (before) { tgWhere.id = { lt: parseInt(before) }; }
       const dbMsgs = await prisma.wAMessage.findMany({
-        where: tgWhere, orderBy: { timestamp: "desc" }, take: parseInt(limit),
+        where: tgWhere, orderBy: { id: "desc" }, take: parseInt(limit),
       });
-      try {
-        await prisma.wAMessage.updateMany({
-          where: { sessionId: { in: sessions }, from: targetJid, direction: "inbound", read: false },
-          data: { read: true },
-        });
-      } catch (_) {}
+      // Fire-and-forget: mark as read in background, don't block response
+      (async () => {
+        try {
+          const _mr = await prisma.wAMessage.updateMany({
+            where: { sessionId: { in: sessions }, from: targetJid, direction: "inbound", read: false },
+            data: { read: true },
+          });
+          if (_mr.count > 0) {
+            await prisma.conversation.updateMany({ where: { jid: targetJid, platform: 'telegram' }, data: { unreadCount: { decrement: _mr.count } } }).catch(()=>{});
+            await prisma.conversation.updateMany({ where: { jid: targetJid, platform: 'telegram', unreadCount: { lt: 0 } }, data: { unreadCount: 0 } }).catch(()=>{});
+          }
+        } catch (_) {}
+      })();
       let messages = dbMsgs.map(m => ({
         id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
         body: m.body || m.content || "", type: m.type || "text",
         direction: m.direction, fromMe: m.direction === "outbound",
         timestamp: m.timestamp,
-        translation: m.translation ? (typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation) : null,
+        translation: (() => {
+          if (!m.translation) return null;
+          try {
+            const p = typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation;
+            const isOutgoing = m.direction === 'outbound';
+            return p;  // return full translation object for frontend getTranslationText to handle
+          } catch { return typeof m.translation === 'string' ? m.translation : null; }
+        })(),
         sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "telegram",
       }));
 
-      // Fallback: 如果 DB 消息为空或很少，从 GramJS 拉取历史消息
-      if (messages.length < 5 && targetJid.endsWith("@telegram")) {
-        try {
-          const peerId = targetJid.replace("@telegram", "");
-          const ubModule = await import('./services/tg-userbot-connector.js');
-          if (ubModule.isConnected()) {
-            const history = await ubModule.getHistory(peerId, parseInt(limit) || 20);
-            if (history && history.length > messages.length) {
-              // 找到 userbot 账号
-              const ubAccount = tgAccounts.find(a => !a.telegramBotToken) || tgAccounts[0];
-              const ubSessionId = `tg_${ubAccount.telegramBotUsername || ubAccount.id}`;
-              // 查找/创建联系人
-              let contact = await prisma.contact.findFirst({ where: { accountId: ubAccount.id, platform: "telegram", jid: targetJid } });
-              if (!contact) {
-                try {
-                  const userInfo = await ubModule.getUserInfo(peerId);
-                  contact = await prisma.contact.create({ data: { accountId: ubAccount.id, platform: "telegram", jid: targetJid, name: userInfo?.displayName || peerId } });
-                } catch { contact = await prisma.contact.create({ data: { accountId: ubAccount.id, platform: "telegram", jid: targetJid, name: peerId } }); }
-              }
-              // 查找/创建对话
-              let conv = await prisma.conversation.findFirst({ where: { accountId: ubAccount.id, platform: "telegram", jid: targetJid } });
-              if (!conv) {
-                conv = await prisma.conversation.create({ data: { accountId: ubAccount.id, platform: "telegram", contactId: contact.id, jid: targetJid } });
-              }
-              // 批量插入 DB 并构建返回结果
-              const existingWaIds = new Set(dbMsgs.map(m => m.waMessageId).filter(Boolean));
-              for (const hm of history) {
-                const waMsgId = `tg_${ubAccount.id}_${hm.id}_${hm.fromMe ? 'out' : 'in'}`;
-                if (existingWaIds.has(waMsgId)) continue;
-                const fromJid = hm.fromMe ? (ubModule.getMe()?.id?.toString() + '@telegram' || 'me@telegram') : targetJid;
-                const toJid = hm.fromMe ? targetJid : (ubModule.getMe()?.id?.toString() + '@telegram' || 'me@telegram');
-                try {
-                  await prisma.wAMessage.create({ data: { sessionId: ubSessionId, from: fromJid, to: toJid, body: (hm.text || '').slice(0, 500), type: hm.mediaType || 'text', direction: hm.fromMe ? 'outbound' : 'inbound', timestamp: new Date(hm.timestamp), read: hm.fromMe, waMessageId: waMsgId } });
-                  await prisma.message.create({ data: { accountId: ubAccount.id, platform: 'telegram', contactId: contact.id, jid: targetJid, fromMe: hm.fromMe, content: (hm.text || '').slice(0, 500), messageType: hm.mediaType || 'text', timestamp: new Date(hm.timestamp) } });
-                } catch {}
-                existingWaIds.add(waMsgId);
-              }
-              // 更新对话最新消息
-              if (history.length > 0) {
-                const latest = history[0];
-                await prisma.conversation.update({ where: { id: conv.id }, data: { lastMessage: (latest.text || '').slice(0, 200), lastMessageAt: new Date(latest.timestamp) } });
-              }
-              // 重新从 DB 读取完整消息列表
-              const freshMsgs = await prisma.wAMessage.findMany({
-                where: { sessionId: ubSessionId, OR: [{ from: targetJid }, { to: targetJid }] },
-                orderBy: { timestamp: "desc" }, take: parseInt(limit),
-              });
-              messages = freshMsgs.map(m => ({
-                id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
-                body: m.body || m.content || "", type: m.type || "text",
-                direction: m.direction, fromMe: m.direction === "outbound",
-                timestamp: m.timestamp,
-                translation: m.translation ? (typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation) : null,
-                sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "telegram",
-              }));
-              console.log(`[TG] Backfilled ${history.length} messages for ${targetJid} from GramJS history`);
+      // Always backfill TG history in background (pull up to 100 messages + download media)
+      if (targetJid.endsWith("@telegram")) {
+        (async () => {
+          try {
+            const peerId = targetJid.replace("@telegram", "");
+            const ubModule = await import('./services/tg-userbot-connector.js');
+            if (!ubModule.isConnected()) return;
+            const history = await ubModule.getHistory(peerId, 100);
+            if (!history || history.length === 0) return;
+            const ubAccount = tgAccounts.find(a => !a.telegramBotToken) || tgAccounts[0];
+            const ubSessionId = `tg_${ubAccount.telegramBotUsername || ubAccount.id}`;
+            let contact = await prisma.contact.findFirst({ where: { accountId: ubAccount.id, platform: "telegram", jid: targetJid } });
+            if (!contact) {
+              try {
+                const userInfo = await ubModule.getUserInfo(peerId);
+                contact = await prisma.contact.create({ data: { accountId: ubAccount.id, platform: "telegram", jid: targetJid, name: userInfo?.displayName || peerId } });
+              } catch { contact = await prisma.contact.create({ data: { accountId: ubAccount.id, platform: "telegram", jid: targetJid, name: peerId } }); }
             }
+            let conv = await prisma.conversation.findFirst({ where: { accountId: ubAccount.id, platform: "telegram", jid: targetJid } });
+            if (!conv) {
+              conv = await prisma.conversation.create({ data: { accountId: ubAccount.id, platform: "telegram", contactId: contact.id, jid: targetJid } });
+            }
+            const existingWaIds = new Set(dbMsgs.map(m => m.waMessageId).filter(Boolean));
+            let newCount = 0;
+            for (const hm of history) {
+              const waMsgId = `tg_${ubAccount.id}_${hm.id}_${hm.fromMe ? 'out' : 'in'}`;
+              if (existingWaIds.has(waMsgId)) continue;
+              const fromJid = hm.fromMe ? (ubModule.getMe()?.id?.toString() + '@telegram' || 'me@telegram') : targetJid;
+              const toJid = hm.fromMe ? targetJid : (ubModule.getMe()?.id?.toString() + '@telegram' || 'me@telegram');
+              // Download media if available
+              let mediaUrl = null;
+              if (hm.raw && hm.raw.media) {
+                try {
+                  const fs2 = await import('fs');
+                  const path2 = await import('path');
+                  const { fileURLToPath: fu2 } = await import('url');
+                  const __d = path2.dirname(fu2(import.meta.url));
+                  const uploadDir = path2.join(__d, 'uploads', 'tg-media');
+                  if (!fs2.existsSync(uploadDir)) fs2.mkdirSync(uploadDir, { recursive: true });
+                  const ubClient = ubModule.getClient();
+                  if (ubClient) {
+                    const buf = await ubClient.downloadMedia(hm.raw, { progressCallback: () => {} });
+                    if (buf) {
+                      const crypto2 = await import('crypto');
+                      const hash = crypto2.createHash('md5').update(`tg_${hm.id}_${Date.now()}`).digest('hex');
+                      const ext = (hm.mediaType || '').includes('Photo') ? 'jpg' : (hm.mediaType || '').includes('Video') ? 'mp4' : (hm.mediaType || '').includes('Document') ? 'pdf' : 'jpg';
+                      const fname = `${hash}.${ext}`;
+                      fs2.writeFileSync(path2.join(uploadDir, fname), Buffer.isBuffer(buf) ? buf : Buffer.from(buf));
+                      mediaUrl = `/uploads/tg-media/${fname}`;
+                    }
+                  }
+                } catch (dlErr) {
+                  console.warn(`[TG Backfill] media download error msgId=${hm.id}:`, dlErr.message);
+                }
+              }
+              try {
+                await prisma.wAMessage.create({ data: { sessionId: ubSessionId, from: fromJid, to: toJid, body: (hm.text || '').slice(0, 500), type: hm.mediaType || 'text', direction: hm.fromMe ? 'outbound' : 'inbound', timestamp: new Date(hm.timestamp).toISOString(), read: hm.fromMe, waMessageId: waMsgId, mediaUrl: mediaUrl } });
+                await prisma.message.create({ data: { accountId: ubAccount.id, platform: 'telegram', contactId: contact.id, jid: targetJid, fromMe: hm.fromMe, content: (hm.text || '').slice(0, 500), messageType: hm.mediaType || 'text', timestamp: new Date(hm.timestamp).toISOString().replace("T"," ").substring(0,19), mediaUrl: mediaUrl } });
+                newCount++;
+              } catch {}
+              existingWaIds.add(waMsgId);
+            }
+            if (history.length > 0) {
+              const latest = history[history.length - 1];
+              await prisma.conversation.update({ where: { id: conv.id }, data: { lastMessage: (latest.text || '').slice(0, 200), lastMessageAt: new Date(latest.timestamp).toISOString() } });
+            }
+            console.log(`[TG] Backfilled ${newCount} new messages (total history: ${history.length}) for ${targetJid}`);
+            if (io) {
+              io.to('user_1').emit('tg-backfill-done', { jid: targetJid });
+            }
+          } catch (e) {
+            console.warn('[TG] History fallback error (async):', e.message);
           }
-        } catch (e) {
-          console.warn('[TG] History fallback error:', e.message);
-        }
+        })();
       }
 
       return res.json(messages);
     }
 
-    // 1. 先从DB查
-    const where = { sessionId: DEFAULT_SESSION_ID, OR: [{ from: targetJid }, { to: targetJid }] };
-    if (before) where.timestamp = { lt: new Date(before) };
+    // 1. 先从DB查 - resolve sessionId based on accountId param
+    const accountIdParam = req.query.accountId;
+    let querySessionId;
+    if (accountIdParam && accountIdParam !== 'all') {
+      querySessionId = await resolveSessionIdForAccount(parseInt(accountIdParam));
+    } else {
+      // Query all WA sessions
+      const waConns = await prisma.wAConnection.findMany({
+        where: { userId: req.userId || 1, sessionId: { startsWith: 'user_' } },
+        select: { sessionId: true }
+      });
+      querySessionId = { in: waConns.map(c => c.sessionId) };
+    }
+    const where = { sessionId: querySessionId, OR: [{ from: targetJid }, { to: targetJid }] };
+    if (before) where.id = { lt: parseInt(before) };
     const dbMsgs = await prisma.wAMessage.findMany({
-      where, orderBy: { timestamp: "desc" }, take: parseInt(limit),
+      where, orderBy: { id: "desc" }, take: parseInt(limit),
     });
 
-    // 2. 如果DB消息少，从Evolution补拉
+    // 2. 总是从Evolution补拉新消息
     let messages = [...dbMsgs];
-    if (dbMsgs.length < 10) {
+    {
       try {
         const evoMsgs = await evoConnector.fetchMessages(targetJid, parseInt(limit));
         // 落库那些DB中没有的
@@ -1916,7 +2466,7 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
           else { body = `[${m.messageType || "unknown"}]`; type = m.messageType || "unknown"; }
           const ts = m.messageTimestamp ? new Date(m.messageTimestamp > 1e12 ? m.messageTimestamp : m.messageTimestamp * 1000) : new Date();
           bulkInsert.push({
-            sessionId: DEFAULT_SESSION_ID,
+            sessionId: typeof querySessionId === 'string' ? querySessionId : DEFAULT_SESSION_ID,
             from: fromMe ? ownerJid : remoteJid,
             to: fromMe ? remoteJid : ownerJid,
             body,
@@ -1927,11 +2477,44 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
           });
         }
         if (bulkInsert.length) {
-          for (const m of bulkInsert) { try { await prisma.wAMessage.create({ data: m }); } catch(e){ /* dup, skip */ } }
+          const insertedIds = [];
+          for (const m of bulkInsert) { try { const created = await prisma.wAMessage.create({ data: m }); insertedIds.push(created.id); } catch(e){ /* dup, skip */ } }
+
+          // ── 同步消息后自动触发翻译 ──
+          if (insertedIds.length > 0) {
+            (async () => {
+              try {
+                const { translateText, detectLanguage } = await import('./services/ai.service.js');
+                const { getTranslationSettings } = await import('./routes/translation.js');
+                const settings = await getTranslationSettings(targetJid, 1);
+                if (!settings || settings.receiveEnabled === false) return;
+                const engine = settings.receiveEngine || 'google';
+                const targetLang = settings.receiveTargetLang || 'zh';
+                for (const msgId of insertedIds) {
+                  try {
+                    const msg = await prisma.wAMessage.findUnique({ where: { id: msgId } });
+                    if (!msg || msg.direction !== 'inbound' || msg.type !== 'text' || msg.translation) continue;
+                    const b = (msg.body || '').trim();
+                    if (b.length < 1 || b.length > 2000 || (b.startsWith('[') && b.endsWith(']'))) continue;
+                    let srcLang = settings.receiveSourceLang || 'auto';
+                    if (srcLang === 'auto') srcLang = await detectLanguage(b, engine);
+                    if (!srcLang || srcLang === 'unknown' || srcLang === 'zh' || srcLang.startsWith('zh-')) continue;
+                    const result = await translateText(b, srcLang, targetLang, engine, 1);
+                    const tr = (result && (result.translated || result.text)) || '';
+                    if (!tr) continue;
+                    await prisma.wAMessage.update({ where: { id: msgId }, data: { translation: JSON.stringify({ original: b, translated: tr, sourceLang: srcLang, targetLang }), sourceLang: srcLang } });
+                    console.log(`[SyncTranslation] #${msgId} ${srcLang}->zh: "${b.slice(0,30)}" => "${tr.slice(0,30)}"`);
+                    await new Promise(r => setTimeout(r, 200));
+                  } catch (te) { console.warn(`[SyncTranslation] #${msgId}:`, te.message); }
+                }
+              } catch (te) { console.warn('[SyncTranslation] batch error:', te.message); }
+            })();
+          }
+
           // 重新查DB
           const refreshed = await prisma.wAMessage.findMany({
-            where: { sessionId: DEFAULT_SESSION_ID, OR: [{ from: targetJid }, { to: targetJid }] },
-            orderBy: { timestamp: "desc" }, take: parseInt(limit),
+            where: { sessionId: querySessionId, OR: [{ from: targetJid }, { to: targetJid }] },
+            orderBy: { id: "desc" }, take: parseInt(limit),
           });
           messages = refreshed;
         }
@@ -1943,12 +2526,27 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
     // 标记已读
     try {
       await prisma.wAMessage.updateMany({
-        where: { sessionId: DEFAULT_SESSION_ID, from: targetJid, direction: "inbound", read: false },
+        where: { sessionId: querySessionId, from: targetJid, direction: "inbound", read: false },
         data: { read: true },
       });
     } catch (e) {}
 
-    res.json(messages.reverse());
+    const mapped = messages.map(m => ({
+      id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
+      body: m.body || "", type: m.type || "text",
+      direction: m.direction, fromMe: m.direction === "outbound",
+      timestamp: m.timestamp,
+      translation: (() => {
+        if (!m.translation) return null;
+        try {
+          const p = typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation;
+          const isOutgoing = m.direction === "outbound";
+          return p;  // return full translation object for frontend getTranslationText to handle
+        } catch { return typeof m.translation === 'string' ? m.translation : null; }
+      })(),
+      sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "whatsapp",
+    }));
+    res.json(mapped.reverse());
   } catch (err) {
     console.error("[WA Messages Error]", err.message);
     res.status(500).json({ error: err.message });
@@ -2013,8 +2611,10 @@ if (isProduction) {
 
   if (hasDist) {
     // Company material uploads (served before SPA fallback)
-    app.use("/uploads/company", express.static(path.join(__dirname, "uploads/company")));
-    app.use("/uploads/outbound", express.static(path.join(__dirname, "uploads/outbound")));
+    app.use("/uploads/company", express.static(path.join(__dirname, "../uploads/company")));
+    app.use("/uploads/outbound", express.static(path.join(__dirname, "../uploads/outbound")));
+    app.use("/uploads/tg-media", express.static(path.join(__dirname, "../uploads/tg-media")));
+    app.use("/uploads/tg-avatars", express.static(path.join(__dirname, "../uploads/tg-avatars")));
     app.use(express.static(frontendPath));
     app.get('{*path}', (req, res, next) => {
       if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
@@ -2052,6 +2652,20 @@ io.on('connection', () => {
   }).catch(() => {});
 });
 
+
+
+// Normalize TG GramJS mediaType to standard types
+function normalizeTgMediaType(t) {
+  if (!t) return 'text';
+  const lower = t.toLowerCase();
+  if (lower.includes('photo')) return 'image';
+  if (lower.includes('video')) return 'video';
+  if (lower.includes('document') || lower.includes('file')) return 'document';
+  if (lower.includes('audio') || lower.includes('voice')) return 'audio';
+  if (lower.includes('contact')) return 'contact';
+  if (lower.includes('geo') || lower.includes('location')) return 'location';
+  return t;
+}
 
 // ─── Start ───
 httpServer.on('error', (err) => {
@@ -2099,6 +2713,8 @@ async function startServer() {
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
     console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
     console.log(`[Server] Build version: evolution-api-v1 | Mode: Evolution REST API`);
+    // TG User Bot 消息去重集合（防止GramJS同一消息触发多次onMessage）
+    const _tgProcessedMsgs = new Set();
     // TG User Bot 自动重连（如果有已保存的session）
     autoConnectUserBot({
       apiId: 33683021,
@@ -2106,6 +2722,19 @@ async function startServer() {
       onEvent: {
         onMessage: async (msg) => {
           console.log('[TG-UB] Incoming message:', msg.chatId, msg.text?.substring(0, 50));
+          // 去重：同一chatId+messageId只处理一次
+          const _dedupKey = msg.chatId + '_' + msg.messageId + '_' + (msg.fromMe ? 'out' : 'in');
+          if (_tgProcessedMsgs.has(_dedupKey)) {
+            console.log('[TG-UB] Skip duplicate onMessage:', _dedupKey);
+            return;
+          }
+          _tgProcessedMsgs.add(_dedupKey);
+          // 限制Set大小，防止内存泄漏
+          if (_tgProcessedMsgs.size > 5000) {
+            const _arr = [..._tgProcessedMsgs];
+            _tgProcessedMsgs.clear();
+            _arr.slice(-2000).forEach(k => _tgProcessedMsgs.add(k));
+          }
           try {
             // 优先使用 UserBot 账号（incoming messages come from userbot context）
             let tgAccount = await prisma.whatsAppAccount.findFirst({
@@ -2127,8 +2756,10 @@ async function startServer() {
             });
             if (!contact) {
               try {
-                const { getUserInfo: _gui } = await import('./services/tg-userbot-connector.js');
-                const userInfo = await _gui(msg.chatId);
+                const ubMod = await import('./services/tg-userbot-connector.js');
+                const userInfo = await ubMod.getUserInfo(msg.chatId);
+                let avatarUrl = null;
+                try { avatarUrl = await ubMod.downloadProfilePhoto(msg.chatId); } catch {}
                 contact = await prisma.contact.create({
                   data: {
                     accountId: tgAccount.id,
@@ -2136,6 +2767,7 @@ async function startServer() {
                     jid,
                     name: userInfo?.displayName || userInfo?.username || msg.chatId,
                     phone: userInfo?.phone || null,
+                    avatarUrl,
                   },
                 });
               } catch {
@@ -2143,6 +2775,16 @@ async function startServer() {
                   data: { accountId: tgAccount.id, platform: 'telegram', jid, name: msg.chatId },
                 });
               }
+            } else {
+              // 更新已有联系人的头像
+              try {
+                const ubMod2 = await import('./services/tg-userbot-connector.js');
+                const newAvatar = await ubMod2.downloadProfilePhoto(msg.chatId);
+                if (newAvatar && newAvatar !== contact.avatarUrl) {
+                  await prisma.contact.update({ where: { id: contact.id }, data: { avatarUrl: newAvatar } });
+                  contact.avatarUrl = newAvatar;
+                }
+              } catch {}
             }
             // Find or create conversation
             let conv = await prisma.conversation.findFirst({
@@ -2159,39 +2801,109 @@ async function startServer() {
               });
             }
             // Save to WAMessage table (for frontend message list)
-            const waMsg = await prisma.wAMessage.create({
-              data: {
-                sessionId: tgSessionId,
-                from: jid,
-                to: 'me',
-                body: msg.text || '',
-                type: msg.mediaType || 'text',
-                direction: 'inbound',
-                timestamp: new Date(msg.timestamp),
-                waMessageId: `tg_${tgAccount.id}_${msg.messageId}_in`,
-              },
-            });
+            const isOut = !!msg.fromMe;
+            // 解析媒体URL（图片/文档/视频）
+            let mediaUrl = null;
+            if (msg.mediaType) { console.log('[TG-UB Media DEBUG] type=' + msg.mediaType + ' isOut=' + isOut + ' hasRaw=' + !!msg.raw + ' client=' + (typeof ubClient !== 'undefined' ? 'defined' : 'undef')); }
+            if (msg.mediaType && msg.raw) {
+              try {
+                const fs2 = await import('fs');
+                const path2 = await import('path');
+                const { fileURLToPath: fu2 } = await import('url');
+                const __d = path2.dirname(fu2(import.meta.url));
+                const uploadDir = path2.join(__d, 'uploads', 'tg-media');
+                if (!fs2.existsSync(uploadDir)) fs2.mkdirSync(uploadDir, { recursive: true });
+                // 通过GramJS client下载媒体
+                const ubMod = await import('./services/tg-userbot-connector.js');
+                const ubClient = ubMod.getClient ? ubMod.getClient() : null;
+                if (ubClient && ubClient.connected) {
+                  console.log('[TG-UB Media] Downloading msgId=' + msg.messageId + ' type=' + msg.mediaType + ' rawType=' + (msg.raw ? msg.raw.className : 'null'));
+                  try {
+                    const buf = await ubClient.downloadMedia(msg.raw, { progressCallback: () => {} });
+                    console.log('[TG-UB Media] Download result: buf=' + (buf ? Buffer.isBuffer(buf) ? 'buffer:'+buf.length : typeof buf : 'null'));
+                    if (buf) {
+                      const crypto2 = await import('crypto');
+                      const hash = crypto2.createHash('md5').update(`tg_${msg.messageId}_${Date.now()}`).digest('hex');
+                      const ext = msg.mediaType.includes('photo') ? 'jpg' : msg.mediaType.includes('video') ? 'mp4' : msg.mediaType.includes('document') ? 'pdf' : 'jpg';
+                      const fname = `${hash}.${ext}`;
+                      const fpath = path2.join(uploadDir, fname);
+                      fs2.writeFileSync(fpath, Buffer.isBuffer(buf) ? buf : Buffer.from(buf));
+                      mediaUrl = `/uploads/tg-media/${fname}`;
+                      console.log('[TG-UB] Media downloaded:', fname);
+                    }
+                  } catch(downloadErr) {
+                    console.warn('[TG-UB Media] downloadMedia threw:', downloadErr.message);
+                  }
+                } else {
+                  console.warn('[TG-UB Media] Client not connected, skip download');
+                }
+              } catch (dlErr) {
+                console.warn('[TG-UB] media download error:', dlErr.message);
+              }
+            }
+            const _waMsgId = `tg_${tgAccount.id}_${msg.messageId}_${isOut ? 'out' : 'in'}`;
+            const _existingWa = await prisma.wAMessage.findUnique({ where: { waMessageId: _waMsgId } }).catch(()=>null);
+            let waMsg;
+            if (_existingWa) {
+              waMsg = _existingWa;
+            } else {
+              try {
+                waMsg = await prisma.wAMessage.create({
+                  data: {
+                    sessionId: tgSessionId,
+                    from: isOut ? 'me' : jid,
+                    to: isOut ? jid : 'me',
+                    body: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
+                    type: normalizeTgMediaType(msg.mediaType) || 'text',
+                    direction: isOut ? 'outbound' : 'inbound',
+                    timestamp: new Date(msg.timestamp).toISOString(),
+                    waMessageId: _waMsgId,
+                    mediaUrl: mediaUrl,
+                  },
+                });
+              } catch (ce) {
+                console.log('[TG-UB] wAMessage create error:', ce.code, ce.message?.substring(0,100));
+                const found = await prisma.wAMessage.findFirst({ where: { waMessageId: _waMsgId } }).catch(()=>null);
+                if (found) {
+                  console.log('[TG-UB] wAMessage found existing:', _waMsgId, 'id=', found.id);
+                  waMsg = found;
+                } else {
+                  console.warn('[TG-UB] wAMessage not found after create error, skip msg:', _waMsgId);
+                  return;
+                }
+              }
+            }
             // Save to Message table (CRM data model)
-            const savedMsg = await prisma.message.create({
-              data: {
-                accountId: tgAccount.id,
-                platform: 'telegram',
-                contactId: contact.id,
-                jid,
-                fromMe: false,
-                content: msg.text || '',
-                messageType: msg.mediaType || 'text',
-                timestamp: new Date(msg.timestamp),
-              },
-            });
+            const _ts = new Date(msg.timestamp).toISOString();
+            const _existingMsg = await prisma.message.findFirst({
+              where: { platform: 'telegram', jid, content: msg.text || '', timestamp: _ts }
+            }).catch(()=>null);
+            let savedMsg;
+            if (_existingMsg) {
+              savedMsg = _existingMsg;
+            } else {
+              savedMsg = await prisma.message.create({
+                data: {
+                  accountId: tgAccount.id,
+                  platform: 'telegram',
+                  contactId: contact.id,
+                  jid,
+                  fromMe: isOut,
+                  content: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
+                  messageType: normalizeTgMediaType(msg.mediaType) || 'text',
+                  timestamp: _ts,
+                  mediaUrl: mediaUrl,
+                },
+              });
+            }
             const savedMsgId = savedMsg.id;
             // Update conversation
             await prisma.conversation.update({
               where: { id: conv.id },
               data: {
-                lastMessage: (msg.text || '').slice(0, 200),
-                lastMessageAt: new Date(msg.timestamp),
-                unreadCount: { increment: 1 },
+                lastMessage: (msg.text || (msg.mediaType ? `[${msg.mediaType}]` : '')).slice(0, 200),
+                lastMessageAt: new Date(msg.timestamp).toISOString(),
+                unreadCount: isOut || msg.skipUnread ? 0 : { increment: 1 },
               },
             });
             // Emit socket events for real-time frontend update
@@ -2202,14 +2914,15 @@ async function startServer() {
                 jid,
                 message: {
                   id: waMsg.id,
-                  fromMe: false,
-                  content: msg.text || '',
-                  body: msg.text || '',
-                  messageType: msg.mediaType || 'text',
-                  timestamp: new Date(msg.timestamp),
+                  fromMe: isOut,
+                  content: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
+                  body: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
+                  messageType: normalizeTgMediaType(msg.mediaType) || 'text',
+                  timestamp: new Date(msg.timestamp).toISOString(),
                   platform: 'telegram',
                   waMessageId: waMsg.waMessageId,
                   jid,
+                  mediaUrl: mediaUrl,
                 },
               });
               io.emit('conversation:update', {
@@ -2256,7 +2969,7 @@ async function startServer() {
               console.warn('[TG-UB] translate error:', te.message);
             }
           } catch (e) {
-            console.error('[TG-UB] onMessage save error:', e.message);
+            console.error('[TG-UB] onMessage save error:', e.stack || e.message || JSON.stringify(e));
           }
         },
         onReady: (me) => {
@@ -2267,6 +2980,29 @@ async function startServer() {
     // 初始化Evolution Connector
     evoConnector.init().catch(err => console.warn('[Evolution] init error:', err.message));
 
+    // 启动时重置所有WA实例的webhook（确保指向当前端口）
+    (async () => {
+      const webhookPort = process.env.DEPLOY_RUN_PORT || LISTEN_PORT;
+      const webhookUrl = `http://host.docker.internal:${webhookPort}/api/evolution/webhook`;
+      for (const inst of ["jeremy-main", "jeremy-eric"]) {
+        try {
+          await fetch(EVO_API + "/webhook/set/" + inst, {
+            method: "POST",
+            headers: { apikey: EVO_KEY, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              webhook: {
+                enabled: true,
+                url: webhookUrl,
+                byEvents: true,
+                events: ["MESSAGES_UPSERT","MESSAGES_UPDATE","MESSAGES_DELETE","CONNECTION_UPDATE","SEND_MESSAGE"]
+              }
+            })
+          });
+          console.log(`[Startup] webhook set for ${inst} -> port ${webhookPort}`);
+        } catch(e) { console.warn(`[Startup] webhook ${inst}:`, e.message); }
+      }
+    })();
+
     // TG webhook自恢复：重启后自动给已连接的TG bot重设webhook（防止进程crash/重启后webhook失效）
     import('./services/telegram-connector.js').then(async ({ getTelegramConnector }) => {
       const crypto = await import('node:crypto');
@@ -2275,7 +3011,7 @@ async function startServer() {
       });
       for (const acc of tgAccs) {
         try {
-          const conn = getTelegramConnector(acc.telegramBotToken);
+          const conn = getTelegramConnector(decToken(acc.telegramBotToken));
           const expectedPrefix = 'tgwh_';
           let secret = '';
           if (acc.sessionDir && acc.sessionDir.startsWith(expectedPrefix)) {

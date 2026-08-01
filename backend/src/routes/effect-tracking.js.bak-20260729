@@ -1,0 +1,368 @@
+/**
+ * Phase 9: 效果闭环 — Effect Tracking
+ * Tracks AI suggestion effectiveness by monitoring customer responses after sales rep sends messages.
+ */
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const router = Router();
+const prisma = new PrismaClient();
+
+// ── Helpers ──────────────────────────────────────────────────────
+function normalizeJid(jid) {
+  if (!jid || !jid.includes('@')) return [];
+  const phone = jid.split('@')[0];
+  const variants = [jid];
+  if (jid.endsWith('@s.whatsapp.net')) variants.push(phone + '@c.us');
+  if (jid.endsWith('@c.us')) variants.push(phone + '@s.whatsapp.net');
+  return variants;
+}
+
+function decodeJid(raw) {
+  if (!raw) return null;
+  let jid = decodeURIComponent(raw);
+  if (!jid.includes('@')) jid += '@s.whatsapp.net';
+  return jid;
+}
+
+// ── Core: Track Effectiveness ────────────────────────────────────
+
+/**
+ * Analyze the effectiveness of a sent message (AI suggestion).
+ * Checks if the customer responded, how quickly, and what the tone was.
+ */
+export async function trackEffectiveness(contactJid, sentMessageId, sentAt) {
+  try {
+    if (!contactJid) return { error: 'contactJid required' };
+
+    const variants = normalizeJid(contactJid);
+    const contacts = await prisma.contact.findMany({
+      where: { jid: { in: variants } },
+    });
+    if (!contacts || contacts.length === 0) return { error: 'contact not found' };
+    const contactIds = contacts.map(c => c.id);
+
+    // Find the sent message across all matching contacts
+    const sentMsg = await prisma.message.findFirst({
+      where: {
+        contactId: { in: contactIds },
+        fromMe: true,
+        timestamp: sentAt ? new Date(sentAt) : undefined,
+      },
+      orderBy: { timestamp: 'desc' },
+    });
+    if (!sentMsg) return { error: 'sent message not found' };
+
+    // Find the customer's next reply after this message
+    const customerReply = await prisma.message.findFirst({
+      where: {
+        contactId: contacts[0].id,
+        fromMe: false,
+        timestamp: { gt: sentMsg.timestamp },
+      },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const now = new Date();
+    const sentTime = new Date(sentMsg.timestamp);
+    const hoursSinceSent = (now - sentTime) / (1000 * 60 * 60);
+
+    let responseTimeHours = null;
+    let responded = false;
+    let effectivenessScore = 0;
+
+    if (customerReply) {
+      responded = true;
+      const replyTime = new Date(customerReply.timestamp);
+      responseTimeHours = Math.round((replyTime - sentTime) / (1000 * 60 * 60) * 10) / 10;
+
+      // Score based on response time
+      if (responseTimeHours < 1) effectivenessScore = 90;
+      else if (responseTimeHours < 4) effectivenessScore = 80;
+      else if (responseTimeHours < 12) effectivenessScore = 70;
+      else if (responseTimeHours < 24) effectivenessScore = 60;
+      else if (responseTimeHours < 48) effectivenessScore = 40;
+      else effectivenessScore = 20;
+
+      // Bonus for longer/substantive replies
+      if (customerReply.content && customerReply.content.length > 100) {
+        effectivenessScore = Math.min(100, effectivenessScore + 10);
+      }
+    } else {
+      // No response yet
+      if (hoursSinceSent < 2) {
+        effectivenessScore = null; // Too early to judge
+      } else if (hoursSinceSent < 24) {
+        effectivenessScore = 30;
+      } else if (hoursSinceSent < 48) {
+        effectivenessScore = 15;
+      } else {
+        effectivenessScore = 0;
+      }
+    }
+
+    // Check if the sent message was an AI suggestion
+    const relatedSample = await prisma.messageSample.findFirst({
+      where: {
+        contactJid: contactJid,
+        salesReply: { contains: sentMsg.content?.substring(0, 50) || '' },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Save effectiveness record
+    const record = await prisma.speechEffectiveness.upsert({
+      where: { sentMessageId: sentMsg.id },
+      update: {
+        customerReplied: responded,
+        responseTimeHours: responseTimeHours,
+        responseLength: customerReply?.content?.length || 0,
+        effectivenessScore: effectivenessScore,
+        evaluatedAt: new Date(),
+      },
+      create: {
+        sentMessageId: sentMsg.id,
+        contactId: contacts[0].id,
+        sampleId: relatedSample?.id || null,
+        sentContent: sentMsg.content || '',
+        sentAt: sentMsg.timestamp,
+        customerReplied: responded,
+        responseTimeHours: responseTimeHours,
+        responseLength: customerReply?.content?.length || 0,
+        effectivenessScore: effectivenessScore,
+        evaluatedAt: new Date(),
+      },
+    });
+
+    // If we have a sample, update its quality score
+    if (relatedSample && effectivenessScore !== null) {
+      const existingScore = relatedSample.qualityScore || 50;
+      const newScore = Math.round((existingScore * 0.7 + effectivenessScore * 0.3) * 10) / 10;
+      await prisma.messageSample.update({
+        where: { id: relatedSample.id },
+        data: { qualityScore: newScore },
+      });
+    }
+
+    return {
+      success: true,
+      sentMessageId: sentMsg.id,
+      responded,
+      responseTimeHours,
+      responseLength: customerReply?.content?.length || 0,
+      effectivenessScore,
+      hoursSinceSent: Math.round(hoursSinceSent * 10) / 10,
+      relatedSampleId: relatedSample?.id || null,
+    };
+  } catch (err) {
+    console.error('[EffectTracking] track error:', err.message);
+    return { error: err.message };
+  }
+}
+
+/**
+ * Get effectiveness statistics for a customer.
+ */
+export async function getCustomerStats(contactJid) {
+  try {
+    if (!contactJid) return { error: 'contactJid required' };
+
+    const variants = normalizeJid(contactJid);
+    const contacts = await prisma.contact.findMany({
+      where: { jid: { in: variants } },
+    });
+    if (!contacts || contacts.length === 0) return { error: 'contact not found' };
+    const contactIds = contacts.map(c => c.id);
+
+    const records = await prisma.speechEffectiveness.findMany({
+      where: { contactId: { in: contactIds } },
+      orderBy: { sentAt: 'desc' },
+    });
+
+    if (records.length === 0) {
+      return { success: true, totalSent: 0, stats: null };
+    }
+
+    const responded = records.filter(r => r.customerReplied);
+    const scoredRecords = records.filter(r => r.effectivenessScore !== null);
+    const avgScore = scoredRecords.length > 0
+      ? Math.round(scoredRecords.reduce((sum, r) => sum + r.effectivenessScore, 0) / scoredRecords.length * 10) / 10
+      : null;
+    const avgResponseTime = responded.length > 0
+      ? Math.round(responded.reduce((sum, r) => sum + (r.responseTimeHours || 0), 0) / responded.length * 10) / 10
+      : null;
+    const responseRate = Math.round((responded.length / records.length) * 100);
+
+    // Recent trend (last 5 messages)
+    const recentRecords = records.slice(0, 5);
+    const recentScore = recentRecords.filter(r => r.effectivenessScore !== null);
+    const recentAvgScore = recentScore.length > 0
+      ? Math.round(recentScore.reduce((sum, r) => sum + r.effectivenessScore, 0) / recentScore.length * 10) / 10
+      : null;
+
+    return {
+      success: true,
+      totalSent: records.length,
+      stats: {
+        responseRate,
+        avgEffectivenessScore: avgScore,
+        avgResponseTimeHours: avgResponseTime,
+        recentAvgScore: recentAvgScore,
+        bestScore: scoredRecords.length > 0 ? Math.max(...scoredRecords.map(r => r.effectivenessScore)) : null,
+        worstScore: scoredRecords.length > 0 ? Math.min(...scoredRecords.map(r => r.effectivenessScore)) : null,
+      },
+      recentRecords: records.slice(0, 10).map(r => ({
+        sentAt: r.sentAt,
+        sentContent: r.sentContent?.substring(0, 80),
+        customerReplied: r.customerReplied,
+        responseTimeHours: r.responseTimeHours,
+        effectivenessScore: r.effectivenessScore,
+      })),
+    };
+  } catch (err) {
+    console.error('[EffectTracking] stats error:', err.message);
+    return { error: err.message };
+  }
+}
+
+/**
+ * Get overall effectiveness statistics across all customers.
+ */
+export async function getOverallStats() {
+  try {
+    const records = await prisma.speechEffectiveness.findMany({
+      orderBy: { sentAt: 'desc' },
+    });
+
+    if (records.length === 0) {
+      return { success: true, totalMessages: 0, stats: null };
+    }
+
+    const responded = records.filter(r => r.customerReplied);
+    const scoredRecords = records.filter(r => r.effectivenessScore !== null);
+    const avgScore = scoredRecords.length > 0
+      ? Math.round(scoredRecords.reduce((sum, r) => sum + r.effectivenessScore, 0) / scoredRecords.length * 10) / 10
+      : null;
+    const avgResponseTime = responded.length > 0
+      ? Math.round(responded.reduce((sum, r) => sum + (r.responseTimeHours || 0), 0) / responded.length * 10) / 10
+      : null;
+    const responseRate = Math.round((responded.length / records.length) * 100);
+
+    // Top performing samples (by avg effectiveness)
+    const sampleStats = {};
+    for (const r of records) {
+      if (r.sampleId && r.effectivenessScore !== null) {
+        if (!sampleStats[r.sampleId]) sampleStats[r.sampleId] = { scores: [], count: 0 };
+        sampleStats[r.sampleId].scores.push(r.effectivenessScore);
+        sampleStats[r.sampleId].count++;
+      }
+    }
+
+    const topSamples = Object.entries(sampleStats)
+      .map(([id, data]) => ({
+        sampleId: parseInt(id),
+        avgScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length * 10) / 10,
+        usageCount: data.count,
+      }))
+      .sort((a, b) => b.avgScore - a.avgScore)
+      .slice(0, 10);
+
+    return {
+      success: true,
+      totalMessages: records.length,
+      stats: {
+        responseRate,
+        avgEffectivenessScore: avgScore,
+        avgResponseTimeHours: avgResponseTime,
+      },
+      topSamples,
+    };
+  } catch (err) {
+    console.error('[EffectTracking] overall stats error:', err.message);
+    return { error: err.message };
+  }
+}
+
+// ── API Routes ───────────────────────────────────────────────────
+
+/**
+ * POST /api/effectiveness/track - Track effectiveness of a sent message
+ */
+router.post('/track', async (req, res) => {
+  try {
+    const { contactJid, sentMessageId, sentAt } = req.body;
+    if (!contactJid) return res.status(400).json({ error: 'contactJid required' });
+    const result = await trackEffectiveness(contactJid, sentMessageId, sentAt);
+    if (result.error) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    console.error('[EffectTracking] POST track error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/effectiveness/customer/:jid - Get customer effectiveness stats
+ */
+router.get('/customer/:jid', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    if (!jid) return res.status(400).json({ error: 'jid required' });
+    const result = await getCustomerStats(jid);
+    if (result.error) return res.status(404).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    console.error('[EffectTracking] GET customer error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * GET /api/effectiveness/overall - Get overall effectiveness stats
+ */
+router.get('/overall', async (req, res) => {
+  try {
+    const result = await getOverallStats();
+    if (result.error) return res.status(500).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    console.error('[EffectTracking] GET overall error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/effectiveness/batch-evaluate - Evaluate all un-evaluated sent messages
+ */
+router.post('/batch-evaluate', async (req, res) => {
+  try {
+    // Find all sent messages that don't have effectiveness records yet
+    const unevaluated = await prisma.message.findMany({
+      where: {
+        fromMe: true,
+        id: {
+          notIn: (await prisma.speechEffectiveness.findMany({
+            select: { sentMessageId: true },
+          })).map(r => r.sentMessageId),
+        },
+      },
+      orderBy: { timestamp: 'desc' },
+      take: 50,
+    });
+
+    const results = [];
+    for (const msg of unevaluated) {
+      const contact = await prisma.contact.findFirst({ where: { id: msg.contactId } });
+      if (!contact) continue;
+      const result = await trackEffectiveness(contact.jid, msg.id, msg.timestamp);
+      if (!result.error) results.push(result);
+    }
+
+    res.json({ success: true, evaluated: results.length, results });
+  } catch (err) {
+    console.error('[EffectTracking] batch evaluate error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;

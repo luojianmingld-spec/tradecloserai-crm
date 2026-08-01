@@ -186,7 +186,7 @@ let pollStartTime = 0; // 只处理此时间戳之后的消息
 
 async function initKnownMessages() {
   if (!client) return;
-  pollStartTime = Math.floor(Date.now() / 1000) - 300; // 2分钟缓冲
+  pollStartTime = Math.floor(Date.now() / 1000) - 30; // 30秒缓冲
   try {
     const dialogs = await client.getDialogs({ limit: 8 });
     for (const d of dialogs) {
@@ -194,7 +194,7 @@ async function initKnownMessages() {
       const peerId = d.id?.toString?.();
       if (!peerId) continue;
       // 获取每个对话最近20条消息，确保覆盖
-      const msgs = await client.getMessages(peerId, { limit: 3 });
+      const msgs = await client.getMessages(peerId, { limit: 20 });
       for (const m of msgs) {
         lastKnownMsgIds.add(m.id);
       }
@@ -215,12 +215,28 @@ async function pollNewMessages() {
       const peerId = d.id?.toString?.();
       if (!peerId) continue;
       if (di > 0) await new Promise(r => setTimeout(r, 2000));
-      const msgs = await client.getMessages(peerId, { limit: 3 });
+      const msgs = await client.getMessages(peerId, { limit: 20 });
       for (const m of msgs) {
         if (lastKnownMsgIds.has(m.id)) continue;
         // 只处理最近2分钟内的消息，避免捡到老消息
         if (m.date && m.date < pollStartTime) { lastKnownMsgIds.add(m.id); continue; }
-        if (m.out) { lastKnownMsgIds.add(m.id); continue; } // 跳过自己发的
+        if (m.out) {
+          // 处理从外部(如ChatKnow)发出的消息，同步到CRM
+          lastKnownMsgIds.add(m.id);
+          const text = m.message || (m.media ? '[media]' : '');
+          const outgoing = {
+            chatId: peerId,
+            messageId: m.id,
+            text: text,
+            timestamp: m.date ? (m.date * 1000) : Date.now(),
+            mediaType: m.media ? m.media.className : null,
+            fromMe: true,
+            raw: m,
+          };
+          console.log('[TG-UB] Poll found OUTGOING message to', peerId, 'text:', text?.substring(0, 50));
+          if (eventHandlers.onMessage) eventHandlers.onMessage(outgoing);
+          continue;
+        }
         lastKnownMsgIds.add(m.id);
         const text = m.message || (m.media ? '[media]' : '');
         const incoming = {
@@ -422,6 +438,7 @@ export async function getHistory(peerId, limit = 50, offsetId = 0) {
       fromMe: msg.out || false,
       timestamp: msg.date ? (msg.date * 1000) : Date.now(),
       mediaType: msg.media ? msg.media.className : null,
+      raw: msg,
     });
   }
   return messages.reverse(); // 旧到新
@@ -492,6 +509,22 @@ export async function getUserInfo(peerId) {
   }
 }
 
+/** 下载用户头像到本地 */
+export async function downloadProfilePhoto(peerId) {
+  if (!client || connectionState !== 'connected') return null;
+  try {
+    const entity = await client.getEntity(Number(peerId));
+    if (!entity || !entity.photo) return null;
+    const buf = await client.downloadProfilePhoto(entity);
+    if (!buf || buf.length === 0) return null;
+    const uploadDir = path.join(__dirname, '../../uploads/tg-avatars');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    const fname = 'avatar_' + peerId + '_' + Date.now() + '.jpg';
+    const fpath = path.join(uploadDir, fname);
+    fs.writeFileSync(fpath, Buffer.isBuffer(buf) ? buf : Buffer.from(buf));
+    return '/uploads/tg-avatars/' + fname;
+  } catch (e) { console.warn('[TG-UB] downloadProfilePhoto error:', peerId, e.message); return null; }
+}
 /** 登出并清除session */
 export async function logout() {
   stopPolling();

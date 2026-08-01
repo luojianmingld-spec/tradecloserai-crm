@@ -1,0 +1,13 @@
+{
+  "weights": {
+    "budget": 0.25,
+    "authority": 0.25,
+    "need": 0.25,
+    "timeline": 0.25
+  },
+  "thresholds": {
+    "high": 7,
+    "low": 4
+  },
+  "recentMessages": 30
+}

@@ -2,6 +2,7 @@
  * Settings API Routes
  */
 import { Router } from 'express';
+import { encrypt, decrypt, isEncrypted } from '../utils/encryption.js';
 import { authMiddleware as auth } from '../middleware/auth.js';
 import { getAISettings, updateSettings, updateSetting, getAvailableModels } from '../services/ai.service.js';
 import { getProviders, getActiveProvider, testConnection } from '../services/ai-client.js';
@@ -23,14 +24,17 @@ async function readProviders() {
     where: { userId_key: { userId: USER_ID, key: 'ai_providers' } },
   });
   if (!setting || !setting.value) return [];
-  try { return JSON.parse(setting.value); } catch { return []; }
+  try {
+    const raw = isEncrypted(setting.value) ? decrypt(setting.value) : setting.value;
+    return JSON.parse(raw);
+  } catch { return []; }
 }
 
 async function writeProviders(providers) {
   await prisma.setting.upsert({
     where: { userId_key: { userId: USER_ID, key: 'ai_providers' } },
-    create: { userId: USER_ID, key: 'ai_providers', value: JSON.stringify(providers) },
-    update: { value: JSON.stringify(providers) },
+    create: { userId: USER_ID, key: 'ai_providers', value: encrypt(JSON.stringify(providers)) },
+    update: { value: encrypt(JSON.stringify(providers)) },
   });
 }
 

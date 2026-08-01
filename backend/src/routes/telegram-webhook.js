@@ -33,7 +33,7 @@ router.post("/webhook/:secret", async (req, res) => {
       return res.status(401).json({ error: "bad secret" });
     }
 
-    const connector = getTelegramConnector(account.telegramBotToken);
+    const connector = getTelegramConnector(decToken(account.telegramBotToken));
     const update = req.body;
     const msg = normalizeIncomingUpdate(update);
 
@@ -48,11 +48,52 @@ router.post("/webhook/:secret", async (req, res) => {
   }
 });
 
+
+/** Get file download URL from TG Bot API */
+async function getTgFileUrl(token, fileId) {
+  try {
+    const resp = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
+    const data = await resp.json();
+    if (data.ok && data.result?.file_path) {
+      return `https://api.telegram.org/file/bot${token}/${data.result.file_path}`;
+    }
+  } catch(e) { /* ignore */ }
+  return null;
+}
+
+/** Fetch TG user profile photo URL via Bot API (best/largest) */
+async function fetchTgAvatarUrl(connector, userId) {
+  try {
+    const photos = await connector.getUserProfilePhotos(userId, 1);
+    if (photos && photos.total_count > 0 && photos.photos && photos.photos[0]) {
+      const sizes = photos.photos[0];
+      const bestFile = sizes[sizes.length - 1]; // largest
+      if (bestFile && bestFile.file_id) {
+        const fileInfo = await connector.getFile(bestFile.file_id);
+        return fileInfo.downloadUrl || null;
+      }
+    }
+  } catch(e) { /* ignore - user may have privacy settings */ }
+  return null;
+}
+
 async function handleIncomingPrivate(prisma, account, connector, msg, io) {
   const tgPeerId = String(msg.chatId);
   // JID 规范：纯数字id + @telegram
   const jid = `${tgPeerId}@telegram`;
   const phone = null; // TG没有手机号公开
+
+  // 检查是否在已删除名单中，防止webhook重建已删除的联系人
+  try {
+    const deleted = await prisma.$queryRawUnsafe(
+      `SELECT 1 FROM "DeletedContact" WHERE "accountId" = ? AND ("jid" = ? OR "jid" LIKE ?)`,
+      account.id, jid, tgPeerId + '@%'
+    );
+    if (deleted.length > 0) {
+      console.log('[TG-Webhook] Skipping deleted contact:', jid, 'accountId:', account.id);
+      return null;
+    }
+  } catch(_e) { /* table may not exist */ }
 
   // upsert contact
   let contact = await prisma.contact.findUnique({
@@ -62,6 +103,7 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
     || msg.username
     || `tg_${tgPeerId}`;
   if (!contact) {
+    const avatarUrl = await fetchTgAvatarUrl(connector, msg.fromId || msg.chatId);
     contact = await prisma.contact.create({
       data: {
         accountId: account.id,
@@ -70,14 +112,20 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
         name: displayName,
         phone,
         pushName: msg.username || null,
+        avatarUrl,
       },
     });
   } else {
-    // 更新名字/用户名
-    if ((contact.name || "").trim() !== displayName || contact.pushName !== (msg.username || null)) {
+    // 更新名字/用户名/头像
+    const updData = {};
+    if ((contact.name || "").trim() !== displayName) updData.name = displayName;
+    if (contact.pushName !== (msg.username || null)) updData.pushName = msg.username || contact.pushName;
+    const avatarUrl = await fetchTgAvatarUrl(connector, msg.fromId || msg.chatId);
+    if (avatarUrl) updData.avatarUrl = avatarUrl;
+    if (Object.keys(updData).length > 0) {
       contact = await prisma.contact.update({
         where: { id: contact.id },
-        data: { name: displayName, pushName: msg.username || contact.pushName },
+        data: updData,
       });
     }
   }
@@ -123,6 +171,23 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
     });
   }
 
+  // Resolve media URL for photo/document/video
+  let mediaUrl = null;
+  if (msg.media && msg.media.fileId) {
+    try {
+      const fileResp = await fetch(`https://api.telegram.org/bot${decToken(account.telegramBotToken)}/getFile?file_id=${msg.media.fileId}`);
+      const fileData = await fileResp.json();
+      if (fileData.ok && fileData.result?.file_path) {
+        mediaUrl = `https://api.telegram.org/file/bot${decToken(account.telegramBotToken)}/${fileData.result.file_path}`;
+        console.log(`[TG] Media URL resolved: ${mediaUrl.substring(0, 50)}...`);
+      } else {
+        console.warn(`[TG] Failed to get file URL for fileId: ${msg.media.fileId}`, fileData);
+      }
+    } catch(e) { 
+      console.error(`[TG] Error fetching file URL:`, e.message);
+    }
+  }
+
   // 写 Message（复用通用Message表，platform字段区分）
   const saved = await prisma.message.create({
     data: {
@@ -134,6 +199,7 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
       content: msg.text,
       messageType: msg.type,
       timestamp: msg.timestamp,
+      mediaUrl: mediaUrl,
     },
   });
 
@@ -141,12 +207,12 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
   const waMsgId = `tg_${account.id}_${msg.messageId}_in`;
   const savedWa = await prisma.wAMessage.upsert({
     where: { waMessageId: waMsgId },
-    update: { body: msg.text || `[${msg.type}]`, timestamp: msg.timestamp, read: false },
+    update: { body: msg.text || `[${msg.type}]`, timestamp: msg.timestamp, read: false, mediaUrl: mediaUrl },
     create: {
       sessionId: tgSessionId,
       from: jid,
       to: 'me',
-      body: msg.text || `[${msg.type}]`,
+      body: msg.text || (msg.media ? `[${msg.media.kind || msg.type}]` : `[${msg.type}]`),
       type: msg.type === 'text' ? 'text' : msg.type,
       direction: 'inbound',
       timestamp: msg.timestamp,
@@ -154,6 +220,7 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
       waMessageId: waMsgId,
       sourceLang: null,
       translation: null,
+      mediaUrl: mediaUrl,
     },
   });
 
@@ -203,6 +270,7 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
         content: msg.text,
         messageType: msg.type,
         timestamp: msg.timestamp,
+      mediaUrl: mediaUrl,
         platform: "telegram",
       },
       contact,
@@ -213,6 +281,7 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
       accountId: account.id,
       jid,
       message: { id: savedWa.id, body: msg.text, fromMe: false, timestamp: msg.timestamp, platform: "telegram", waMessageId: savedWa.waMessageId },
+      mediaUrl: mediaUrl,
       contact,
       platform: "telegram",
     });
@@ -222,32 +291,31 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
 
 async function translateInboundAsync(saved, jid, io, waDbId) {
   try {
-    const { getTranslationSettings } = await import("./translation.js");
-    const { detectLanguage, translateText } = await import("../services/ai.service.js");
+    const { getTranslationSettings } = await import("../services/translation.js");
+    const { detectLanguage, translateText } = await import("../services/translation.js");
     const body = (saved.content || "").trim();
     if (saved.messageType !== "text" || body.length < 1 || body.length > 2000) return;
     if (body.startsWith("[") && body.endsWith("]")) return;
-    const settings = await getTranslationSettings(jid, saved.accountId || 1);
-    if (!settings.receiveEnabled) return;
-    const engine = settings.receiveEngine || "google";
-    let sourceLang = settings.receiveSourceLang || "auto";
-    const targetLang = settings.receiveTargetLang || "zh";
+    const settings = await getTranslationSettings(saved.accountId || 1);
+    if (settings.translationEnabled !== "true") return;
+    const engine = settings.translationEngine || "doubao";
+    let sourceLang = "auto";
+    const targetLang = "zh";
     if (sourceLang === "auto") sourceLang = await detectLanguage(body, engine);
     if (!sourceLang || sourceLang === "unknown" || sourceLang === "zh") return;
     const result = await translateText(body, sourceLang, targetLang, engine, saved.accountId || 1);
-    const translated = (result && (result.translated || result.text)) || "";
+    const translated = (result && result.translated) || "";
     if (!translated) return;
-    const transObj = JSON.stringify({ original: body, translated, sourceLang, targetLang });
-    // 同时更新 Message 和 WAMessage（前端消息列表读WAMessage.translation）
-    await prisma.message.update({ where: { id: saved.id }, data: { translation: transObj, sourceLang } });
+    // 前端期望 translation 是纯文本字符串，不是 JSON 对象
+    await prisma.message.update({ where: { id: saved.id }, data: { translation: translated, sourceLang } });
     if (waDbId) {
-      await prisma.wAMessage.update({ where: { id: waDbId }, data: { translation: transObj, sourceLang } }).catch(() => {});
+      await prisma.wAMessage.update({ where: { id: waDbId }, data: { translation: translated, sourceLang } }).catch(() => {});
     }
     console.log(`[Translation][TG] inbound #${saved.id} ${sourceLang}->${targetLang}: "${body.slice(0,50)}" => "${translated.slice(0,50)}"`);
     if (io) {
       // 同时发两个事件兼容前端不同监听
-      io.emit("telegram:translation", { id: saved.id, waId: waDbId, jid, translation: { original: body, translated, sourceLang, targetLang }, sourceLang });
-      io.emit("whatsapp:translation", { id: waDbId || saved.id, jid, translation: { original: body, translated, sourceLang, targetLang }, sourceLang, platform: "telegram" });
+      io.emit("telegram:translation", { id: saved.id, waId: waDbId, jid, translation: translated, sourceLang });
+      io.emit("whatsapp:translation", { id: waDbId || saved.id, jid, translation: translated, sourceLang, platform: "telegram" });
     }
   } catch (e) {
     console.warn("[TG] translate async error:", e.message);

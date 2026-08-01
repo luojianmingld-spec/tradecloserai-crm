@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeAgent - 外贸成交转化AI工作台</title>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #0f1629;
+    --bg-card: #131a2e;
+    --bg-card-hover: #1a2340;
+    --border-color: #1e2a4a;
+    --border-highlight: #2a3a6a;
+    --text-primary: #e8ecf4;
+    --text-secondary: #8892a8;
+    --text-muted: #5a6478;
+    --accent-cyan: #00d4ff;
+    --accent-green: #00e676;
+    --accent-amber: #f59e0b;
+    --accent-purple: #a855f7;
+    --accent-pink: #ec4899;
+    --accent-red: #ef4444;
+    --accent-blue: #3b82f6;
+    --gradient-cyan: linear-gradient(135deg, #00d4ff, #00e676);
+    --gradient-hero: linear-gradient(135deg, #00d4ff 0%, #00e676 50%, #f59e0b 100%);
+    --radius: 12px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ NAV ============ */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px; height: 64px;
+    background: rgba(10, 14, 26, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 18px; font-weight: 700; color: var(--text-primary);
+    text-decoration: none;
+  }
+  .nav-logo-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff;
+  }
+  .nav-links { display: flex; gap: 32px; align-items: center; }
+  .nav-links a {
+    color: var(--text-secondary); text-decoration: none; font-size: 14px;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--text-primary); }
+  .nav-actions { display: flex; gap: 12px; align-items: center; }
+  .btn {
+    padding: 8px 20px; border-radius: var(--radius-full); font-size: 14px;
+    font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-ghost {
+    background: transparent; color: var(--text-primary);
+    border: 1px solid var(--border-highlight);
+  }
+  .btn-ghost:hover { background: var(--bg-card); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: #fff;
+  }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-large { padding: 12px 32px; font-size: 15px; }
+  .btn-outline {
+    background: transparent; color: var(--text-primary);
+    border: 1px solid var(--border-highlight);
+  }
+  .btn-outline:hover { background: var(--bg-card); }
+  .btn-green {
+    background: linear-gradient(135deg, #00c853, #00e676);
+    color: #000;
+  }
+  .btn-green:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* ============ HERO ============ */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 20px 80px;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(30,42,74,0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,42,74,0.15) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 0;
+  }
+  .hero::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 200px;
+    background: linear-gradient(to top, var(--bg-primary), transparent);
+    z-index: 1;
+  }
+  .hero > * { position: relative; z-index: 2; }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 16px; border-radius: var(--radius-full);
+    background: rgba(0, 212, 255, 0.08);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    color: var(--accent-cyan); font-size: 13px; font-weight: 500;
+    margin-bottom: 24px;
+  }
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-green);
+  }
+
+  .hero h1 {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 20px;
+  }
+  .hero h1 .gradient-text {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: clamp(15px, 1.8vw, 18px);
+    color: var(--text-secondary);
+    max-width: 680px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+
+  .hero-actions { display: flex; gap: 16px; margin-bottom: 48px; flex-wrap: wrap; justify-content: center; }
+
+  .hero-stats {
+    display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;
+  }
+  .hero-stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px 28px;
+    min-width: 130px;
+    text-align: center;
+  }
+  .hero-stat-value {
+    font-size: 28px; font-weight: 800;
+    background: var(--gradient-cyan);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ============ SECTIONS ============ */
+  .section {
+    padding: 80px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-tag {
+    display: block; text-align: center;
+    font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent-cyan);
+    margin-bottom: 12px;
+  }
+  .section-title {
+    text-align: center;
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .section-title .highlight { color: var(--accent-green); }
+  .section-desc {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 600px;
+    margin: 0 auto 48px;
+  }
+
+  /* ============ PIPELINE ============ */
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  .pipeline-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .pipeline-card:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .pipeline-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    margin: 0 auto 16px;
+  }
+  .pipeline-step {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .pipeline-name {
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .pipeline-desc {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+  }
+  .pipeline-arrow {
+    position: absolute; right: -12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted); font-size: 18px;
+    z-index: 2;
+  }
+  .pipeline-card:last-child .pipeline-arrow { display: none; }
+
+  /* ============ SKILLS GRID ============ */
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .skill-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .skill-card:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .skill-badge {
+    position: absolute; top: 12px; right: 12px;
+    padding: 3px 10px; border-radius: var(--radius-full);
+    font-size: 11px; font-weight: 600;
+    background: rgba(0,212,255,0.1);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+  .skill-icon { font-size: 24px; margin-bottom: 12px; }
+  .skill-name { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .skill-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* ============ WHY ============ */
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .why-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: flex; gap: 16px; align-items: flex-start;
+    transition: all 0.3s;
+  }
+  .why-card:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-2px);
+  }
+  .why-icon { font-size: 24px; flex-shrink: 0; }
+  .why-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .why-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* ============ CTA BANNER ============ */
+  .cta-banner {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 60px 40px;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .cta-banner h2 {
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .cta-banner p {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    font-size: 15px;
+  }
+  .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+  /* ============ PRICING ============ */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .pricing-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .pricing-card:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-4px);
+  }
+  .pricing-card.featured {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 40px rgba(0,212,255,0.1);
+  }
+  .pricing-card.featured::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--gradient-cyan);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .pricing-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 12px; border-radius: var(--radius-full);
+    font-size: 12px; font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .pricing-badge.hot { background: rgba(245,158,11,0.15); color: var(--accent-amber); }
+  .pricing-badge.pro { background: rgba(0,212,255,0.1); color: var(--accent-cyan); }
+  .pricing-badge.ent { background: rgba(168,85,247,0.15); color: var(--accent-purple); }
+  .pricing-plan { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .pricing-plan-en { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .pricing-amount {
+    font-size: 40px; font-weight: 800; margin-bottom: 4px;
+  }
+  .pricing-amount .currency { font-size: 20px; }
+  .pricing-amount .period { font-size: 14px; color: var(--text-muted); font-weight: 400; }
+  .pricing-tagline { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+  .pricing-features { list-style: none; margin-bottom: 28px; }
+  .pricing-features li {
+    font-size: 13px; color: var(--text-secondary);
+    padding: 6px 0;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .pricing-features li::before {
+    content: '✓';
+    color: var(--accent-green);
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .pricing-btn {
+    width: 100%; padding: 12px; border-radius: var(--radius);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.2s;
+  }
+  .pricing-btn.outline {
+    background: transparent; color: var(--text-primary);
+    border: 1px solid var(--border-highlight);
+  }
+  .pricing-btn.outline:hover { background: var(--bg-card-hover); }
+  .pricing-btn.filled {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: #fff;
+  }
+  .pricing-btn.filled:hover { opacity: 0.9; }
+
+  /* Enterprise Private Deployment */
+  .enterprise-private {
+    max-width: 960px;
+    margin: 32px auto 0;
+    background: linear-gradient(135deg, rgba(168,85,247,0.08), rgba(0,212,255,0.06));
+    border: 1px solid rgba(168,85,247,0.25);
+    border-radius: var(--radius);
+    padding: 32px;
+  }
+  .enterprise-private-inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 32px;
+    align-items: center;
+  }
+  .enterprise-private-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 12px;
+  }
+  .enterprise-private-title-en {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .enterprise-private-features {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .enterprise-private-features li {
+    font-size: 14px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    position: relative;
+    padding-left: 20px;
+  }
+  .enterprise-private-features li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--accent-purple);
+    font-weight: 700;
+  }
+  .enterprise-private-price {
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+  }
+  .enterprise-private-price-en {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .enterprise-private-right .pricing-btn {
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .enterprise-private-inner {
+      grid-template-columns: 1fr;
+      text-align: center;
+      gap: 20px;
+    }
+    .enterprise-private-right {
+      max-width: 280px;
+      margin: 0 auto;
+    }
+  }
+
+  /* ============ CREDITS ============ */
+  .credits-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .credit-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px 16px;
+    text-align: center;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .credit-card:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-2px);
+  }
+  .credit-card.hot { border-color: var(--accent-amber); }
+  .credit-card.best { border-color: var(--accent-green); }
+  .credit-tag {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    padding: 2px 12px; border-radius: var(--radius-full);
+    font-size: 11px; font-weight: 700;
+  }
+  .credit-tag.hot { background: var(--accent-amber); color: #000; }
+  .credit-tag.best { background: var(--accent-green); color: #000; }
+  .credit-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .credit-price { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+  .credit-amount { font-size: 14px; color: var(--accent-cyan); font-weight: 600; margin-bottom: 4px; }
+  .credit-unit { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .credit-save { font-size: 12px; font-weight: 600; }
+
+  /* ============ COMPARISON TABLE ============ */
+  .comparison-table {
+    max-width: 960px; margin: 0 auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .comparison-table table {
+    width: 100%; border-collapse: collapse;
+  }
+  .comparison-table th, .comparison-table td {
+    padding: 14px 16px; text-align: center; font-size: 13px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .comparison-table th {
+    background: rgba(0,0,0,0.2);
+    font-weight: 700; color: var(--text-primary);
+  }
+  .comparison-table td:first-child { text-align: left; color: var(--text-secondary); }
+  .comparison-table tr:last-child td { border-bottom: none; }
+  .comparison-table .check { color: var(--accent-green); }
+  .comparison-table .dash { color: var(--text-muted); }
+  .comparison-table .highlight-cell { color: var(--accent-cyan); font-weight: 600; }
+
+  /* ============ FAQ ============ */
+  .faq-list {
+    max-width: 720px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .faq-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .faq-item:hover { border-color: var(--border-highlight); }
+  .faq-q {
+    padding: 18px 24px;
+    font-size: 15px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq-q::after {
+    content: '+'; font-size: 20px; color: var(--text-muted);
+    transition: transform 0.2s;
+  }
+  .faq-item.open .faq-q::after { transform: rotate(45deg); }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    padding: 0 24px;
+    font-size: 14px; color: var(--text-secondary); line-height: 1.6;
+  }
+  .faq-item.open .faq-a {
+    max-height: 200px;
+    padding: 0 24px 18px;
+  }
+
+  /* ============ FOOTER ============ */
+  .footer {
+    border-top: 1px solid var(--border-color);
+    padding: 48px 40px 24px;
+    margin-top: 40px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto 40px;
+  }
+  .footer-col-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 40px;
+  }
+  .footer-brand p {
+    font-size: 13px; color: var(--text-muted); margin-top: 12px; line-height: 1.5;
+  }
+  .footer-col h4 {
+    font-size: 14px; font-weight: 700; margin-bottom: 16px;
+  }
+  .footer-col a {
+    display: block; font-size: 13px; color: var(--text-muted);
+    text-decoration: none; padding: 4px 0; transition: color 0.2s;
+  }
+  .footer-col a:hover { color: var(--text-primary); }
+  .footer-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    max-width: 1200px; margin: 0 auto;
+    padding-top: 24px; border-top: 1px solid var(--border-color);
+    font-size: 12px; color: var(--text-muted);
+  }
+  .footer-models { display: flex; gap: 8px; flex-wrap: wrap; }
+  .footer-model-tag {
+    padding: 3px 10px; border-radius: var(--radius-full);
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    font-size: 11px; color: var(--text-secondary);
+  }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    width: 90%; max-width: 520px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--text-muted);
+    font-size: 24px; cursor: pointer;
+  }
+  .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+  .modal > p { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 600;
+    margin-bottom: 6px; color: var(--text-secondary);
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 14px; font-family: var(--font-sans);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--accent-cyan);
+  }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+  .form-submit {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: #fff; border: none; border-radius: var(--radius);
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 8px;
+  }
+  .form-submit:hover { opacity: 0.9; }
+  .form-success {
+    display: none; text-align: center; padding: 40px 20px;
+  }
+  .form-success.show { display: block; }
+  .form-success .icon { font-size: 48px; margin-bottom: 16px; }
+  .form-success h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .form-success p { font-size: 14px; color: var(--text-secondary); }
+
+  /* ============ DIVIDER ============ */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 1024px) {
+    .pipeline-grid { grid-template-columns: repeat(3, 1fr); }
+    .pipeline-card:nth-child(3) .pipeline-arrow,
+    .pipeline-card:nth-child(4) .pipeline-arrow,
+    .pipeline-card:nth-child(5) .pipeline-arrow { display: none; }
+    .skills-grid { grid-template-columns: repeat(3, 1fr); }
+    .credits-grid { grid-template-columns: repeat(2, 1fr); }
+    .footer-grid { grid-template-columns: 1fr; }
+    .footer-col-links { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 768px) {
+    .nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .pipeline-grid { grid-template-columns: 1fr 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; max-width: 400px; }
+    .hero-stats { gap: 12px; }
+    .hero-stat { min-width: 100px; padding: 16px 20px; }
+    .hero-stat-value { font-size: 22px; }
+    .why-grid { grid-template-columns: 1fr; }
+    .cta-banner { padding: 40px 24px; }
+    .modal { padding: 28px 20px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+    .footer-col-links {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
+    .section { padding: 60px 16px; }
+    .comparison-table { overflow-x: auto; }
+    .skills-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .pipeline-grid { grid-template-columns: 1fr; }
+    .skills-grid { grid-template-columns: 1fr; }
+    .credits-grid { grid-template-columns: 1fr 1fr; }
+    .hero-actions { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== NAV ========== -->
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon"></div>
+    TradeAgent
+  </a>
+  <div class="nav-links">
+    <a href="#hero" class="active">首页</a>
+    <a href="#pipeline">成交流程</a>
+    <a href="#pricing">订阅方案</a>
+    <a href="#skills">AI技能</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn btn-ghost" onclick="openModal()">登录</button>
+    <button class="btn btn-primary" onclick="openModal()">免费试用</button>
+  </div>
+</nav>
+
+<!-- ========== HERO ========== -->
+<section class="hero" id="hero">
+  <div class="hero-badge">外贸成交转化AI工作台</div>
+  <h1>AI驱动成交转化<br><span class="gradient-text">让每个客户都不再流失</span></h1>
+  <p class="hero-sub">
+    WhatsApp、邮件、Telegram 三个渠道统一管理，7×24小时AI自动值守。<br>
+    关键询盘秒推微信通知，12种语言实时翻译，AI话术即时辅助谈判。<br>
+    从线索到成交，每一步进展都一目了然。
+  </p>
+  <div class="hero-actions">
+    <button class="btn btn-primary btn-large" onclick="openModal()">免费体验 →</button>
+    <button class="btn btn-outline btn-large" onclick="scrollTo('#pricing')">查看订阅方案</button>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-value">10+</div>
+      <div class="hero-stat-label">AI模型可选</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">12</div>
+      <div class="hero-stat-label">语种支持</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">&lt;3s</div>
+      <div class="hero-stat-label">响应速度</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">7×24</div>
+      <div class="hero-stat-label">AI自动值守</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PIPELINE ========== -->
+<div class="section-divider"></div>
+<section class="section" id="pipeline">
+  <span class="section-tag">成交流程管道</span>
+  <h2 class="section-title">从客户沟通到成交，<span class="highlight">5个阶段</span>全程AI加持</h2>
+  <p class="section-desc">每一步都有AI辅助，让沟通更高效、转化更快</p>
+  <div class="pipeline-grid">
+    <div class="pipeline-card">
+      <div class="pipeline-icon" style="background:rgba(0,212,255,0.12);">💬</div>
+      <div class="pipeline-step">STEP 01</div>
+      <div class="pipeline-name">客户触达</div>
+      <div class="pipeline-desc">WhatsApp、邮件、Telegram 三个渠道统一管理，AI自动回复首次询盘，秒级响应不冷场</div>
+      <span class="pipeline-arrow">›</span>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-icon" style="background:rgba(245,158,11,0.12);">🔍</div>
+      <div class="pipeline-step">STEP 02</div>
+      <div class="pipeline-name">意向识别</div>
+      <div class="pipeline-desc">AI自动识别客户意向等级，谁是真心想买的、谁只是随便问问，一目了然</div>
+      <span class="pipeline-arrow">›</span>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-icon" style="background:rgba(168,85,247,0.12);">🌐</div>
+      <div class="pipeline-step">STEP 03</div>
+      <div class="pipeline-name">深度沟通</div>
+      <div class="pipeline-desc">12种语言自动翻译，AI实时给你推荐最佳回复话术，就像旁边坐了个翻译+销售教练</div>
+      <span class="pipeline-arrow">›</span>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-icon" style="background:rgba(236,72,153,0.12);">📊</div>
+      <div class="pipeline-step">STEP 04</div>
+      <div class="pipeline-name">客户背调</div>
+      <div class="pipeline-desc">一键AI生成客户画像，行业/规模/采购偏好/决策链全景分析，知己知彼</div>
+      <span class="pipeline-arrow">›</span>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-icon" style="background:rgba(0,230,118,0.12);">🏆</div>
+      <div class="pipeline-step">STEP 05</div>
+      <div class="pipeline-name">跟进成交</div>
+      <div class="pipeline-desc">AI跟进提醒+销售漏斗看板，关键询盘秒推企微/飞书，高意向不遗漏</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== SKILLS ========== -->
+<div class="section-divider"></div>
+<section class="section" id="skills">
+  <span class="section-tag">AI核心技能</span>
+  <h2 class="section-title"><span class="highlight">10+项AI技能</span>，聚焦成交转化</h2>
+  <p class="section-desc">从沟通触达到客户管理，每个环节都有AI技能加持</p>
+  <div class="skills-grid">
+    <div class="skill-card">
+      <span class="skill-badge">沟通</span>
+      <div class="skill-icon">🤖</div>
+      <div class="skill-name">7×24小时AI自动值守</div>
+      <div class="skill-desc">WhatsApp、邮件、Telegram 三个渠道不间断响应，新客户首次消息秒级回复，不丢任何商机</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">翻译</span>
+      <div class="skill-icon">🌍</div>
+      <div class="skill-name">12种语言双向实时翻译</div>
+      <div class="skill-desc">英/西/法/阿/俄/日/韩/越/泰/印尼/马来/葡，客户说母语你说中文，沟通零障碍</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">销售</span>
+      <div class="skill-icon">💡</div>
+      <div class="skill-name">AI实时话术助手</div>
+      <div class="skill-desc">根据客户画像和聊天上下文，AI实时推荐最佳回复策略、报价话术、异议应对方案</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">分析</span>
+      <div class="skill-icon">📋</div>
+      <div class="skill-name">聊天记录智能总结</div>
+      <div class="skill-desc">AI自动提取关键信息：客户需求、决策人、预算、时间线，告别逐条翻聊天记录</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">分析</span>
+      <div class="skill-icon">🎯</div>
+      <div class="skill-name">客户意向智能分类</div>
+      <div class="skill-desc">AI自动分析客户聊天语气，判断意向等级，高意向客户高亮显示，精力聚焦最有价值的客户</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">提醒</span>
+      <div class="skill-icon">⏰</div>
+      <div class="skill-name">智能跟进提醒</div>
+      <div class="skill-desc">AI分析客户活跃时间和沟通节奏，智能推荐最佳跟进时机，不冷不热刚刚好</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">管理</span>
+      <div class="skill-icon">👤</div>
+      <div class="skill-name">360°客户画像</div>
+      <div class="skill-desc">四合一客户档案：基础信息+沟通记录+意向轨迹+背调报告，一个页面看清一个客户</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">管理</span>
+      <div class="skill-icon">🔬</div>
+      <div class="skill-name">AI客户背调</div>
+      <div class="skill-desc">一键AI生成客户全景画像，公司背景、行业分析、采购偏好全掌握</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">通知</span>
+      <div class="skill-icon">📱</div>
+      <div class="skill-name">关键信息秒推微信</div>
+      <div class="skill-desc">高意向客户、报价到期、客户已读未回等关键事件即时推送企微/飞书，半夜不再丢单</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">看板</span>
+      <div class="skill-icon">📊</div>
+      <div class="skill-name">销售漏斗看板</div>
+      <div class="skill-desc">7阶段可视化看板（初步联系→意向确认→需求沟通→报价→谈判→签约→复购），一目了然</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">时效</span>
+      <div class="skill-icon">🌍</div>
+      <div class="skill-name">时间文化助手</div>
+      <div class="skill-desc">自动识别客户所在时区，提醒当地节假日和工作时间，帮你把握最佳沟通时机，不踩文化雷区</div>
+    </div>
+    <div class="skill-card">
+      <span class="skill-badge">效率</span>
+      <div class="skill-icon">📄</div>
+      <div class="skill-name">一键生成单证</div>
+      <div class="skill-desc">报价单、形式发票、装箱单等外贸常用单证自动生成，告别手动填表，省时不出错</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== WHY ========== -->
+<div class="section-divider"></div>
+<section class="section" id="why">
+  <span class="section-tag">为什么选择 TradeAgent</span>
+  <h2 class="section-title">不只是工具，<span class="highlight">是你的外贸AI搭档</span></h2>
+  <p class="section-desc"></p>
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon">🔌</div>
+      <div>
+        <div class="why-title">三渠道统一收口</div>
+        <div class="why-desc">WhatsApp、邮件、Telegram 一个平台管理，不再多个APP切换漏消息</div>
+      </div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🤝</div>
+      <div>
+        <div class="why-title">AI不只是翻译</div>
+        <div class="why-desc">从翻译到话术、从背调到跟进提醒，AI贯穿销售全流程，不只是工具是搭档</div>
+      </div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">🔔</div>
+      <div>
+        <div class="why-title">关键询盘零遗漏</div>
+        <div class="why-desc">高意向客户秒推通知 + 7×24自动值守 + 智能跟进提醒，确保每个商机都被跟进</div>
+      </div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon"></div>
+      <div>
+        <div class="why-title">多种AI模型按需选</div>
+        <div class="why-desc">多种主流AI模型随时切换，不同场景选不同模型，效果好还省钱</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CTA ========== -->
+<div class="section-divider"></div>
+<section class="section">
+  <div class="cta-banner">
+    <h2>开启外贸AI自动化之旅</h2>
+    <p>全链路套餐仅需 $69/月，解锁全部AI技能，大幅提升客户成交转化率</p>
+    <div class="cta-actions">
+      <button class="btn btn-primary btn-large" onclick="scrollTo('#pricing')">查看订阅方案</button>
+      <button class="btn btn-outline btn-large" onclick="openModal()">申请试用</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========== PRICING ========== -->
+<div class="section-divider"></div>
+<section class="section" id="pricing">
+  <span class="section-tag">订阅方案</span>
+  <h2 class="section-title">简单透明的<span class="highlight">订阅方案</span></h2>
+  <p class="section-desc">按需选择单Agent订阅，或选择全链路套餐解锁全部能力</p>
+  <div class="pricing-grid">
+    <!-- Single Agent -->
+    <div class="pricing-card">
+      <div class="pricing-badge hot">⚡ 轻量起步</div>
+      <div class="pricing-plan">单Agent订阅</div>
+      <div class="pricing-plan-en">Single Agent</div>
+      <div class="pricing-amount"><span class="currency">$</span>12<span class="period"> /月起</span></div>
+      <div class="pricing-tagline">按需选择，灵活订阅单个Agent</div>
+      <ul class="pricing-features">
+        <li>选择任意单个Agent使用</li>
+        <li>基础功能完整解锁</li>
+        <li>每月100次操作额度</li>
+        <li>标准技术支持</li>
+        <li>基础数据报表</li>
+      </ul>
+      <button class="pricing-btn outline" onclick="openModal()">开始订阅</button>
+    </div>
+    <!-- Full Chain -->
+    <div class="pricing-card featured">
+      <div class="pricing-badge pro"> 最佳性价比</div>
+      <div class="pricing-plan">全链路套餐</div>
+      <div class="pricing-plan-en">Full Chain Suite</div>
+      <div class="pricing-amount"><span class="currency">$</span>69<span class="period"> /月</span></div>
+      <div class="pricing-tagline">解锁全部5大Agent，覆盖外贸全流程</div>
+      <ul class="pricing-features">
+        <li>全部5大Agent无限使用</li>
+        <li>全链路数据打通</li>
+        <li>多种AI模型自由切换</li>
+        <li>关键业务数据对接</li>
+        <li>企业微信通知</li>
+        <li>优先技术支持</li>
+        <li>月度数据分析报告</li>
+      </ul>
+      <button class="pricing-btn filled" onclick="openModal()">开始订阅</button>
+    </div>
+    <!-- Enterprise -->
+    <div class="pricing-card">
+      <div class="pricing-badge ent">🏢 深度定制</div>
+      <div class="pricing-plan">企业定制版</div>
+      <div class="pricing-plan-en">Enterprise</div>
+      <div class="pricing-amount"><span class="currency">$</span>199<span class="period"> /月</span></div>
+      <div class="pricing-tagline">深度定制，对接企业自有系统</div>
+      <ul class="pricing-features">
+        <li>全链路套餐全部功能</li>
+        <li>对接客户现有管理系统</li>
+        <li>私有化部署方案</li>
+        <li>无限子账号</li>
+        <li>自定义智能工作流</li>
+        <li>专属客户经理</li>
+        <li>服务等级保障</li>
+      </ul>
+      <button class="pricing-btn outline" onclick="openModal()">联系销售</button>
+    </div>
+  </div>
+
+  <!-- Enterprise Private Deployment -->
+  <div class="enterprise-private">
+    <div class="enterprise-private-inner">
+      <div class="enterprise-private-left">
+        <div class="pricing-badge ent">🔒 私有化部署</div>
+        <div class="enterprise-private-title">企业私有化部署方案</div>
+        <div class="enterprise-private-title-en">On-Premise Deployment</div>
+      </div>
+      <div class="enterprise-private-center">
+        <ul class="enterprise-private-features">
+          <li>完整系统部署在企业自有服务器</li>
+          <li>数据完全自主可控，安全合规</li>
+          <li>对接企业现有业务系统</li>
+          <li>专属部署团队 + 定制开发</li>
+          <li>独立运维支持与版本升级</li>
+        </ul>
+      </div>
+      <div class="enterprise-private-right">
+        <div class="enterprise-private-price">价格面议</div>
+        <div class="enterprise-private-price-en">Contact for Pricing</div>
+        <button class="pricing-btn filled" onclick="openModal()">立即咨询</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== CREDITS ========== -->
+<section class="section">
+  <span class="section-tag">积分方案</span>
+  <h2 class="section-title">积分消耗<span class="highlight">灵活计费</span></h2>
+  <p class="section-desc">套餐包含基础积分，超出后按积分包计费，按需选择最划算的方案</p>
+  <div class="credits-grid">
+    <div class="credit-card">
+      <div class="credit-name">入门包</div>
+      <div class="credit-price">¥49</div>
+      <div class="credit-amount">5,000 积分</div>
+      <div class="credit-unit">约 ¥0.0098/积分</div>
+    </div>
+    <div class="credit-card hot">
+      <div class="credit-tag hot">🔥 热推</div>
+      <div class="credit-name">增长包</div>
+      <div class="credit-price">¥149</div>
+      <div class="credit-amount">16,000 积分</div>
+      <div class="credit-unit">约 ¥0.0093/积分</div>
+      <div class="credit-save" style="color:var(--accent-amber)">省7%</div>
+    </div>
+    <div class="credit-card">
+      <div class="credit-name">专业包</div>
+      <div class="credit-price">¥399</div>
+      <div class="credit-amount">45,000 积分</div>
+      <div class="credit-unit">约 ¥0.0089/积分</div>
+      <div class="credit-save" style="color:var(--accent-green)">省10%</div>
+    </div>
+    <div class="credit-card best">
+      <div class="credit-tag best"> 最划算</div>
+      <div class="credit-name">企业包</div>
+      <div class="credit-price">¥999</div>
+      <div class="credit-amount">120,000 积分</div>
+      <div class="credit-unit">约 ¥0.0083/积分</div>
+      <div class="credit-save" style="color:var(--accent-green)">省15%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== COMPARISON ========== -->
+<section class="section">
+  <h2 class="section-title">功能对比详情</h2>
+  <p class="section-desc"></p>
+  <div class="comparison-table">
+    <table>
+      <thead>
+        <tr>
+          <th>功能项</th>
+          <th>单Agent</th>
+          <th class="highlight-cell">全链路套餐</th>
+          <th>企业定制</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Agent数量</td><td>1个</td><td class="highlight-cell">全部5个</td><td>全部5个+</td></tr>
+        <tr><td>月度操作额度</td><td>100次</td><td class="highlight-cell">无限</td><td>无限</td></tr>
+        <tr><td>AI模型切换</td><td>默认模型</td><td class="highlight-cell">多种AI模型</td><td>全部模型+定制训练</td></tr>
+        <tr><td>企业微信通知</td><td class="dash">—</td><td class="check">✓</td><td class="check">✓ + 钉钉/飞书</td></tr>
+        <tr><td>子账号</td><td>1个</td><td class="highlight-cell">3个</td><td>无限</td></tr>
+        <tr><td>管理系统对接</td><td class="dash">—</td><td class="dash">—</td><td class="check">✓</td></tr>
+        <tr><td>私有部署</td><td class="dash">—</td><td class="dash">—</td><td class="check">✓</td></tr>
+        <tr><td>专属客户经理</td><td class="dash">—</td><td class="dash">—</td><td class="check">✓</td></tr>
+        <tr><td>服务保障</td><td class="dash">—</td><td class="highlight-cell">99.9%</td><td>99.99%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========== FAQ ========== -->
+<div class="section-divider"></div>
+<section class="section" id="faq">
+  <span class="section-tag">FAQ</span>
+  <h2 class="section-title">常见问题</h2>
+  <p class="section-desc"></p>
+  <div class="faq-list">
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">可以先试用再订阅吗？</div>
+      <div class="faq-a">当然可以！每个Agent都提供7天免费试用期，无需绑定支付方式。试用期间享受完整功能体验。</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">支持哪些AI模型？</div>
+      <div class="faq-a">支持10+主流AI模型，包括国内外最热门的选择。同时支持您自定义添加其他模型，灵活适配不同业务场景。</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">WhatsApp消息稳定吗？</div>
+      <div class="faq-a">经过大量实际业务验证，消息收发稳定可靠，7×24小时不间断运行，支持多人同时使用。已服务多家外贸企业，消息到达率和响应速度均有保障。</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">如何对接现有管理系统？</div>
+      <div class="faq-a">企业定制版支持标准接口对接，我们提供完整的技术文档和全程技术支持，可对接各类主流企业管理系统。</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">数据安全如何保障？</div>
+      <div class="faq-a">所有数据传输采用军事级加密，存储符合国际数据保护标准。还支持私有部署，数据完全掌握在您自己手中。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-icon">⊙</div>
+        TradeAgent
+      </a>
+      <p>外贸成交转化AI工作台。聚焦沟通、跟进、成交全链路。</p>
+    </div>
+    <div class="footer-col-links">
+      <div class="footer-col">
+        <h4>产品</h4>
+        <a href="#">外贸AI助手</a>
+        <a href="#">WhatsApp沟通</a>
+        <a href="#">邮件中心</a>
+        <a href="#">客户管理</a>
+        <a href="#">成交流程</a>
+      </div>
+      <div class="footer-col">
+        <h4>AI技能</h4>
+        <a href="#">邮件自动化</a>
+        <a href="#">多语种翻译</a>
+        <a href="#">销售话术库</a>
+        <a href="#">客户背调</a>
+        <a href="#">意向分析</a>
+      </div>
+      <div class="footer-col">
+        <h4>支持</h4>
+        <a href="#">帮助中心</a>
+        <a href="#">在线客服</a>
+        <a href="#">企业定制</a>
+        <a href="#">隐私政策</a>
+        <a href="#">服务条款</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 TradeAgent. All rights reserved.</span>
+    <div class="footer-models">
+      <span>支持模型：</span>
+      <span class="footer-model-tag">GPT</span>
+      <span class="footer-model-tag">Claude</span>
+      <span class="footer-model-tag">DeepSeek</span>
+      <span class="footer-model-tag">通义千问</span>
+      <span class="footer-model-tag">豆包</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ========== APPLICATION MODAL ========== -->
+<div class="modal-overlay" id="applyModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="formContent">
+      <h2>申请试用 TradeAgent</h2>
+      <p>填写以下信息，我们将在24小时内与您联系</p>
+      <form onsubmit="submitForm(event)">
+        <div class="form-group">
+          <label>公司名称 *</label>
+          <input type="text" required placeholder="请输入公司名称">
+        </div>
+        <div class="form-group">
+          <label>联系人姓名 *</label>
+          <input type="text" required placeholder="请输入姓名">
+        </div>
+        <div class="form-group">
+          <label>邮箱 *</label>
+          <input type="email" required placeholder="your@company.com">
+        </div>
+        <div class="form-group">
+          <label>手机号 *</label>
+          <input type="tel" required placeholder="请输入手机号">
+        </div>
+        <div class="form-group">
+          <label>感兴趣的方案</label>
+          <select>
+            <option value="">请选择</option>
+            <option value="single">单Agent订阅 ($12/月)</option>
+            <option value="full">全链路套餐 ($69/月)</option>
+            <option value="enterprise">企业定制版 ($199/月)</option>
+            <option value="private">企业私有化部署（价格面议）</option>
+            <option value="unsure">不确定，想先了解</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>补充说明</label>
+          <textarea placeholder="选填，告诉我们您的具体需求"></textarea>
+        </div>
+        <button type="submit" class="form-submit">提交申请</button>
+      </form>
+    </div>
+    <div class="form-success" id="formSuccess">
+      <div class="icon">✅</div>
+      <h3>申请已提交！</h3>
+      <p>我们会在24小时内与您联系。<br>感谢您的关注！</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal() {
+    document.getElementById('applyModal').classList.add('active');
+    document.getElementById('formContent').style.display = 'block';
+    document.getElementById('formSuccess').classList.remove('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    document.getElementById('applyModal').classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  function submitForm(e) {
+    e.preventDefault();
+    document.getElementById('formContent').style.display = 'none';
+    document.getElementById('formSuccess').classList.add('show');
+  }
+  function toggleFaq(el) {
+    el.classList.toggle('open');
+  }
+  function scrollTo(sel) {
+    document.querySelector(sel).scrollIntoView({ behavior: 'smooth' });
+  }
+  // Close modal on overlay click
+  document.getElementById('applyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+  // Active nav link on scroll
+  window.addEventListener('scroll', function() {
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.remove('active');
+      if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
