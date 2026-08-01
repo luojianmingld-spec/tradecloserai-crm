@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-window">
+  <div class="chat-window" @click="closeContextMenu">
     <!-- Chat Header -->
     <div class="chat-header">
       <div class="header-info">
@@ -23,6 +23,18 @@
       </div>
     </div>
 
+    <!-- Multi-select Action Bar -->
+    <div v-if="selectMode" class="select-action-bar">
+      <div class="select-bar-left">
+        <el-checkbox v-model="selectAllChecked" @change="toggleSelectAll">全选</el-checkbox>
+        <span class="select-count">已选 {{ selectedMsgs.length }} 条</span>
+      </div>
+      <div class="select-bar-right">
+        <el-button size="small" @click="exitSelectMode">取消</el-button>
+        <el-button size="small" type="danger" :disabled="!selectedMsgs.length" @click="batchDeleteMessages">删除</el-button>
+      </div>
+    </div>
+
     <!-- Messages Area -->
     <div ref="messagesContainer" class="messages-area" @scroll="onScroll">
       <div class="messages-inner">
@@ -32,50 +44,112 @@
           class="message-row"
           :class="{ 'from-me': msg.fromMe }"
         >
-          <div class="message-bubble" :class="{ outgoing: msg.fromMe, incoming: !msg.fromMe }">
-            <div class="message-content">
-              <!-- Outgoing: show translation first, then original -->
-              <template v-if="msg.fromMe && msg.translation">
-                <span class="msg-text">{{ msg.translation }}</span>
-                <div class="msg-translation">
-                  <span class="translation-label">原文：</span>
-                  <span>{{ msg.content }}</span>
-                </div>
-              </template>
-              <!-- Incoming with translation -->
-              <template v-else-if="!msg.fromMe && msg.translation">
-                <span class="msg-text">{{ msg.content }}</span>
-                <div class="msg-translation">
-                  <span class="translation-label">翻译：</span>
-                  <span>{{ msg.translation }}</span>
-                  <span v-if="msg.sourceLang" class="translation-lang">{{ getLangName(msg.sourceLang) }}</span>
-                </div>
-              </template>
-              <!-- No translation available - show translate button for incoming -->
-              <template v-else-if="!msg.fromMe && chatStore.translationSettings.translationEnabled && msg.messageType === 'text'">
-                <span class="msg-text">{{ msg.content }}</span>
-                <div v-if="translatingMsgs[msg.id]" class="msg-translation translating">
-                  <span class="translation-label">翻译中...</span>
-                </div>
-                <div v-else class="msg-translate-btn" @click="handleTranslateMsg(msg)">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px">
-                    <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
-                  </svg>
-                  翻译
-                </div>
-              </template>
-              <!-- Fallback: just text -->
-              <template v-else>
-                <span class="msg-text">{{ msg.content }}</span>
-              </template>
+          <div
+            class="message-bubble-wrapper"
+            @contextmenu.prevent="onContextMenu($event, msg)"
+            @touchstart="onTouchStart($event, msg)"
+            @touchend="onTouchEnd"
+            @touchmove="onTouchEnd"
+            @mouseenter="onBubbleHover(msg, true)"
+            @mouseleave="onBubbleHover(msg, false)"
+          >
+            <!-- Quick Reactions Bar -->
+            <div v-if="hoveredMsgId === msg.id && !selectMode" class="quick-reactions-bar" :class="{ 'from-me': msg.fromMe }">
+              <button v-for="emoji in quickReactionEmojis" :key="emoji" class="quick-reaction-btn" @click.stop="handleQuickReaction(msg, emoji)">{{ emoji }}</button>
             </div>
-            <div class="message-meta">
-              <span class="msg-time">{{ formatMessageTime(msg.timestamp) }}</span>
-              <span v-if="msg.fromMe" class="msg-status">
-                <svg viewBox="0 0 16 11" width="16" height="11" fill="currentColor">
-                  <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.336-.153.457.457 0 0 0-.336.153l-.312.318a.518.518 0 0 0-.14.353c0 .14.05.265.14.353l2.684 2.796a.46.46 0 0 0 .336.153.477.477 0 0 0 .382-.178l6.844-8.44a.526.526 0 0 0 .012-.648l-.318-.318a.458.458 0 0 0-.38-.153zm-3.603 8.44L7.87 9.45l3.39-4.175-.304-.318L7.566 9.13l-.609-.636-.304.318.914.95a.46.46 0 0 0 .336.153.477.477 0 0 0 .381-.178l.571-.685.318.318-.722.876a.458.458 0 0 1-.304.102.493.493 0 0 1-.381-.178l-.318-.318z"/>
+
+            <!-- Reply Quote in bubble -->
+            <div v-if="msg.quotedMsg || msg.replyQuote" class="reply-quote" @click.stop="scrollToQuotedMsg(msg)">
+              <div class="reply-quote-bar"></div>
+              <div class="reply-quote-content">
+                <span class="reply-quote-name">{{ msg.quotedMsg?.name || msg.replyQuote?.name || '' }}</span>
+                <span class="reply-quote-text">{{ (msg.quotedMsg?.body || msg.replyQuote?.text || '').substring(0, 80) }}</span>
+              </div>
+            </div>
+
+            <!-- Checkbox for select mode -->
+            <div v-if="selectMode" class="msg-checkbox" @click.stop>
+              <el-checkbox :model-value="selectedMsgs.includes(msg.id)" @change="toggleMsgSelect(msg.id)" />
+            </div>
+
+            <div class="message-bubble" :class="{ outgoing: msg.fromMe, incoming: !msg.fromMe }">
+              <!-- Reactions display -->
+              <div v-if="msg.reactions && msg.reactions.length" class="msg-reactions">
+                <span v-for="(r, ri) in msg.reactions" :key="ri" class="msg-reaction-chip">{{ r.emoji }}</span>
+              </div>
+
+              <!-- Media content -->
+              <div v-if="msg.messageType === 'image' || msg.type === 'image'" class="msg-media">
+                <img
+                  :src="getMediaUrl(msg)"
+                  :alt="msg.fileName || '图片'"
+                  class="msg-image"
+                  loading="lazy"
+                  @click.stop="previewImage(getMediaUrl(msg))"
+                />
+              </div>
+              <div v-else-if="msg.messageType === 'video' || msg.type === 'video'" class="msg-media">
+                <video :src="getMediaUrl(msg)" controls class="msg-video" preload="metadata" />
+              </div>
+              <div v-else-if="msg.messageType === 'document' || msg.type === 'document'" class="msg-file" @click.stop="downloadFile(msg)">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="flex-shrink:0">
+                  <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
                 </svg>
-              </span>
+                <div class="msg-file-info">
+                  <span class="msg-file-name">{{ msg.fileName || '文件' }}</span>
+                  <span class="msg-file-size" v-if="msg.fileSize">{{ formatFileSize(msg.fileSize) }}</span>
+                </div>
+              </div>
+              <div v-else-if="msg.messageType === 'audio' || msg.type === 'audio'" class="msg-audio">
+                <audio :src="getMediaUrl(msg)" controls class="msg-audio-player" preload="metadata" />
+              </div>
+
+              <div class="message-content">
+                <!-- Outgoing: show translation first, then original -->
+                <template v-if="msg.fromMe && msg.translation">
+                  <span class="msg-text">{{ msg.translation }}</span>
+                  <div class="msg-translation">
+                    <span class="translation-label">原文：</span>
+                    <span>{{ msg.content }}</span>
+                  </div>
+                </template>
+                <!-- Incoming with translation -->
+                <template v-else-if="!msg.fromMe && msg.translation">
+                  <span class="msg-text">{{ msg.content }}</span>
+                  <div class="msg-translation">
+                    <span class="translation-label">翻译：</span>
+                    <span>{{ msg.translation }}</span>
+                    <span v-if="msg.sourceLang" class="translation-lang">{{ getLangName(msg.sourceLang) }}</span>
+                  </div>
+                </template>
+                <!-- No translation available - show translate button for incoming -->
+                <template v-else-if="!msg.fromMe && chatStore.translationSettings.translationEnabled && (msg.messageType === 'text' || !msg.messageType)">
+                  <span class="msg-text">{{ msg.content }}</span>
+                  <div v-if="translatingMsgs[msg.id]" class="msg-translation translating">
+                    <span class="translation-label">翻译中...</span>
+                  </div>
+                  <div v-else class="msg-translate-btn" @click.stop="handleTranslateMsg(msg)">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px">
+                      <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                    </svg>
+                    翻译
+                  </div>
+                </template>
+                <!-- Fallback: just text -->
+                <template v-else>
+                  <span class="msg-text">{{ msg.content }}</span>
+                </template>
+                <!-- Edited marker -->
+                <span v-if="msg.edited" class="msg-edited">(已编辑)</span>
+              </div>
+              <div class="message-meta">
+                <span class="msg-time">{{ formatMessageTime(msg.timestamp) }}</span>
+                <span v-if="msg.fromMe" class="msg-status">
+                  <svg viewBox="0 0 16 11" width="16" height="11" fill="currentColor">
+                    <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.336-.153.457.457 0 0 0-.336.153l-.312.318a.518.518 0 0 0-.14.353c0 .14.05.265.14.353l2.684 2.796a.46.46 0 0 0 .336.153.477.477 0 0 0 .382-.178l6.844-8.44a.526.526 0 0 0 .012-.648l-.318-.318a.458.458 0 0 0-.38-.153zm-3.603 8.44L7.87 9.45l3.39-4.175-.304-.318L7.566 9.13l-.609-.636-.304.318.914.95a.46.46 0 0 0 .336.153.477.477 0 0 0 .381-.178l.571-.685.318.318-.722.876a.458.458 0 0 1-.304.102.493.493 0 0 1-.381-.178l-.318-.318z"/>
+                  </svg>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -86,44 +160,70 @@
       </div>
     </div>
 
+    <!-- Context Menu -->
+    <Teleport to="body">
+      <div
+        v-if="contextMenuMsg"
+        class="context-menu-overlay"
+        @click="closeContextMenu"
+        @contextmenu.prevent="closeContextMenu"
+      >
+        <div class="context-menu" :style="contextMenuPos" @click.stop>
+          <button class="ctx-item" @click="handleReply">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+            <span>回复</span>
+          </button>
+          <button v-if="contextMenuMsg.fromMe && (contextMenuMsg.messageType === 'text' || !contextMenuMsg.messageType)" class="ctx-item" @click="handleEdit">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <span>编辑</span>
+          </button>
+          <button class="ctx-item" @click="handleCopyText">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            <span>复制文本</span>
+          </button>
+          <button v-if="!contextMenuMsg.fromMe && !contextMenuMsg.translation && chatStore.translationSettings.translationEnabled" class="ctx-item" @click="handleCtxTranslate">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+            <span>翻译</span>
+          </button>
+          <button class="ctx-item" @click="handleSelectMode">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+            <span>选择</span>
+          </button>
+          <button v-if="contextMenuMsg.fromMe" class="ctx-item ctx-item-danger" @click="handleDeleteMsg">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span>删除</span>
+          </button>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Image Preview Overlay -->
+    <Teleport to="body">
+      <div v-if="imagePreviewUrl" class="image-preview-overlay" @click="imagePreviewUrl = null">
+        <img :src="imagePreviewUrl" class="image-preview-img" @click.stop />
+        <button class="image-preview-close" @click="imagePreviewUrl = null">&times;</button>
+      </div>
+    </Teleport>
+
     <!-- Input Area -->
     <div class="input-area">
-      <div class="input-toolbar">
-        <el-tooltip content="表情" placement="top">
-          <el-button text circle size="small">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-            </svg>
-          </el-button>
-        </el-tooltip>
-        <el-tooltip content="附件" placement="top">
-          <el-button text circle size="small">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
-            </svg>
-          </el-button>
-        </el-tooltip>
-        <el-tooltip content="翻译设置" placement="top">
-          <el-button text circle size="small" @click="toggleTranslationPanel">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
-            </svg>
-          </el-button>
-        </el-tooltip>
-        <el-tooltip content="AI话术" placement="top">
-          <el-button text circle size="small" @click="toggleReplyPanel">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-            </svg>
-          </el-button>
-        </el-tooltip>
-        <el-tooltip content="需求总结" placement="top">
-          <el-button text circle size="small" @click="handleAISummarize" :loading="aiSummarizingLocal">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
-            </svg>
-          </el-button>
-        </el-tooltip>
+      <!-- Reply Preview Bar -->
+      <div v-if="replyTo" class="reply-bar">
+        <div class="reply-bar-bar"></div>
+        <div class="reply-bar-content">
+          <span class="reply-bar-name">{{ replyTo.name || '对方' }}</span>
+          <span class="reply-bar-text">{{ (replyTo.body || '').substring(0, 60) }}</span>
+        </div>
+        <button class="reply-bar-close" @click="clearReplyTo">&times;</button>
+      </div>
+
+      <!-- Edit Preview Bar -->
+      <div v-if="editingMsgId" class="edit-bar">
+        <div class="edit-bar-info">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:6px;opacity:.6"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          <span>编辑消息</span>
+        </div>
+        <button class="edit-bar-close" @click="cancelEdit">&times;</button>
       </div>
 
       <!-- Translation Settings Panel (Inline) -->
@@ -189,32 +289,113 @@
             <button class="style-btn" :class="{ active: replyStyle === 'casual' }" @click="replyStyle = 'casual'">非正式</button>
             <button class="style-btn" :class="{ active: replyStyle === 'polite' }" @click="replyStyle = 'polite'">礼貌</button>
           </div>
-          <el-button type="primary" size="small" @click="executeAIReply" :loading="aiGeneratingLocal" style="width: 100%; margin-top: 12px;">生成话术</el-button>
+          <el-button type="primary" size="small" @click="executeAIReply" :loading="aiGeneratingLocal" style="width: 100%; margin-top: 12px;">
+            生成话术
+          </el-button>
         </div>
       </div>
 
+      <!-- Compact Single-Line Input -->
       <div class="input-container">
-        <button class="attach-btn" @click="showAttachMenu = !showAttachMenu">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-        </button>
+        <!-- Emoji Button -->
+        <el-tooltip content="表情" placement="top">
+          <button class="input-icon-btn" @click="toggleEmojiPicker">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+            </svg>
+          </button>
+        </el-tooltip>
+
+        <!-- Textarea -->
         <div class="input-wrapper">
           <el-input
             ref="inputRef"
             v-model="inputText"
             type="textarea"
             :autosize="{ minRows: 1, maxRows: 5 }"
-            :placeholder="inputPlaceholder"
+            :placeholder="computedPlaceholder"
             resize="none"
             @keydown.enter.exact.prevent="handleSend"
           />
         </div>
-        <button v-if="inputText.trim()" class="send-btn" @click="handleSend">
+
+        <!-- Attachment Dropdown -->
+        <el-dropdown trigger="click" @command="handleAttachCommand" @visible-change="onAttachDropdownChange">
+          <el-tooltip content="附件" placement="top">
+            <button class="input-icon-btn" :class="{ 'attach-open': showAttachDropdown }">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+              </svg>
+            </button>
+          </el-tooltip>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="image-video">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right:8px;vertical-align:middle"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                图片或视频
+              </el-dropdown-item>
+              <el-dropdown-item command="file">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right:8px;vertical-align:middle"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                文件
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+
+        <!-- More Menu -->
+        <el-dropdown trigger="click" @command="handleMoreCommand">
+          <el-tooltip content="更多" placement="top">
+            <button class="input-icon-btn">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+              </svg>
+            </button>
+          </el-tooltip>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="translate-settings">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:8px"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0014.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+                翻译设置
+              </el-dropdown-item>
+              <el-dropdown-item command="ai-reply">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:8px"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+                AI话术
+              </el-dropdown-item>
+              <el-dropdown-item command="need-summary" :disabled="aiSummarizingLocal">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:8px"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+                {{ aiSummarizingLocal ? '总结中...' : '需求总结' }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+
+        <!-- Mic/Send Toggle Button -->
+        <button
+          v-if="inputText.trim() || editingMsgId"
+          class="send-btn"
+          @click="handleSend"
+        >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
           </svg>
         </button>
+        <button
+          v-else
+          class="mic-btn"
+          :class="{ recording: isRecording }"
+          @click="toggleRecording"
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Recording indicator -->
+      <div v-if="isRecording" class="recording-bar">
+        <span class="recording-dot"></span>
+        <span>录音中 {{ recordingDuration }}s</span>
+        <button class="recording-cancel" @click="cancelRecording">取消</button>
       </div>
     </div>
 
@@ -230,12 +411,17 @@
       </div>
       <div class="preview-content">{{ translationPreview }}</div>
     </div>
+
+    <!-- Hidden file inputs -->
+    <input ref="imageVideoInput" type="file" accept="image/*,video/*" style="display:none" @change="onFileSelected" />
+    <input ref="fileInput" type="file" style="display:none" @change="onFileSelected" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, reactive } from 'vue';
+import { ref, computed, watch, nextTick, reactive, onUnmounted } from 'vue';
 import { useChatStore } from '../../stores/chat.js';
+import { ElMessage } from 'element-plus';
 
 const props = defineProps({
   jid: { type: String, required: true },
@@ -250,6 +436,8 @@ const chatStore = useChatStore();
 const inputText = ref('');
 const messagesContainer = ref(null);
 const inputRef = ref(null);
+const imageVideoInput = ref(null);
+const fileInput = ref(null);
 const autoTranslate = computed({
   get: () => chatStore.autoTranslateOutgoing,
   set: (val) => { chatStore.autoTranslateOutgoing = val; },
@@ -257,8 +445,50 @@ const autoTranslate = computed({
 const translationPreview = ref(null);
 const translatingMsgs = reactive({});
 
-const inputPlaceholder = computed(() => {
+// ── Context Menu ──
+const contextMenuMsg = ref(null);
+const contextMenuPos = ref({ top: '0px', left: '0px' });
+
+// ── Select Mode ──
+const selectMode = ref(false);
+const selectedMsgs = ref([]);
+const selectAllChecked = ref(false);
+
+// ── Edit Mode ──
+const editingMsgId = computed(() => chatStore.editingMsgId);
+
+// ── Reply Mode ──
+const replyTo = computed(() => chatStore.replyTo);
+
+// ── Reactions ──
+const hoveredMsgId = ref(null);
+const quickReactionEmojis = ['❤️', '👍', '👎', '🔥', '😍', '😄'];
+
+// ── Voice Recording ──
+const isRecording = ref(false);
+const recordingDuration = ref(0);
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingTimer = null;
+
+// ── Image Preview ──
+const imagePreviewUrl = ref(null);
+
+// ── Attach Dropdown ──
+const showAttachDropdown = ref(false);
+
+// ── AI Panel States ──
+const showTranslationPanel = ref(false);
+const showReplyPanel = ref(false);
+const replyStyle = ref('formal');
+const aiTranslating = ref(false);
+const aiGeneratingLocal = ref(false);
+const aiSummarizingLocal = ref(false);
+
+const computedPlaceholder = computed(() => {
   if (!props.connected) return 'WhatsApp未连接...';
+  if (editingMsgId.value) return '编辑消息...';
+  if (replyTo.value) return '回复消息...';
   if (autoTranslate.value && chatStore.translationSettings.translationEnabled) {
     return '输入中文，自动翻译后发送...';
   }
@@ -278,10 +508,14 @@ watch(
 watch(
   () => props.jid,
   async () => {
-    headerAvatarOk.value = true; // 切换会话时重置头像状态
+    headerAvatarOk.value = true;
     await nextTick();
     scrollToBottom();
     translationPreview.value = null;
+    closeContextMenu();
+    exitSelectMode();
+    cancelEdit();
+    chatStore.clearReplyTo();
   }
 );
 
@@ -299,6 +533,8 @@ watch(
   }
 );
 
+// ── Core Functions ──
+
 function scrollToBottom() {
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
@@ -306,11 +542,20 @@ function scrollToBottom() {
 }
 
 async function handleSend() {
+  if (editingMsgId.value) {
+    // Edit mode: save edit
+    const newText = inputText.value.trim();
+    if (!newText) return;
+    await chatStore.editMessage(props.jid, editingMsgId.value, newText);
+    inputText.value = '';
+    return;
+  }
   const text = inputText.value.trim();
   if (!text || !props.connected) return;
   emit('send', text);
   inputText.value = '';
   translationPreview.value = null;
+  chatStore.clearReplyTo();
 }
 
 async function handleTranslateMsg(msg) {
@@ -333,7 +578,7 @@ function onScroll() {
   // Could implement load-more on scroll up
 }
 
-// 头像状态（与列表页 conv-avatar 一致）
+// ── Avatar ──
 const headerAvatarOk = ref(true);
 function onHeaderAvatarError() { headerAvatarOk.value = false; }
 function avatarColor(name) {
@@ -356,6 +601,13 @@ function formatMessageTime(timestamp) {
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 const languageNames = {
   en: '英语', zh: '中文', ja: '日语', ko: '韩语', es: '西班牙语',
   fr: '法语', de: '德语', pt: '葡萄牙语', ru: '俄语', ar: '阿拉伯语',
@@ -368,15 +620,303 @@ function getLangName(code) {
   return languageNames[code] || code;
 }
 
-// AI feature handlers
-const aiTranslating = ref(false);
-const aiGeneratingLocal = ref(false);
-const aiSummarizingLocal = ref(false);
-const showTranslationPanel = ref(false);
-const showAttachMenu = ref(false);
-const showReplyPanel = ref(false);
-const replyStyle = ref('formal');
+// ── Media URL Helper ──
+function getMediaUrl(msg) {
+  if (msg.previewDataUrl) return msg.previewDataUrl;
+  if (msg.mediaUrl) {
+    if (msg.mediaUrl.startsWith('http')) return msg.mediaUrl;
+    // /uploads/ paths must go through backend proxy (nginx regex location would 404 direct paths)
+    return '/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl);
+  }
+  return '';
+}
 
+// ── Image Preview ──
+function previewImage(url) {
+  if (url) imagePreviewUrl.value = url;
+}
+
+// ── File Download ──
+function downloadFile(msg) {
+  const url = getMediaUrl(msg);
+  if (url) window.open(url, '_blank');
+}
+
+// ── Context Menu ──
+let longPressTimer = null;
+
+function onContextMenu(e, msg) {
+  e.preventDefault();
+  contextMenuMsg.value = msg;
+  // Position the menu, keeping it within viewport
+  const x = Math.min(e.clientX, window.innerWidth - 200);
+  const y = Math.min(e.clientY, window.innerHeight - 300);
+  contextMenuPos.value = { top: y + 'px', left: x + 'px' };
+}
+
+function onTouchStart(e, msg) {
+  longPressTimer = setTimeout(() => {
+    const touch = e.touches[0];
+    contextMenuMsg.value = msg;
+    const x = Math.min(touch.clientX, window.innerWidth - 200);
+    const y = Math.min(touch.clientY, window.innerHeight - 300);
+    contextMenuPos.value = { top: y + 'px', left: x + 'px' };
+  }, 500);
+}
+
+function onTouchEnd() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+}
+
+function closeContextMenu() {
+  contextMenuMsg.value = null;
+}
+
+function handleReply() {
+  if (!contextMenuMsg.value) return;
+  chatStore.setReplyTo(contextMenuMsg.value);
+  closeContextMenu();
+  nextTick(() => inputRef.value?.focus());
+}
+
+function handleEdit() {
+  if (!contextMenuMsg.value) return;
+  const msg = contextMenuMsg.value;
+  chatStore.editingMsgId = msg.id;
+  inputText.value = msg.body || msg.content || '';
+  closeContextMenu();
+  nextTick(() => inputRef.value?.focus());
+}
+
+function cancelEdit() {
+  chatStore.editingMsgId = null;
+  inputText.value = '';
+}
+
+function handleCopyText() {
+  if (!contextMenuMsg.value) return;
+  const text = contextMenuMsg.value.body || contextMenuMsg.value.content || '';
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    ElMessage.success('已复制');
+  });
+  closeContextMenu();
+}
+
+async function handleCtxTranslate() {
+  if (!contextMenuMsg.value) return;
+  const msg = contextMenuMsg.value;
+  closeContextMenu();
+  await handleTranslateMsg(msg);
+}
+
+function handleSelectMode() {
+  closeContextMenu();
+  selectMode.value = true;
+  selectedMsgs.value = [];
+  selectAllChecked.value = false;
+}
+
+function exitSelectMode() {
+  selectMode.value = false;
+  selectedMsgs.value = [];
+  selectAllChecked.value = false;
+}
+
+function toggleMsgSelect(msgId) {
+  const idx = selectedMsgs.value.indexOf(msgId);
+  if (idx >= 0) selectedMsgs.value.splice(idx, 1);
+  else selectedMsgs.value.push(msgId);
+}
+
+function toggleSelectAll(checked) {
+  if (checked) {
+    selectedMsgs.value = props.messages.map(m => m.id);
+  } else {
+    selectedMsgs.value = [];
+  }
+}
+
+function batchDeleteMessages() {
+  for (const msgId of selectedMsgs.value) {
+    chatStore.localDeleteMessage(props.jid, msgId);
+  }
+  exitSelectMode();
+}
+
+async function handleDeleteMsg() {
+  if (!contextMenuMsg.value) return;
+  const msg = contextMenuMsg.value;
+  closeContextMenu();
+  chatStore.localDeleteMessage(props.jid, msg.id);
+}
+
+// ── Quick Reactions ──
+let hoverTimer = null;
+
+function onBubbleHover(msg, entering) {
+  if (selectMode.value) return;
+  if (entering) {
+    hoverTimer = setTimeout(() => {
+      hoveredMsgId.value = msg.id;
+    }, 300);
+  } else {
+    if (hoverTimer) clearTimeout(hoverTimer);
+    hoveredMsgId.value = null;
+  }
+}
+
+async function handleQuickReaction(msg, emoji) {
+  hoveredMsgId.value = null;
+  await chatStore.sendReaction(props.jid, msg, emoji);
+}
+
+function scrollToQuotedMsg(msg) {
+  // Best-effort: find the quoted message in the list and scroll to it
+  const quotedId = msg.quotedMsg?.id || msg.replyQuote?.id;
+  if (!quotedId) return;
+  const el = document.querySelector(`[data-msg-id="${quotedId}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── Voice Recording ──
+async function toggleRecording() {
+  if (isRecording.value) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      if (audioChunks.length === 0) return;
+      const mimeType = mediaRecorder.mimeType || 'audio/webm';
+      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(audioChunks, { type: mimeType });
+      const file = new File([blob], `voice_${Date.now()}.${ext}`, { type: mimeType });
+      // Send as audio media
+      await chatStore.sendMedia(props.jid, file, 'audio', '');
+      audioChunks = [];
+    };
+
+    mediaRecorder.start();
+    isRecording.value = true;
+    recordingDuration.value = 0;
+    recordingTimer = setInterval(() => {
+      recordingDuration.value++;
+    }, 1000);
+  } catch (err) {
+    console.error('Microphone access denied:', err);
+    ElMessage.warning('无法访问麦克风，请检查浏览器权限');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  isRecording.value = false;
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+  recordingDuration.value = 0;
+}
+
+function cancelRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.onstop = null; // Prevent sending
+    mediaRecorder.stop();
+  }
+  isRecording.value = false;
+  audioChunks = [];
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+  recordingDuration.value = 0;
+}
+
+function getSupportedMimeType() {
+  const types = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return 'audio/webm';
+}
+
+onUnmounted(() => {
+  cancelRecording();
+  if (hoverTimer) clearTimeout(hoverTimer);
+});
+
+// ── Attachment Handling ──
+function onAttachDropdownChange(visible) {
+  showAttachDropdown.value = visible;
+}
+
+function handleAttachCommand(command) {
+  if (command === 'image-video') {
+    imageVideoInput.value?.click();
+  } else if (command === 'file') {
+    fileInput.value?.click();
+  }
+}
+
+async function onFileSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const isMedia = file.type.startsWith('image/') || file.type.startsWith('video/');
+  const mediatype = isMedia ? (file.type.startsWith('video/') ? 'video' : 'image') : 'document';
+  await chatStore.sendMedia(props.jid, file, mediatype, '');
+  // Reset input so same file can be re-selected
+  e.target.value = '';
+}
+
+// ── More Menu ──
+function handleMoreCommand(command) {
+  if (command === 'translate-settings') {
+    showReplyPanel.value = false;
+    showTranslationPanel.value = !showTranslationPanel.value;
+  } else if (command === 'ai-reply') {
+    showTranslationPanel.value = false;
+    showReplyPanel.value = !showReplyPanel.value;
+  } else if (command === 'need-summary') {
+    handleAISummarize();
+  }
+}
+
+// ── Emoji Picker (placeholder) ──
+function toggleEmojiPicker() {
+  // Simple: insert a common emoji into input
+  // Can be replaced with a full emoji picker component later
+  inputText.value += '😊';
+  nextTick(() => inputRef.value?.focus());
+}
+
+// ── AI feature handlers ──
 function toggleTranslationPanel() {
   showReplyPanel.value = false;
   showTranslationPanel.value = !showTranslationPanel.value;
@@ -496,6 +1036,30 @@ async function handleAISummarize() {
   color: var(--text-secondary);
 }
 
+/* Select Action Bar */
+.select-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #1a3a4a;
+  border-bottom: 1px solid var(--border-color);
+  animation: fadeIn 0.2s ease;
+}
+.select-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.select-count {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.select-bar-right {
+  display: flex;
+  gap: 8px;
+}
+
 /* Messages */
 .messages-area {
   flex: 1;
@@ -520,11 +1084,99 @@ async function handleAISummarize() {
   justify-content: flex-end;
 }
 
-.message-bubble {
+.message-bubble-wrapper {
+  position: relative;
   max-width: 65%;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.from-me .message-bubble-wrapper {
+  flex-direction: row-reverse;
+}
+
+/* Quick Reactions Bar */
+.quick-reactions-bar {
+  position: absolute;
+  top: -28px;
+  display: flex;
+  gap: 2px;
+  background: #2a2a2a;
+  border-radius: 16px;
+  padding: 2px 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 5;
+  animation: fadeIn 0.15s ease;
+}
+.quick-reactions-bar.from-me {
+  right: 0;
+}
+.quick-reactions-bar:not(.from-me) {
+  left: 0;
+}
+.quick-reaction-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 3px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  line-height: 1;
+}
+.quick-reaction-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* Reply Quote in bubble */
+.reply-quote {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.reply-quote-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.reply-quote-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.reply-quote-name {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.reply-quote-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Checkbox in select mode */
+.msg-checkbox {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.message-bubble {
   padding: 8px 12px;
   border-radius: 8px;
   position: relative;
+  min-width: 80px;
 }
 
 .message-bubble.incoming {
@@ -537,6 +1189,78 @@ async function handleAISummarize() {
   border-top-right-radius: 0;
 }
 
+/* Reactions on message */
+.msg-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.msg-reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Media in message */
+.msg-media {
+  margin-bottom: 4px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.msg-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: block;
+}
+.msg-video {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+}
+.msg-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+.msg-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.msg-file-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-file-size {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.msg-audio {
+  margin-bottom: 4px;
+}
+.msg-audio-player {
+  width: 100%;
+  max-width: 280px;
+  height: 36px;
+  border-radius: 8px;
+}
+
 .message-content {
   color: var(--text-primary);
   font-size: 14px;
@@ -546,6 +1270,12 @@ async function handleAISummarize() {
 
 .msg-text {
   white-space: pre-wrap;
+}
+
+.msg-edited {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
 }
 
 .msg-translation {
@@ -623,6 +1353,89 @@ async function handleAISummarize() {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Context Menu */
+.context-menu-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 9999;
+  background: transparent;
+}
+.context-menu {
+  position: fixed;
+  background: #2a2a2a;
+  border: 1px solid #3d3d3d;
+  border-radius: 10px;
+  padding: 4px 0;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  animation: fadeIn 0.15s ease;
+  z-index: 10000;
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 16px;
+  border: none;
+  background: none;
+  color: #e0e0e0;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.ctx-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+.ctx-item svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.ctx-item-danger {
+  color: #ef4444;
+}
+.ctx-item-danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* Image Preview Overlay */
+.image-preview-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.image-preview-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.image-preview-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-preview-close:hover {
+  background: rgba(255,255,255,0.25);
+}
+
 /* Input Area */
 .input-area {
   background: var(--chat-header-bg);
@@ -632,14 +1445,138 @@ async function handleAISummarize() {
   flex-shrink: 0;
 }
 
+/* Reply Bar */
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+.reply-bar-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.reply-bar-name {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.reply-bar-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reply-bar-close {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.reply-bar-close:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+/* Edit Bar */
+.edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: rgba(64, 158, 255, 0.08);
+  border-radius: 8px;
+  border-left: 3px solid #409eff;
+}
+.edit-bar-info {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #409eff;
+}
+.edit-bar-close {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.edit-bar-close:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+/* Recording Bar */
+.recording-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  margin-top: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 13px;
+  animation: fadeIn 0.2s ease;
+}
+.recording-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.recording-cancel {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.recording-cancel:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.06);
+}
+
+/* Compact Input Container */
 .input-container {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 4px;
   padding: 4px 0;
 }
 
-.attach-btn {
+.input-icon-btn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -654,9 +1591,59 @@ async function handleAISummarize() {
   transition: all 0.2s;
 }
 
-.attach-btn:hover {
+.input-icon-btn:hover {
   background: var(--bg-hover);
   color: var(--text-secondary);
+}
+
+.input-icon-btn.attach-open {
+  color: var(--accent);
+}
+
+.input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-wrapper :deep(.el-textarea__inner) {
+  background: var(--input-bg);
+  border: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  min-height: 40px !important;
+  max-height: 120px;
+}
+
+.input-wrapper :deep(.el-textarea__inner::placeholder) {
+  color: var(--text-muted);
+}
+
+.mic-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.mic-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.mic-btn.recording {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  animation: pulse 1.2s infinite;
 }
 
 .send-btn {
@@ -675,67 +1662,6 @@ async function handleAISummarize() {
 }
 
 .send-btn:hover {
-  background: var(--accent-hover);
-}
-
-.input-toolbar {
-  display: flex;
-  gap: 2px;
-  margin-bottom: 6px;
-}
-
-.input-toolbar :deep(.el-button) {
-  color: var(--text-muted);
-}
-
-.input-toolbar :deep(.el-button:hover) {
-  color: var(--text-secondary);
-}
-
-.input-wrapper {
-  flex: 1;
-  min-width: 0;
-}
-
-.input-wrapper :deep(.el-textarea__inner) {
-  background: var(--input-bg);
-  border: none;
-  color: var(--text-primary);
-  font-size: 14px;
-  padding: 8px 12px;
-  border-radius: 20px;
-  min-height: 36px !important;
-}
-
-.input-wrapper :deep(.el-textarea__inner::placeholder) {
-  color: var(--text-muted);
-}
-
-.input-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.input-actions :deep(.el-button--small) {
-  width: 32px;
-  height: 32px;
-}
-
-.input-actions :deep(.el-button--default) {
-  background: rgba(255, 255, 255, 0.06);
-  border: none;
-  color: var(--text-muted);
-}
-
-.input-actions :deep(.el-button--primary) {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.input-actions :deep(.el-button--primary:hover) {
   background: var(--accent-hover);
 }
 
@@ -778,16 +1704,17 @@ async function handleAISummarize() {
     flex-direction: column;
   }
 
-  .messages-container {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
+  .messages-area {
+    padding: 8px 8px;
+  }
+
+  .message-bubble-wrapper {
+    max-width: 85%;
   }
 
   .input-area {
-    flex-shrink: 0;
-    max-height: 50vh;
-    overflow-y: auto;
+    padding: 6px 8px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px) + 50px);
   }
 
   .chat-header {
@@ -800,43 +1727,27 @@ async function handleAISummarize() {
     font-size: 11px;
   }
 
-  .messages-container {
-    padding: 8px;
-  }
-
-  .message-wrapper {
-    max-width: 85%;
-  }
-
-  .message-bubble {
-    font-size: 14px;
-    padding: 6px 10px;
-    border-radius: 8px;
-  }
-
-  .message-translation {
-    font-size: 12px;
-  }
-
-  .input-area {
-    padding: 6px 8px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px) + 50px);
-    position: relative;
-  }
-
-  .input-actions :deep(.el-button--small) {
-    width: 36px;
-    height: 36px;
-  }
-
-  .message-input :deep(.el-textarea__inner) {
+  .input-wrapper :deep(.el-textarea__inner) {
     font-size: 16px;
-    min-height: 36px;
+    min-height: 40px !important;
+  }
+
+  .input-icon-btn, .mic-btn, .send-btn {
+    width: 38px;
+    height: 38px;
   }
 
   .translation-preview {
     bottom: 70px;
     max-width: 90%;
+  }
+
+  .quick-reactions-bar {
+    top: -24px;
+  }
+  .quick-reaction-btn {
+    font-size: 14px;
+    padding: 1px 2px;
   }
 }
 
@@ -845,7 +1756,7 @@ async function handleAISummarize() {
   background: #2d2d2d;
   border-radius: 12px;
   overflow: hidden;
-  margin: 8px 12px;
+  margin: 8px 0;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
   animation: slideDown 0.2s ease;
 }
@@ -942,18 +1853,6 @@ async function handleAISummarize() {
   color: #666;
 }
 
-.language-selector {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.translation-desc {
-  font-size: 12px;
-  color: #888;
-  margin-top: 4px;
-}
-
 .style-selector {
   display: flex;
   gap: 8px;
@@ -980,11 +1879,6 @@ async function handleAISummarize() {
 .style-btn:hover:not(.active) {
   background: #4d4d4d;
   color: #fff;
-}
-
-.source-lang.active {
-  background: #409eff;
-  color: white;
 }
 
 .panel-row {

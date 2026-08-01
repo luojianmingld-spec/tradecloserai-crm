@@ -104,6 +104,16 @@ export function initSocket() {
     chatStore.handleReceipt(data);
   });
 
+  // Background check completed event
+  socket.on('customer:bgcheck:done', (data) => {
+    window.dispatchEvent(new CustomEvent('customer:bgcheck:done', { detail: data }));
+  });
+
+  // BANT score completed event
+  socket.on('customer:bantscore:done', (data) => {
+    window.dispatchEvent(new CustomEvent('customer:bantscore:done', { detail: data }));
+  });
+
   socket.on('whatsapp:presence', (data) => {
     // Handle typing indicators etc.
   });

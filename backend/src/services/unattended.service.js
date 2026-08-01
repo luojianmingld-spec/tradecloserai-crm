@@ -4,6 +4,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { chatComplete } from './ai-client.js';
+import { translateText, detectLanguage } from './ai.service.js';
 import { getEvolutionConnector } from './evolution-connector.js';
 
 const prisma = new PrismaClient();
@@ -80,7 +81,7 @@ async function generateAutoReply(customerName, customerMessage, customer) {
   const config = await getConfig();
 
   if (config.strategy === 'simple') {
-    return 'Thank you for your message! I am currently offline and will reply to you during business hours. Have a great day!';
+    return '感谢您的留言！我们目前不在工作时间，会在上班时间尽快回复您。祝您有美好的一天！';
   }
 
   if (config.strategy === 'custom' && config.customTemplate) {
@@ -109,9 +110,9 @@ Requirements:
 - Keep it professional, friendly, and brief (2-3 sentences max)
 - If they asked a specific question, indicate you'll provide details during business hours
 - Do NOT make up product details, prices, or commitments
-- Language: Match the customer's likely language (use English if uncertain)
+- Language: ALWAYS reply in Chinese (简体中文). Do NOT use English or any other language.
 
-Return ONLY the reply message, no explanations.`;
+Return ONLY the reply message in Chinese, no explanations.`;
 
   try {
     const reply = await chatComplete([
@@ -121,7 +122,7 @@ Return ONLY the reply message, no explanations.`;
     return reply.trim();
   } catch (e) {
     console.error('[Unattended] AI generation failed:', e.message);
-    return 'Thank you for your message! I will get back to you during business hours.';
+    return '感谢您的留言！我会在上班时间回复您。';
   }
 }
 
@@ -138,13 +139,36 @@ async function handleUnattendedReply({ remoteJid, body, pushName, customer }) {
 
   console.log(`[Unattended] Auto-replying to ${remoteJid} (message: "${body?.slice(0, 30)}...")`);
 
-  const reply = await generateAutoReply(pushName, body, customer);
+  const zhReply = await generateAutoReply(pushName, body, customer);
+
+  // 检测客户语言并翻译成目标语言
+  let sendText = zhReply;
+  let translationObj = null;
+  try {
+    const srcLang = await detectLanguage(body || '', 'google');
+    const tgtLang = srcLang && srcLang !== 'zh' && srcLang !== 'unknown' ? srcLang : null;
+    if (tgtLang) {
+      const tr = await translateText(zhReply, 'zh', tgtLang, 'google', USER_ID);
+      if (tr && tr.translated) {
+        sendText = tr.translated;
+        translationObj = JSON.stringify({
+          original: zhReply,
+          translated: sendText,
+          sourceLang: 'zh',
+          targetLang: tgtLang,
+        });
+        console.log(`[Unattended] zh->${tgtLang}: "${zhReply.slice(0,30)}" => "${sendText.slice(0,30)}"`);
+      }
+    }
+  } catch (te) {
+    console.warn('[Unattended] Translation failed, sending Chinese reply:', te.message);
+  }
 
   try {
     const evoConnector = getEvolutionConnector();
 
     // sendTextMessage内部会自动处理LID映射
-    const result = await evoConnector.sendTextMessage(remoteJid, reply);
+    const result = await evoConnector.sendTextMessage(remoteJid, sendText);
 
     // 记录自动回复到数据库
     const ownerJid = '8613016242602@s.whatsapp.net';
@@ -156,17 +180,19 @@ async function handleUnattendedReply({ remoteJid, body, pushName, customer }) {
           sessionId: DEFAULT_SESSION_ID,
           from: ownerJid,
           to: remoteJid,
-          body: reply,
+          body: sendText,
           type: 'text',
           direction: 'outbound',
           timestamp: new Date(),
           waMessageId,
+          translation: translationObj,
+          sourceLang: translationObj ? 'zh' : null,
         },
       });
     }
 
     console.log(`[Unattended] ✅ Sent auto-reply to ${remoteJid}, msgId=${waMessageId}`);
-    return { sent: true, reply, messageId: waMessageId };
+    return { sent: true, reply: sendText, messageId: waMessageId };
 
   } catch (e) {
     console.error('[Unattended] ❌ Failed to send auto-reply:', e.message);

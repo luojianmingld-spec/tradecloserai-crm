@@ -208,7 +208,7 @@ router.post('/send', async (req, res) => {
           body: outgoingText,
           content: outgoingText,
           direction: 'outbound',
-          translation: translatedMeta,
+          translation: translatedMeta?.original || null,
           fromMe: true,
           messageType: 'text',
           timestamp: saved?.timestamp || new Date(),
@@ -293,11 +293,14 @@ router.get('/messages', async (req, res) => {
     if (!jid) return res.status(400).json({ error: 'jid is required' });
 
     const platform = jid.endsWith('@telegram') ? 'telegram' : 'whatsapp';
-    const tgAccounts = await prisma.whatsAppAccount.findMany({
-      where: { userId: req.userId, platform: 'telegram', status: 'connected' },
-      select: { telegramBotUsername: true, id: true },
-    });
-    const sessionIds = [`user_${req.userId}`, ...tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`)];
+    let sessionIds = [`user_${req.userId}`];
+    if (platform === 'telegram') {
+      const tgAccounts = await prisma.whatsAppAccount.findMany({
+        where: { userId: req.userId, platform: 'telegram', status: 'connected' },
+        select: { telegramBotUsername: true, id: true },
+      });
+      sessionIds.push(...tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`));
+    }
     const where = { sessionId: { in: sessionIds }, OR: [{ from: jid }, { to: jid }] };
     if (before) where.timestamp = { lt: new Date(before) };
 
@@ -320,6 +323,13 @@ async function ensureConversation(accountId, jid, platform = "whatsapp") {
     if (!_ph || _ph === '0') return null;
     if (platform === "whatsapp" && (_ph.length < 5 || !/^[0-9]+$/.test(_ph))) return null;
     if (platform === "telegram" && !/^[0-9]+$/.test(_ph)) return null;
+    // 检查是否已删除（防止webhook重建）- 用前缀匹配覆盖所有jid格式
+    const _checkPhone = jid.split('@')[0];
+    const deleted = await prisma.$queryRawUnsafe(
+      "SELECT 1 FROM \"DeletedContact\" WHERE \"accountId\" = ? AND (\"jid\" = ? OR \"jid\" LIKE ? OR \"jid\" LIKE ?)",
+      accountId, jid, _checkPhone + '@%', _checkPhone + '@lid'
+    ).catch(()=>[]);
+    if (deleted.length > 0) return null;
     const cwhere = { accountId_platform_jid: { accountId, platform, jid } };
     let contact = await prisma.contact.findUnique({ where: cwhere });
     if (!contact) {
@@ -365,7 +375,7 @@ router.get('/conversations', async (req, res) => {
     const reqPlatform = (req.query.platform || '').toString(); // 'whatsapp' | 'telegram' | ''(全部)
 
     // 聚合活跃账号sessionId（按platform过滤）
-    const waSessionIds = [`user_${req.userId}`];
+    const waSessionIds = [`user_${req.userId}`, 'user_2']; // user_1=Main, user_2=Eric
     const tgAccounts = await prisma.whatsAppAccount.findMany({
       where: { userId: req.userId, platform: 'telegram', status: 'connected' },
       select: { id: true, telegramBotUsername: true },
@@ -413,10 +423,49 @@ router.get('/conversations', async (req, res) => {
           select: { id: true, phone: true, jid: true, name: true },
         })
       : [];
+    // 批量查询 Contact 表获取 pushName（WAMessage 没有 pushName 字段）
+    // 也包含 @lid 解析后的 phone JID
+    const allQueryJids = new Set([...contactMap.keys()]);
+    for (const jid of contactMap.keys()) {
+      if (!jid.endsWith('@telegram')) {
+        const rj = resolveToPhoneJid(jid);
+        if (rj !== jid) allQueryJids.add(rj);
+      }
+    }
+    const contactRecords = allQueryJids.size
+      ? await prisma.contact.findMany({
+          where: { jid: { in: [...allQueryJids] } },
+          select: { jid: true, pushName: true, phone: true },
+        })
+      : [];
+    const pushNameMap = new Map();
+    const contactPhoneMap = new Map();
+    for (const cr of contactRecords) {
+      if (cr.jid && cr.pushName) pushNameMap.set(cr.jid, cr.pushName);
+      if (cr.jid && cr.phone) contactPhoneMap.set(cr.jid, cr.phone);
+    }
+
+    // 构建 Customer 映射：同 phone 有多条时，优先保留有真名的记录
+    const isRealName = (n) => {
+      if (!n) return false;
+      const cleaned = n.replace(/[+\s\-()]/g, '');
+      return !(cleaned.length >= 7 && /^\d+$/.test(cleaned));
+    };
     const custMap = new Map();
+    const custJidMap = new Map();
     for (const c of customers) {
-      if (c.phone) custMap.set(c.phone, c);
-      if (c.jid) custMap.set(c.jid, c);
+      if (c.phone) {
+        const existing = custMap.get(c.phone);
+        if (!existing || (isRealName(c.name) && !isRealName(existing.name))) {
+          custMap.set(c.phone, c);
+        }
+      }
+      if (c.jid) {
+        const existing = custJidMap.get(c.jid);
+        if (!existing || (isRealName(c.name) && !isRealName(existing.name))) {
+          custJidMap.set(c.jid, c);
+        }
+      }
     }
 
     // 批量获取所有jid对应的Conversation记录（全平台）
@@ -433,7 +482,9 @@ router.get('/conversations', async (req, res) => {
       if (!convMap.has(jid)) {
         const platform = jid.endsWith('@telegram') ? 'telegram' : 'whatsapp';
         const acc = platform === 'telegram' ? (tgAccounts[0]?.id || defaultAccountId) : defaultAccountId;
-        const c = await ensureConversation(acc, jid, platform);
+        // 用 resolved phone JID 创建 Conversation，保持一致性
+        const createJid = platform === 'telegram' ? jid : resolveToPhoneJid(jid);
+        const c = await ensureConversation(acc, createJid, platform);
         if (c) convMap.set(jid, c);
       }
     }
@@ -446,9 +497,16 @@ router.get('/conversations', async (req, res) => {
       if (!phone || phone === '0') continue;
       if (platform === 'whatsapp' && (phone.length < 5 || !/^\d+$/.test(phone))) continue;
       if (platform === 'telegram' && !/^\d+$/.test(phone)) continue;
-      const cust = custMap.get(phone);
-      const name = cust?.name || phone;
-      const conv = convMap.get(jid) || { pinned: false, starred: false, blocked: false };
+      // 解析 @lid -> phone JID，用于匹配 Customer 记录
+      const rJid = platform === 'telegram' ? jid : resolveToPhoneJid(jid);
+      const resolvedPhone = rJid.split('@')[0];
+      // 先用 resolved phone 查 Customer，回退到原始 phone、jid
+      const cust = custMap.get(resolvedPhone) || custMap.get(phone) || custJidMap.get(jid) || custJidMap.get(rJid) || custMap.get(jid) || custMap.get(rJid);
+      // 名称链：Customer真名 > Contact.pushName > 手机号
+      const rawName = cust?.name || '';
+      const contactPushName = pushNameMap.get(jid) || pushNameMap.get(rJid) || '';
+      const name = isRealName(rawName) ? rawName : (contactPushName && isRealName(contactPushName) ? contactPushName : phone);
+      const conv = convMap.get(jid) || convMap.get(rJid) || { pinned: false, starred: false, blocked: false };
 
       // 默认过滤blocked
       if (conv.blocked && !showBlocked) continue;
@@ -459,15 +517,13 @@ router.get('/conversations', async (req, res) => {
 
       if (search && !name.includes(search) && !phone.includes(search) && !(entry.lastMsg.body || '').includes(search)) continue;
 
-      const rJid = platform === 'telegram' ? jid : resolveToPhoneJid(jid);
       const displayName = platform === 'telegram'
-        ? (cust?.name || contactMap.get(jid)?.lastMsg?.pushName || `TG:${phone}`)
-        : (cust?.name || phone);
+        ? (isRealName(cust?.name) ? cust.name : (contactPushName && isRealName(contactPushName) ? contactPushName : `TG:${phone}`))
+        : name;
       const convPlatform = (entry.platform === 'telegram') ? 'telegram' : 'whatsapp';
-      if (!jid.includes('@s.whatsapp') && !jid.includes('@telegram')) console.log('[PLAT-DEBUG] weird jid:', jid, 'entry.platform=', entry.platform, 'convPlatform=', convPlatform);
-      if (Math.random() < 0.5) console.log('[PLAT-DEBUG]', jid, 'convPlatform=', convPlatform, 'keys in obj will include platform:', 'platform' in {platform: convPlatform});
+      const contactPhone = contactPhoneMap.get(jid) || contactPhoneMap.get(rJid) || '';
       conversations.push({
-        jid: rJid, phone, name: displayName,
+        jid: rJid, phone, name: displayName, contactPhone,
         lastMessage: entry.lastMsg.body,
         lastMessageTime: entry.lastMsg.timestamp,
         direction: entry.lastMsg.direction,
@@ -479,13 +535,24 @@ router.get('/conversations', async (req, res) => {
       });
     }
 
+    // 去重：同一个 resolvedJid 可能有多条(如 @lid 和 @s.whatsapp.net 同时存在)
+    // 保留最新消息的那条
+    const deduped = new Map();
+    for (const conv of conversations) {
+      const key = conv.jid; // jid 已经是 resolved 后的 rJid
+      if (!deduped.has(key) || new Date(conv.lastMessageTime) > new Date(deduped.get(key).lastMessageTime)) {
+        deduped.set(key, conv);
+      }
+    }
+    const uniqueConversations = [...deduped.values()];
+
     // 排序：pinned优先，其次按lastMessageTime降序
-    conversations.sort((a, b) => {
+    uniqueConversations.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
     });
 
-    res.json(conversations);
+    res.json(uniqueConversations);
   } catch (err) {
     console.error('[WA Conversations Error]', err.message);
     res.status(500).json({ error: err.message });
@@ -563,15 +630,20 @@ router.post('/conversations/:jid/block', async (req, res) => {
   }
 });
 
-/** DELETE /api/whatsapp/conversations/:jid  删除聊天（清WAMessage，不删Conversation/Customer） */
+/** DELETE /api/whatsapp/conversations/:jid  删除聊天
+ *  默认：清unread，保留会话和客户数据
+ *  ?force=true：彻底删除联系人+客户+消息+会话（WA和TG通用） */
 router.delete('/conversations/:jid', async (req, res) => {
   try {
     const jid = decodeURIComponent(req.params.jid);
-    const resolvedJid = resolveToPhoneJid(jid);
+    const force = req.query.force === 'true';
+    // 从jid提取phone（兼容WA和TG格式）
+    const rawPhone = jid.split('@')[0].replace(/[^0-9]/g, '');
+    const resolvedJid = jid.includes('@lid') ? resolveToPhoneJid(jid) : jid;
     const phone = resolvedJid.split('@')[0];
-    // 无效jid（如0@s.whatsapp.net）直接彻底删除
     const isInvalidJid = !phone || phone === '0' || phone.length < 5 || !/^\d+$/.test(phone);
-    // 删该会话所有消息（兜底startsWith匹配@lid和s.whatsapp.net）
+
+    // 删该会话所有消息
     const result = await prisma.wAMessage.deleteMany({
       where: {
         OR: [
@@ -582,12 +654,70 @@ router.delete('/conversations/:jid', async (req, res) => {
         ],
       },
     });
+
     const accountId = 1;
-    if (isInvalidJid) {
-      // 无效jid：彻底删Conversation/Contact/Customer
+
+    if (force) {
+      // force模式：彻底删除联系人+客户+会话+消息（WA和TG通用）
+      // 同时用原始jid和resolvedJid的phone匹配，覆盖lid映射场景
+      const rawPhone = jid.split('@')[0].replace(/[^0-9]/g, '');
+      const resolvedPhone = phone;
+      const phonePatterns = [...new Set([rawPhone, resolvedPhone].filter(p => p && p.length >= 5))];
+      console.log('[Delete Conv] force=true, jid=' + jid + ', rawPhone=' + rawPhone + ', resolvedPhone=' + resolvedPhone);
+      // 记录已删除的jid，防止webhook重建（存储完整格式）
+      for (const p of phonePatterns) {
+        // 存储完整phone JID（如 8613016242602@s.whatsapp.net）
+        await prisma.$executeRawUnsafe(
+          "INSERT OR IGNORE INTO \"DeletedContact\" (\"accountId\", \"jid\") VALUES (?, ?)",
+          accountId, p + '@s.whatsapp.net'
+        ).catch(()=>{});
+        // 也存储不完整格式（兜底）
+        await prisma.$executeRawUnsafe(
+          "INSERT OR IGNORE INTO \"DeletedContact\" (\"accountId\", \"jid\") VALUES (?, ?)",
+          accountId, p + '@'
+        ).catch(()=>{});
+      }
+      // 记录原始jid（如 182927472218210@lid）
+      await prisma.$executeRawUnsafe(
+        "INSERT OR IGNORE INTO \"DeletedContact\" (\"accountId\", \"jid\") VALUES (?, ?)",
+        accountId, jid
+      ).catch(()=>{});
+      // 记录resolvedJid（如 8613016242602@s.whatsapp.net）
+      if (resolvedJid !== jid) {
+        await prisma.$executeRawUnsafe(
+          "INSERT OR IGNORE INTO \"DeletedContact\" (\"accountId\", \"jid\") VALUES (?, ?)",
+          accountId, resolvedJid
+        ).catch(()=>{});
+      }
+      // 删除所有platform的Conversation（按phone前缀匹配，覆盖WA+TG+lid）
+      await prisma.conversation.deleteMany({ where: { accountId, OR: phonePatterns.map(p => ({ jid: { contains: p + '@' } })) } }).catch(()=>{});
+      // 删除Contact（同时匹配原始jid和resolvedJid）
+      await prisma.contact.deleteMany({ where: { accountId, OR: phonePatterns.map(p => ({ jid: { contains: p + '@' } })) } }).catch(()=>{});
+      // 删除Customer（按phone或jid匹配）
+      await prisma.customer.deleteMany({ where: { OR: [{ phone: rawPhone }, { phone: phone }, { jid: { contains: phone + '@' } }] } }).catch(()=>{});
+      // 清理CustomerFollowUp等关联数据
+      const deletedCustomers = await prisma.customer.findMany({ where: { OR: [{ phone: rawPhone }, { phone: phone }] }, select: { id: true } }).catch(()=>[]);
+      if (deletedCustomers.length > 0) {
+        const cids = deletedCustomers.map(c => c.id);
+        await prisma.customerFollowUp.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customerAttitude.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customerBantScore.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customerBackgroundCheck.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.document.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.automationCustomer.deleteMany({ where: { customerId: { in: cids } } }).catch(()=>{});
+        await prisma.customer.deleteMany({ where: { id: { in: cids } } }).catch(()=>{});
+      }
+      res.json({ success: true, jid, deletedCount: result.count, force: true });
+    } else if (isInvalidJid) {
+      // 无效jid：彻底删Conversation/Contact/Customer，并记录防止重建
+      await prisma.$executeRawUnsafe(
+        "INSERT OR IGNORE INTO "DeletedContact" ("accountId", "jid") VALUES (?, ?)",
+        accountId, jid
+      ).catch(()=>{});
       await prisma.conversation.deleteMany({ where: { accountId, jid: { startsWith: phone + '@' } } }).catch(()=>{});
       await prisma.contact.deleteMany({ where: { jid: { startsWith: phone + '@' } } }).catch(()=>{});
       await prisma.customer.deleteMany({ where: { phone } }).catch(()=>{});
+      res.json({ success: true, jid: resolvedJid, deletedCount: result.count });
     } else {
       // 正常客户：只清unread和最后消息，保留会话记录
       const conv = await prisma.conversation.findUnique({
@@ -599,8 +729,8 @@ router.delete('/conversations/:jid', async (req, res) => {
           data: { unreadCount: 0, lastMessage: null, lastMessageAt: null, updatedAt: new Date() },
         });
       }
+      res.json({ success: true, jid: resolvedJid, deletedCount: result.count });
     }
-    res.json({ success: true, jid: resolvedJid, deletedCount: result.count });
   } catch (err) {
     console.error('[WA Delete Conv Error]', err.message);
     res.status(500).json({ error: err.message });

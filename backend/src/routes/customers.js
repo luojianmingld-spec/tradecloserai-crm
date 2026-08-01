@@ -8,6 +8,7 @@
  */
 
 import { Router } from 'express';
+import { autoBantScore } from './bant-score.js';
 import { PrismaClient } from '@prisma/client';
 import { chatComplete, resolveModelId } from '../services/ai.service.js';
 import { chatCompleteLite } from '../services/ai-client.js';
@@ -18,6 +19,7 @@ import { fileURLToPath } from 'url';
 import https from "https";
 import http from "http";
 import { getEvolutionConnector } from "../services/evolution-connector.js";
+import { runFullBackgroundCheck } from "./background-check.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../../data');
@@ -88,11 +90,17 @@ function normalizeJid(jid) {
   const variants = new Set([clean]);
   if (clean.includes('@s.whatsapp.net')) {
     variants.add(clean.replace('@s.whatsapp.net', '@c.us'));
+    variants.add(clean.replace('@s.whatsapp.net', '@lid'));
   } else if (clean.includes('@c.us')) {
     variants.add(clean.replace('@c.us', '@s.whatsapp.net'));
+    variants.add(clean.replace('@c.us', '@lid'));
+  } else if (clean.includes('@lid')) {
+    variants.add(clean.replace('@lid', '@s.whatsapp.net'));
+    variants.add(clean.replace('@lid', '@c.us'));
   } else if (!clean.includes('@')) {
     variants.add(clean + '@s.whatsapp.net');
     variants.add(clean + '@c.us');
+    variants.add(clean + '@lid');
   }
   return [...variants];
 }
@@ -380,25 +388,23 @@ router.get('/', async (req, res) => {
     const userId = req.userId;
     const { level, status: statusQ, source, country, search, page, pageSize, sort, order } = req.query;
     // 排除自己的WA号（不把自己当客户）
-    const selfExclude = [];
-    try {
-      const evo = getEvolutionConnector();
-      const selfJid = await evo.getOwnerJid?.();
-      if (selfJid) {
-        selfExclude.push({ jid: selfJid });
-        // jid 可能以 @s.whatsapp.net 或 @c.us 结尾，两种都尝试
-        const otherDomain = selfJid.includes('@s.whatsapp.net')
-          ? selfJid.replace('@s.whatsapp.net', '@c.us')
-          : selfJid.replace('@c.us', '@s.whatsapp.net');
-        selfExclude.push({ jid: otherDomain });
-        // 也排除 phone 字段是自己号码的情况
-        const phoneNum = selfJid.split('@')[0];
-        if (phoneNum) selfExclude.push({ phone: phoneNum }, { phone: '+' + phoneNum }, { phone: phoneNum.replace(/^86/, '') });
-      }
-      selfExclude.push({ source: 'self' });
-    } catch (e) { /* 不阻塞列表加载 */ }
     const where = { userId };
-    if (selfExclude.length) where.NOT = selfExclude;
+    // Self-exclusion using notIn (avoids Prisma NOT+NULL bug)
+    // 异步获取selfJid，带超时，不阻塞主查询
+    let selfJid = null;
+    try {
+      selfJid = await Promise.race([
+        (async () => getEvolutionConnector().getOwnerJid?.())(),
+        new Promise(r => setTimeout(() => r(null), 3000)),
+      ]);
+    } catch (e) { /* 不阻塞 */ }
+    if (selfJid) {
+      const otherDomain = selfJid.includes("@s.whatsapp.net")
+        ? selfJid.replace("@s.whatsapp.net", "@c.us")
+        : selfJid.replace("@c.us", "@s.whatsapp.net");
+      where.jid = { notIn: [selfJid, otherDomain] };
+    }
+    where.source = { not: "self" };
     if (level && ['A', 'B', 'C', 'D'].includes(level.toUpperCase())) where.customerLevel = level.toUpperCase();
     if (statusQ) where.status = statusQ;
     if (source) where.source = source;
@@ -435,30 +441,29 @@ router.get('/', async (req, res) => {
     // Enrich with last message preview / pending doc / follow-up counts
     const jidSet = [...new Set(customers.map(c=>c.jid).filter(Boolean))];
     const lastMsgMap = new Map();
-    // For performance: one query per 20 jids batched via findFirst in Promise.all (limited concurrency)
-    async function fetchLastForJid(jid) {
+    // Batch query: fetch last messages for ALL jids in one query using groupBy
+    if (jidSet.length > 0 && jidSet.length <= 200) {
       try {
-        return await prisma.wAMessage.findFirst({
-          where: { OR: [{ from: jid }, { to: jid }] },
+        // Get recent messages for all jids in one query
+        const recentMsgs = await prisma.wAMessage.findMany({
+          where: {
+            OR: [
+              { from: { in: jidSet } },
+              { to: { in: jidSet } },
+            ],
+          },
           orderBy: { timestamp: 'desc' },
-          select: { body: true, timestamp: true, direction: true },
+          select: { from: true, to: true, body: true, timestamp: true, direction: true },
+          take: jidSet.length * 3, // get a few per jid, pick latest below
         });
-      } catch { return null; }
-    }
-    // batch to avoid N+1 blowup but still simple; cap if more than 80 customers we skip
-    if (jidSet.length && jidSet.length <= 120) {
-      const concurrency = 8;
-      const results = [];
-      let idx = 0;
-      async function worker() {
-        while (true) {
-          const cur = idx++;
-          if (cur >= jidSet.length) return;
-          const r = await fetchLastForJid(jidSet[cur]);
-          if (r) lastMsgMap.set(jidSet[cur], r);
+        // For each jid, find the latest message
+        for (const jid of jidSet) {
+          const match = recentMsgs.find(m => m.from === jid || m.to === jid);
+          if (match) lastMsgMap.set(jid, match);
         }
+      } catch(e) {
+        console.error('[Customers] lastMsg batch error:', e.message);
       }
-      await Promise.all(Array.from({length: concurrency}, () => worker()));
     }
 
     // Pending doc counts (per customer)
@@ -1266,7 +1271,8 @@ async function performWebSearch(customer) {
 
   const allResults = [];
   let failedQueryCount = 0;
-  for (const q of queries) {
+  for (let i = 0; i < queries.length; i++) {
+    const q = queries[i];
     try {
       const rs = await duckSearch(q, 10000);
       if (rs.length) {
@@ -1276,9 +1282,59 @@ async function performWebSearch(customer) {
       failedQueryCount++;
       console.warn('[bg-check] search failed for:', q, e.message);
     }
+    // Add random delay between searches to avoid DDG rate limiting (3-5 seconds)
+    if (i < queries.length - 1) {
+      const delay = 3000 + Math.random() * 2000;
+      await new Promise(r => setTimeout(r, delay));
+    }
   }
   return { allResults, failedQueryCount, totalQueries: queries.length };
 }
+
+
+// === GET /by-jid/:jid/bg-check — 获取背调状态 ===
+router.get('/by-jid/:jid/bg-check', async (req, res) => {
+  try {
+    const jid = decodeJid(req.params.jid);
+    const userId = req.userId;
+    const customer = await findCustomerByJid(prisma, userId, jid);
+    if (!customer) {
+      return res.json({ hasReport: false });
+    }
+    let bgCheck = null;
+    try {
+      bgCheck = await prisma.customerBackgroundCheck.findUnique({ where: { contactId: customer.id } });
+    } catch (e) { /* table may not exist yet */ }
+
+    if (!customer.bgReport && !bgCheck) {
+      return res.json({ hasReport: false });
+    }
+
+    const result = {
+      hasReport: true,
+      rating: bgCheck?.riskLevel || null,
+      summary: bgCheck?.notes || customer.bgReport || '',
+      updatedAt: (bgCheck?.updatedAt || customer.bgUpdatedAt)?.toISOString?.() || null,
+      dimensions: [],
+      sources: [],
+      companyName: bgCheck?.companyName || customer.companyName || null,
+      country: bgCheck?.country || customer.country || null,
+      industry: bgCheck?.industry || customer.industry || null,
+      companySize: bgCheck?.companySize || null,
+    };
+    if (bgCheck?.details) {
+      try {
+        const parsed = JSON.parse(bgCheck.details);
+        if (Array.isArray(parsed.dimensions)) result.dimensions = parsed.dimensions;
+        if (Array.isArray(parsed.sources)) result.sources = parsed.sources;
+      } catch {}
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('[bg-check GET] error:', err);
+    res.status(500).json({ error: 'Failed to get bg check status' });
+  }
+});
 
 router.post('/by-jid/:jid/bg-check', async (req, res) => {
   try {
@@ -1447,29 +1503,31 @@ ${searchText}
     const now = new Date();
     try {
       if (isNew) {
-        // 创建新customer记录
-        await prisma.customer.create({
+        const created = await prisma.customer.create({
           data: {
-            userId,
-            jid,
-            name: customer.contactName || '',
-            companyName: customer.companyName,
-            contactName: customer.contactName,
-            country: country,
-            phone: phone,
-            email: customer.email,
-            website: customer.website,
-            source: customer.source || 'whatsapp',
-            customerLevel: 'C',
-            bgReport: report,
-            bgUpdatedAt: now,
+            userId, jid, name: customer.contactName || '',
+            companyName: customer.companyName, contactName: customer.contactName,
+            country: country, phone: phone, email: customer.email,
+            website: customer.website, source: customer.source || 'whatsapp',
+            customerLevel: 'C', bgReport: report, bgUpdatedAt: now,
           },
         });
+        try {
+          await prisma.customerBackgroundCheck.upsert({
+            where: { contactId: created.id },
+            update: { companyName: customer.companyName || null, country: country || null, industry: customer.industry || null, details: JSON.stringify({ textReport: report }), riskLevel: null, notes: report, source: 'llm' },
+            create: { contactId: created.id, companyName: customer.companyName || null, country: country || null, industry: customer.industry || null, details: JSON.stringify({ textReport: report }), riskLevel: null, notes: report, source: 'llm' }
+          });
+        } catch (bgcErr) { console.warn('[bg-check] save CBC failed:', bgcErr.message); }
       } else {
-        await prisma.customer.update({
-          where: { id: customer.id },
-          data: { bgReport: report, bgUpdatedAt: now },
-        });
+        await prisma.customer.update({ where: { id: customer.id }, data: { bgReport: report, bgUpdatedAt: now } });
+        try {
+          await prisma.customerBackgroundCheck.upsert({
+            where: { contactId: customer.id },
+            update: { companyName: customer.companyName || null, country: country || null, industry: customer.industry || null, details: JSON.stringify({ textReport: report }), riskLevel: null, notes: report, source: 'llm' },
+            create: { contactId: customer.id, companyName: customer.companyName || null, country: country || null, industry: customer.industry || null, details: JSON.stringify({ textReport: report }), riskLevel: null, notes: report, source: 'llm' }
+          });
+        } catch (bgcErr) { console.warn('[bg-check] save CBC failed:', bgcErr.message); }
       }
     } catch (dbErr) {
       console.warn('[bg-check] save bgReport to DB failed:', dbErr.message);
@@ -1693,5 +1751,119 @@ export async function autoFillCustomer(jid, userId = 1) {
   } catch (err) {
     console.error('[autoFill] error:', err.message);
     return null;
+  }
+}
+
+// ===== 自动背调（入站消息后异步调用） =====
+// 规则：7天冷却；至少要有公司名或联系人名；不阻塞主流程
+export async function autoBackgroundCheck(jid, userId = 1, io = null) {
+  try {
+    if (!jid) return { skipped: true, reason: 'no jid' };
+    const cust = await findCustomerByJid(prisma, userId, jid);
+    if (!cust) return { skipped: true, reason: 'customer not found' };
+
+    // 7天冷却
+    if (cust.bgUpdatedAt) {
+      const elapsed = Date.now() - new Date(cust.bgUpdatedAt).getTime();
+      if (elapsed < 7 * 24 * 3600 * 1000) {
+        return { skipped: true, reason: 'within 7-day cooldown' };
+      }
+    }
+
+    // 至少要有公司名或联系人名
+    const hasCompany = cust.companyName && cust.companyName.trim();
+    const hasContactName = cust.contactName && cust.contactName.trim();
+    if (!hasCompany && !hasContactName) {
+      return { skipped: true, reason: 'missing companyName and contactName' };
+    }
+
+    let query = hasCompany ? cust.companyName : cust.contactName;
+    if (hasCompany && hasContactName) query = cust.companyName + ' ' + cust.contactName;
+    if (!hasCompany && hasContactName && cust.phone) query = cust.contactName + ' ' + cust.phone;
+
+    console.log('[autoBgCheck] starting structured bg check for jid=' + jid + ' query=' + query);
+
+    const result = await runFullBackgroundCheck(query, {
+      email: cust.email || undefined,
+      context: [cust.contactName, cust.title, cust.country, cust.city, cust.address].filter(Boolean).join(' ')
+    });
+
+    const now = new Date();
+    const rating = result.rating || 'C';
+    const summary = result.summary || '';
+
+    // 从 dimensions 提取结构化字段
+    let companyName = cust.companyName || null;
+    let country = cust.country || null;
+    let industry = cust.industry || null;
+    let companySize = null;
+    let website = cust.website || null;
+
+    if (result.dimensions && result.dimensions.length > 0) {
+      const step1 = result.dimensions[0];
+      if (step1 && step1.data) {
+        if (step1.data.companyName) companyName = step1.data.companyName;
+        if (step1.data.country) country = step1.data.country;
+        if (step1.data.industry) industry = step1.data.industry;
+      }
+      const step2 = result.dimensions[1];
+      if (step2 && step2.data && step2.data.url) website = step2.data.url;
+      const step5 = result.dimensions[4];
+      if (step5 && step5.data && step5.data.companySize) companySize = step5.data.companySize;
+    }
+
+    // 保存到 CustomerBackgroundCheck 表
+    try {
+      await prisma.customerBackgroundCheck.upsert({
+        where: { contactId: cust.id },
+        update: {
+          companyName, country, industry, companySize, website,
+          details: JSON.stringify({
+            dimensions: result.dimensions.map(d => ({ step: d.step, name: d.name, status: d.status, summary: d.summary || '' })),
+            sources: result.sources || [], completedAt: result.completedAt
+          }),
+          riskLevel: rating, notes: summary, source: 'llm'
+        },
+        create: {
+          contactId: cust.id,
+          companyName, country, industry, companySize, website,
+          details: JSON.stringify({
+            dimensions: result.dimensions.map(d => ({ step: d.step, name: d.name, status: d.status, summary: d.summary || '' })),
+            sources: result.sources || [], completedAt: result.completedAt
+          }),
+          riskLevel: rating, notes: summary, source: 'llm'
+        }
+      });
+    } catch (bgcErr) {
+      console.warn('[autoBgCheck] save CBC failed:', bgcErr.message);
+    }
+
+    // 更新 Customer.bgReport 和 bgUpdatedAt
+    try {
+      await prisma.customer.update({
+        where: { id: cust.id },
+        data: { bgReport: summary, bgUpdatedAt: now }
+      });
+    } catch (updErr) {
+      console.warn('[autoBgCheck] update customer failed:', updErr.message);
+    }
+
+    // WebSocket 通知前端刷新
+    if (io) {
+      io.emit('customer:bgcheck:done', { jid, rating, summary: summary.slice(0, 200) });
+    }
+
+    // Phase 3: Auto BANT scoring after background check (fire-and-forget)
+    try {
+      autoBantScore(jid, io).catch(e => console.warn('[autoBgCheck] BANT follow-up error:', e.message));
+    } catch (e) {
+      console.warn('[autoBgCheck] BANT trigger error:', e.message);
+    }
+
+    console.log('[autoBgCheck] done for jid=' + jid + ' rating=' + rating);
+    return { skipped: false, customerId: cust.id, rating, summary, jid };
+  } catch (err) {
+    console.error('[autoBgCheck] error:', err.message);
+    return { skipped: true, reason: err.message };
   }
 }

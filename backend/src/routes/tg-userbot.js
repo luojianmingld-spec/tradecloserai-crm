@@ -14,6 +14,7 @@ import {
   sendMessage,
   addContactByPhone,
   getUserInfo,
+  downloadProfilePhoto,
   logout,
   getState,
   getMe,
@@ -361,6 +362,33 @@ router.post('/sync-dialogs', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+
+// --- Sync avatars ---
+router.post('/sync-avatars', async (req, res) => {
+  try {
+    if (!isConnected()) return res.status(400).json({ error: '未连接' });
+    const contacts = await prisma.contact.findMany({ where: { platform: 'telegram', avatarUrl: null } });
+    const pathMod = await import('path');
+    const fsMod = await import('fs');
+    const { fileURLToPath } = await import('url');
+    const __fn = fileURLToPath(import.meta.url);
+    const __dn = pathMod.dirname(__fn);
+    const avatarDir = pathMod.join(__dn, '../../uploads/tg-avatars');
+    if (!fsMod.existsSync(avatarDir)) fsMod.mkdirSync(avatarDir, { recursive: true });
+    let updated=0, skipped=0, failed=0; const results=[];
+    for (const c of contacts) {
+      const peerId = c.jid.replace('@telegram', '');
+      try {
+        const avatarUrl = await downloadProfilePhoto(peerId);
+        if (avatarUrl) { await prisma.contact.update({ where:{id:c.id}, data:{avatarUrl} }); updated++; results.push({id:c.id,name:c.name,status:'ok'}); }
+        else { skipped++; results.push({id:c.id,name:c.name,status:'no-photo'}); }
+      } catch(e) { failed++; results.push({id:c.id,name:c.name,status:'error',error:e.message}); }
+      if (contacts.indexOf(c)<contacts.length-1) await new Promise(r=>setTimeout(r,300));
+    }
+    res.json({updated,skipped,failed,total:contacts.length});
+  } catch(e) { res.status(500).json({error:e.message}); }
 });
 
 export default router;

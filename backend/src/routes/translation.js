@@ -45,7 +45,9 @@ export const DEFAULT_TRANSLATION_SETTINGS = {
 
 export const TRANSLATION_ENGINES = [
   { value: "google", label: "谷歌翻译(推荐/免费)" },
+  { value: "deepseek", label: "DeepSeek" },
   { value: "doubao", label: "豆包AI" },
+  { value: "openai", label: "GPT-4o-mini" },
 ];
 
 function ensureDataDir() {

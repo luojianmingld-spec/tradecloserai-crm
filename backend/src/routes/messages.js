@@ -44,9 +44,21 @@ router.get('/', async (req, res) => {
       direction: msg.direction,
       messageType: msg.type || 'text',
       timestamp: msg.timestamp,
-      translation: msg.translation || null,
+      translation: (() => {
+        if (!msg.translation) return null;
+        try {
+          const parsed = JSON.parse(msg.translation);
+          // 发出消息：msg.content 是译文(如英文)，返回 original(中文原文)作为参考
+          // 接收消息：msg.content 是原文(如英文)，返回 translated(中文译文)
+          const isOutgoing = msg.direction === 'outbound' || msg.direction === 'outgoing';
+          return isOutgoing ? (parsed.original || parsed.translated) : (parsed.translated || parsed.original);
+        } catch {
+          return msg.translation;
+        }
+      })(),
       sourceLang: msg.sourceLang || null,
       waMessageId: msg.waMessageId,
+      mediaUrl: msg.mediaUrl,
       deliveredAt: msg.deliveredAt || null,
       readAt: msg.readAt || null,
       ackError: msg.ackError || null,

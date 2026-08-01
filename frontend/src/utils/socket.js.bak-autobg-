@@ -1,0 +1,128 @@
+import { io } from 'socket.io-client';
+import { useAuthStore } from '../stores/auth.js';
+import { useChatStore } from '../stores/chat.js';
+
+let socket = null;
+
+export function initSocket() {
+  const authStore = useAuthStore();
+  const chatStore = useChatStore();
+
+  if (socket?.connected) return socket;
+
+  socket = io({
+    auth: {
+      userId: authStore.user?.id,
+      token: authStore.token,
+    },
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+  });
+
+  socket.on('connect', () => {
+    console.log('[Socket] Connected');
+    // 重连后刷新会话列表，补齐断线期间的内容
+    try { chatStore.fetchConversations?.(); } catch(e) {}
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log('[Socket] Disconnected:', reason);
+  });
+
+  // WhatsApp events
+  socket.on('whatsapp:qr', (data) => {
+    chatStore.handleQRCode(data);
+  });
+
+  socket.on('whatsapp:status', (data) => {
+    chatStore.handleStatus(data);
+  });
+
+  socket.on('whatsapp:message', (data) => {
+    chatStore.handleNewMessage(data);
+  });
+
+  socket.on('whatsapp:reaction', (data) => {
+    chatStore.handleReaction?.(data);
+  });
+  socket.on('whatsapp:message_sent', (data) => {
+    chatStore.handleMessageSent(data);
+  });
+
+  // Telegram events → 通过window事件转发给LayoutView（避免污染chatStore）
+  socket.on('telegram:message', (data) => {
+    window.dispatchEvent(new CustomEvent('tg:message', { detail: data }));
+  });
+  socket.on('telegram:translation', (data) => {
+    window.dispatchEvent(new CustomEvent('tg:translation', { detail: data }));
+  });
+  socket.on('conversation:update', (data) => {
+    if (data?.conversation?.platform === 'telegram') {
+      window.dispatchEvent(new CustomEvent('tg:conv-update', { detail: data }));
+    }
+  });
+
+  socket.on('whatsapp:message_update', (data) => {
+    chatStore.handleMessageUpdate?.(data);
+  });
+
+  socket.on('whatsapp:translation', (data) => {
+    chatStore.handleTranslation(data);
+  });
+
+    socket.on('whatsapp:message_translated', (data) => {
+    chatStore.handleMessageTranslated(data);
+  });
+
+  socket.on('whatsapp:conversations', (data) => {
+    chatStore.handleConversations(data);
+  });
+
+  socket.on('whatsapp:messages', (data) => {
+    chatStore.handleMessages(data);
+  });
+
+  socket.on('whatsapp:error', (data) => {
+    console.error('[WhatsApp Error]', data.message);
+    // Update store state
+    chatStore.handleWAError(data);
+    // Import ElMessage dynamically to avoid circular deps
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error(data.message || 'WhatsApp 错误');
+    });
+  });
+
+  socket.on('whatsapp:chats_loaded', (data) => {
+    chatStore.fetchConversations();
+  });
+
+  socket.on('whatsapp:receipt', (data) => {
+    chatStore.handleReceipt(data);
+  });
+
+  socket.on('whatsapp:presence', (data) => {
+    // Handle typing indicators etc.
+  });
+
+  return socket;
+}
+
+export function useSocket() {
+  if (!socket) {
+    return initSocket();
+  }
+  return socket;
+}
+
+export function disconnectSocket() {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+}
+
+export default { initSocket, useSocket, disconnectSocket };

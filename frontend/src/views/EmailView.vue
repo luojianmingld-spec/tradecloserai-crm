@@ -312,9 +312,24 @@ async function loadEmails() {
 
 // Select email
 async function selectEmail(email) {
-  selectedEmail.value = email;
   showReplyArea.value = false;
   aiReplies.value = [];
+
+  // Fetch full email content (with bodyHtml) if not already loaded
+  if (!email.bodyHtml && email.id) {
+    try {
+      const { data } = await api.get(`/emails/detail/${email.id}`);
+      selectedEmail.value = data;
+      // Update local cache
+      const idx = emails.value.findIndex(e => e.id === email.id);
+      if (idx >= 0) emails.value[idx] = data;
+    } catch (err) {
+      console.error('Failed to load full email:', err);
+      selectedEmail.value = email;
+    }
+  } else {
+    selectedEmail.value = email;
+  }
 
   // Mark as read
   if (!email.read) {

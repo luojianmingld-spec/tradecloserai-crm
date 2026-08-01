@@ -7,6 +7,7 @@ import PipelineView from "../views/PipelineView.vue";
 import CustomersListView from "../views/CustomersListView.vue";
 import ChatView from "../views/ChatView.vue";
 import AssistantView from "../views/AssistantView.vue";
+import ProductKnowledgeView from "../views/ProductKnowledgeView.vue";
 
 const routes = [
   {
@@ -54,6 +55,16 @@ const routes = [
       },
       { path: "pipeline", name: "Pipeline", component: PipelineView },
       {
+        path: "speech-library",
+        name: "SpeechLibrary",
+        component: () => import("../views/SpeechLibraryView.vue"),
+      },
+      {
+        path: "effect-tracking",
+        name: "EffectTracking",
+        component: () => import("../views/EffectTrackingView.vue"),
+      },
+      {
         path: "automation",
         name: "Automation",
         component: () => import("../views/AutomationView.vue"),
@@ -62,6 +73,11 @@ const routes = [
         path: "skill-store",
         name: "SkillStore",
         component: () => import("../views/SkillStoreView.vue"),
+      },
+      {
+        path: "product-knowledge",
+        name: "ProductKnowledge",
+        component: ProductKnowledgeView,
       },
       {
         path: "settings",
@@ -82,7 +98,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next("/login");
   } else if (to.path === "/login" && authStore.isAuthenticated) {
-    next(window.innerWidth <= 768 ? '/dashboard' : '/chat');
+    next((window.innerWidth <= 900 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')) ? '/dashboard' : '/chat');
   } else {
     next();
   }

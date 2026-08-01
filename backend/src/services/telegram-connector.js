@@ -38,6 +38,29 @@ class TelegramConnector {
     return data.result;
   }
 
+  async _callMultipart(method, fields) {
+    const url = TG_API + "/bot" + this.token + "/" + method;
+    const formData = new FormData();
+    for (const [key, val] of Object.entries(fields)) {
+      if (val && val.buffer) {
+        const blob = new Blob([val.buffer], { type: val.contentType || "application/octet-stream" });
+        formData.append(key, blob, val.filename || key);
+      } else {
+        formData.append(key, String(val));
+      }
+    }
+    const resp = await fetch(url, { method: "POST", body: formData });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { ok: false, description: text }; }
+    if (!data.ok) {
+      const err = new Error("Telegram API " + method + " failed: " + (data.description || text));
+      err.code = data.error_code;
+      throw err;
+    }
+    return data.result;
+  }
+
   async getMe() {
     this.botInfo = await this._call('getMe');
     return this.botInfo;
@@ -70,11 +93,33 @@ class TelegramConnector {
   }
 
   async sendPhoto(chatId, photo, extra = {}) {
+    const fields = { chat_id: String(chatId) };
+    if (extra.caption) fields.caption = extra.caption;
+    if (photo && photo.buffer) {
+      fields.photo = { buffer: photo.buffer, filename: photo.filename || 'photo.jpg', contentType: photo.contentType || 'image/jpeg' };
+      return this._callMultipart('sendPhoto', fields);
+    }
     return this._call('sendPhoto', { chat_id: chatId, photo, caption: extra.caption, parse_mode: extra.parse_mode });
   }
 
   async sendDocument(chatId, doc, extra = {}) {
+    const fields = { chat_id: String(chatId) };
+    if (extra.caption) fields.caption = extra.caption;
+    if (doc && doc.buffer) {
+      fields.document = { buffer: doc.buffer, filename: doc.filename || 'file', contentType: doc.contentType || 'application/octet-stream' };
+      return this._callMultipart('sendDocument', fields);
+    }
     return this._call('sendDocument', { chat_id: chatId, document: doc, caption: extra.caption, parse_mode: extra.parse_mode });
+  }
+
+  async sendVideo(chatId, video, extra = {}) {
+    const fields = { chat_id: String(chatId) };
+    if (extra.caption) fields.caption = extra.caption;
+    if (video && video.buffer) {
+      fields.video = { buffer: video.buffer, filename: video.filename || 'video.mp4', contentType: video.contentType || 'video/mp4' };
+      return this._callMultipart('sendVideo', fields);
+    }
+    return this._call('sendVideo', { chat_id: chatId, video, caption: extra.caption });
   }
 
   async sendChatAction(chatId, action) {

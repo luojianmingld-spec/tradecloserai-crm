@@ -5,6 +5,7 @@
  * v2: 模型下线自动检测 + 自动替换 + 智能 fallback
  */
 import { PrismaClient } from "@prisma/client";
+import { encrypt, decrypt, isEncrypted } from "../utils/encryption.js";
 
 const prisma = new PrismaClient();
 const USER_ID = 1;
@@ -44,7 +45,8 @@ export async function getProviders() {
   });
   if (!setting || !setting.value) return [];
   try {
-    return JSON.parse(setting.value);
+    const raw = isEncrypted(setting.value) ? decrypt(setting.value) : setting.value;
+    return JSON.parse(raw);
   } catch {
     return [];
   }
@@ -56,8 +58,8 @@ export async function getProviders() {
 async function saveProviders(providers) {
   await prisma.setting.upsert({
     where: { userId_key: { userId: USER_ID, key: "ai_providers" } },
-    create: { userId: USER_ID, key: "ai_providers", value: JSON.stringify(providers) },
-    update: { value: JSON.stringify(providers) },
+    create: { userId: USER_ID, key: "ai_providers", value: encrypt(JSON.stringify(providers)) },
+    update: { value: encrypt(JSON.stringify(providers)) },
   });
 }
 

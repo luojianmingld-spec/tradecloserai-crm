@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { generateToken, authMiddleware } from '../middleware/auth.js';
+import { recordLoginSuccess, recordLoginFailure, getLockoutInfo, loginRateMiddleware } from '../middleware/login-logger.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -12,15 +13,28 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateMiddleware, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: '用户名和密码必填' });
     const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) return res.status(401).json({ error: '用户名或密码错误' });
+    if (!user) {
+      const ip = req.ip || req.connection.remoteAddress;
+      const ua = req.headers['user-agent'] || '';
+      recordLoginFailure(username || 'unknown', ip, ua, 'user_not_found');
+      return res.status(401).json({ error: '用户名或密码错误', lockout: getLockoutInfo(ip) });
+    }
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: '用户名或密码错误' });
+    if (!valid) {
+      const ip = req.ip || req.connection.remoteAddress;
+      const ua = req.headers['user-agent'] || '';
+      recordLoginFailure(username, ip, ua, 'wrong_password');
+      return res.status(401).json({ error: '用户名或密码错误', lockout: getLockoutInfo(ip) });
+    }
     const token = generateToken(user.id, user.role);
+    const ip = req.ip || req.connection.remoteAddress;
+    const ua = req.headers['user-agent'] || '';
+    recordLoginSuccess(user.id, ip, ua);
     res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role } });
   } catch (err) {
     console.error('[Auth] Login error:', err);
@@ -38,7 +52,7 @@ router.post('/register', authMiddleware, requireAdmin, async (req, res) => {
     if (existing) return res.status(409).json({ error: '用户名已存在' });
     const hash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { username, password: hash, name: name || username, role: role === 'admin' ? 'admin' : 'user' },
+      data: { username, password: hash, name: name || username, role: ['admin','manager','sales'].includes(role) ? role : 'sales' },
     });
     res.status(201).json({ id: user.id, username: user.username, name: user.name, role: user.role });
   } catch (err) {
@@ -74,7 +88,7 @@ router.put('/users/:id', authMiddleware, requireAdmin, async (req, res) => {
     const { name, role, password } = req.body;
     const data = {};
     if (name !== undefined) data.name = name;
-    if (role !== undefined) data.role = role === 'admin' ? 'admin' : 'user';
+    if (role !== undefined) data.role = ['admin','manager','sales'].includes(role) ? role : 'sales';
     if (password) {
       if (password.length < 4) return res.status(400).json({ error: '密码至少4位' });
       data.password = await bcrypt.hash(password, 10);

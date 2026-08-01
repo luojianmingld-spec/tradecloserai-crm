@@ -23,6 +23,12 @@ export const useChatStore = defineStore('chat', () => {
   // Conversations
   const conversations = ref([]);
   const activeJid = ref(null);
+  const accountFilter = ref(null); // null = all accounts, number = specific WA account id
+  function setAccountFilter(id) {
+    accountFilter.value = id;
+    // Refresh conversations with new filter
+    fetchConversations(currentConvFilter.value);
+  }
 
   // Messages
   const messages = ref({});
@@ -185,11 +191,16 @@ const editingMsgId = ref(null); // 正在编辑的消息id
    * 调用方直接用作 <img :src="chatStore.loadAvatar(jid)"> 即可，
    * onerror 时调用 markAvatarFailed(jid) 回退首字母占位。
    */
-  function loadAvatar(jid) {
+  function loadAvatar(jid, avatar) {
     if (!jid) return '';
     if (avatarFailed.value[jid]) return '';
     if (avatarCache.value[jid]) return avatarCache.value[jid];
-    // 先生成 URL 缓存（带 _t 仅做首次触发，后续复用）
+    // 如果传入了直接头像URL（如TG头像），优先使用
+    if (avatar) {
+      avatarCache.value[jid] = avatar;
+      return avatar;
+    }
+    // WhatsApp: 走API代理
     const url = '/api/wa/avatar?jid=' + encodeURIComponent(jid);
     avatarCache.value[jid] = url;
     return url;
@@ -346,6 +357,8 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       // 默认只拉WA渠道会话，TG有自己的loadTgConversations；传入platform='all'可拉全部
       const reqParams = { platform: 'whatsapp', ...params };
       if (reqParams.platform === 'all') delete reqParams.platform;
+      // Multi-WA: pass accountId filter (null = all accounts)
+      reqParams.accountId = accountFilter.value != null ? accountFilter.value : 'all';
       const { data } = await api.get('/whatsapp/conversations', { params: reqParams });
       // 前端双保险过滤：按platform字段+jid后缀双重判断，防止后端漏打platform标
       const filtered = (data || []).filter(c => {
@@ -398,9 +411,10 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       return data;
     } catch (err) { console.error('Block failed:', err); throw err; }
   }
-  async function deleteConversation(jid) {
+  async function deleteConversation(jid, force = false) {
     try {
-      const { data } = await api.delete(`/whatsapp/conversations/${encodeURIComponent(jid)}`);
+      const url = `/whatsapp/conversations/${encodeURIComponent(jid)}` + (force ? '?force=true' : '');
+      const { data } = await api.delete(url);
       // 删除本地状态
       conversations.value = conversations.value.filter(x => x.jid !== jid);
       if (activeJid.value === jid) {
@@ -418,14 +432,21 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     return fetchConversations(currentConvFilter.value);
   }
 
-  async function fetchMessages(jid, limit = 50) {
+  let _fetchMsgSeq = 0;
+  async function fetchMessages(jid, limit = 50, accountId = null) {
     if (!jid) return;
-    loadingMessages.value = true;
+    const hasCached = messages.value[jid] && messages.value[jid].length > 0;
+    if (!hasCached) loadingMessages.value = true;
+    const seq = ++_fetchMsgSeq;
     try {
-      const { data } = await api.get('/whatsapp/messages', { params: { jid, limit } });
+      const params = { jid, limit };
+      if (accountId) params.accountId = accountId;
+      const { data } = await api.get('/whatsapp/messages', { params });
+      // Race guard: only apply if this is still the latest request
+      if (seq !== _fetchMsgSeq) return;
       messages.value[jid] = data.map(normalizeMessage);
     } catch (err) { console.error('Failed to fetch messages:', err); }
-    finally { loadingMessages.value = false; }
+    finally { if (seq === _fetchMsgSeq) loadingMessages.value = false; }
   }
 
   function normalizeMessage(msg) {
@@ -442,6 +463,11 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     let translation = msg.translation ?? msg.translated ?? null;
     let sourceLang = msg.sourceLang || null;
     let body = msg.body || msg.content || "";
+
+    // Normalize TG GramJS mediaType to standard types (backend + frontend fallback)
+    const _tgTypeMap = { messagemediaphoto: 'image', messagemediavideo: 'video', messagemediadocument: 'document', messagemediaaudio: 'audio', messagemediawebpage: 'text' };
+    const _rawType = (msg.type || msg.messageType || '').toLowerCase();
+    if (_tgTypeMap[_rawType]) { msg.type = _tgTypeMap[_rawType]; msg.messageType = _tgTypeMap[_rawType]; }
 
     // Parse JSON-string translation
     if (typeof translation === "string" && translation.trim()) {
@@ -466,10 +492,12 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       if (translation.original === body && translation.translated === body) {
         translation = null;
       }
-      // Outbound: only show dashed line if original differs from body (i.e. translation actually happened)
-      if (isOutbound && translation && (!translation.original || translation.original === body)) {
-        // If no distinct Chinese original, don't show dashed line for self-sent same-language messages
-        if (!hasChinese || !translation.translated || translation.translated === body) {
+      // Outbound: only show dashed line if we have a Chinese translation to show
+      if (isOutbound && translation) {
+        const hasChineseTranslation = /[\u4e00-\u9fff]/.test(translation.translated || "");
+        // If translated is Chinese (back-translation), keep it for display
+        if (!hasChineseTranslation && (!translation.original || translation.original === body)) {
+          // No Chinese translation and no distinct original, skip display
           translation = null;
         }
       }
@@ -497,9 +525,18 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     }
 
     const mediaType = msg.type || msg.messageType || 'text';
-  
 
-  return {
+    // Convert translation object to string for template rendering
+    // ChatWindow.vue expects msg.translation as a string:
+    //   - outgoing: Chinese original (original field)
+    //   - incoming: Chinese translation (translated field)
+    if (translation && typeof translation === 'object') {
+      translation = isOutbound
+        ? (translation.original || translation.translated || null)
+        : (translation.translated || translation.original || null);
+    }
+
+    return {
       id: msg.id ?? msg.waMessageId ?? Date.now(),
       waMessageId: msg.waMessageId || null,
       jid: msg.jid || fromJid,
@@ -562,7 +599,9 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       conv.lastMessageTime = optimistic.timestamp;
     }
     try {
-      const { data } = await api.post('/whatsapp/send', { to: jid, message: text, quoted: _quoted || undefined });
+      const sendPayload = { to: jid, message: text, quoted: _quoted || undefined };
+      if (accountFilter.value != null) sendPayload.accountId = accountFilter.value;
+      const { data } = await api.post('/whatsapp/send', sendPayload);
       // 发送成功后立刻更新乐观消息（不等socket）：译文覆盖body、translation带原文
       const list = messages.value[jid];
       if (list) {
@@ -780,6 +819,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       fd.append('file', sendFile);
       fd.append('mediatype', type);
       if (caption) fd.append('caption', caption);
+      if (accountFilter.value != null) fd.append('accountId', accountFilter.value);
       // 注意：不要手动设置 Content-Type，让浏览器/axios自动附带 multipart/form-data; boundary=...
       const { data } = await api.post('/whatsapp/send-media', fd, {
         timeout: 120000,
@@ -823,8 +863,12 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       const socket = useSocket();
       socket.emit('whatsapp:mark_read', { jid });
       const conv = conversations.value.find(c => c.jid === jid);
-      if (conv) conv.unreadCount = 0;
-      fetchMessages(jid);
+      if (conv) {
+        conv.unreadCount = 0;
+        fetchMessages(jid, 50, conv.accountId || null);
+      } else {
+        fetchMessages(jid);
+      }
     }
   }
 
@@ -1252,14 +1296,18 @@ const editingMsgId = ref(null); // 正在编辑的消息id
 
   /**
    * AI 话术：按当前 replyStyle 生成 3 条回复并追加到 aiReplyResults
+   * Phase 5: 支持 length / includeContext / 双语
    * @param extraPrompt 可选，用户在输入框里的补充要求
+   * @param opts 可选，{ length: 'short'|'medium'|'long', includeContext: boolean }
    */
-  async function generateAiReplies(extraPrompt) {
+  async function generateAiReplies(extraPrompt, opts = {}) {
     if (!activeJid.value) return;
     aiGenerating.value = true;
     const style = replyStyle.value;
+    const replyLength = opts.length || 'medium';
+    const includeCtx = opts.includeContext !== undefined ? opts.includeContext : true;
     try {
-      const body = { jid: activeJid.value, style };
+      const body = { jid: activeJid.value, style, length: replyLength, includeContext: includeCtx };
       if (extraPrompt) body.extraPrompt = extraPrompt;
       // 如果有焦点消息，也传过去
       if (aiFocusMessage.value?.content) {
@@ -1269,29 +1317,71 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       }
       const { data } = await api.post('/ai/reply', body);
       const styleMeta = STYLE_META[style] || STYLE_META.formal;
+      // Phase 5: Handle bilingual response
       const raw = data?.replies || [];
-      let replies = raw
-        .map((text) => (text || '').trim())
-        .filter(t => t.length > 0);
-      // 兜底：若后端没返回数组，尝试从 reply 字段取
-      if (!replies.length && typeof data?.reply === 'string') {
-        replies = [data.reply.trim()].filter(t => t.length > 0);
+      const ctx = data?.context || null;
+      const respLength = data?.length || replyLength;
+      let newItems = [];
+      if (Array.isArray(raw) && raw.length > 0) {
+        newItems = raw
+          .filter(r => r && ((typeof r === 'object' && (r.foreign || r.zh)) || typeof r === 'string'))
+          .map((r, i) => {
+            if (typeof r === 'object') {
+              return {
+                id: 'r-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
+                content: (r.foreign || '').trim(),
+                contentCn: (r.zh || '').trim(),
+                style,
+                styleIcon: styleMeta.icon,
+                styleName: styleMeta.label,
+                length: respLength,
+              };
+            }
+            return {
+              id: 'r-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
+              content: String(r).trim(),
+              contentCn: '',
+              style,
+              styleIcon: styleMeta.icon,
+              styleName: styleMeta.label,
+              length: respLength,
+            };
+          })
+          .filter(x => x.content || x.contentCn);
       }
-      if (!replies.length && data?.error) {
-        replies = ['⚠️ ' + data.error];
+      // 兜底
+      if (!newItems.length && typeof data?.reply === 'string') {
+        newItems = [{
+          id: 'r-' + Date.now() + '-0',
+          content: data.reply.trim(),
+          contentCn: '',
+          style, styleIcon: styleMeta.icon, styleName: styleMeta.label,
+          length: respLength,
+        }];
       }
-      if (!replies.length) {
-        replies = ['(无回复内容)'];
+      if (!newItems.length && data?.error) {
+        newItems = [{
+          id: 'r-err-' + Date.now(),
+          content: '⚠️ ' + data.error,
+          contentCn: '',
+          style, styleIcon: styleMeta.icon, styleName: styleMeta.label,
+          error: true, length: respLength,
+        }];
       }
-      const newItems = replies.map((text, i) => ({
-        id: 'r-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
-        content: text,
-        style,
-        styleIcon: styleMeta.icon,
-        styleName: styleMeta.label,
-      }));
+      if (!newItems.length) {
+        newItems = [{
+          id: 'r-empty-' + Date.now(),
+          content: '(无回复内容)',
+          contentCn: '',
+          style, styleIcon: styleMeta.icon, styleName: styleMeta.label,
+          length: respLength,
+        }];
+      }
+      // Attach context to first item
+      if (ctx && newItems.length > 0) {
+        newItems[0].context = ctx;
+      }
       aiReplyResults.value.push(...newItems);
-      // 同步到旧字段以兼容可能的旧组件（只读）
       aiReplies.value = newItems.map(x => ({
         id: x.id, text: x.content, style: x.style, confidence: 0,
       }));
@@ -1301,10 +1391,12 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       aiReplyResults.value.push({
         id: 'r-err-' + Date.now(),
         content: '⚠️ ' + (err?.response?.data?.error || err.message || '生成失败'),
+        contentCn: '',
         style,
         styleIcon: styleMeta.icon,
         styleName: styleMeta.label,
         error: true,
+        length: replyLength,
       });
     } finally {
       aiGenerating.value = false;
@@ -1606,7 +1698,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     fetchConnectionStatus, requestQR, requestPairingCode, clearPairing, disconnectWhatsApp, clearOnDisconnect,
 
     // Conversations / Messages
-    fetchConversations, setConvFilter, togglePin, toggleStar, toggleBlock, deleteConversation, currentConvFilter, fetchMessages, sendMessage, setActiveConversation, loadCustomerTranslation, sendMedia, normalizeMessage, loadAvatar, markAvatarFailed, preloadSelfAvatar,
+    fetchConversations, setConvFilter, togglePin, toggleStar, toggleBlock, deleteConversation, currentConvFilter, fetchMessages, sendMessage, setActiveConversation, loadCustomerTranslation, sendMedia, normalizeMessage, loadAvatar, markAvatarFailed, preloadSelfAvatar, accountFilter, setAccountFilter,
     replyTo, setReplyTo, clearReplyTo, sendReaction, localDeleteMessage, editMessage, editingMsgId,
 
     // Followup actions

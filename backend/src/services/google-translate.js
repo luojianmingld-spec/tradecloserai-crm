@@ -55,14 +55,145 @@ function httpsGetJson(urlStr, timeoutMs = DEFAULT_TIMEOUT_MS) {
 /**
  * Translate text via Google Translate public endpoint.
  */
+
+// ── 拼写纠错预处理（修复常见 typo 后再翻译）──
+const TYPO_CONTEXT_MAP = {
+  // [typo, 需要此上下文才纠正, 正确词]
+  'tanks':  { ctx: ['for'], correct: 'thanks' },
+  'wanna':  { ctx: null, correct: 'want to' },
+  'gonna':  { ctx: null, correct: 'going to' },
+  'dunno':  { ctx: null, correct: "don't know" },
+  'gotta':  { ctx: null, correct: 'got to' },
+  'kinda':  { ctx: null, correct: 'kind of' },
+  'sorta':  { ctx: null, correct: 'sort of' },
+  'lemme':  { ctx: null, correct: 'let me' },
+  'gimme':  { ctx: null, correct: 'give me' },
+  'cos':    { ctx: ['i', 'we', 'it', 'he', 'she', 'that', 'the', 'is', 'was'], correct: 'because' },
+  'coz':    { ctx: ['i', 'we', 'it', 'he', 'she', 'that', 'the', 'is', 'was'], correct: 'because' },
+  'cuz':    { ctx: ['i', 'we', 'it', 'he', 'she', 'that', 'the', 'is', 'was'], correct: 'because' },
+  'nite':   { ctx: null, correct: 'night' },
+  'pls':    { ctx: null, correct: 'please' },
+  'plz':    { ctx: null, correct: 'please' },
+  'thx':    { ctx: null, correct: 'thanks' },
+  'ty':     { ctx: ['so', 'very', 'thank'], correct: 'thank you' },
+  'u':      { ctx: null, correct: 'you' },
+  'ur':     { ctx: null, correct: 'your' },
+  'r':      { ctx: ['u', 'you', 'we', 'they'], correct: 'are' },
+  'cant':   { ctx: null, correct: "can't" },
+  'dont':   { ctx: null, correct: "don't" },
+  'wont':   { ctx: null, correct: "won't" },
+  'didnt':  { ctx: null, correct: "didn't" },
+  'doesnt': { ctx: null, correct: "doesn't" },
+  'wasnt':  { ctx: null, correct: "wasn't" },
+  'isnt':   { ctx: null, correct: "isn't" },
+  'wouldnt':{ ctx: null, correct: "wouldn't" },
+  'shouldnt':{ ctx: null, correct: "shouldn't" },
+  'couldnt':{ ctx: null, correct: "couldn't" },
+  'ive':    { ctx: null, correct: "I've" },
+  'youve':  { ctx: null, correct: "you've" },
+  'theyve': { ctx: null, correct: "they've" },
+  'im':     { ctx: null, correct: "I'm" },
+  'youre':  { ctx: null, correct: "you're" },
+  'theyre': { ctx: null, correct: "they're" },
+  'weve':   { ctx: null, correct: "we've" },
+};
+
+// 纯拼写错误（无需上下文）
+const SIMPLE_TYPOS = {
+  'teh': 'the', 'recieve': 'receive', 'occured': 'occurred',
+  'seperate': 'separate', 'definately': 'definitely', 'accomodate': 'accommodate',
+  'acheive': 'achieve', 'beleive': 'believe', 'comming': 'coming',
+  'happend': 'happened', 'untill': 'until', 'wich': 'which',
+  'wierd': 'weird', 'truely': 'truly', 'realyl': 'really',
+  'realy': 'really', 'alot': 'a lot', 'beacuse': 'because',
+  'becuase': 'because', 'becaus': 'because', 'becouse': 'because',
+  'tommorow': 'tomorrow', 'tommorrow': 'tomorrow', 'tomorow': 'tomorrow',
+  'yestarday': 'yesterday', 'yeserday': 'yesterday',
+  'todya': 'today', 'todya': 'today',
+  'hapen': 'happen', 'happend': 'happened',
+  'noice': 'nice', 'defintely': 'definitely',
+};
+
+export function spellCorrect(text) {
+  if (!text || typeof text !== 'string') return text;
+  // 跳过非拉丁文本（中文、阿拉伯文等）
+  if (!/[a-zA-Z]/.test(text)) return text;
+  
+  const words = text.split(/(\s+)/);
+  const corrected = words.map((token, i) => {
+    // 跳过空白
+    if (/^\s+$/.test(token)) return token;
+    
+    const lower = token.toLowerCase();
+    const clean = lower.replace(/[^a-z']/g, '');
+    
+    // 1. "tanks" 特殊处理：区分 "thanks" vs 真正的水箱
+    if (clean === 'tanks') {
+      let prevWord = '';
+      for (let j = i - 1; j >= 0; j--) {
+        const w = words[j].toLowerCase().replace(/[^a-z]/g, '');
+        if (w) { prevWord = w; break; }
+      }
+      const LITERAL_MODIFIERS = ['fuel','water','gas','oil','propane','storage','septic','fish','pressure','hydraulic','chemical','heat','cooling','air','liquid','waste','sewage','holding','fresh','black','grey','glass','stainless','steel','plastic','metal','concrete','cement','underground','overground','above'];
+      if (LITERAL_MODIFIERS.includes(prevWord)) return token;
+      let nextWord = '';
+      for (let j = i + 1; j < words.length; j++) {
+        const w = words[j].toLowerCase().replace(/[^a-z]/g, '');
+        if (w) { nextWord = w; break; }
+      }
+      if (nextWord === 'for' || nextWord === 'you' || prevWord === 'you' || prevWord === 'thank') {
+        return token.replace(/tanks/i, 'thanks');
+      }
+      return token;
+    }
+
+    // 2. 上下文敏感纠正
+    if (TYPO_CONTEXT_MAP[clean]) {
+      const entry = TYPO_CONTEXT_MAP[clean];
+      if (entry.ctx === null) {
+        return token.replace(new RegExp(clean, 'i'), entry.correct);
+      }
+      let prevWord = '', nextWord = '';
+      for (let j = i - 1; j >= 0; j--) {
+        const w = words[j].toLowerCase().replace(/[^a-z]/g, '');
+        if (w) { prevWord = w; break; }
+      }
+      for (let j = i + 1; j < words.length; j++) {
+        const w = words[j].toLowerCase().replace(/[^a-z]/g, '');
+        if (w) { nextWord = w; break; }
+      }
+      const contextWords = [prevWord, nextWord];
+      const hasContext = entry.ctx.some(ctx => contextWords.some(cw => cw === ctx));
+      if (hasContext) {
+        return token.replace(new RegExp(clean, 'i'), entry.correct);
+      }
+    }
+    
+    // 2. 简单拼写纠正
+    if (SIMPLE_TYPOS[clean]) {
+      return token.replace(new RegExp(clean, 'i'), SIMPLE_TYPOS[clean]);
+    }
+    
+    return token;
+  });
+  
+  return corrected.join('');
+}
+
 export async function googleTranslate(text, from, to) {
   if (!text || typeof text !== 'string') {
     throw new Error('text is required');
   }
+  // 英文文本先做拼写纠错
+  const isEnglish = /^[\x00-\x7F]+$/.test(text.trim());
+  const correctedText = isEnglish ? spellCorrect(text) : text;
+  if (isEnglish && correctedText !== text) {
+    console.log('[GoogleTranslate] spell-corrected:', text.slice(0,30), '->', correctedText.slice(0,30));
+  }
   const sl = from === 'auto' || !from ? 'auto' : from;
   const tl = to || 'en';
 
-  const url = `https://${ENDPOINT_HOST}${ENDPOINT_PATH}?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
+  const url = `https://${ENDPOINT_HOST}${ENDPOINT_PATH}?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(correctedText || text)}`;
 
   let data;
   try {
@@ -91,7 +222,7 @@ export async function googleTranslate(text, from, to) {
   const CJK_RE = /[\u4e00-\u9fff\u3400-\u4dbf]/;
   if ((tl === 'zh' || tl === 'zh-CN' || tl === 'zh-TW') && !CJK_RE.test(translated) && sl === 'auto') {
     try {
-      const rurl = `https://${ENDPOINT_HOST}${ENDPOINT_PATH}?client=gtx&sl=en&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
+      const rurl = `https://${ENDPOINT_HOST}${ENDPOINT_PATH}?client=gtx&sl=en&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(correctedText || text)}`;
       const rd = await httpsGetJson(rurl, DEFAULT_TIMEOUT_MS);
       if (Array.isArray(rd) && Array.isArray(rd[0])) {
         let rt = "";

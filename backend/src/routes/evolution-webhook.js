@@ -2,9 +2,9 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { getEvolutionConnector } from "../services/evolution-connector.js";
 import { recordLidMapping, resolveToPhoneJid } from "../services/lid-mapping.js";
-import { detectLanguage, translateText } from "../services/ai.service.js";
+import { detectLanguage, translateText, transcribeAudio } from "../services/ai.service.js";
 import { getTranslationSettings } from "./translation.js";
-import { autoFillCustomer } from "./customers.js";
+import { autoFillCustomer, autoBackgroundCheck } from "./customers.js";
 import unattendedService from "../services/unattended.service.js";
 
 const router = express.Router();
@@ -12,12 +12,37 @@ const prisma = new PrismaClient();
 
 const DEFAULT_SESSION_ID = "user_1";
 
+/** Map Evolution API instanceName to CRM sessionId */
+function instanceToSessionId(instanceName) {
+  if (instanceName === "jeremy-eric") return "user_2";
+  return "user_1"; // jeremy-main and default
+}
+
+
 function jidToPhone(jid) {
   return (jid || "").split("@")[0];
 }
 function isGroup(jid) {
   return (jid || "").includes("@g.us");
 }
+
+/**
+ * 根据 instanceName 查找对应的 WhatsAppAccount 记录
+ * @returns {Promise<{accountId: number, account: object}|null>}
+ */
+async function resolveAccountByInstance(instanceName) {
+  try {
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { platform: "whatsapp", instanceName },
+    });
+    if (account) return { accountId: account.id, account };
+    return null;
+  } catch (e) {
+    console.warn("[Webhook] resolveAccountByInstance error:", e.message);
+    return null;
+  }
+}
+
 
 /**
  * 异步翻译入站消息（不阻塞推送）
@@ -31,9 +56,75 @@ async function translateInboundAsync(saved, convJid, io) {
     if (!saved || !saved.id) return;
     // 只处理入站（对方发来的），不要重复处理出站译文
     if (saved.direction === "outbound") return;
-    const body = (saved.body || "").trim();
-    if (saved.type !== "text" || body.length < 1 || body.length > 2000) return;
-    // 跳过以 [ 开头的占位文本，如 "[图片]" "[语音]"
+
+    let body = (saved.body || "").trim();
+
+    // ── 语音消息：先转录再翻译 ──
+    if ((saved.type === "audio" || saved.type === "MessageMediaAudio") && saved.mediaUrl) {
+      try {
+        console.log(`[Translation] Voice message #${saved.id}, transcribing...`);
+        const fs = await import('fs');
+        const pathMod = await import('path');
+        const https = await import('https');
+        const http = await import('http');
+        const { URL: URLCls } = await import('url');
+        const { execSync } = await import('child_process');
+
+        const tmpDir = '/tmp/crm-audio';
+        if (!fs.default.existsSync(tmpDir)) fs.default.mkdirSync(tmpDir, { recursive: true });
+        const tmpFile = pathMod.default.join(tmpDir, `voice_${saved.id}.ogg`);
+        const wavFile = pathMod.default.join(tmpDir, `voice_${saved.id}.wav`);
+
+        // Download audio
+        await new Promise((resolve, reject) => {
+          const urlObj = new URLCls(saved.mediaUrl);
+          const lib = urlObj.protocol === 'https:' ? https.default : http.default;
+          const ws = fs.default.createWriteStream(tmpFile);
+          lib.get(saved.mediaUrl, (res) => {
+            if (res.statusCode !== 200) { reject(new Error('HTTP ' + res.statusCode)); res.resume(); return; }
+            res.pipe(ws);
+            ws.on('finish', () => { ws.close(); resolve(); });
+          }).on('error', (e) => { try { fs.default.unlinkSync(tmpFile); } catch{} reject(e); });
+        });
+
+        // Convert to WAV for Whisper
+        try {
+          execSync(`ffmpeg -y -i "${tmpFile}" -ar 16000 -ac 1 -f wav "${wavFile}" 2>/dev/null`, { timeout: 15000 });
+        } catch (e) {
+          console.warn('[Translation] ffmpeg failed, using raw file');
+        }
+
+        const audioFile = fs.default.existsSync(wavFile) ? wavFile : tmpFile;
+        const transcribed = await transcribeAudio(audioFile);
+
+        if (transcribed && transcribed.length > 0) {
+          body = transcribed;
+          // Update DB with transcription
+          await prisma.wAMessage.update({
+            where: { id: saved.id },
+            data: { body: transcribed },
+          });
+          if (io) {
+            io.emit("whatsapp:transcription", {
+              id: saved.id, waMessageId: saved.waMessageId, jid: convJid,
+              transcription: transcribed,
+            });
+          }
+          console.log(`[Translation] Voice #${saved.id} transcribed: "${transcribed.slice(0, 50)}"`);
+        }
+
+        // Cleanup
+        try { fs.default.unlinkSync(tmpFile); } catch {}
+        try { fs.default.unlinkSync(wavFile); } catch {}
+      } catch (transErr) {
+        console.warn(`[Translation] Voice #${saved.id} transcription failed:`, transErr.message);
+        if (!body || body === "[语音]" || body.startsWith("[") && body.endsWith("]")) return;
+      }
+    }
+
+    // Skip non-text and placeholder messages
+    if (saved.type !== "text" && saved.type !== "audio" && saved.type !== "MessageMediaAudio") return;
+    if (body.length < 1 || body.length > 2000) return;
     if (body.startsWith("[") && body.endsWith("]")) return;
 
     const settings = await getTranslationSettings(convJid, 1);
@@ -234,13 +325,17 @@ function extractBody(msg) {
   if (m.lottieStickerMessage) return { body: "[动态贴纸]", type: "sticker" };
   if (m.locationMessage) return { body: `[位置] ${m.locationMessage.degreesLatitude || ""},${m.locationMessage.degreesLongitude || ""}`, type: "location" };
   if (m.contactsArrayMessage) return { body: "[联系人卡片]", type: "contacts" };
+  // albumMessage / associatedChildMessage: multi-image send, treat as image placeholder
+  if (t === "albumMessage" || t === "associatedChildMessage") {
+    return { body: "[图片]", type: "image" };
+  }
   return { body: `[${t || "unknown"}]`, type: t || "unknown" };
 }
 
 function evoTsToDate(ts) {
-  if (!ts) return new Date();
+  if (!ts) return new Date().toISOString();
   const n = typeof ts === "object" ? ts.low : Number(ts);
-  return new Date(n > 1e12 ? n : n * 1000);
+  return new Date(n > 1e12 ? n : n * 1000).toISOString();
 }
 
 async function ensureWAConnection(sessionId, phone) {
@@ -291,6 +386,9 @@ async function upsertCustomer(phone, pushName, jid) {
 
 async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJid, io) {
   if (!rawRemoteJid) return null;
+  // 动态解析 accountId
+  const accountInfo = await resolveAccountByInstance(instanceName);
+  const accountId = accountInfo ? accountInfo.accountId : 1;
   if (isGroup(rawRemoteJid)) return null;
   if (rawRemoteJid === "status@broadcast") return null;
   if (fromMe && rawRemoteJid === ownerJid) return null;
@@ -307,7 +405,7 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
   if (!fromMe) {
     try {
       const _conv = await prisma.conversation.findUnique({
-        where: { accountId_platform_jid: { accountId: 1, platform: "whatsapp", jid: remoteJid } },
+        where: { accountId_platform_jid: { accountId, platform: "whatsapp", jid: remoteJid } },
         select: { blocked: true },
       });
       if (_conv && _conv.blocked) {
@@ -344,7 +442,7 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
   const direction = fromMe ? "outbound" : "inbound";
   const convJid = remoteJid;
 
-  await ensureWAConnection(DEFAULT_SESSION_ID, mePhone);
+  await ensureWAConnection(instanceToSessionId(instanceName), mePhone);
 
   let saved, duplicate = false;
   try {
@@ -352,7 +450,7 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
     try {
       saved = await prisma.wAMessage.create({
         data: {
-          sessionId: DEFAULT_SESSION_ID, from, to, body: body || "", type: type || "text", direction,
+          sessionId: instanceToSessionId(instanceName), from, to, body: body || "", type: type || "text", direction,
           timestamp, waMessageId,
           mediaUrl: mediaUrl || null, fileName: fileName || null, mimeType: mimeType || null,
           mediaKey: mediaKey || null,
@@ -407,7 +505,9 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
     const phone = jidToPhone(remoteJid);
     await upsertCustomer(phone, pushName, remoteJid);
     // AI 自动补全客户空字段（异步fire-and-forget，不阻塞响应，24h冷却）
-    autoFillCustomer(remoteJid, 1).catch(err => console.warn('[autoFill] async error:', err.message));
+    autoFillCustomer(remoteJid, accountId).catch(err => console.warn('[autoFill] async error:', err.message));
+    // 自动背调（异步，不阻塞；7天冷却；需要公司名或联系人名）
+    autoBackgroundCheck(remoteJid, accountId, io).catch(err => console.warn('[autoBgCheck] async error:', err.message));
   }
 
   const lidNote = rawRemoteJid !== remoteJid ? ` [@lid->${remoteJid}]` : "";
@@ -477,10 +577,24 @@ router.post("/", async (req, res) => {
         const ownerJid = info?.ownerJid || event.sender || "";
         const ownerPhone = jidToPhone(ownerJid);
         await ensureWAConnection(DEFAULT_SESSION_ID, ownerPhone);
-        if (io) io.emit("whatsapp:status", { status: "connected", phone: ownerPhone, instance: instanceName, sessionId: DEFAULT_SESSION_ID });
+        // 更新 WhatsAppAccount 状态
+        try {
+          await prisma.whatsAppAccount.updateMany({
+            where: { instanceName, platform: "whatsapp" },
+            data: { status: "connected", phone: ownerPhone || undefined },
+          });
+        } catch(e) { console.warn("[Webhook] update account status error:", e.message); }
+        if (io) io.emit("whatsapp:status", { status: "connected", phone: ownerPhone, instance: instanceName, sessionId: instanceToSessionId(instanceName) });
       } else if (state === "close" || state === "disconnected") {
         connector.connected = false;
-        if (io) io.emit("whatsapp:status", { status: "disconnected", instance: instanceName, sessionId: DEFAULT_SESSION_ID });
+        // 更新 WhatsAppAccount 状态
+        try {
+          await prisma.whatsAppAccount.updateMany({
+            where: { instanceName, platform: "whatsapp" },
+            data: { status: "disconnected" },
+          });
+        } catch(e) { console.warn("[Webhook] update account status error:", e.message); }
+        if (io) io.emit("whatsapp:status", { status: "disconnected", instance: instanceName, sessionId: instanceToSessionId(instanceName) });
       }
       return res.status(200).json({ received: true, event: eventType });
     }

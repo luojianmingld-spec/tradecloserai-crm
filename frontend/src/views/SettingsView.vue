@@ -112,6 +112,122 @@
         </div>
       </section>
 
+
+      <!-- WhatsApp 账号管理 -->
+      <section class="settings-section wa-section">
+        <div class="section-header">
+          <h2>📱 WhatsApp 账号管理</h2>
+          <button class="btn-add" @click="showCreateAccount = true">+ 新建账号</button>
+        </div>
+        <div v-if="waLoading" class="tg-status"><span class="tg-loading">加载中...</span></div>
+        <div v-else-if="waAccounts.length === 0" class="empty-state"><p>暂无 WhatsApp 账号</p></div>
+        <div v-else class="wa-account-list">
+          <div v-for="acct in waAccounts" :key="acct.id" class="wa-account-card">
+            <div class="wa-account-info">
+              <div class="wa-account-name">
+                <span class="wa-dot" :class="acct.connectionState"></span>
+                {{ acct.name || acct.phone || acct.instanceName }}
+              </div>
+              <div class="wa-account-meta">
+                <span v-if="acct.phone">{{ acct.phone }}</span>
+                <span v-if="acct.instanceName" class="wa-instance">{{ acct.instanceName }}</span>
+                <span class="wa-state-badge" :class="acct.connectionState">{{ stateLabel(acct.connectionState) }}</span>
+              </div>
+            </div>
+            <div class="wa-account-actions">
+              <button class="btn-icon-sm btn-proxy" @click="openProxyModal(acct)" title="代理配置">
+                🌐 代理
+              </button>
+              <button v-if="acct.connectionState !== 'open'" class="btn-icon-sm btn-primary-sm" @click="showQR(acct)" title="扫码连接">
+                🔗 连接
+              </button>
+              <button v-if="acct.connectionState === 'open'" class="btn-icon-sm btn-danger-sm" @click="disconnectWA(acct)" title="断开连接">
+                ⏏️ 断开
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 代理配置弹窗 -->
+      <div v-if="showProxyModal" class="modal-mask" @click.self="closeProxyModal">
+        <div class="modal-card proxy-modal">
+          <h3>🌐 代理配置 - {{ proxyAccount?.name || proxyAccount?.instanceName }}</h3>
+          <div class="proxy-form">
+            <div class="form-group">
+              <label>代理协议</label>
+              <select v-model="proxyForm.protocol" class="form-input">
+                <option value="socks5">SOCKS5</option>
+                <option value="http">HTTP</option>
+                <option value="https">HTTPS</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>代理地址</label>
+              <input v-model="proxyForm.host" class="form-input" placeholder="例如: 127.0.0.1" />
+            </div>
+            <div class="form-group">
+              <label>代理端口</label>
+              <input v-model="proxyForm.port" class="form-input" placeholder="例如: 1080" type="number" />
+            </div>
+            <div class="form-group">
+              <label>用户名 <span class="optional">(可选)</span></label>
+              <input v-model="proxyForm.username" class="form-input" placeholder="无认证可留空" />
+            </div>
+            <div class="form-group">
+              <label>密码 <span class="optional">(可选)</span></label>
+              <input v-model="proxyForm.password" class="form-input" type="password" placeholder="无认证可留空" />
+            </div>
+            <div v-if="proxyStatus" class="proxy-status" :class="proxyStatus.type">{{ proxyStatus.msg }}</div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-cancel" @click="closeProxyModal">取消</button>
+            <button class="btn-secondary" @click="deleteProxy" :disabled="!proxyForm.hasProxy">删除代理</button>
+            <button class="btn-primary" @click="saveProxy">保存配置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新建账号弹窗 -->
+      <div v-if="showCreateAccount" class="modal-mask" @click.self="showCreateAccount = false">
+        <div class="modal-card">
+          <h3>+ 新建 WhatsApp 账号</h3>
+          <div class="form-group">
+            <label>账号名称</label>
+            <input v-model="newAccount.name" class="form-input" placeholder="例如: Eric、Alice" />
+          </div>
+          <div class="form-group">
+            <label>手机号</label>
+            <input v-model="newAccount.phone" class="form-input" placeholder="例如: 8618038118960" />
+          </div>
+          <div class="form-group">
+            <label>实例名称 <span class="optional">(自动生成)</span></label>
+            <input v-model="newAccount.instanceName" class="form-input" placeholder="留空自动生成" />
+          </div>
+          <div class="form-actions">
+            <button class="btn-cancel" @click="showCreateAccount = false">取消</button>
+            <button class="btn-primary" @click="createAccount" :disabled="!newAccount.name">创建并连接</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QR 扫码弹窗 -->
+      <div v-if="showQRModal" class="modal-mask" @click.self="closeQRModal">
+        <div class="modal-card qr-modal">
+          <h3>扫码连接 WhatsApp</h3>
+          <p class="qr-hint">打开 WhatsApp → 设置 → 关联设备 → 扫描此二维码</p>
+          <div v-if="qrLoading" class="qr-loading">获取二维码中...</div>
+          <div v-else-if="qrBase64" class="qr-image-wrapper">
+            <img :src="qrBase64" class="qr-image" alt="WhatsApp QR Code" />
+          </div>
+          <div v-else class="qr-error">二维码获取失败，请重试</div>
+          <div class="form-actions">
+            <button class="btn-cancel" @click="closeQRModal">关闭</button>
+            <button class="btn-primary" @click="refreshQR" v-if="qrBase64">刷新二维码</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 模型管理区域（所有Tab共用） -->
       <section class="settings-section">
         <div class="section-header">
@@ -702,8 +818,88 @@ const syncTgContacts = async () => {
   }
 };
 
-onMounted(async () => {
+
+      // ===== WhatsApp 账号管理 =====
+      const waAccounts = ref([]);
+      const waLoading = ref(false);
+      const showQRModal = ref(false);
+      const qrLoading = ref(false);
+      const qrBase64 = ref(null);
+      const currentQRAccount = ref(null);
+      let qrPollTimer = null;
+
+      const stateLabel = (state) => {
+        const map = { open: "已连接", connecting: "连接中", close: "未连接", disconnected: "已断开", no_instance: "未创建实例", error: "异常" };
+        return map[state] || state;
+      };
+
+      const fetchWAStatus = async () => {
+        waLoading.value = true;
+        try {
+          const res = await apiClient.get(`/accounts/wa/status`);
+          waAccounts.value = res.data;
+        } catch (e) {
+          console.error("Failed to fetch WA status:", e);
+        } finally {
+          waLoading.value = false;
+        }
+      };
+
+      const showQR = async (acct) => {
+        showQRModal.value = true;
+        currentQRAccount.value = acct;
+        qrBase64.value = null;
+        await refreshQR();
+      };
+
+      const refreshQR = async () => {
+        if (!currentQRAccount.value) return;
+        qrLoading.value = true;
+        qrBase64.value = null;
+        try {
+          const res = await apiClient.get(`/accounts/wa/${currentQRAccount.value.id}/qr`);
+          qrBase64.value = res.data.base64;
+          // Poll for connection status
+          if (qrPollTimer) clearInterval(qrPollTimer);
+          qrPollTimer = setInterval(async () => {
+            try {
+              const statusRes = await apiClient.get(`/accounts/wa/status`);
+              waAccounts.value = statusRes.data;
+              const acct = waAccounts.value.find(a => a.id === currentQRAccount.value.id);
+              if (acct && acct.connectionState === "open") {
+                clearInterval(qrPollTimer);
+                qrPollTimer = null;
+                closeQRModal();
+              }
+            } catch {}
+          }, 3000);
+        } catch (e) {
+          console.error("QR fetch failed:", e);
+        } finally {
+          qrLoading.value = false;
+        }
+      };
+
+      const closeQRModal = () => {
+        showQRModal.value = false;
+        qrBase64.value = null;
+        currentQRAccount.value = null;
+        if (qrPollTimer) { clearInterval(qrPollTimer); qrPollTimer = null; }
+      };
+
+      const disconnectWA = async (acct) => {
+        if (!confirm(`确定断开 ${acct.name || acct.phone} 的连接？`)) return;
+        try {
+          await apiClient.post(`/accounts/wa/${acct.id}/disconnect`);
+          await fetchWAStatus();
+        } catch (e) {
+          alert("断开失败: " + e.message);
+        }
+      };
+
+      onMounted(async () => {
   fetchTgStatus();
+      fetchWAStatus();
   loadTeam();
   await loadProviders();
   await loadTransSettings();
@@ -1661,4 +1857,121 @@ async function testBackground() {
 .tg-stat { background: var(--bg-secondary, #f5f5f5); padding: 4px 12px; border-radius: 12px; font-size: 13px; color: #666; }
 .tg-sync-result { margin-top: 8px; color: #4caf50; font-size: 13px; }
 .tg-loading { color: #888; }
+
+/* WhatsApp 账号管理 */
+.wa-section { margin-top: 0; }
+.wa-account-list { display: flex; flex-direction: column; gap: 12px; }
+.wa-account-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; border-radius: 12px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.wa-account-card:hover { border-color: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.08); }
+.wa-account-info { flex: 1; min-width: 0; }
+.wa-account-name {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; font-size: 15px; color: var(--text, #111);
+}
+.wa-account-meta {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+  font-size: 13px; color: var(--text-secondary, #6b7280);
+}
+.wa-instance { background: var(--bg-hover, #f3f4f6); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.wa-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.wa-dot.open { background: #22c55e; box-shadow: 0 0 4px rgba(34,197,94,0.4); }
+.wa-dot.connecting { background: #f59e0b; animation: pulse 1.5s infinite; }
+.wa-dot.close, .wa-dot.disconnected { background: #9ca3af; }
+.wa-dot.error { background: #ef4444; }
+.wa-state-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500;
+}
+.wa-state-badge.open { background: #dcfce7; color: #15803d; }
+.wa-state-badge.connecting { background: #fef3c7; color: #b45309; }
+.wa-state-badge.close, .wa-state-badge.disconnected { background: #f3f4f6; color: #6b7280; }
+.wa-state-badge.error { background: #fee2e2; color: #b91c1c; }
+.wa-state-badge.no_instance { background: #f3f4f6; color: #9ca3af; }
+.wa-account-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-primary-sm {
+  background: #3b82f6; color: #fff; border: none; padding: 6px 12px;
+  border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500;
+}
+.btn-primary-sm:hover { background: #2563eb; }
+.btn-danger-sm {
+  background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 12px;
+  border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500;
+}
+.btn-danger-sm:hover { background: #fecaca; }
+
+/* QR Modal */
+.qr-modal { max-width: 380px; text-align: center; }
+.qr-hint { color: var(--text-secondary, #6b7280); font-size: 13px; margin: 8px 0 16px; }
+.qr-loading { padding: 40px 0; color: var(--text-secondary); }
+.qr-image-wrapper { display: flex; justify-content: center; margin: 16px 0; }
+.qr-image { width: 256px; height: 256px; border-radius: 12px; border: 4px solid var(--border, #e5e7eb); }
+.qr-error { padding: 40px 0; color: #ef4444; }
+
+
+/* Proxy modal */
+.proxy-modal {
+  max-width: 440px;
+}
+.proxy-form .form-group {
+  margin-bottom: 12px;
+}
+.proxy-form .form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.proxy-form .optional {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.proxy-status {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+.proxy-status.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.proxy-status.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.proxy-status.info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+.btn-proxy {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+.btn-proxy:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+.btn-secondary {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.btn-secondary:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 </style>

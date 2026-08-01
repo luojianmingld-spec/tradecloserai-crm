@@ -34,7 +34,8 @@ model WhatsAppAccount {
   name                String?
   pushName            String?
   status              String   @default("disconnected") // whatsapp: disconnected/connecting/connected; telegram: disconnected/connected
-  sessionDir          String?  @unique // whatsapp: evo session dir; telegram: "tg_<botUsername>"
+  sessionDir          String?  @unique
+  instanceName        String?  // Evolution API instance name
   avatarUrl           String?
   // Telegram 专用
   telegramBotToken    String?  // 123456:ABC-DEF...
@@ -486,4 +487,185 @@ model TopicBriefing {
   createdAt       DateTime @default(now())
 
   topicSubscription TopicSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
+
+// ==================== 产品知识库 ====================
+
+model ProductKnowledgeBase {
+  id              Int      @id @default(autoincrement())
+  accountId       Int      @default(1)
+  
+  // 基本信息
+  productNameCn   String   // 产品中文名
+  productNameEn   String   // 产品英文名
+  productDesc     String?  // 产品描述
+  productImageUrl String?  // 产品图片URL
+  
+  // 报价规则
+  pricingUnit     String?  // 计价单位（kg/piece/set）
+  basePrice       Float?   // 基础价格
+  moq             String?  // 最小起订量（文本，如"1个20GP"、"1000吨"）
+  deliveryDays    String?  // 标准交期（文本，如"15天"、"3-4周"）
+  paymentTerms    String?  // 付款条件
+  
+  // 配置状态
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  questions       ProductQuestion[]
+  
+  @@index([accountId])
+  @@index([productNameEn])
+}
+
+model ProductQuestion {
+  id           Int      @id @default(autoincrement())
+  productId    Int
+  product      ProductKnowledgeBase @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // 问题内容
+  questionCn   String   // 中文问题
+  questionEn   String   // 英文问题
+  questionType String   @default("text") // text/single_choice/multiple_choice/number
+  optionsJson  String?  // 选项列表（JSON格式）
+  
+  // 问题属性
+  priority     Int      @default(1) // 1=必须问，2=进阶问
+  sortOrder    Int      @default(0)
+  
+  // 配置状态
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([productId, priority])
+}
+
+// ==================== 客户背调与BANT评分 ====================
+
+model CustomerBackgroundCheck {
+  id          Int      @id @default(autoincrement())
+  contactId   Int      // 关联的Contact ID
+  
+  // 公司信息
+  companyName String?  // 公司名称
+  website     String?  // 公司官网
+  country     String?  // 国家
+  industry    String?  // 行业
+  companySize String?  // 公司规模
+  
+  // 详细信息（JSON）
+  details     String?  // 完整背调信息（JSON格式）
+  
+  // 分析结果
+  riskLevel   String?  // 风险等级：Low/Medium/High
+  notes       String?  // 备注
+  
+  // 元数据
+  source      String   @default("llm") // 数据来源：llm/manual/api
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([contactId])
+  @@index([contactId])
+}
+
+model CustomerBantScore {
+  id          Int      @id @default(autoincrement())
+  contactId   Int      // 关联的Contact ID
+  
+  // BANT四维评分（0-10）
+  budgetScore     Float  @default(0)
+  authorityScore  Float  @default(0)
+  needScore       Float  @default(0)
+  timelineScore   Float  @default(0)
+  
+  // 综合评分
+  totalScore      Float  @default(0)
+  level           String @default("MEDIUM") // HIGH/MEDIUM/LOW
+  
+  // 评估详情（JSON）
+  evaluationDetails String? // 评估详情（JSON格式）
+  
+  // 元数据
+  evaluatedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([contactId])
+  @@index([totalScore])
+}
+
+// ==================== Phase 6-9: 话术v4升级 ====================
+
+// Phase 6: 客户态度分析
+model CustomerAttitude {
+  id              Int      @id @default(autoincrement())
+  contactId       Int      @unique // 关联的Contact ID
+
+  // 态度分析结果
+  intentLevel     String   @default("MEDIUM")  // HIGH/MEDIUM/LOW - 购买意向
+  sentiment       String   @default("NEUTRAL") // POSITIVE/NEUTRAL/NEGATIVE - 情绪
+  urgency         String   @default("NORMAL")  // URGENT/NORMAL/PATIENT - 紧急程度
+  focusPoints     String?  // JSON数组，如 ["价格","交期"]
+  trend           String?  // IMPROVING/STABLE/DECLINING - 趋势
+  confidenceScore Float    @default(0) // 分析置信度 0-1
+
+  // 分析上下文
+  analyzedMessages Int     @default(0)  // 已分析的消息数
+  reasoning        String? // 分析理由
+  lastAnalyzedAt   DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contactId])
+}
+
+// Phase 7: 行动建议
+model ActionSuggestion {
+  id              Int      @id @default(autoincrement())
+  contactId       Int      // 关联的Contact ID
+
+  // 建议内容
+  actionType      String   // FOLLOW_UP_NOW/SEND_QUOTE/GATHER_INFO/SEND_MATERIAL/SCHEDULE_MEETING/NURTURE/ESCALATE/CLOSE_DEAL
+  priority        String   @default("NORMAL") // HIGH/NORMAL/LOW
+  suggestion      String   // 具体建议文本
+  reason          String?  // 建议原因
+  templateMessage String?  // 可选的模板消息
+
+  // 状态
+  status          String   @default("PENDING") // PENDING/ACCEPTED/DISMISSED/EXECUTED/EXPIRED
+  executedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contactId, status])
+}
+
+// Phase 9: 话术效果追踪
+model SpeechEffectiveness {
+  id              Int      @id @default(autoincrement())
+  sentMessageId   Int      @unique // 关联的已发消息ID
+  contactId       Int      // 关联的Contact ID
+  sampleId        Int?     // 关联的话术样本ID（可选）
+
+  // 发送内容
+  sentContent     String   // 发送的消息内容
+
+  // 效果数据
+  sentAt          DateTime // 发送时间
+  customerReplied Boolean  @default(false) // 客户是否回复
+  responseTimeHours Float? // 回复时间（小时）
+  responseLength  Int      @default(0) // 客户回复内容长度
+  effectivenessScore Float? // 效果评分 0-100
+  evaluatedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([contactId])
+  @@index([effectivenessScore])
 }

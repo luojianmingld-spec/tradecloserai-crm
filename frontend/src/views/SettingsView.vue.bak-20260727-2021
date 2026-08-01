@@ -1,0 +1,1664 @@
+<template>
+  <div class="settings-page">
+    <div class="settings-header">
+      <button class="back-btn" @click="$router.push('/')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <h1>AI 设置</h1>
+    </div>
+
+    <div class="settings-body">
+      <!-- 账户信息卡片 -->
+      <section class="settings-section account-card">
+        <div class="account-header">
+          <div class="avatar-circle">{{ (authStore.user?.name || authStore.user?.username || 'U').charAt(0).toUpperCase() }}</div>
+          <div class="account-info">
+            <div class="account-name">{{ authStore.user?.name || authStore.user?.username }}</div>
+            <div class="account-sub">@{{ authStore.user?.username }} · {{ authStore.user?.role === 'admin' ? '管理员' : '成员' }}</div>
+          </div>
+        </div>
+        <button class="btn-logout" @click="handleLogout">退出登录</button>
+      </section>
+
+      <!-- 团队成员管理（仅admin） -->
+      <section v-if="authStore.user?.role === 'admin'" class="settings-section">
+        <div class="section-header">
+          <h2>团队成员</h2>
+          <button class="btn-add" @click="showAddUser = true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            添加成员
+          </button>
+        </div>
+        <div v-if="teamLoading" class="empty-state"><p>加载中...</p></div>
+        <div v-else-if="teamUsers.length === 0" class="empty-state"><p>暂无成员</p></div>
+        <div v-else class="team-list">
+          <div v-for="u in teamUsers" :key="u.id" class="team-row">
+            <div class="avatar-circle sm">{{ (u.name || u.username).charAt(0).toUpperCase() }}</div>
+            <div class="team-info">
+              <div class="team-name">{{ u.name }} <span v-if="u.id === authStore.user?.id" class="tag-me">我</span></div>
+              <div class="team-sub">@{{ u.username }} · {{ u.role === 'admin' ? '管理员' : '成员' }}</div>
+            </div>
+            <div class="team-actions" v-if="u.id !== authStore.user?.id">
+              <button class="btn-icon-sm" @click="resetPwd(u)" title="重置密码">🔑</button>
+              <button class="btn-icon-sm btn-danger" @click="delUser(u)" title="删除">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 添加/重置密码弹窗（极简内联） -->
+      <div v-if="showAddUser || pwdTarget" class="modal-mask" @click.self="closeModals">
+        <div class="modal-card">
+          <h3>{{ pwdTarget ? '重置密码 - ' + pwdTarget.name : '添加成员' }}</h3>
+          <div v-if="!pwdTarget" class="form-group">
+            <label>姓名</label>
+            <input v-model="userForm.name" class="form-input" placeholder="显示名，如张三"/>
+          </div>
+          <div v-if="!pwdTarget" class="form-group">
+            <label>用户名（登录用）</label>
+            <input v-model="userForm.username" class="form-input" placeholder="英文/数字"/>
+          </div>
+          <div v-if="!pwdTarget" class="form-group">
+            <label>角色</label>
+            <select v-model="userForm.role" class="form-select">
+              <option value="user">成员</option>
+              <option value="admin">管理员</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ pwdTarget ? '新密码' : '初始密码' }}</label>
+            <input v-model="userForm.password" class="form-input" type="text" placeholder="至少4位"/>
+          </div>
+          <div class="form-actions">
+            <button class="btn-cancel" @click="closeModals">取消</button>
+            <button class="btn-primary" @click="submitUser" :disabled="submitting">{{ submitting ? '提交中...' : '确认' }}</button>
+          </div>
+          <div v-if="modalMsg" class="inline-msg" :class="modalErr ? 'err' : 'ok'">{{ modalMsg }}</div>
+        </div>
+      </div>
+
+      <!-- Telegram User Bot -->
+      <section class="settings-section tg-section">
+        <div class="section-header">
+          <h2>📡 Telegram 连接</h2>
+          <button v-if="tgStatus.connected" class="btn-add" @click="syncTgContacts" :disabled="tgSyncing">
+            {{ tgSyncing ? '同步中...' : '同步联系人' }}
+          </button>
+        </div>
+        <div v-if="tgLoading" class="tg-status">
+          <span class="tg-loading">加载中...</span>
+        </div>
+        <div v-else-if="tgStatus.connected" class="tg-info">
+          <div class="tg-status-row">
+            <span class="tg-dot connected"></span>
+            <span class="tg-label">已连接</span>
+            <span class="tg-username">@{{ tgStatus.user?.username }}</span>
+            <span class="tg-phone">{{ tgStatus.user?.phone }}</span>
+          </div>
+          <div class="tg-stats">
+            <span class="tg-stat">联系人: {{ tgContactCount }}</span>
+          </div>
+          <div v-if="tgSyncResult" class="tg-sync-result">
+            ✅ 已同步 {{ tgSyncResult.synced }} 个联系人到CRM数据库
+          </div>
+        </div>
+        <div v-else class="tg-status">
+          <span class="tg-dot disconnected"></span>
+          <span class="tg-label">未连接</span>
+        </div>
+      </section>
+
+      <!-- 模型管理区域（所有Tab共用） -->
+      <section class="settings-section">
+        <div class="section-header">
+          <h2>模型管理</h2>
+          <button class="btn-add" @click="showAddForm = !showAddForm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            添加模型
+          </button>
+        </div>
+
+        <!-- 模型列表 -->
+        <div v-if="providers.length === 0" class="empty-state">
+          <p>尚未配置 AI 模型</p>
+          <p class="empty-hint">点击上方"添加模型"按钮开始配置</p>
+        </div>
+
+        <div v-for="p in providers" :key="p.id" class="provider-card" :class="{ active: p.id === activeId }">
+          <div class="provider-status">
+            <span class="status-dot" :class="{ active: p.id === activeId }"></span>
+          </div>
+          <div class="provider-info">
+            <div class="provider-name-row">
+              <span class="provider-name">{{ p.name }}</span>
+              <span class="provider-tag">{{ getProviderLabel(p.provider) }}</span>
+            </div>
+            <div class="provider-url">{{ p.baseUrl }}</div>
+            <div class="provider-model">模型: {{ p.model }}</div>
+          </div>
+          <div class="provider-actions">
+            <button v-if="p.id !== activeId" class="btn-icon btn-activate" @click="activateProvider(p.id)" title="激活">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </button>
+            <button class="btn-icon btn-edit" @click="editProvider(p)" title="编辑">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="btn-icon btn-delete" @click="deleteProvider(p.id)" title="删除">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 添加/编辑模型表单（内联） -->
+        <div v-if="showAddForm || editingId" class="form-card">
+          <h3>{{ editingId ? '编辑模型' : '添加模型' }}</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>模型名称</label>
+              <input v-model="form.name" class="form-input" placeholder="例如：火山引擎豆包Pro" />
+            </div>
+            <div class="form-group">
+              <label>供应商</label>
+              <select v-model="form.provider" class="form-select" @change="onProviderChange">
+                <option value="doubao">火山引擎豆包 (Doubao)</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="custom">自定义</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>API Key</label>
+              <div class="input-with-toggle">
+                <input v-model="form.apiKey" class="form-input" :type="showApiKey ? 'text' : 'password'" :placeholder="editingId ? '留空则不修改' : '输入 API Key'" />
+                <button type="button" class="btn-toggle" @click="showApiKey = !showApiKey">
+                  <svg v-if="showApiKey" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                  <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label>API 地址</label>
+              <input v-model="form.baseUrl" class="form-input" placeholder="https://..." />
+            </div>
+            <div class="form-group full-width">
+              <label>模型 ID / Endpoint</label>
+              <input v-model="form.model" class="form-input" placeholder="例如：doubao-seed-2-0-pro-260215" />
+            </div>
+          </div>
+          <div v-if="testMessage" class="test-result-inline" :class="{ success: testSuccess, error: !testSuccess }">
+            {{ testMessage }}
+          </div>
+          <div class="form-actions">
+            <button class="btn-secondary" @click="testFormConnection" :disabled="testingConnection">
+              {{ testingConnection ? '测试中...' : '测试连接' }}
+            </button>
+            <button class="btn-primary" @click="saveForm" :disabled="savingForm">
+              {{ savingForm ? '保存中...' : '保存' }}
+            </button>
+            <button class="btn-cancel" @click="cancelForm">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 导航 -->
+      <div class="tabs">
+        <button v-for="tab in tabs" :key="tab.id" class="tab-btn" :class="{ active: activeTab === tab.id }" @click="activeTab = tab.id">
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <!-- Tab 1: 翻译设置 -->
+      <section v-if="activeTab === 'translation'" class="settings-section">
+        <h2>翻译设置</h2>
+        <div class="form-group">
+          <label class="toggle-label">
+            <span>启用自动翻译</span>
+            <button class="toggle-btn" :class="{ active: transForm.translationEnabled === 'true' }" @click="transForm.translationEnabled = transForm.translationEnabled === 'true' ? 'false' : 'true'">
+              <span class="toggle-thumb"></span>
+            </button>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>翻译引擎</label>
+          <select v-model="transForm.translationEngine" class="form-select" :disabled="providers.length === 0">
+            <option v-if="providers.length === 0" disabled>请先添加模型</option>
+            <option v-for="p in providers" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+          <p class="form-hint">选择用于翻译的AI模型</p>
+        </div>
+
+        <div class="form-group">
+          <label>目标翻译语言</label>
+          <select v-model="transForm.translationTargetLang" class="form-select">
+            <option value="auto">自动检测</option>
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="ko">한국어</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="toggle-label">
+            <span>发送时自动翻译</span>
+            <button class="toggle-btn" :class="{ active: transForm.translationAutoSend === 'true' }" @click="transForm.translationAutoSend = transForm.translationAutoSend === 'true' ? 'false' : 'true'">
+              <span class="toggle-thumb"></span>
+            </button>
+          </label>
+          <p class="form-hint">开启后，发送消息时会自动将中文翻译为对方语言</p>
+        </div>
+
+        <div class="form-group">
+          <label>翻译测试</label>
+          <div class="test-input-row">
+            <input v-model="testText" class="form-input" placeholder="输入文本测试翻译..." @keyup.enter="testTranslate" />
+            <button class="btn-test" @click="testTranslate" :disabled="testing || providers.length === 0">
+              {{ testing ? '翻译中...' : '测试' }}
+            </button>
+          </div>
+          <div v-if="testResult" class="test-result">
+            <span class="result-label">翻译结果:</span>
+            <span class="result-text">{{ testResult }}</span>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button class="save-btn" @click="saveTransSettings" :disabled="savingTrans">
+            {{ savingTrans ? '保存中...' : '保存翻译设置' }}
+          </button>
+          <span v-if="saveMsg" class="save-msg" :class="{ error: saveMsg.includes('失败') }">{{ saveMsg }}</span>
+        </div>
+      </section>
+
+      <!-- Tab 2: AI话术 -->
+      <section v-if="activeTab === 'reply'" class="settings-section">
+        <h2>AI 话术生成</h2>
+        <div v-if="providers.length === 0" class="empty-state">
+          <p>请先在上方添加AI模型</p>
+        </div>
+        <template v-else>
+          <div class="form-group">
+            <label>默认回复风格</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" v-model="replyStyle" value="formal" />
+                <span>正式商务</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" v-model="replyStyle" value="friendly" />
+                <span>友好热情</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" v-model="replyStyle" value="concise" />
+                <span>简洁高效</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>话术测试</label>
+            <textarea v-model="replyTestText" class="form-textarea" rows="4" placeholder="输入客户消息，生成回复话术..."></textarea>
+            <button class="btn-test" @click="testReply" :disabled="testingReply" style="margin-top: 8px;">
+              {{ testingReply ? '生成中...' : '生成话术' }}
+            </button>
+          </div>
+
+          <div v-if="replyResults.length > 0" class="reply-results">
+            <div v-for="(reply, idx) in replyResults" :key="idx" class="reply-item">
+              <div class="reply-index">话术 {{ idx + 1 }}</div>
+              <div class="reply-content">{{ reply }}</div>
+            </div>
+          </div>
+        </template>
+      </section>
+
+      <!-- Tab 3: 需求总结 -->
+      <section v-if="activeTab === 'summarize'" class="settings-section">
+        <h2>需求总结</h2>
+        <div v-if="providers.length === 0" class="empty-state">
+          <p>请先在上方添加AI模型</p>
+        </div>
+        <template v-else>
+          <div class="form-group">
+            <label>测试需求分析</label>
+            <textarea v-model="summarizeTestText" class="form-textarea" rows="6" placeholder="输入对话内容，分析客户需求..."></textarea>
+            <button class="btn-test" @click="testSummarize" :disabled="testingSummarize" style="margin-top: 8px;">
+              {{ testingSummarize ? '分析中...' : '分析需求' }}
+            </button>
+          </div>
+
+          <div v-if="summarizeResult" class="summarize-result">
+            <div class="result-item" v-if="summarizeResult.products">
+              <span class="result-key">意向产品:</span>
+              <span class="result-value">{{ summarizeResult.products }}</span>
+            </div>
+            <div class="result-item" v-if="summarizeResult.quantity">
+              <span class="result-key">需求规模:</span>
+              <span class="result-value">{{ summarizeResult.quantity }}</span>
+            </div>
+            <div class="result-item" v-if="summarizeResult.keyConcerns">
+              <span class="result-key">核心关注:</span>
+              <span class="result-value">{{ summarizeResult.keyConcerns }}</span>
+            </div>
+            <div class="result-item" v-if="summarizeResult.nextActions">
+              <span class="result-key">下一步行动:</span>
+              <span class="result-value">{{ summarizeResult.nextActions }}</span>
+            </div>
+            <div class="result-item" v-if="summarizeResult.intentionScore">
+              <span class="result-key">意向度:</span>
+              <span class="result-value">{{ summarizeResult.intentionScore }}/10</span>
+            </div>
+          </div>
+        </template>
+      </section>
+
+      <!-- Tab 4: 客户背调 -->
+      <section v-if="activeTab === 'background'" class="settings-section">
+        <h2>客户背调</h2>
+        <div v-if="providers.length === 0" class="empty-state">
+          <p>请先在上方添加AI模型</p>
+        </div>
+        <template v-else>
+          <div class="form-group">
+            <label>搜索深度</label>
+            <select v-model="backgroundDepth" class="form-select">
+              <option value="quick">快速</option>
+              <option value="standard">标准</option>
+              <option value="deep">深度</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>背调测试</label>
+            <input v-model="backgroundQuery" class="form-input" placeholder="输入公司名或域名..." @keyup.enter="testBackground" />
+            <button class="btn-test" @click="testBackground" :disabled="testingBackground" style="margin-top: 8px;">
+              {{ testingBackground ? '搜索中...' : '开始背调' }}
+            </button>
+          </div>
+
+          <div v-if="backgroundResult" class="background-result">
+            <div class="result-section" v-if="backgroundResult.companyInfo">
+              <h4>公司信息</h4>
+              <p>{{ backgroundResult.companyInfo }}</p>
+            </div>
+            <div class="result-section" v-if="backgroundResult.products">
+              <h4>主要产品/服务</h4>
+              <p>{{ backgroundResult.products }}</p>
+            </div>
+            <div class="result-section" v-if="backgroundResult.reputation">
+              <h4>市场声誉</h4>
+              <p>{{ backgroundResult.reputation }}</p>
+            </div>
+            <div class="result-section" v-if="backgroundResult.recommendations">
+              <h4>合作建议</h4>
+              <p>{{ backgroundResult.recommendations }}</p>
+            </div>
+          </div>
+        </template>
+      </section>
+
+      <!-- 无人值守设置 -->
+      <section v-if="activeTab === 'unattended'" class="settings-section">
+        <h2>无人值守自动回复</h2>
+        <p class="section-desc">非工作时间，AI 自动回复客户消息，不让客户等太久。</p>
+        
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" v-model="unattendedForm.enabled" />
+            <span>启用无人值守</span>
+          </label>
+        </div>
+
+        <div class="form-group" v-if="unattendedForm.enabled">
+          <label>开始时间（24小时制）</label>
+          <select v-model="unattendedForm.startHour" class="form-select">
+            <option v-for="h in 24" :key="h" :value="h - 1">{{ String(h - 1).padStart(2, '0') }}:00</option>
+          </select>
+        </div>
+
+        <div class="form-group" v-if="unattendedForm.enabled">
+          <label>结束时间（24小时制）</label>
+          <select v-model="unattendedForm.endHour" class="form-select">
+            <option v-for="h in 24" :key="h" :value="h - 1">{{ String(h - 1).padStart(2, '0') }}:00</option>
+          </select>
+        </div>
+
+        <div class="form-group" v-if="unattendedForm.enabled">
+          <label>时区</label>
+          <select v-model="unattendedForm.timezone" class="form-select">
+            <option value="Asia/Shanghai">北京时间 (UTC+8)</option>
+            <option value="Asia/Dubai">迪拜 (UTC+4)</option>
+            <option value="Asia/Kolkata">印度 (UTC+5:30)</option>
+            <option value="America/New_York">美东 (UTC-5)</option>
+            <option value="America/Los_Angeles">美西 (UTC-8)</option>
+            <option value="Europe/London">伦敦 (UTC+0)</option>
+            <option value="Europe/Berlin">柏林 (UTC+1)</option>
+          </select>
+        </div>
+
+        <div class="form-group" v-if="unattendedForm.enabled">
+          <label>回复策略</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" v-model="unattendedForm.strategy" value="smart" />
+              <span>智能回复（AI 根据客户消息生成）</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" v-model="unattendedForm.strategy" value="simple" />
+              <span>简单告知（固定话术：正在离线中）</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions" v-if="unattendedForm.enabled">
+          <button class="btn btn-primary" @click="saveUnattended" :disabled="unattendedSaving">
+            {{ unattendedSaving ? '保存中...' : '保存设置' }}
+          </button>
+          <span v-if="unattendedSaved" class="save-hint">✓ 已保存</span>
+        </div>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/auth.js';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import api from '../utils/api.js';
+
+// TG User Bot
+const tgStatus = ref({ connected: false, user: null });
+const tgLoading = ref(true);
+const tgSyncing = ref(false);
+const tgContactCount = ref(0);
+const tgSyncResult = ref(null);
+
+const router = useRouter();
+const authStore = useAuthStore();
+const teamUsers = ref([]);
+const teamLoading = ref(false);
+const showAddUser = ref(false);
+const pwdTarget = ref(null);
+const submitting = ref(false);
+const modalMsg = ref('');
+const modalErr = ref(false);
+const userForm = reactive({ name:'', username:'', password:'', role:'user' });
+
+async function loadTeam() {
+  if (authStore.user?.role !== 'admin') return;
+  teamLoading.value = true;
+  try { const { data } = await api.get('/auth/users'); teamUsers.value = data; }
+  catch(e) { ElMessage.error('加载成员失败'); }
+  teamLoading.value = false;
+}
+
+function handleLogout() {
+  ElMessageBox.confirm('确定退出登录？', '提示', { type: 'warning' }).then(() => {
+    authStore.logout();
+    router.push('/login');
+  }).catch(()=>{});
+}
+
+function resetPwd(u) {
+  pwdTarget.value = u;
+  userForm.password = '';
+  modalMsg.value = '';
+}
+
+async function delUser(u) {
+  try {
+    await ElMessageBox.confirm(`确定删除成员 ${u.name} (@${u.username})？`, '删除确认', { type: 'warning' });
+    await api.delete('/auth/users/' + u.id);
+    ElMessage.success('已删除');
+    loadTeam();
+  } catch(e) { if(e!=='cancel') ElMessage.error('删除失败'); }
+}
+
+function closeModals() {
+  showAddUser.value = false; pwdTarget.value = null;
+  modalMsg.value = ''; userForm.name=''; userForm.username=''; userForm.password=''; userForm.role='user';
+}
+
+async function submitUser() {
+  submitting.value = true; modalMsg.value = ''; modalErr.value = false;
+  try {
+    if (pwdTarget.value) {
+      if (!userForm.password || userForm.password.length < 4) throw new Error('密码至少4位');
+      await api.put('/auth/users/' + pwdTarget.value.id, { password: userForm.password });
+      ElMessage.success('密码已重置');
+    } else {
+      if (!userForm.username || !userForm.password) throw new Error('用户名密码必填');
+      if (userForm.password.length < 4) throw new Error('密码至少4位');
+      await api.post('/auth/register', { ...userForm });
+      ElMessage.success('成员已添加');
+    }
+    closeModals();
+    loadTeam();
+  } catch(e) {
+    modalErr.value = true;
+    modalMsg.value = e.response?.data?.error || e.message || '操作失败';
+  }
+  submitting.value = false;
+}
+
+// Provider management
+const providers = ref([]);
+const activeId = ref(null);
+const showAddForm = ref(false);
+const editingId = ref(null);
+const showApiKey = ref(false);
+const testingConnection = ref(false);
+const savingForm = ref(false);
+const testMessage = ref('');
+const testSuccess = ref(false);
+
+const PROVIDER_DEFAULTS = {
+  doubao: { baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-2-0-pro-260215' },
+  deepseek: { baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  custom: { baseUrl: '', model: '' },
+};
+
+const form = ref({
+  name: '',
+  provider: 'doubao',
+  apiKey: '',
+  baseUrl: PROVIDER_DEFAULTS.doubao.baseUrl,
+  model: PROVIDER_DEFAULTS.doubao.model,
+});
+
+// Tabs
+const tabs = [
+  { id: 'translation', label: '翻译设置' },
+  { id: 'reply', label: 'AI话术' },
+  { id: 'summarize', label: '需求总结' },
+  { id: 'background', label: '客户背调' },
+  { id: 'unattended', label: '无人值守' },
+];
+const activeTab = ref('translation');
+
+// Unattended settings
+const unattendedForm = ref({
+  enabled: false,
+  startHour: 22,
+  endHour: 8,
+  timezone: 'Asia/Shanghai',
+  strategy: 'smart',
+});
+const unattendedSaving = ref(false);
+const unattendedSaved = ref(false);
+
+async function loadUnattended() {
+  try {
+    const res = await api.get('/settings/unattended');
+    unattendedForm.value = { ...unattendedForm.value, ...res.data };
+  } catch (e) {
+    console.warn('load unattended failed:', e.message);
+  }
+}
+
+async function saveUnattended() {
+  unattendedSaving.value = true;
+  unattendedSaved.value = false;
+  try {
+    await api.put('/settings/unattended', unattendedForm.value);
+    unattendedSaved.value = true;
+    setTimeout(() => { unattendedSaved.value = false; }, 3000);
+  } catch (e) {
+    console.error('save unattended failed:', e);
+  } finally {
+    unattendedSaving.value = false;
+  }
+}
+
+// Translation settings
+const transForm = ref({
+  translationEnabled: 'true',
+  translationEngine: '',
+  translationTargetLang: 'auto',
+  translationAutoSend: 'false',
+});
+const testing = ref(false);
+const testText = ref('');
+const testResult = ref('');
+const savingTrans = ref(false);
+const saveMsg = ref('');
+
+// Reply settings
+const replyStyle = ref('formal');
+const replyTestText = ref('');
+const replyResults = ref([]);
+const testingReply = ref(false);
+
+// Summarize settings
+const summarizeTestText = ref('');
+const summarizeResult = ref(null);
+const testingSummarize = ref(false);
+
+// Background settings
+const backgroundDepth = ref('standard');
+const backgroundQuery = ref('');
+const backgroundResult = ref(null);
+const testingBackground = ref(false);
+
+// TG methods
+const fetchTgStatus = async () => {
+  try {
+    const res = await fetch('/api/tg-userbot/state');
+    if (res.ok) {
+      tgStatus.value = await res.json();
+    }
+    if (tgStatus.value.connected) {
+      const contactsRes = await fetch('/api/tg-userbot/contacts').then(r => r.json());
+      tgContactCount.value = contactsRes.contacts?.length || 0;
+    }
+  } catch (e) {
+    console.warn('TG status fetch failed:', e);
+  } finally {
+    tgLoading.value = false;
+  }
+};
+
+const syncTgContacts = async () => {
+  tgSyncing.value = true;
+  tgSyncResult.value = null;
+  try {
+    const res = await fetch('/api/tg-userbot/sync-contacts', { method: 'POST' });
+    if (res.ok) {
+      tgSyncResult.value = await res.json();
+      tgContactCount.value = tgSyncResult.value.total;
+    }
+  } catch (e) {
+    console.error('TG sync failed:', e);
+  } finally {
+    tgSyncing.value = false;
+  }
+};
+
+onMounted(async () => {
+  fetchTgStatus();
+  loadTeam();
+  await loadProviders();
+  await loadTransSettings();
+  await loadUnattended();
+});
+
+function getProviderLabel(provider) {
+  const labels = { doubao: '豆包', deepseek: 'DeepSeek', openai: 'OpenAI', custom: '自定义' };
+  return labels[provider] || provider;
+}
+
+async function loadProviders() {
+  try {
+    const res = await api.get('/api/settings/ai-providers');
+    providers.value = res.data.providers || [];
+    activeId.value = res.data.activeId;
+    // Set default translation engine if not set
+    if (!transForm.value.translationEngine && providers.value.length > 0) {
+      transForm.value.translationEngine = providers.value[0].id;
+    }
+  } catch (err) {
+    console.error('Failed to load providers:', err);
+  }
+}
+
+async function loadTransSettings() {
+  try {
+    const res = await api.get('/api/settings/ai');
+    if (res.data.settings) {
+      transForm.value.translationEnabled = res.data.settings.translationEnabled || 'true';
+      transForm.value.translationTargetLang = res.data.settings.translationTargetLang || 'auto';
+      transForm.value.translationAutoSend = res.data.settings.translationAutoSend || 'false';
+      transForm.value.translationEngine = res.data.settings.translationEngine || '';
+    }
+  } catch (err) {
+    console.error('Failed to load settings:', err);
+  }
+}
+
+function onProviderChange() {
+  const defaults = PROVIDER_DEFAULTS[form.value.provider] || PROVIDER_DEFAULTS.custom;
+  form.value.baseUrl = defaults.baseUrl;
+  form.value.model = defaults.model;
+}
+
+function editProvider(p) {
+  editingId.value = p.id;
+  showAddForm.value = false;
+  form.value = {
+    name: p.name,
+    provider: p.provider,
+    apiKey: '',
+    baseUrl: p.baseUrl,
+    model: p.model,
+  };
+  showApiKey.value = false;
+  testMessage.value = '';
+}
+
+function cancelForm() {
+  showAddForm.value = false;
+  editingId.value = null;
+  form.value = {
+    name: '',
+    provider: 'doubao',
+    apiKey: '',
+    baseUrl: PROVIDER_DEFAULTS.doubao.baseUrl,
+    model: PROVIDER_DEFAULTS.doubao.model,
+  };
+  showApiKey.value = false;
+  testMessage.value = '';
+}
+
+async function saveForm() {
+  if (!form.value.name || !form.value.model) {
+    testMessage.value = '请填写模型名称和模型ID';
+    testSuccess.value = false;
+    return;
+  }
+  if (!editingId.value && !form.value.apiKey) {
+    testMessage.value = '请填写 API Key';
+    testSuccess.value = false;
+    return;
+  }
+
+  savingForm.value = true;
+  testMessage.value = '';
+  try {
+    if (editingId.value) {
+      await api.put(`/api/settings/ai-providers/${editingId.value}`, form.value);
+    } else {
+      await api.post('/api/settings/ai-providers', form.value);
+    }
+    await loadProviders();
+    cancelForm();
+  } catch (err) {
+    testMessage.value = '保存失败: ' + (err.response?.data?.error || err.message);
+    testSuccess.value = false;
+  } finally {
+    savingForm.value = false;
+  }
+}
+
+async function deleteProvider(id) {
+  if (!confirm('确定要删除这个模型配置吗？')) return;
+  try {
+    await api.delete(`/api/settings/ai-providers/${id}`);
+    await loadProviders();
+  } catch (err) {
+    alert('删除失败: ' + (err.response?.data?.error || err.message));
+  }
+}
+
+async function activateProvider(id) {
+  try {
+    await api.post(`/api/settings/ai-providers/${id}/activate`);
+    await loadProviders();
+  } catch (err) {
+    alert('激活失败: ' + (err.response?.data?.error || err.message));
+  }
+}
+
+async function testFormConnection() {
+  testingConnection.value = true;
+  testMessage.value = '';
+  try {
+    const payload = editingId.value
+      ? { providerId: editingId.value }
+      : { apiKey: form.value.apiKey, baseUrl: form.value.baseUrl, model: form.value.model };
+    const res = await api.post('/api/settings/ai-providers/test', payload);
+    testMessage.value = res.data.message || (res.data.success ? '连接成功' : '连接失败');
+    testSuccess.value = res.data.success;
+  } catch (err) {
+    testMessage.value = '测试失败: ' + (err.response?.data?.error || err.message);
+    testSuccess.value = false;
+  } finally {
+    testingConnection.value = false;
+  }
+}
+
+async function saveTransSettings() {
+  savingTrans.value = true;
+  saveMsg.value = '';
+  try {
+    await api.put('/api/settings/ai', transForm.value);
+    saveMsg.value = '保存成功';
+    setTimeout(() => { saveMsg.value = ''; }, 3000);
+  } catch (err) {
+    saveMsg.value = '保存失败: ' + (err.response?.data?.error || err.message);
+  } finally {
+    savingTrans.value = false;
+  }
+}
+
+async function testTranslate() {
+  if (!testText.value.trim() || providers.length === 0) return;
+  testing.value = true;
+  testResult.value = '';
+  try {
+    const res = await api.post('/api/ai/translate', {
+      text: testText.value,
+      sourceLang: 'auto',
+      targetLang: transForm.value.translationTargetLang === 'auto' ? 'zh' : transForm.value.translationTargetLang,
+      providerId: transForm.value.translationEngine,
+    });
+    testResult.value = res.data.translated || '无结果';
+  } catch (err) {
+    testResult.value = '翻译失败: ' + (err.response?.data?.error || err.message);
+  } finally {
+    testing.value = false;
+  }
+}
+
+async function testReply() {
+  if (!replyTestText.value.trim()) return;
+  testingReply.value = true;
+  replyResults.value = [];
+  try {
+    const res = await api.post('/api/ai/reply', {
+      text: replyTestText.value,
+      style: replyStyle.value,
+    });
+    replyResults.value = res.data.replies || [];
+  } catch (err) {
+    alert('生成失败: ' + (err.response?.data?.error || err.message));
+  } finally {
+    testingReply.value = false;
+  }
+}
+
+async function testSummarize() {
+  if (!summarizeTestText.value.trim()) return;
+  testingSummarize.value = true;
+  summarizeResult.value = null;
+  try {
+    const res = await api.post('/api/ai/summarize', {
+      text: summarizeTestText.value,
+    });
+    summarizeResult.value = res.data.summary || res.data;
+  } catch (err) {
+    alert('分析失败: ' + (err.response?.data?.error || err.message));
+  } finally {
+    testingSummarize.value = false;
+  }
+}
+
+async function testBackground() {
+  if (!backgroundQuery.value.trim()) return;
+  testingBackground.value = true;
+  backgroundResult.value = null;
+  try {
+    const res = await api.post('/api/background-check', {
+      query: backgroundQuery.value,
+      depth: backgroundDepth.value,
+    });
+    backgroundResult.value = res.data;
+  } catch (err) {
+    alert('背调失败: ' + (err.response?.data?.error || err.message));
+  } finally {
+    testingBackground.value = false;
+  }
+}
+</script>
+
+<style scoped>
+.settings-page {
+  min-height: 100%;
+  background: var(--chat-bg);
+  color: var(--text-primary);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.settings-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-btn:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+}
+
+.settings-body {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+.settings-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.settings-section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.settings-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-secondary);
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Provider cards */
+.provider-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel-header-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+
+.provider-card.active {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
+.provider-status {
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(0,168,132,0.5);
+}
+
+.provider-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.provider-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.provider-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.provider-tag {
+  font-size: 11px;
+  background: rgba(0,168,132,0.15);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.provider-url {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-model {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.provider-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.btn-icon:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.btn-activate:hover { color: var(--accent) !important; }
+.btn-edit:hover { color: var(--accent-info) !important; }
+.btn-delete:hover { color: var(--danger) !important; }
+
+/* Add button */
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgba(0,168,132,0.4);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add:hover {
+  background: rgba(0,168,132,0.08);
+  border-color: var(--accent);
+}
+
+/* Form card */
+.form-card {
+  background: var(--panel-header-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.form-card h3 {
+  margin-bottom: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group > label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.form-select,
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-select:focus,
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--accent);
+}
+
+.form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.input-with-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-toggle .form-input {
+  padding-right: 40px;
+}
+
+.btn-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.btn-toggle:hover {
+  color: var(--text-primary);
+}
+
+.test-result-inline {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.test-result-inline.success {
+  background: rgba(0,168,132,0.1);
+  color: var(--accent);
+}
+
+.test-result-inline.error {
+  background: rgba(234,67,53,0.1);
+  color: var(--danger);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,168,132,0.4);
+  background: transparent;
+  color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-secondary:hover { background: rgba(0,168,132,0.08); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-cancel {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-cancel:hover { background: rgba(255,255,255,0.12); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--panel-header-bg);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.06);
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Toggle */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.toggle-btn {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255,255,255,0.12);
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-btn.active {
+  background: var(--accent);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.toggle-btn.active .toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* Radio group */
+.radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.radio-label input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+/* Test section */
+.test-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.test-input-row .form-input {
+  flex: 1;
+}
+
+.btn-test {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.btn-test:hover { opacity: 0.9; }
+.btn-test:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.test-result {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0,168,132,0.1);
+  font-size: 14px;
+}
+
+.result-label {
+  color: var(--accent);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.result-text {
+  color: var(--text-primary);
+}
+
+/* Reply results */
+.reply-results {
+  margin-top: 16px;
+}
+
+.reply-item {
+  background: var(--panel-header-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.reply-index {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.reply-content {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* Summarize result */
+.summarize-result,
+.background-result {
+  margin-top: 16px;
+  background: var(--panel-header-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.result-item {
+  margin-bottom: 12px;
+}
+
+.result-item:last-child {
+  margin-bottom: 0;
+}
+
+.result-key {
+  display: block;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.result-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.result-section {
+  margin-bottom: 16px;
+}
+
+.result-section:last-child {
+  margin-bottom: 0;
+}
+
+.result-section h4 {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0 0 8px 0;
+}
+
+.result-section p {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Actions */
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.save-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.save-btn:hover { opacity: 0.9; }
+.save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.save-msg {
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.save-msg.error {
+  color: var(--danger);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .settings-body {
+    padding: 12px;
+    max-width: 100%;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group.full-width {
+    grid-column: 1;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .provider-card {
+    flex-wrap: wrap;
+  }
+
+  .provider-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+
+/* ===== 账户卡片 & 团队管理 ===== */
+.account-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--panel-header-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.account-header { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+.avatar-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #008069);
+  color: #fff; font-weight: 600; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.avatar-circle.sm { width: 36px; height: 36px; font-size: 15px; }
+.account-info { flex: 1; min-width: 0; }
+.account-name { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.account-sub { font-size: 12px; color: var(--text-secondary); }
+.btn-logout {
+  padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.4);
+  background: transparent; color: #ef4444; font-size: 13px; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-logout:hover { background: rgba(239,68,68,0.15); }
+
+.team-list { display: flex; flex-direction: column; gap: 6px; }
+.team-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel-header-bg); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 10px 14px;
+}
+.team-info { flex: 1; min-width: 0; }
+.team-name { font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+.tag-me { font-size: 10px; background: var(--accent); color: #fff; padding: 1px 6px; border-radius: 6px; font-weight: 600; }
+.team-sub { font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
+.team-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.btn-icon-sm {
+  width: 32px; height: 32px; border: none; border-radius: 8px;
+  background: transparent; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.btn-icon-sm:hover { background: rgba(255,255,255,0.08); }
+.btn-icon-sm.btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+/* 弹窗 */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000; padding: 20px;
+}
+.modal-card {
+  background: var(--panel-header-bg); border-radius: 14px; padding: 20px 22px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 1px solid var(--text-muted);
+}
+.modal-card h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0 0 16px 0; }
+.inline-msg {
+  margin-top: 12px; padding: 8px 12px; border-radius: 8px;
+  font-size: 12.5px; text-align: center;
+}
+.inline-msg.ok { background: rgba(0,168,132,0.15); color: var(--accent); }
+.inline-msg.err { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+
+/* Telegram Section */
+.tg-section { border-left: 3px solid #0088cc; }
+.tg-status { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+.tg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tg-dot.connected { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.5); }
+.tg-dot.disconnected { background: #999; }
+.tg-label { font-weight: 500; }
+.tg-info { padding: 8px 0; }
+.tg-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.tg-username { color: #0088cc; font-weight: 500; }
+.tg-phone { color: #888; font-size: 13px; }
+.tg-stats { display: flex; gap: 16px; margin-top: 4px; }
+.tg-stat { background: var(--bg-secondary, #f5f5f5); padding: 4px 12px; border-radius: 12px; font-size: 13px; color: #666; }
+.tg-sync-result { margin-top: 8px; color: #4caf50; font-size: 13px; }
+.tg-loading { color: #888; }
+</style>

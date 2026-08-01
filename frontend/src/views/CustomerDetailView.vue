@@ -383,6 +383,106 @@
           </div>
         </div>
       </div>
+
+      <!-- Attitude Analysis Tab (Phase 6) -->
+      <div v-if="activeTab==='attitude'" class="tab-pane">
+        <div class="fu-toolbar">
+          <div class="docs-title">🧠 客户态度分析</div>
+          <div class="spacer"></div>
+          <el-button type="primary" :loading="attLoading" @click="triggerAttitudeAnalysis">🤖 AI分析</el-button>
+          <el-button @click="loadAttitudeTrend" :loading="attTrendLoading">📈 趋势</el-button>
+        </div>
+        <div v-if="attLoading && !attitudes.length" class="empty-state">
+          <div style="font-size:40px;opacity:0.3">🧠</div>
+          <div class="empty-desc">正在分析客户态度...</div>
+        </div>
+        <div v-else-if="!attitudes.length" class="empty-state">
+          <div style="font-size:40px;opacity:0.3">🧠</div>
+          <div class="empty-desc">暂无态度分析，点击🤖AI分析开始</div>
+        </div>
+        <div v-else class="att-panel">
+          <div class="att-latest">
+            <div class="att-card">
+              <div class="att-card-hdr">
+                <span class="att-label">最新分析</span>
+                <span class="att-time muted">{{ fmtDateTime(latestAttitude.analyzedAt) }}</span>
+              </div>
+              <div class="att-metrics">
+                <div class="att-metric">
+                  <span class="att-m-label">意向强度</span>
+                  <span class="att-m-value" :class="'intent-'+latestAttitude.intentLevel">{{ intentLabel(latestAttitude.intentLevel) }}</span>
+                </div>
+                <div class="att-metric">
+                  <span class="att-m-label">情绪</span>
+                  <span class="att-m-value" :class="'sentiment-'+latestAttitude.sentiment">{{ sentimentLabel(latestAttitude.sentiment) }}</span>
+                </div>
+                <div class="att-metric">
+                  <span class="att-m-label">紧急度</span>
+                  <span class="att-m-value" :class="'urgency-'+latestAttitude.urgency">{{ urgencyLabel(latestAttitude.urgency) }}</span>
+                </div>
+              </div>
+              <div v-if="latestAttitude.focusAreas" class="att-focus">
+                <span class="att-focus-label">关注点：</span>
+                <span class="att-focus-text">{{ latestAttitude.focusAreas }}</span>
+              </div>
+              <div v-if="latestAttitude.keySignals" class="att-focus">
+                <span class="att-focus-label">关键信号：</span>
+                <span class="att-focus-text">{{ latestAttitude.keySignals }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="attTrend.length" class="att-trend">
+            <div class="att-trend-title">📈 态度变化趋势</div>
+            <div class="att-trend-list">
+              <div v-for="(t,i) in attTrend" :key="i" class="att-trend-item">
+                <span class="att-trend-time">{{ fmtDateTime(t.analyzedAt) }}</span>
+                <span class="att-trend-chip" :class="'intent-'+t.intentLevel">{{ intentLabel(t.intentLevel) }}</span>
+                <span class="att-trend-chip" :class="'sentiment-'+t.sentiment">{{ sentimentLabel(t.sentiment) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Suggestions Tab (Phase 7) -->
+      <div v-if="activeTab==='suggestions'" class="tab-pane">
+        <div class="fu-toolbar">
+          <div class="docs-title">💡 行动建议</div>
+          <div class="spacer"></div>
+          <el-button type="primary" :loading="sugLoading" @click="generateSuggestions">🤖 生成建议</el-button>
+        </div>
+        <div v-if="sugLoadingInit && !suggestions.length" class="empty-state">
+          <div style="font-size:40px;opacity:0.3">💡</div>
+          <div class="empty-desc">正在生成建议...</div>
+        </div>
+        <div v-else-if="!suggestions.length" class="empty-state">
+          <div style="font-size:40px;opacity:0.3">💡</div>
+          <div class="empty-desc">暂无建议，点击🤖生成建议或等待AI自动推荐</div>
+        </div>
+        <div v-else class="sug-list">
+          <div v-for="s in suggestions" :key="s.id" class="sug-card" :class="'sug-priority-'+s.priority">
+            <div class="sug-hdr">
+              <span class="sug-type-chip">{{ sugTypeLabel(s.type) }}</span>
+              <span class="sug-priority-chip" :class="'pri-'+s.priority">{{ priorityLabel(s.priority) }}</span>
+              <span class="spacer"></span>
+              <span class="sug-time muted">{{ fmtDateTime(s.createdAt) }}</span>
+            </div>
+            <div class="sug-title">{{ s.title }}</div>
+            <div class="sug-desc">{{ s.description }}</div>
+            <div v-if="s.templateMessage" class="sug-template">
+              <div class="sug-tpl-label">📋 推荐话术：</div>
+              <div class="sug-tpl-text">{{ s.templateMessage }}</div>
+              <button class="mini-btn go" @click="copyText(s.templateMessage)">复制话术</button>
+            </div>
+            <div class="sug-actions">
+              <button v-if="s.status==='active'" class="mini-btn go" @click="executeSuggestion(s)">✅ 已执行</button>
+              <button v-if="s.status==='active'" class="mini-btn" @click="dismissSuggestion(s)">忽略</button>
+              <span v-if="s.status==='executed'" class="sug-status executed">✅ 已执行</span>
+              <span v-if="s.status==='dismissed'" class="sug-status dismissed">已忽略</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Manual follow-up dialog -->
@@ -536,6 +636,8 @@ const tabs = [
   { key: 'chat', label: '💬 沟通记录' },
   { key: 'docs', label: '📄 单证' },
   { key: 'follow', label: '📝 跟进' },
+  { key: 'attitude', label: '🧠 态度' },
+  { key: 'suggestions', label: '💡 建议' },
 ];
 
 // Docs
@@ -588,6 +690,8 @@ async function load() {
     Object.assign(editForm, data);
     loadDocs();
     loadFollowUps();
+    loadAttitude();
+    loadSuggestions();
   } catch(e) {
     ElMessage.error('加载客户信息失败');
   } finally { loading.value = false; }
@@ -646,9 +750,7 @@ async function jumpToChat() {
     ElMessage.warning('该客户暂无WhatsApp号码，请先编辑添加JID');
     return;
   }
-  await router.push('/chat');
-  // Let LayoutView/ChatView pick up target jid via sessionStorage
-  sessionStorage.setItem('wa-open-jid', customer.value.jid);
+  router.push({ path: '/chat', query: { jid: customer.value.jid } });
 }
 async function jumpToEmail() {
   if (!customer.value.email) { ElMessage.warning('该客户暂无邮箱'); return; }
@@ -723,6 +825,91 @@ async function deleteFu(f) {
     await api.delete(`/customers/follow-ups/${f.id}`);
     loadFollowUps();
   } catch(e) {}
+}
+
+// Phase 6: Attitude Analysis
+const attitudes = ref([]);
+const attLoading = ref(false);
+const attTrend = ref([]);
+const attTrendLoading = ref(false);
+const latestAttitude = computed(() => {
+  if (!attitudes.value.length) return {};
+  return attitudes.value[0]; // most recent
+});
+function intentLabel(v) { return ({HIGH:'🔥 高',MEDIUM:'⚡ 中',LOW:'💤 低'})[v] || v || '—'; }
+function sentimentLabel(v) { return ({POSITIVE:'😊 积极',NEUTRAL:'😐 中性',NEGATIVE:'😠 消极'})[v] || v || '—'; }
+function urgencyLabel(v) { return ({URGENT:'🚨 紧急',PATIENT:'🐢 耐心',MODERATE:'⏳ 适中'})[v] || v || '—'; }
+async function loadAttitude() {
+  if (!customer.value?.jid) return;
+  attLoading.value = true;
+  try {
+    const jid = encodeURIComponent(customer.value.jid);
+    const { data } = await api.get('/attitude/by-jid/' + jid);
+    if (data.attitudes) { attitudes.value = data.attitudes; }
+    else if (data.hasAnalysis) { attitudes.value = [data]; }
+    else { attitudes.value = []; }
+  } catch(e) { /* no data yet */ }
+  finally { attLoading.value = false; }
+}
+async function triggerAttitudeAnalysis() {
+  if (!customer.value?.jid) { ElMessage.warning('该客户没有WhatsApp JID'); return; }
+  attLoading.value = true;
+  try {
+    const jid = encodeURIComponent(customer.value.jid);
+    await api.post('/attitude/by-jid/' + jid + '/analyze');
+    ElMessage.success('态度分析完成');
+    loadAttitude();
+  } catch(e) { ElMessage.error(e?.response?.data?.error || '分析失败'); }
+  finally { attLoading.value = false; }
+}
+async function loadAttitudeTrend() {
+  if (!customer.value?.jid) return;
+  attTrendLoading.value = true;
+  try {
+    const jid = encodeURIComponent(customer.value.jid);
+    const { data } = await api.get('/attitude/by-jid/' + jid + '/trend');
+    attTrend.value = data.trend || data || [];
+  } catch(e) {} finally { attTrendLoading.value = false; }
+}
+
+// Phase 7: Action Suggestions
+const suggestions = ref([]);
+const sugLoading = ref(false);
+const sugLoadingInit = ref(false);
+function sugTypeLabel(t) { return ({FOLLOW_UP:'📞 跟进',QUOTE:'💰 报价',NURTURE:'🌱 培养',GATHER_INFO:'🔍 收集信息',CLOSE_DEAL:'🤝 促单',REACTIVATE:'🔄 激活'})[t] || t || '建议'; }
+function priorityLabel(p) { return ({HIGH:'高优先',MEDIUM:'中',LOW:'低'})[p] || p || ''; }
+async function loadSuggestions() {
+  if (!customer.value?.jid) return;
+  try {
+    const jid = encodeURIComponent(customer.value.jid);
+    const { data } = await api.get('/suggestions/by-jid/' + jid);
+    suggestions.value = data.suggestions || data || [];
+  } catch(e) {} 
+}
+async function generateSuggestions() {
+  if (!customer.value?.jid) { ElMessage.warning('该客户没有WhatsApp JID'); return; }
+  sugLoading.value = true;
+  try {
+    const jid = encodeURIComponent(customer.value.jid);
+    await api.post('/suggestions/by-jid/' + jid + '/generate');
+    ElMessage.success('建议已生成');
+    loadSuggestions();
+  } catch(e) { ElMessage.error(e?.response?.data?.error || '生成失败'); }
+  finally { sugLoading.value = false; }
+}
+async function dismissSuggestion(s) {
+  try {
+    await api.post('/suggestions/' + s.id + '/dismiss');
+    ElMessage.success('已忽略');
+    loadSuggestions();
+  } catch(e) { ElMessage.error('操作失败'); }
+}
+async function executeSuggestion(s) {
+  try {
+    await api.post('/suggestions/' + s.id + '/execute');
+    ElMessage.success('已标记为执行');
+    loadSuggestions();
+  } catch(e) { ElMessage.error('操作失败'); }
 }
 
 onMounted(load);
@@ -1008,4 +1195,61 @@ onMounted(load);
 .stage-won { background: #10b981; }
 .stage-completed { background: #059669; }
 .stage-lost { background: #ef4444; }
+/* Phase 6: Attitude Analysis */
+.att-panel { display:flex; flex-direction:column; gap:16px; }
+.att-card { background:var(--mgmt-card-bg); border:1px solid var(--mgmt-divider); border-radius:12px; padding:16px 20px; box-shadow:var(--mgmt-shadow); }
+.att-card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.att-label { font-weight:600; font-size:15px; color:var(--mgmt-text); }
+.att-time { font-size:12px; }
+.att-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px; }
+.att-metric { text-align:center; background:var(--mgmt-bg); border-radius:8px; padding:12px 8px; border:1px solid var(--mgmt-divider); }
+.att-m-label { display:block; font-size:12px; color:var(--mgmt-text-muted); margin-bottom:6px; }
+.att-m-value { display:block; font-size:15px; font-weight:600; }
+.intent-HIGH { color:#ef4444; }
+.intent-MEDIUM { color:#f59e0b; }
+.intent-LOW { color:#6b7280; }
+.sentiment-POSITIVE { color:#10b981; }
+.sentiment-NEUTRAL { color:#6b7280; }
+.sentiment-NEGATIVE { color:#ef4444; }
+.urgency-URGENT { color:#ef4444; }
+.urgency-MODERATE { color:#f59e0b; }
+.urgency-PATIENT { color:#10b981; }
+.att-focus { margin-top:8px; font-size:13px; line-height:1.6; }
+.att-focus-label { color:var(--mgmt-text-muted); font-weight:500; }
+.att-focus-text { color:var(--mgmt-text); }
+.att-trend { background:var(--mgmt-card-bg); border:1px solid var(--mgmt-divider); border-radius:12px; padding:16px 20px; box-shadow:var(--mgmt-shadow); }
+.att-trend-title { font-weight:600; font-size:14px; margin-bottom:12px; color:var(--mgmt-text); }
+.att-trend-list { display:flex; flex-direction:column; gap:8px; }
+.att-trend-item { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--mgmt-divider); font-size:13px; }
+.att-trend-item:last-child { border-bottom:none; }
+.att-trend-time { color:var(--mgmt-text-muted); min-width:120px; }
+.att-trend-chip { padding:2px 10px; border-radius:10px; font-size:11px; font-weight:500; }
+
+/* Phase 7: Action Suggestions */
+.sug-list { display:flex; flex-direction:column; gap:12px; }
+.sug-card { background:var(--mgmt-card-bg); border:1px solid var(--mgmt-divider); border-radius:12px; padding:16px 20px; box-shadow:var(--mgmt-shadow); transition:border-color .2s; }
+.sug-card:hover { border-color:var(--mgmt-input-border-hover); }
+.sug-card.sug-priority-HIGH { border-left:3px solid #ef4444; }
+.sug-card.sug-priority-MEDIUM { border-left:3px solid #f59e0b; }
+.sug-card.sug-priority-LOW { border-left:3px solid #6b7280; }
+.sug-hdr { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.sug-type-chip { background:var(--mgmt-tag-blue-bg); color:var(--mgmt-tag-blue); padding:2px 10px; border-radius:10px; font-size:12px; font-weight:500; }
+.sug-priority-chip { font-size:11px; color:var(--mgmt-text-muted); }
+.pri-HIGH { color:#ef4444; font-weight:600; }
+.pri-MEDIUM { color:#f59e0b; }
+.sug-time { font-size:12px; }
+.sug-title { font-size:15px; font-weight:600; color:var(--mgmt-text); margin-bottom:6px; }
+.sug-desc { font-size:13px; color:var(--mgmt-text-secondary); line-height:1.6; margin-bottom:8px; }
+.sug-template { background:var(--mgmt-bg); border-radius:6px; padding:10px 14px; margin-bottom:10px; border:1px solid var(--mgmt-divider); }
+.sug-tpl-label { font-size:12px; color:var(--mgmt-text-muted); margin-bottom:4px; }
+.sug-tpl-text { font-size:13px; color:var(--mgmt-text); line-height:1.6; white-space:pre-wrap; margin-bottom:6px; }
+.sug-actions { display:flex; align-items:center; gap:8px; }
+.sug-status { font-size:12px; padding:2px 10px; border-radius:10px; }
+.sug-status.executed { background:var(--mgmt-tag-green-bg); color:var(--mgmt-tag-green); }
+.sug-status.dismissed { background:var(--mgmt-tag-gray-bg); color:var(--mgmt-text-muted); }
+
+@media (max-width:768px) {
+  .att-metrics { grid-template-columns:1fr; }
+  .att-trend-item { flex-wrap:wrap; }
+}
 </style>
