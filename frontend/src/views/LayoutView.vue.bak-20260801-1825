@@ -411,7 +411,7 @@
         </aside>
 
         <!-- ④ 聊天列表栏 -->
-        <aside class="col-chatlist" v-if="!(isMobile && mobileInConv && (chatStore.activeJid || tgActiveJid))" :class="{ 'm-hidden': isMobile && mobileInConv && (chatStore.activeJid || tgActiveJid) }" :style="isMobile ? { width: '100%', maxWidth: 'none', borderRight: 'none', minWidth: '0', minHeight: '0' } : {}">
+        <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }" :style="isMobile ? { width: '100%', maxWidth: 'none', borderRight: 'none', minWidth: '0', minHeight: '0' } : {}">
           <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
@@ -615,7 +615,7 @@
           </transition>
 
 </aside>
-        <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (chatStore.activeJid || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }" :style="isMobile ? { position: 'absolute', left: '0', right: '0', top: '0', bottom: '0', transform: (mobileInConv && (chatStore.activeJid || tgActiveJid)) ? 'none' : 'translateX(100%)', zIndex: '45' } : {}">
+        <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (activeConv || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }" :style="isMobile ? { position: 'absolute', left: '0', right: '0', top: '0', bottom: '0', transform: (mobileInConv && (activeConv || tgActiveJid)) ? 'none' : 'translateX(100%)', zIndex: '45' } : {}">
           <!-- 📧 邮箱渠道嵌入式视图 -->
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
@@ -5155,18 +5155,7 @@ onMounted(async () => {
   try { await loadTgAccounts();
   loadWaAccounts(); } catch(e) { console.warn('loadTgAccounts failed', e); }
   if (activeChannel.value === 'telegram') {
-    await loadTgConversations();
-    // Auto-select first TG conversation on mobile (mirrors WA store logic)
-    if (isMobile.value && !tgActiveJid.value && tgConversations.value.length > 0) {
-      const first = tgConversations.value[0];
-      tgActiveJid.value = first.jid;
-      chatStore.activeJid = first.jid;
-      chatStore.activePlatform = 'telegram';
-      mobileInConv.value = true;
-      loadTgMessages(first.jid);
-      loadCustomerByJid(first.jid);
-      console.log('[Mobile] Auto-selected TG conv:', first.jid);
-    }
+    loadTgConversations();
   }
 
   // TG socket实时事件监听
@@ -5445,11 +5434,6 @@ function onDrawerItemClick(item) {
         }
       }
     }
-    // FIX: 切换到沟通页时，如果已有活跃会话，恢复移动端会话面板
-    if (isMobile.value && chatStore.activeJid) {
-      activeConv.value = chatStore.activeJid;
-      mobileInConv.value = true;
-    }
     return;
   }
   if (item.key === 'translate_set') {
@@ -5555,11 +5539,6 @@ function handleMobileTab(tab) {
     if (route.path !== '/chat') router.push('/chat');
     popupSelected.value = false;
     channelSheetOpen.value = true;
-    // FIX: 切换到沟通页时，如果已有活跃会话，恢复移动端会话面板
-    if (isMobile.value && chatStore.activeJid) {
-      activeConv.value = chatStore.activeJid;
-      mobileInConv.value = true;
-    }
     return;
   }
   if (tab.key === 'customers') {
@@ -5583,26 +5562,7 @@ function handleMobileTab(tab) {
 watch(() => route.path, (p) => {
   if (p === '/' || p === '/dashboard') activePlatform.value = 'dashboard';
   else if (p.startsWith('/assistant')) activePlatform.value = 'assistant';
-  else if (p.startsWith('/chat')) {
-    activePlatform.value = 'communication';
-    // FIX: 移动端进入沟通页时，确保会话面板正确显示
-    if (isMobile.value) {
-      nextTick(() => {
-        if (chatStore.activeJid) {
-          activeConv.value = chatStore.activeJid;
-          mobileInConv.value = true;
-        } else if (tgActiveJid.value) {
-          mobileInConv.value = true;
-        }
-        console.log('[RouteWatch] /chat mobile check:', {
-          isMobile: isMobile.value,
-          activeJid: chatStore.activeJid,
-          tgActiveJid: tgActiveJid.value,
-          mobileInConv: mobileInConv.value
-        });
-      });
-    }
-  }
+  else if (p.startsWith('/chat')) activePlatform.value = 'communication';
   else if (p.startsWith('/emails')) activePlatform.value = 'emails';
   else if (p.startsWith('/customers')) activePlatform.value = 'customers';
   else if (p.startsWith('/pipeline')) activePlatform.value = 'pipeline';
@@ -5648,33 +5608,6 @@ watch(() => route.path, (p) => {
     const activeChannel = ref(typeof window !== 'undefined' && localStorage.getItem('active_channel') || 'whatsapp');
 const activeAccount = ref('wa-1');
 const activeConv = ref(null); // jid
-
-// 2026-08-01 修复移动端自动选中后面板不切换的问题
-// 改用 activeJid（独立 ref）而非 activeConversation（computed，数组替换时短暂为 null）
-// 避免 fetchConversations 替换数组导致 activeConversation 瞬时 null → 误重置 mobileInConv
-watch(() => chatStore.activeJid, (jid) => {
-  if (jid) {
-    activeConv.value = jid;
-    if (isMobile.value) {
-      nextTick(() => { mobileInConv.value = true; });
-      console.log('[LayoutWatch] Sync mobile panel:', jid);
-    }
-  } else {
-    activeConv.value = null;
-    // 不在此处重置 mobileInConv，避免竞态条件导致面板意外收起
-  }
-});
-
-// Watch isMobile changes to ensure panel state is correct
-watch(isMobile, (mobile) => {
-  if (mobile && chatStore.activeJid) {
-    nextTick(() => {
-      activeConv.value = chatStore.activeJid;
-      mobileInConv.value = true;
-      console.log('[LayoutWatch] isMobile watcher sync:', chatStore.activeJid);
-    });
-  }
-});
 
 const totalUnread = computed(() => {
   let n = 0;
@@ -13271,32 +13204,6 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 
 .mh-ch-arrow { opacity: 0.6; margin-left: 2px; flex-shrink: 0; }
-
-/* ═══ FIX 2026-08-01 v3: 纯媒体查询兜底，不依赖任何 JS 状态 ═══ */
-@media (max-width: 900px) {
-  .comm-module .col-chatlist.m-hidden,
-  .comm-module.in-conv .col-chatlist {
-    display: none !important;
-    flex: none !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    position: absolute !important;
-    left: -9999px !important;
-  }
-  .comm-module .col-conversation.m-in,
-  .comm-module.in-conv .col-conversation {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    flex: none !important;
-    transform: none !important;
-  }
-}
 </style>
 
 <style>
@@ -15185,34 +15092,4 @@ html.is-mobile .col-function-panel.m-panel { display: flex !important; position:
 html.is-mobile .col-function-panel.m-panel.m-panel-show { transform: translateX(0) !important; }
 html.is-mobile .mobile-tabbar { display: flex !important; }
 html.is-mobile .mobile-header { display: flex !important; }
-
-/* FIX 2026-08-01: 强制移动端 in-conv 状态下面板全宽布局 */
-html.is-mobile .comm-module.in-conv .col-chatlist { display: none !important; flex: none !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; position: absolute !important; left: -9999px !important; }
-html.is-mobile .comm-module.in-conv .col-conversation { position: absolute !important; left: 0 !important; right: 0 !important; top: 0 !important; bottom: 0 !important; width: 100% !important; max-width: none !important; flex: none !important; }
-
-/* ═══ FIX 2026-08-01 v3: 纯媒体查询兜底，不依赖任何 JS 状态 ═══ */
-@media (max-width: 900px) {
-  .comm-module .col-chatlist.m-hidden,
-  .comm-module.in-conv .col-chatlist {
-    display: none !important;
-    flex: none !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    position: absolute !important;
-    left: -9999px !important;
-  }
-  .comm-module .col-conversation.m-in,
-  .comm-module.in-conv .col-conversation {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    flex: none !important;
-    transform: none !important;
-  }
-}
 </style>

@@ -373,6 +373,27 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         return true;
       });
       conversations.value = filtered;
+      
+      // 移动端自动选中第一个会话（首次加载 / 重连后）
+      console.log('[Debug] fetchConversations completed, mobile check:', {
+        isMobile: typeof window !== 'undefined' && window.innerWidth <= 900,
+        hasActiveJid: !!activeJid.value,
+        filteredLength: filtered.length,
+        windowWidth: typeof window !== 'undefined' ? window.innerWidth : 'N/A'
+      });
+      if (typeof window !== 'undefined' && window.innerWidth <= 900 && !activeJid.value && filtered.length > 0) {
+        const firstConv = filtered[0];
+        if (firstConv && firstConv.jid) {
+          console.log('[Mobile] Auto-selecting first conversation:', firstConv.jid);
+          // 防止重复触发
+          if (activeJid.value) {
+            console.log('[Mobile] Skip: activeJid already set to', activeJid.value);
+            return;
+          }
+          setActiveConversation(firstConv.jid);
+        }
+      }
+      
       return data;
     } catch (err) { console.error('Failed to fetch conversations:', err); return []; }
   }
@@ -894,7 +915,18 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       qrCode.value = null;
       waError.value = null;
       preloadSelfAvatar();
-      fetchConversations();
+      // 等待会话加载完成，然后自动选中第一个（移动端）
+      fetchConversations().then(() => {
+        console.log('[handleStatus] fetchConversations completed, count:', conversations.value?.length);
+        // 移动端自动选中第一个会话
+        if (typeof window !== 'undefined' && window.innerWidth <= 900 && !activeJid.value && conversations.value && conversations.value.length > 0) {
+          const displayConvs = conversations.value.filter(c => !c.platform || c.platform === 'whatsapp');
+          if (displayConvs.length > 0 && displayConvs[0].jid) {
+            console.log('[handleStatus] Auto-selecting first conversation:', displayConvs[0].jid);
+            setActiveConversation(displayConvs[0].jid);
+          }
+        }
+      });
     } else if (data.status === 'disconnected') {
       // 服务端通知断开：清空会话/消息/AI 面板状态
       clearOnDisconnect();

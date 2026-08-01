@@ -2,15 +2,6 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { getTelegramConnector, normalizeIncomingUpdate } from "../services/telegram-connector.js";
 import crypto from "crypto";
-import { decrypt, isEncrypted } from "../utils/encryption.js";
-function decToken(t) { return t && isEncrypted(t) ? decrypt(t) : t; }
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename_tg = fileURLToPath(import.meta.url);
-const __dirname_tg = path.dirname(__filename_tg);
-const TG_MEDIA_DIR = path.resolve(__dirname_tg, "../../uploads/tg-media");
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -180,30 +171,15 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
     });
   }
 
-  // Resolve media: download TG file to local storage (avoid expired/leaked bot-token URLs)
+  // Resolve media URL for photo/document/video
   let mediaUrl = null;
   if (msg.media && msg.media.fileId) {
     try {
-      const _tk = decToken(account.telegramBotToken);
-      const fileResp = await fetch(`https://api.telegram.org/bot${_tk}/getFile?file_id=${msg.media.fileId}`);
+      const fileResp = await fetch(`https://api.telegram.org/bot${decToken(account.telegramBotToken)}/getFile?file_id=${msg.media.fileId}`);
       const fileData = await fileResp.json();
       if (fileData.ok && fileData.result?.file_path) {
-        const tgUrl = `https://api.telegram.org/file/bot${_tk}/${fileData.result.file_path}`;
-        // Download to local tg-media dir
-        if (!fs.existsSync(TG_MEDIA_DIR)) fs.mkdirSync(TG_MEDIA_DIR, { recursive: true });
-        const ext = path.extname(fileData.result.file_path) || '.jpg';
-        const localName = crypto.randomBytes(16).toString('hex') + ext;
-        const localPath = path.join(TG_MEDIA_DIR, localName);
-        const dlResp = await fetch(tgUrl);
-        if (dlResp.ok) {
-          const buf = Buffer.from(await dlResp.arrayBuffer());
-          fs.writeFileSync(localPath, buf);
-          mediaUrl = `/uploads/tg-media/${localName}`;
-          console.log(`[TG] Media downloaded to local: ${mediaUrl}`);
-        } else {
-          mediaUrl = tgUrl;
-          console.warn(`[TG] Download failed (${dlResp.status}), fallback to direct URL`);
-        }
+        mediaUrl = `https://api.telegram.org/file/bot${decToken(account.telegramBotToken)}/${fileData.result.file_path}`;
+        console.log(`[TG] Media URL resolved: ${mediaUrl.substring(0, 50)}...`);
       } else {
         console.warn(`[TG] Failed to get file URL for fileId: ${msg.media.fileId}`, fileData);
       }
