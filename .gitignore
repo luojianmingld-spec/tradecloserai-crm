@@ -1,17 +1,10 @@
-node_modules/
-dist/
-sessions/
+*.bak
+*.bak-*
 *.db
+*.db.bak*
+node_modules/
+uploads/
 .env
-.DS_Store
-*.swp
-__pycache__/
-*.pyc
-.venv/
-*.o
-*.a
-
-# Preview files
-.preview
-.cozeproj/reduction
-backend/uploads/documents/
+.env.*
+*.sqlite
+*.sqlite-journal
