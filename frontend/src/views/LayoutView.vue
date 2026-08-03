@@ -126,30 +126,38 @@
       <div v-if="isMobile && channelSheetOpen" class="action-sheet channel-sheet" @click.stop>
         <div class="action-sheet-title">切换渠道</div>
         <template v-for="ch in channels" :key="ch.id">
-          <button class="action-sheet-item"
-                  :class="{active: activeChannel===ch.id, 'asi-offline': ch.status==='offline'}"
-                  @click="selectChannel(ch.id); channelSheetOpen=false">
-            <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
-            <span class="asi-label">{{ ch.name }}</span>
-            <span v-if="ch.id==='whatsapp' && (chatStore.followupCounts?.firstResponse||0) > 0" class="asi-badge asi-badge-red">{{ chatStore.followupCounts.firstResponse }}</span>
-            <span v-else-if="ch.id==='telegram' && tgUnreadTotal > 0" class="asi-badge" style="background:#2AABEE;">{{ tgUnreadTotal }}</span>
-            <span v-else-if="ch.id==='email' && emailUnreadTotal > 0" class="asi-badge" style="background:#EA4335;">{{ emailUnreadTotal }}</span>
-            <span v-if="ch.status==='offline'" class="asi-tag asi-tag-soon">即将上线</span>
-            <span v-if="activeChannel===ch.id" class="asi-check">✓</span>
-          </button>
+          <template v-if="ch.id==='whatsapp'">
+            <div class="action-sheet-item asi-channel-header">
+              <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
+              <span class="asi-label">{{ ch.name }}</span>
+              <span v-if="(chatStore.followupCounts?.firstResponse||0) > 0" class="asi-badge asi-badge-red">{{ chatStore.followupCounts.firstResponse }}</span>
+            </div>
+          </template>
+          <template v-else>
+            <button class="action-sheet-item"
+                    :class="{active: activeChannel===ch.id, 'asi-offline': ch.status==='offline'}"
+                    @click="selectChannel(ch.id); channelSheetOpen=false">
+              <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
+              <span class="asi-label">{{ ch.name }}</span>
+              <span v-if="ch.id==='telegram' && tgUnreadTotal > 0" class="asi-badge" style="background:#2AABEE;">{{ tgUnreadTotal }}</span>
+              <span v-else-if="ch.id==='email' && emailUnreadTotal > 0" class="asi-badge" style="background:#EA4335;">{{ emailUnreadTotal }}</span>
+              <span v-if="ch.status==='offline'" class="asi-tag asi-tag-soon">即将上线</span>
+              <span v-if="activeChannel===ch.id" class="asi-check">✓</span>
+            </button>
+          </template>
           <!-- WA多账号作为二级菜单紧跟WhatsApp按钮 -->
           <div class="as-sub-accounts as-sub-menu" v-if="ch.id==='whatsapp' && waAccounts.length > 1">
             <button class="action-sheet-item as-sub-item"
                     v-for="acc in waAccounts" :key="acc.id"
                     :class="{active: acc.id===currentWaAccountId}"
-                    @click="switchWaAccount(acc.id); channelSheetOpen=false">
+                    @click="switchWaAccount(acc.id); activeChannel='whatsapp'; channelSheetOpen=false">
               <span class="asi-icon">
                 <span class="as-acc-avatar as-acc-fallback" :style="{background: acc.color}">{{ (acc.name||'?')[0] }}</span>
               </span>
               <span class="asi-label">{{ acc.name }}</span>
               <span v-if="acc.online" class="asi-tag asi-tag-online">在线</span>
               <span v-else class="asi-tag">离线</span>
-              <span v-if="acc.id===currentWaAccountId" class="asi-check">✓</span>
+              <span v-if="acc.id===currentWaAccountId && activeChannel==='whatsapp'" class="asi-check">✓</span>
             </button>
           </div>
           <div class="as-sub-accounts as-sub-menu" v-else-if="ch.id==='whatsapp'">
@@ -200,7 +208,7 @@
         <!-- 对话视图：头像+名字 -->
         <template v-else>
           <div v-if="activeChannel==='whatsapp' && chatStore.activeConversation" class="mh-avatar" :style="{background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)}">
-            <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar) && !mhAvatarFailed" :src="chatStore.loadAvatar(chatStore.activeConversation.jid, chatStore.activeConversation.avatar)" @error="mhAvatarFailed=true" alt=""/>
+            <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid) && !mhAvatarFailed" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="mhAvatarFailed=true" alt=""/>
             <span v-else>{{ (chatStore.activeConversation.name || '?')[0] }}</span>
           </div>
           <div v-else-if="activeChannel==='telegram' && tgActiveJid" class="mh-avatar" style="background:#2AABEE;">
@@ -211,9 +219,7 @@
           </div>
           <div class="mh-name-row">
             <span class="mh-name-text">{{ mobileHeaderTitle }}</span>
-            <span v-if="cultureIso && cultureInfo && (activeChannel==='whatsapp' || activeChannel==='telegram')" class="mh-cul-badge" :class="'mh-cul-s-'+cultureWorkStatus.status" @click.stop="switchPanel('worldclock')">
-              {{ cultureInfo.name }} {{ cultureWorkStatus.localTime }} {{ cultureWorkStatus.icon }}
-            </span>
+            <span v-if="cultureIso && cultureInfo && (activeChannel==='whatsapp' || activeChannel==='telegram')" style="font-size:11px;color:var(--text-secondary,#8696a0);font-variant-numeric:tabular-nums;white-space:nowrap;padding:0;margin:0;" @click.stop="switchPanel('worldclock')">{{ cultureInfo.name }} {{ cultureWorkStatus.localTime }}</span>
             <span v-else-if="activeChannel==='telegram' && !cultureIso && chatStore.activeConversation && chatStore.activeConversation.platform === 'telegram' && !chatStore.activeConversation.contactPhone" class="mh-cul-badge mh-cul-set-hint" @click.stop="switchPanel('worldclock')">
               🌐 设置国家
             </span>
@@ -239,7 +245,7 @@
     <!-- 工作区 -->
     <div class="workspace" :class="{ 'has-mheader': isMobile, 'has-tabbar': isMobile, 'full-page': isMobile && activePlatform !== 'communication' }">
       <!-- 沟通模块 -->
-    <div v-if="activePlatform === 'communication'" class="comm-module" :class="{ 'email-active': activeChannel === 'email', 'drawer-open': isMobile && mobileDrawerOpen, 'in-conv': isMobile && (mobileInConv || mobilePanel) }" :style="isMobile ? { overflow: 'hidden', position: 'relative', width: '100%', height: '100%' } : {}">
+    <div v-if="activePlatform === 'communication'" class="comm-module" :class="{ 'email-active': activeChannel === 'email', 'drawer-open': isMobile && mobileDrawerOpen, 'in-conv': isMobile && (mobileInConv || mobilePanel) }">
         <!-- 渠道图标切换条：v-for遍历channels，后期加渠道只需在channels数组+channelIcons加一项 -->
           <div class="ch-switch" v-if="activePlatform==='communication' && !mobileInConv && !mobilePanel && !isMobile">
             <button
@@ -296,25 +302,11 @@
                   <div class="wa-empty-meta"><span class="status-text">点击扫码登录</span></div>
                 </div>
               </div>
-              <!-- "全部"选项：显示所有账号合并视图 -->
-              <div v-if="waAccounts.length > 1"
-                   class="wa-account-item"
-                   :class="{active: currentWaAccountId === null}"
-                   @click="switchWaAccount(null)">
-                <div class="acc-avatar" style="background:#00a884;">
-                  <span class="acc-avatar-initial" style="font-size:16px;">📱</span>
-                </div>
-                <div class="acc-info">
-                  <div class="acc-name">全部账号</div>
-                  <div class="acc-meta">{{ waAccounts.filter(a=>a.online).length }} 个在线</div>
-                </div>
-                <span v-if="currentWaAccountId === null" class="acc-check">✓</span>
-              </div>
               <!-- 各WA账号卡片 -->
               <div v-for="acc in waAccounts" :key="acc.id"
                    class="wa-account-item"
                    :class="{active: currentWaAccountId === acc.id}"
-                   @click="switchWaAccount(acc.id); channelSheetOpen=false">
+                   @click="switchWaAccount(acc.id); activeChannel='whatsapp'; channelSheetOpen=false">
                 <div class="acc-avatar" :style="!acc.avatar ? {background: acc.color} : {}">
                   <img v-if="acc.avatar" class="acc-avatar-img" :src="acc.avatar" alt="" />
                   <span v-else class="acc-avatar-initial">{{ (acc.name||'?')[0] }}</span>
@@ -411,7 +403,7 @@
         </aside>
 
         <!-- ④ 聊天列表栏 -->
-        <aside class="col-chatlist" v-if="!(isMobile && mobileInConv && (chatStore.activeJid || tgActiveJid))" :class="{ 'm-hidden': isMobile && mobileInConv && (chatStore.activeJid || tgActiveJid) }" :style="isMobile ? { width: '100%', maxWidth: 'none', borderRight: 'none', minWidth: '0', minHeight: '0' } : {}">
+        <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }">
           <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
@@ -516,7 +508,7 @@
                 <div style="font-size:13px;color:#8696a0;margin-top:8px;text-align:center;padding:0 16px;">请先连接 WhatsApp 账号</div>
               </div>
             </template>
-            <template v-else-if="activeChannel === 'telegram' && tgAccounts.length === 0">
+            <template v-else-if="activeChannel === 'telegram' && (tgAccounts.length === 0 || tgConversationsLoading)">
               <div class="empty-list-hint">
                 <div style="font-size:32px;opacity:0.3">✈️</div>
                 <div style="font-size:13px;color:#8696a0;margin-top:8px;text-align:center;padding:0 16px;">Telegram 加载中...</div>
@@ -553,7 +545,7 @@
               @touchmove.passive="onConvTouchMove"
             >
               <div class="conv-avatar" :style="!convAvatarOk(conv) ? {background: conv.color} : {}">
-                <img v-if="chatStore.loadAvatar(conv.jid, conv.avatar) && convAvatarOk(conv)" class="conv-avatar-img" :src="chatStore.loadAvatar(conv.jid, conv.avatar)" @error="onConvAvatarError(conv.jid)" alt="" />
+                <img v-if="chatStore.loadAvatar(conv.jid) && convAvatarOk(conv)" class="conv-avatar-img" :src="chatStore.loadAvatar(conv.jid)" @error="onConvAvatarError(conv.jid)" alt="" />
                 <span v-else class="conv-avatar-initial">{{ convInitial(conv) }}</span>
                 <span class="conv-status-dot" :class="conv.status || 'offline'"></span>
                 <span v-if="conv.followupStatus" class="conv-followup-dot" :class="'fu-dot-' + conv.followupStatus"></span>
@@ -615,7 +607,7 @@
           </transition>
 
 </aside>
-        <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (chatStore.activeJid || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }" :style="isMobile ? { position: 'absolute', left: '0', right: '0', top: '0', bottom: '0', transform: (mobileInConv && (chatStore.activeJid || tgActiveJid)) ? 'none' : 'translateX(100%)', zIndex: '45' } : {}">
+        <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (activeConv || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }">
           <!-- 📧 邮箱渠道嵌入式视图 -->
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
@@ -631,15 +623,15 @@
             </div>
           </div>
           <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
-          <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);padding-bottom:env(safe-area-inset-bottom)">
+          <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
             <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:50;touch-action:manipulation;overflow:visible;">
               <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" @touchend.stop.prevent="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
               <div class="tg-avatar" style="width:40px;height:40px;border-radius:50%;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;">{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</div>
               <div style="flex:1;">
                 <div style="font-weight:600;color:var(--text-primary,#e9edef);font-size:16px;">{{ tgConversations.find(c=>c.jid===tgActiveJid)?.name || tgActiveJid }}</div>
                 <div style="font-size:12px;color:var(--text-secondary,#8696a0);display:flex;align-items:center;gap:4px;justify-content:flex-start;">
-                  <span v-if="tgCultureInfo && tgCultureWorkStatus.localTime" :style="{display:'inline-flex',alignItems:'center',gap:'3px',padding:'1px 6px',borderRadius:'10px',fontSize:'11px',fontWeight:500,marginRight:'auto',background:tgCultureWorkStatus.status==='working'?'rgba(46,204,113,0.15)':tgCultureWorkStatus.status==='night'?'rgba(52,152,219,0.15)':tgCultureWorkStatus.status==='weekend'?'rgba(155,89,182,0.15)':'rgba(241,196,15,0.15)',color:'#e9edef',cursor:'pointer'}" @click.stop="switchPanel('worldclock')">
-                    {{ tgCultureInfo.name }} {{ tgCultureWorkStatus.localTime }} {{ tgCultureWorkStatus.icon }}
+                  <span v-if="tgCultureInfo && tgCultureWorkStatus.localTime" :style="{display:'inline-flex',alignItems:'center',gap:'3px',fontSize:'11px',fontWeight:500,marginRight:'auto',color:'#e9edef',cursor:'pointer'}" @click.stop="switchPanel('worldclock')">
+                    {{ tgCultureInfo.name }} {{ tgCultureWorkStatus.localTime }}
                   </span>
                   <span v-else-if="tgActiveConv && tgActiveConv.platform === 'telegram' && !tgActiveConv.contactPhone" style="color:#e67e22;font-size:11px;cursor:pointer;" @click.stop="switchPanel('worldclock')">🌐 请设置国家</span>
                   <span v-else>✈️ Telegram</span>
@@ -664,10 +656,10 @@
               <div v-for="m in tgMessages" :key="m.id" :style="{alignSelf:m.fromMe?'flex-end':'flex-start',maxWidth:'75%'}">
                 <div :style="{background:m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)',color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word'}">
                   <!-- 媒体消息：显示图片/视频 -->
-                  <template v-if="m.mediaUrl && (m.type === 'image' || m.type === 'MessageMediaPhoto' || m.messageType === 'image' || m.messageType === 'MessageMediaPhoto' || m.mediaType === 'MessageMediaPhoto')">
+                  <template v-if="m.mediaUrl && (m.messageType === 'image' || m.messageType === 'MessageMediaPhoto' || m.mediaType === 'MessageMediaPhoto')">
                     <a :href="m.mediaUrl" target="_blank" rel="noopener"><img :src="m.mediaUrl" style="max-width:100%;border-radius:8px;margin-bottom:4px;cursor:pointer;" @error="$event.target.style.display='none'" /></a>
                   </template>
-                  <template v-else-if="m.mediaUrl && (m.type === 'video' || m.type === 'MessageMediaVideo' || m.messageType === 'video' || m.messageType === 'MessageMediaVideo')">
+                  <template v-else-if="m.mediaUrl && (m.messageType === 'video' || m.messageType === 'MessageMediaVideo')">
                     <video :src="m.mediaUrl" controls style="max-width:100%;border-radius:8px;margin-bottom:4px;max-height:240px;"></video>
                   </template>
                   <template v-else-if="m.mediaUrl">
@@ -684,7 +676,7 @@
               </div>
               <div v-if="tgMessages.length === 0" style="text-align:center;color:var(--text-secondary,#8696a0);padding:20px;">暂无消息，在 Telegram 发第一条消息吧</div>
             </div>
-            <div class="tg-input" style="display:flex;gap:8px;padding:10px 12px 14px;background:var(--panel-header-bg,#202c33);border-top:1px solid var(--border-color,#222d34);padding-bottom:max(14px, env(safe-area-inset-bottom))">
+            <div class="tg-input" style="display:flex;gap:8px;padding:10px 12px;background:var(--panel-header-bg,#202c33);border-top:1px solid var(--border-color,#222d34);">
               <input v-model="tgInputText" @keydown.enter="sendTgMessage" placeholder="输入消息..." style="flex:1;background:var(--input-bg,#2a3942);border:none;border-radius:20px;padding:10px 16px;color:var(--text-primary,#e9edef);font-size:14px;outline:none;" />
               <button @click="sendTgMessage" :disabled="tgSending" style="width:42px;height:42px;border-radius:50%;border:none;background:#2AABEE;color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">➤</button>
             </div>
@@ -2302,7 +2294,7 @@
                 </div>
                 <!-- 切换国籍/所在国 -->
                 <div v-if="cultureResidenceIso && cultureResidenceIso !== cultureIso" class="cul-switch-hint">
-                  <button class="cul-switch-btn" @click="cultureUseResidence = !cultureUseResidence">
+                  <button class="cul-switch-btn" @click="cultureUseResidence = !cultureUseResidence; cultureSaveManual()">
                     🔄 {{ cultureUseResidence ? '查看国籍文化('+cultureInfoNationality.name+')' : '切换到所在国('+cultureResidenceName+')' }}
                   </button>
                 </div>
@@ -2582,7 +2574,7 @@
         </aside>
 
         <!-- ⑦ 图标列（常驻）） -->
-        <aside class="col-iconbar" :class="{ collapsed: iconbarCollapsed }" :style="isMobile ? { display: 'none' } : {}">
+        <aside class="col-iconbar" :class="{ collapsed: iconbarCollapsed }">
           <div class="ib-items">
             <button class="ib-item" :class="{ active: activePanel === 'translate' }" @click="switchPanel('translate')" :title="iconbarCollapsed ? '翻译设置' : ''">
               <span class="ib-icon">🌐</span>
@@ -3562,6 +3554,10 @@ function switchWaAccount(id) {
   // Filter conversations by accountId - null means show all
   if (chatStore.setAccountFilter) {
     chatStore.setAccountFilter(newId);
+  }
+  // Re-fetch conversations with new account filter
+  if (chatStore.fetchConversations) {
+    chatStore.fetchConversations().catch(e => console.error('Refetch convs after account switch failed:', e));
   }
 }
 const mobileChannelBadge = computed(() => {
@@ -5139,34 +5135,43 @@ onMounted(async () => {
   window.addEventListener('resize', checkMobile);
   checkMobile();
   try { initSocket(); } catch(e) { console.warn('initSocket failed', e); }
-  try { await chatStore.fetchTranslationSettings(); syncTransFormFromStore(); } catch(e) { console.warn('translation settings load failed:', e); }
-  try {
-    await chatStore.fetchConnectionStatus();
-    if (chatStore.isConnected) {
-      await chatStore.fetchConversations();
-      await chatStore.fetchPendingFollowups();
-    }
-  } catch(e) { console.warn('fetchStatus failed', e); }
+  
+  // 并行加载非关键数据，提升首屏速度
+  const loadTranslationSettings = chatStore.fetchTranslationSettings().then(() => {
+    syncTransFormFromStore();
+  }).catch(e => console.warn('translation settings load failed:', e));
+  
+  const loadConnectionAndData = (async () => {
+    try {
+      await chatStore.fetchConnectionStatus();
+      if (chatStore.isConnected) {
+        // 会话列表和待跟进并行
+        await Promise.all([
+          chatStore.fetchConversations(),
+          chatStore.fetchPendingFollowups()
+        ]);
+      }
+    } catch(e) { console.warn('fetchStatus failed', e); }
+  })();
+  
+  const loadAccounts = (async () => {
+    try {
+      await loadTgAccounts();
+      await loadWaAccounts();
+      if (currentWaAccountId.value === null && waAccounts.value.length > 0) { 
+        const fo = waAccounts.value.find(a => a.online); 
+        if (fo) switchWaAccount(fo.id); 
+      }
+    } catch(e) { console.warn('loadAccounts failed', e); }
+  })();
+  
   // Support jumping to a specific WA conversation from other pages (Customer detail)
   tryOpenPendingJid();
   // 启动首响/待跟进轮询
   scheduleFollowupPoll();
-  // 加载TG Bot账号列表
-  try { await loadTgAccounts();
-  loadWaAccounts(); } catch(e) { console.warn('loadTgAccounts failed', e); }
+  
   if (activeChannel.value === 'telegram') {
-    await loadTgConversations();
-    // Auto-select first TG conversation on mobile (mirrors WA store logic)
-    if (isMobile.value && !tgActiveJid.value && tgConversations.value.length > 0) {
-      const first = tgConversations.value[0];
-      tgActiveJid.value = first.jid;
-      chatStore.activeJid = first.jid;
-      chatStore.activePlatform = 'telegram';
-      mobileInConv.value = true;
-      loadTgMessages(first.jid);
-      loadCustomerByJid(first.jid);
-      console.log('[Mobile] Auto-selected TG conv:', first.jid);
-    }
+    loadTgConversations();
   }
 
   // TG socket实时事件监听
@@ -5409,6 +5414,7 @@ const mobileHeaderTitle = computed(() => {
   if (mobileInConv.value && chatStore.activeConversation?.name) return chatStore.activeConversation.name;
   if (activePlatform.value === 'dashboard') return '数据概览';
   if (activePlatform.value === 'assistant') return '外贸Agent';
+  if (activePlatform.value === 'communication' && activeChannel.value === 'whatsapp' && currentWaAccountId.value) { const acc = waAccounts.value.find(a => a.id === currentWaAccountId.value); return acc?.name || 'WhatsApp'; }
   if (activePlatform.value === 'communication') return currentChannel.value?.name || '客户沟通';
   if (activePlatform.value === 'customers') return '客户管理';
   if (activePlatform.value === 'pipeline') return '销售看板';
@@ -5433,23 +5439,7 @@ function onDrawerItemClick(item) {
   closeAllMobileOverlays();
   if (item.key === 'chatlist') {
     activePlatform.value = 'communication';
-    if (route.path !== '/chat') {
-      router.push('/chat');
-    } else {
-      // 已经在 /chat 路由，主动触发自动选中（移动端）
-      if (typeof window !== 'undefined' && window.innerWidth <= 900 && !chatStore.activeJid && chatStore.conversations && chatStore.conversations.length > 0) {
-        const displayConvs = chatStore.conversations.filter(c => !c.platform || c.platform === 'whatsapp');
-        if (displayConvs.length > 0 && displayConvs[0].jid) {
-          console.log('[DrawerClick] Auto-selecting first conversation:', displayConvs[0].jid);
-          chatStore.setActiveConversation(displayConvs[0].jid);
-        }
-      }
-    }
-    // FIX: 切换到沟通页时，如果已有活跃会话，恢复移动端会话面板
-    if (isMobile.value && chatStore.activeJid) {
-      activeConv.value = chatStore.activeJid;
-      mobileInConv.value = true;
-    }
+    if (route.path !== '/chat') router.push('/chat');
     return;
   }
   if (item.key === 'translate_set') {
@@ -5470,8 +5460,6 @@ function checkMobile() {
   const ua = navigator.userAgent || '';
   const isMobileUA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(ua);
   isMobile.value = window.innerWidth <= 900 || isMobileUA;
-  // 给 html 根元素加 is-mobile class，CSS 用此 class 兜底移动端布局（解决部分浏览器媒体查询不匹配问题）
-  document.documentElement.classList.toggle('is-mobile', isMobile.value);
   // 仅在真正跨断点切换时重置面板状态；输入法弹起/收起引起的高度变化(宽度不变)不打断当前会话
   if (!wasMobile && isMobile.value) {
     // PC → 移动端
@@ -5555,11 +5543,6 @@ function handleMobileTab(tab) {
     if (route.path !== '/chat') router.push('/chat');
     popupSelected.value = false;
     channelSheetOpen.value = true;
-    // FIX: 切换到沟通页时，如果已有活跃会话，恢复移动端会话面板
-    if (isMobile.value && chatStore.activeJid) {
-      activeConv.value = chatStore.activeJid;
-      mobileInConv.value = true;
-    }
     return;
   }
   if (tab.key === 'customers') {
@@ -5583,26 +5566,7 @@ function handleMobileTab(tab) {
 watch(() => route.path, (p) => {
   if (p === '/' || p === '/dashboard') activePlatform.value = 'dashboard';
   else if (p.startsWith('/assistant')) activePlatform.value = 'assistant';
-  else if (p.startsWith('/chat')) {
-    activePlatform.value = 'communication';
-    // FIX: 移动端进入沟通页时，确保会话面板正确显示
-    if (isMobile.value) {
-      nextTick(() => {
-        if (chatStore.activeJid) {
-          activeConv.value = chatStore.activeJid;
-          mobileInConv.value = true;
-        } else if (tgActiveJid.value) {
-          mobileInConv.value = true;
-        }
-        console.log('[RouteWatch] /chat mobile check:', {
-          isMobile: isMobile.value,
-          activeJid: chatStore.activeJid,
-          tgActiveJid: tgActiveJid.value,
-          mobileInConv: mobileInConv.value
-        });
-      });
-    }
-  }
+  else if (p.startsWith('/chat')) activePlatform.value = 'communication';
   else if (p.startsWith('/emails')) activePlatform.value = 'emails';
   else if (p.startsWith('/customers')) activePlatform.value = 'customers';
   else if (p.startsWith('/pipeline')) activePlatform.value = 'pipeline';
@@ -5648,33 +5612,6 @@ watch(() => route.path, (p) => {
     const activeChannel = ref(typeof window !== 'undefined' && localStorage.getItem('active_channel') || 'whatsapp');
 const activeAccount = ref('wa-1');
 const activeConv = ref(null); // jid
-
-// 2026-08-01 修复移动端自动选中后面板不切换的问题
-// 改用 activeJid（独立 ref）而非 activeConversation（computed，数组替换时短暂为 null）
-// 避免 fetchConversations 替换数组导致 activeConversation 瞬时 null → 误重置 mobileInConv
-watch(() => chatStore.activeJid, (jid) => {
-  if (jid) {
-    activeConv.value = jid;
-    if (isMobile.value) {
-      nextTick(() => { mobileInConv.value = true; });
-      console.log('[LayoutWatch] Sync mobile panel:', jid);
-    }
-  } else {
-    activeConv.value = null;
-    // 不在此处重置 mobileInConv，避免竞态条件导致面板意外收起
-  }
-});
-
-// Watch isMobile changes to ensure panel state is correct
-watch(isMobile, (mobile) => {
-  if (mobile && chatStore.activeJid) {
-    nextTick(() => {
-      activeConv.value = chatStore.activeJid;
-      mobileInConv.value = true;
-      console.log('[LayoutWatch] isMobile watcher sync:', chatStore.activeJid);
-    });
-  }
-});
 
 const totalUnread = computed(() => {
   let n = 0;
@@ -6175,6 +6112,7 @@ async function loadTgAccounts() {
 
 // TG会话列表（独立于chatStore，因为TG走不同sessionId）
 const tgConversations = ref([]);
+const tgConversationsLoading = ref(true); // Track initial load to avoid two-stage loading
 let tgPollTimer = null;
 function onTgSocketMessage(e) {
   const data = e.detail;
@@ -6281,6 +6219,7 @@ function startTgUnreadPolling() {
   tgRefreshTimer = setInterval(() => { loadTgConversations().catch(()=>{}); }, 30000);
 }
 async function loadTgConversations() {
+  const wasLoading = tgConversationsLoading.value;
   try {
     const { data } = await api.get('/whatsapp/conversations', { params: { platform: 'telegram' } });
     // 获取 UserBot 自身信息，用于过滤自己给自己的会话
@@ -6306,7 +6245,8 @@ async function loadTgConversations() {
       time: formatConvTime(c.lastMessageTime),
       unread: c.unreadCount || 0,
     }));
-  } catch(e) { console.warn('loadTgConv err', e); }
+    if (wasLoading) tgConversationsLoading.value = false;
+  } catch(e) { console.warn('loadTgConv err', e); if (wasLoading) tgConversationsLoading.value = false; }
 }
 async function tgConnect() {
   const token = tgTokenInput.value.trim();
@@ -8756,7 +8696,7 @@ function cultureLoadManual() {
     const entry = map[jid] || {};
     cultureManualNationality.value = entry.nationality || '';
     cultureManualResidence.value = entry.residence || '';
-    cultureUseResidence.value = false;
+    cultureUseResidence.value = entry.useResidence === true;
   } catch(e) { cultureManualNationality.value=''; cultureManualResidence.value=''; }
 }
 
@@ -8766,10 +8706,15 @@ function cultureSaveManual() {
     if (!jid) return;
     const raw = localStorage.getItem('culture_manual_map');
     const map = raw ? JSON.parse(raw) : {};
-    map[jid] = { nationality: cultureManualNationality.value, residence: cultureManualResidence.value };
+    map[jid] = { nationality: cultureManualNationality.value, residence: cultureManualResidence.value, useResidence: cultureUseResidence.value };
     localStorage.setItem('culture_manual_map', JSON.stringify(map));
   } catch(e) {}
 }
+
+// Auto-save whenever manual values change (more reliable than @change on mobile)
+watch([cultureManualNationality, cultureManualResidence, cultureUseResidence], () => {
+  cultureSaveManual();
+});
 
 // 检测客户ISO（优先手动→客户档案country→手机号国家码）
 const _customerCountryIsoCache = new Map();
@@ -8923,9 +8868,10 @@ const cultureTzDiff = computed(() => {
 });
 
 // 切换会话时重新加载手动修正
-watch(() => chatStore.activeJid, () => {
-  cultureLoadManual();
-  cultureUseResidence.value = false;
+watch(() => chatStore.activeJid, (newJid, oldJid) => {
+  if (newJid && newJid !== oldJid) {
+    cultureLoadManual();
+  }
 });
 
 // provide给子组件（ChatWindow等）使用
@@ -11222,10 +11168,10 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
     overflow: hidden;
   }
   .mh-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-  .mh-name-row { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+  .mh-name-row { flex: 1; min-width: 0; display: flex; flex-direction: column !important; justify-content: center !important; align-items: flex-start !important; gap: 0px; }
   .mh-name-text {
     display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    line-height: 1.3; align-self: stretch;
+    line-height: 1.3; flex: 0 1 auto; min-width: 0;
   }
 
   /* 遮罩 */
@@ -13192,6 +13138,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   .asi-check { color: var(--accent, #00a884); font-weight: bold; font-size: 16px; margin-left: auto; }
   .action-sheet-item.active { color: var(--accent, #00a884); }
   .asi-offline { opacity: 0.6; }
+  .asi-channel-header { cursor: default; font-weight: 600; background: transparent !important; }
   .asi-label { flex: 1; text-align: left; }
 
   /* 多账号子区 */
@@ -13271,32 +13218,6 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 
 .mh-ch-arrow { opacity: 0.6; margin-left: 2px; flex-shrink: 0; }
-
-/* ═══ FIX 2026-08-01 v3: 纯媒体查询兜底，不依赖任何 JS 状态 ═══ */
-@media (max-width: 900px) {
-  .comm-module .col-chatlist.m-hidden,
-  .comm-module.in-conv .col-chatlist {
-    display: none !important;
-    flex: none !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    position: absolute !important;
-    left: -9999px !important;
-  }
-  .comm-module .col-conversation.m-in,
-  .comm-module.in-conv .col-conversation {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    flex: none !important;
-    transform: none !important;
-  }
-}
 </style>
 
 <style>
@@ -14514,16 +14435,16 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
 /* 手机端Header徽标 */
 .mh-cul-badge {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 7px 2px 2px; border-radius: 10px; font-size: 11px; font-weight: 500;
-  margin-top: 2px; margin-left: 0; align-self: flex-start; font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 0; border-radius: 0; font-size: 11px; font-weight: 400;
+  margin-top: 0; margin-left: 0; align-self: flex-start; font-variant-numeric: tabular-nums;
+  white-space: nowrap; background: none !important; color: var(--text-secondary, #8696a0) !important;
 }
-.mh-cul-badge.cul-s-working { background: rgba(46,204,113,0.2); color: #27ae60; }
-.mh-cul-badge.cul-s-morning { background: rgba(241,196,15,0.2); color: #d68910; }
-.mh-cul-badge.cul-s-evening { background: rgba(230,126,34,0.2); color: #d35400; }
-.mh-cul-badge.cul-s-night { background: rgba(52,152,219,0.18); color: #5dade2; }
-.mh-cul-badge.cul-s-weekend { background: rgba(155,89,182,0.2); color: #bb8fce; }
+.mh-cul-badge.cul-s-working { background: none !important; color: var(--text-secondary, #8696a0) !important; }
+.mh-cul-badge.cul-s-morning { background: none !important; color: var(--text-secondary, #8696a0) !important; }
+.mh-cul-badge.cul-s-evening { background: none !important; color: var(--text-secondary, #8696a0) !important; }
+.mh-cul-badge.cul-s-night { background: none !important; color: var(--text-secondary, #8696a0) !important; }
+.mh-cul-badge.cul-s-weekend { background: none !important; color: var(--text-secondary, #8696a0) !important; }
 
 .wc-card-mid { display: flex; align-items: center; gap: 16px; }
 .wc-analog { flex-shrink: 0; }
@@ -15168,51 +15089,4 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .att-urg-medium { background: rgba(245,158,11,.15); color: #f59e0b; }
 .att-urg-low { background: rgba(134,150,160,.15); color: #8696a0; }
 
-/* ═══ 移动端布局兜底：JS is-mobile class 驱动（解决 Via 等浏览器媒体查询不匹配问题） ═══ */
-html.is-mobile .platform-nav { display: none !important; }
-html.is-mobile .workspace { overflow: hidden !important; }
-html.is-mobile .comm-module { display: flex !important; position: relative !important; width: 100% !important; height: 100% !important; overflow: hidden !important; }
-html.is-mobile .col-accounts { position: absolute !important; left: 0; top: 0; bottom: 0; z-index: 35; width: 82vw !important; max-width: 320px !important; transform: translateX(-100%) !important; box-shadow: 2px 0 16px rgba(0,0,0,.4) !important; }
-html.is-mobile .col-accounts.m-open { transform: translateX(0) !important; }
-html.is-mobile .col-chatlist { width: 100% !important; max-width: none !important; border-right: none !important; position: relative !important; flex: 1 1 auto !important; min-height: 0 !important; min-width: 0 !important; overflow: hidden !important; height: 100% !important; }
-html.is-mobile .col-chatlist .chatlist-body { -webkit-overflow-scrolling: touch !important; overscroll-behavior-y: contain !important; overflow-y: auto !important; }
-html.is-mobile .col-chatlist.m-hidden { transform: translateX(-100%) !important; pointer-events: none !important; display: none !important; visibility: hidden !important; }
-html.is-mobile .col-conversation { position: absolute !important; left: 0; right: 0; top: 0; bottom: 0; z-index: 45; background: var(--chat-bg); transform: translateX(100%) !important; display: flex !important; flex-direction: column !important; }
-html.is-mobile .col-conversation.m-in { transform: none !important; }
-html.is-mobile .col-iconbar { display: none !important; }
-html.is-mobile .col-function-panel { display: none !important; }
-html.is-mobile .col-function-panel.m-panel { display: flex !important; position: fixed !important; right: 0; top: 60px; bottom: 56px; width: 86vw !important; max-width: 360px; z-index: 55; transform: translateX(100%); transition: transform .28s; box-shadow: -2px 0 16px rgba(0,0,0,.4); background: var(--panel-bg); }
-html.is-mobile .col-function-panel.m-panel.m-panel-show { transform: translateX(0) !important; }
-html.is-mobile .mobile-tabbar { display: flex !important; }
-html.is-mobile .mobile-header { display: flex !important; }
-
-/* FIX 2026-08-01: 强制移动端 in-conv 状态下面板全宽布局 */
-html.is-mobile .comm-module.in-conv .col-chatlist { display: none !important; flex: none !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; position: absolute !important; left: -9999px !important; }
-html.is-mobile .comm-module.in-conv .col-conversation { position: absolute !important; left: 0 !important; right: 0 !important; top: 0 !important; bottom: 0 !important; width: 100% !important; max-width: none !important; flex: none !important; }
-
-/* ═══ FIX 2026-08-01 v3: 纯媒体查询兜底，不依赖任何 JS 状态 ═══ */
-@media (max-width: 900px) {
-  .comm-module .col-chatlist.m-hidden,
-  .comm-module.in-conv .col-chatlist {
-    display: none !important;
-    flex: none !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    position: absolute !important;
-    left: -9999px !important;
-  }
-  .comm-module .col-conversation.m-in,
-  .comm-module.in-conv .col-conversation {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    flex: none !important;
-    transform: none !important;
-  }
-}
 </style>

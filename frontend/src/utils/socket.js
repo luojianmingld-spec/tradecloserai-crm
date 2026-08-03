@@ -25,8 +25,7 @@ export function initSocket() {
 
   socket.on('connect', () => {
     console.log('[Socket] Connected');
-    // 重连后刷新会话列表，补齐断线期间的内容
-    try { chatStore.fetchConversations?.(); } catch(e) {}
+    // fetchConversations 由 handleStatus('connected') 触发，这里不再重复调用
   });
 
   socket.on('disconnect', (reason) => {

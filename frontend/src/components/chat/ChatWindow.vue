@@ -123,7 +123,7 @@
                   </div>
                 </template>
                 <!-- No translation available - show translate button for incoming -->
-                <template v-else-if="!msg.fromMe && chatStore.translationSettings.translationEnabled && (msg.messageType === 'text' || !msg.messageType)">
+                <template v-else-if="!msg.fromMe && (chatStore.translationSettings.receiveEnabled !== false) && (msg.messageType === 'text' || !msg.messageType)">
                   <span class="msg-text">{{ msg.content }}</span>
                   <div v-if="translatingMsgs[msg.id]" class="msg-translation translating">
                     <span class="translation-label">翻译中...</span>

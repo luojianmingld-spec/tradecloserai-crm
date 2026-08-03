@@ -155,7 +155,7 @@ async function _toggleConvField(jid, field) {
   });
 }
 
-const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message);
@@ -180,6 +180,9 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
 }));
+
+// ── Trust proxy (Nginx reverse proxy) ──
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 // ── Security: Rate Limiting ──
 const apiLimiter = rateLimit({
@@ -319,7 +322,7 @@ app.post("/api/whatsapp/check-number", authMiddleware, async (req, res) => {
     }
     const EVO_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
     const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
-    const INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+    const INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
     // 智能补国家码：11位以1开头的中国手机号自动补86；其他不补
     const cleaned = [];
     const fallbackMap = {}; // 原始请求索引 -> 带86的二次请求号
@@ -426,11 +429,37 @@ app.get("/api/whatsapp/qr", async (req, res) => {
   }
 });
 
+// POST /api/whatsapp/qr — 前端ChatView请求QR码
+app.post("/api/whatsapp/qr", async (req, res) => {
+  try {
+    const state = await evoConnector.getConnectionState();
+    if (state === "open") {
+      const info = await evoConnector.getInstanceInfo().catch(() => null);
+      return res.json({
+        status: "connected",
+        phone: info?.ownerJid?.split("@")?.[0] || null,
+        pushName: info?.profileName || null,
+        ownerJid: info?.ownerJid || null,
+        sessionId: evoConnector.instance,
+      });
+    }
+    const qr = await evoConnector.getQRCode();
+    res.json({
+      qr: qr || null,
+      status: qr ? "waiting_qr" : "connecting",
+      sessionId: evoConnector.instance,
+    });
+  } catch (e) {
+    console.error("[POST /api/whatsapp/qr] error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 
 // ─── WA 实例管理接口（登录/登出/状态） ───
 const EVO_API = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
 const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
-const EVO_INST = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+const EVO_INST = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
 
 async function evoFetch(path, opts = {}) {
   const headers = { apikey: EVO_KEY, "Content-Type": "application/json", ...(opts.headers||{}) };
@@ -608,7 +637,7 @@ app.post("/api/whatsapp/admin/reset", authMiddleware, async (req, res) => {
     }
 
     // 重启CRM让它感知新instance
-    const { execSync } = require("child_process");
+    const { execSync } = await import('child_process');
     try { execSync("systemctl restart whatsapp-crm", {timeout: 5000}); } catch(e){}
 
     res.json({
@@ -653,7 +682,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     const toPhone = toJid.split("@")[0];
 
     // ─── Multi-instance: resolve correct Evolution connector based on accountId or conversation ───
-    let sendConnector = evoConnector; // default to jeremy-main
+    let sendConnector = evoConnector; // default to jeremy-eric
     let sendAccountId = body.accountId || null;
     if (!sendAccountId) {
       // Try to find which account this conversation belongs to
@@ -1103,7 +1132,7 @@ app.get("/api/wa/media", async (req, res) => {
     const prisma = new PrismaClient();
     const EVO_API = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
     const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
-    const EVO_INST = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+    const EVO_INST = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
 
     let msgRecord = null;
     let mediaUrl = req.query.url;
@@ -1867,6 +1896,18 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
 
       // 1. From local DB: get messages for this account's conversations
       const accJidList = [...accConvJids];
+      // Build set of OTHER WA account phone numbers (to filter cross-instance synced messages)
+      const otherWaPhones = new Set();
+      if (!showAllAccounts || waAccountsList.length > 1) {
+        const allWaPhones = await prisma.whatsAppAccount.findMany({
+          where: { userId: req.userId || 1, platform: "whatsapp", phone: { not: null } },
+          select: { phone: true },
+        });
+        const myPhone = waAcc.phone || "";
+        for (const p of allWaPhones) {
+          if (p.phone && p.phone !== myPhone) otherWaPhones.add(p.phone);
+        }
+      }
       if (accJidList.length > 0) {
         const dbMsgs = await prisma.wAMessage.findMany({
           where: {
@@ -1880,6 +1921,11 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
           take: 500,
         });
         for (const msg of dbMsgs) {
+          // Skip messages addressed to a DIFFERENT WA account's phone (cross-instance sync)
+          const msgToPhone = (msg.to || "").split("@")[0];
+          if (msgToPhone && otherWaPhones.has(msgToPhone)) continue;
+          const msgFromPhone = (msg.from || "").split("@")[0];
+          if (msgFromPhone && otherWaPhones.has(msgFromPhone) && msg.direction === "inbound") continue;
           let contactJid = null;
           if (msg.direction === "inbound") contactJid = msg.from;
           else if (msg.to && msg.to !== "me") contactJid = msg.to;
@@ -1928,6 +1974,9 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
             : new Date(chat.updatedAt || Date.now());
           const body = lastEv?.message?.conversation || lastEv?.message?.extendedTextMessage?.text || "[新会话]";
           const direction = lastEv?.key?.fromMe ? "outbound" : "inbound";
+          // Skip chats whose remoteJid phone matches another WA account (cross-instance)
+          const evoPhone = jid.split("@")[0];
+          if (evoPhone && otherWaPhones.has(evoPhone)) continue;
           if (!contactMap.has(jid)) {
             contactMap.set(jid, { jid, lastMsg: { body, timestamp: evoTs, direction }, unread: chat.unreadCount || 0, _evoOnly: true, accountId: accId, accountName: accName });
           } else {
@@ -2646,7 +2695,12 @@ app.set('prisma', prisma);
 setupSocketHandlers(io, prisma);
 
 // 客户端(重)连时立即跑一次backfill补漏，断线期间的消息不用等3分钟周期
+// 节流：30秒内只跑一次，避免重连风暴时反复backfill
+let _lastBackfill = 0;
 io.on('connection', () => {
+  const now = Date.now();
+  if (now - _lastBackfill < 30000) return;
+  _lastBackfill = now;
   import('./services/message-backfill.js').then(m => {
     if (m.runOnce) m.runOnce(io).catch(e => console.warn('[Backfill] on-connect error:', e.message));
   }).catch(() => {});

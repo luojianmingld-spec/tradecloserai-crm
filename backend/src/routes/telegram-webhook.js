@@ -315,31 +315,34 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
 
 async function translateInboundAsync(saved, jid, io, waDbId) {
   try {
-    const { getTranslationSettings } = await import("../services/translation.js");
-    const { detectLanguage, translateText } = await import("../services/translation.js");
+    const { getTranslationSettings } = await import("../routes/translation.js");
+    const { detectLanguage, translateText } = await import("../services/ai.service.js");
     const body = (saved.content || "").trim();
     if (saved.messageType !== "text" || body.length < 1 || body.length > 2000) return;
     if (body.startsWith("[") && body.endsWith("]")) return;
-    const settings = await getTranslationSettings(saved.accountId || 1);
-    if (settings.translationEnabled !== "true") return;
-    const engine = settings.translationEngine || "doubao";
-    let sourceLang = "auto";
-    const targetLang = "zh";
+    const settings = await getTranslationSettings(jid, saved.accountId || 1);
+    if (!settings.receiveEnabled) return;
+    const engine = settings.receiveEngine || "google";
+    let sourceLang = settings.receiveSourceLang || "auto";
+    const targetLang = settings.receiveTargetLang || "zh";
     if (sourceLang === "auto") sourceLang = await detectLanguage(body, engine);
-    if (!sourceLang || sourceLang === "unknown" || sourceLang === "zh") return;
+    if (!sourceLang || sourceLang === "unknown") return;
+    if (sourceLang === "zh" || sourceLang.startsWith("zh-")) return;
     const result = await translateText(body, sourceLang, targetLang, engine, saved.accountId || 1);
-    const translated = (result && result.translated) || "";
+    const translated = (result && (result.translated || result.text)) || "";
     if (!translated) return;
-    // 前端期望 translation 是纯文本字符串，不是 JSON 对象
-    await prisma.message.update({ where: { id: saved.id }, data: { translation: translated, sourceLang } });
+    // 统一用对象结构（与WA一致）：original=原文外文, translated=中文译文
+    const transObj = JSON.stringify({ original: body, translated, sourceLang, targetLang });
+    await prisma.message.update({ where: { id: saved.id }, data: { translation: transObj, sourceLang } });
     if (waDbId) {
-      await prisma.wAMessage.update({ where: { id: waDbId }, data: { translation: translated, sourceLang } }).catch(() => {});
+      await prisma.wAMessage.update({ where: { id: waDbId }, data: { translation: transObj, sourceLang } }).catch(() => {});
     }
     console.log(`[Translation][TG] inbound #${saved.id} ${sourceLang}->${targetLang}: "${body.slice(0,50)}" => "${translated.slice(0,50)}"`);
     if (io) {
+      const translationPayload = { original: body, translated, sourceLang, targetLang };
       // 同时发两个事件兼容前端不同监听
-      io.emit("telegram:translation", { id: saved.id, waId: waDbId, jid, translation: translated, sourceLang });
-      io.emit("whatsapp:translation", { id: waDbId || saved.id, jid, translation: translated, sourceLang, platform: "telegram" });
+      io.emit("telegram:translation", { id: saved.id, waId: waDbId, jid, translation: translationPayload, sourceLang });
+      io.emit("whatsapp:translation", { id: waDbId || saved.id, jid, translation: translationPayload, sourceLang, platform: "telegram" });
     }
   } catch (e) {
     console.warn("[TG] translate async error:", e.message);

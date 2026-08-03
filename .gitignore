@@ -8,3 +8,25 @@ uploads/
 .env.*
 *.sqlite
 *.sqlite-journal
+
+# Backup files
+*.bak*
+*.orig
+*.broken*
+*.backup*
+
+# Build output
+frontend/dist/
+
+# Database files
+backend/prisma/*.db
+backend/prisma/*.db-*
+
+# Logs
+backend/*.log
+
+# Package backup
+backend/package.json.bak*
+backend/src/**/*.bak*
+frontend/src/**/*.bak*
+frontend/src/**/*.orig

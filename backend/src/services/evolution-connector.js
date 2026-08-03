@@ -8,7 +8,7 @@ import { resolveSendTarget } from "./lid-mapping.js";
 
 const EVO_API_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
 const EVO_API_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
-const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-main";
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
 
 class EvolutionConnector {
   constructor(instanceName = DEFAULT_INSTANCE) {
@@ -306,7 +306,7 @@ class EvolutionConnector {
 // 多实例连接器池
 const _connectors = new Map();
 export function getEvolutionConnector(name) {
-  const key = name || 'jeremy-main';
+  const key = name || 'jeremy-eric';
   if (!_connectors.has(key)) {
     _connectors.set(key, new EvolutionConnector(key));
   }

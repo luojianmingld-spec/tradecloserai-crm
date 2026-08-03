@@ -123,7 +123,7 @@ async function fetchAvatarUrl(jid, instance) {
   return p;
 }
 
-router.get('/api/wa/avatar', async (req, res) => {
+const avatarHandler = async (req, res) => {
   const jid = (req.query.jid || '').toString().trim();
   if (!jid) {
     return res.status(400).set('Content-Type', 'text/plain').send('Missing jid parameter');
@@ -214,6 +214,11 @@ router.get('/api/wa/avatar', async (req, res) => {
       try { res.end(); } catch (_) {}
     }
   }
-});
+};
+
+// 原始路由
+router.get('/api/wa/avatar', avatarHandler);
+// 兼容路由：前端某些地方引用 /api/v1/avatar
+router.get('/api/v1/avatar', avatarHandler);
 
 export default router;

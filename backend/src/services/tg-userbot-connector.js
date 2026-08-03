@@ -301,10 +301,11 @@ function registerUpdateHandler() {
 
   // 方法2: 同时也注册 raw handler 兜底（处理 UpdateShortMessage 等）
   let rawCount = 0;
+  const SKIP_LOG_TYPES = new Set(['UpdateConnectionState']);
   client.addEventHandler(async (update) => {
     rawCount++;
-    if (rawCount <= 50) {
-      const ctorName = update?.constructor?.name || update?.className || 'unknown';
+    const ctorName = update?.constructor?.name || update?.className || 'unknown';
+    if (!SKIP_LOG_TYPES.has(ctorName) && rawCount <= 100) {
       console.log('[TG-UB] Raw update #' + rawCount + ': ' + ctorName);
     }
     try {

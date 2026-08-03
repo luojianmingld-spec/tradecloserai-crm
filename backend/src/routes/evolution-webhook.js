@@ -395,6 +395,21 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
 
   const remoteJid = resolveRealJid(msg, rawRemoteJid);
   if (!remoteJid || remoteJid === ownerJid) return null;
+  // Skip cross-instance messages: if fromMe and remoteJid phone matches another WA account, skip
+  // Also skip if !fromMe and the "to" (ownerJid) phone matches a different WA account than this instance
+  const ownerPhone = jidToPhone(ownerJid);
+  if (ownerPhone && ownerPhone.length >= 5) {
+    try {
+      const myAcc = await prisma.whatsAppAccount.findFirst({
+        where: { platform: "whatsapp", phone: ownerPhone },
+        select: { id: true },
+      });
+      if (myAcc && myAcc.id !== accountId) {
+        // This message is actually for a different account, skip
+        return null;
+      }
+    } catch(_e) {}
+  }
   // 过滤无效jid（如 0@s.whatsapp.net 系统/协议消息），必须在 resolveRealJid 之后
   const _phone = remoteJid.split('@')[0];
   if (!_phone || _phone === '0' || _phone.length < 5 || !/^\d+$/.test(_phone)) {

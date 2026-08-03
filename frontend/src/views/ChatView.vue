@@ -2125,79 +2125,19 @@ onMounted(async () => {
   } else {
     // 已连接：从其他页面导航过来时 socket 早就 connected，
     // whatsapp:status 不会重复触发，需主动拉一次会话列表
-    // 移动端自动选中逻辑（等会话列表加载完成）
-    const autoSelectFirst = async () => {
-      if (typeof window === 'undefined' || window.innerWidth > 900) return;
-      if (chatStore.activeJid) return;
-      // 等会话列表加载
-      let tries = 0;
-      while ((!chatStore.conversations || chatStore.conversations.length === 0) && tries < 20) {
-        await new Promise(r => setTimeout(r, 200));
-        tries++;
-      }
-      // DEBUG: 测试是否执行到这里
-      if (typeof window !== 'undefined' && window.innerWidth <= 900) {
-        console.log('[DEBUG] ChatView mounted, checking auto-select...', {
-          screenWidth: window.innerWidth,
-          hasActiveJid: !!chatStore.activeJid,
-          conversationsLength: chatStore.conversations?.length,
-          ua: navigator.userAgent
-        });
-      }
-      // 使用与左侧栏一致的过滤逻辑（优先WA，排除TG）
-      const displayConvs = (chatStore.conversations || []).filter(c => !c.platform || c.platform === 'whatsapp');
-      if (displayConvs.length > 0) {
-        const firstConv = displayConvs[0];
-        if (firstConv && firstConv.jid) {
-          console.log('[ChatView Mobile] Auto-selecting first conversation on mount:', firstConv.jid);
-          chatStore.setActiveConversation(firstConv.jid);
-        }
-      }
-    };
-    
+    // 已连接：拉取会话列表（不自动选中，让用户自己选择）
     if (!chatStore.conversations || chatStore.conversations.length === 0) {
       console.log('[ChatView] Already connected but no conversations loaded, fetching now...');
       await chatStore.fetchConversations();
       console.log('[ChatView] fetchConversations completed, conversations count:', chatStore.conversations?.length);
     }
-    // 会话列表已有数据，直接自动选中
-    await autoSelectFirst();
-    if (chatStore.activeJid && isMobileView.value) {
-      // 移动端首次加载也拉一次建议
-      refreshAiSuggests();
-    }
   }
 });
 
 
-// 🔧 兜底：监听 conversations 数据变化，数据到了就自动选中（解决移动端时序问题）
-watch(() => chatStore.conversations, (newConvs) => {
-  if (isMobileView.value && !chatStore.activeJid && newConvs && newConvs.length > 0) {
-    const displayConvs = newConvs.filter(c => !c.platform || c.platform === 'whatsapp');
-    if (displayConvs.length > 0 && displayConvs[0].jid) {
-      console.log('[ConversationsWatch] Auto-selecting first:', displayConvs[0].jid);
-      chatStore.setActiveConversation(displayConvs[0].jid);
-    }
-  }
-}, { deep: false });
+// [FIX] 已移除 conversations 自动选中 watcher，用户需手动选择会话
 
-// 监听路由变化，当进入 /chat 时主动触发自动选中（解决移动端从其他页面切换过来的问题）
-watch(() => route.path, async (newPath) => {
-  if (newPath === '/chat' && typeof window !== 'undefined' && window.innerWidth <= 900 && !chatStore.activeJid) {
-    console.log('[ChatView RouteWatch] Navigated to /chat, triggering auto-select...');
-    // 等会话列表加载
-    let tries = 0;
-    while ((!chatStore.conversations || chatStore.conversations.length === 0) && tries < 20) {
-      await new Promise(r => setTimeout(r, 200));
-      tries++;
-    }
-    const displayConvs = (chatStore.conversations || []).filter(c => !c.platform || c.platform === 'whatsapp');
-    if (displayConvs.length > 0 && displayConvs[0].jid) {
-      console.log('[ChatView RouteWatch] Auto-selecting:', displayConvs[0].jid);
-      chatStore.setActiveConversation(displayConvs[0].jid);
-    }
-  }
-});
+// [FIX] 已移除 route.path 自动选中 watcher，用户需手动选择会话
 
 onUnmounted(() => {
   window.removeEventListener('wa:open-qr', onOpenQrEvent);

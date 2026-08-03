@@ -256,8 +256,8 @@ export function setupSocketHandlers(io, prisma) {
       } catch (err) {}
     });
 
-    socket.on('disconnect', () => {
-      console.log(`[Socket] User ${userId} disconnected (socket: ${socket.id})`);
+    socket.on('disconnect', (reason) => {
+      console.log(`[Socket] User ${userId} disconnected (socket: ${socket.id}, reason: ${reason})`);
     });
   });
 }

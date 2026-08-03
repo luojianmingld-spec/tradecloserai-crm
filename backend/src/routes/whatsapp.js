@@ -373,9 +373,24 @@ router.get('/conversations', async (req, res) => {
 
     const showBlocked = req.query.showBlocked === '1';
     const reqPlatform = (req.query.platform || '').toString(); // 'whatsapp' | 'telegram' | ''(全部)
+    const reqAccountId = req.query.accountId ? (req.query.accountId === 'all' ? null : parseInt(req.query.accountId)) : null;
 
-    // 聚合活跃账号sessionId（按platform过滤）
-    const waSessionIds = [`user_${req.userId}`, 'user_2']; // user_1=Main, user_2=Eric
+    // 聚合活跃账号sessionId（按platform + accountId过滤）
+    // 查询所有WA账号，按id排序 → sessionId = user_1, user_2, user_3...
+    const allWaAccts = await prisma.whatsAppAccount.findMany({
+      where: { userId: req.userId, platform: 'whatsapp' },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    const acctToSession = {};
+    allWaAccts.forEach((a, i) => { acctToSession[a.id] = `user_${i + 1}`; });
+    let waSessionIds;
+    if (reqAccountId != null && acctToSession[reqAccountId]) {
+      waSessionIds = [acctToSession[reqAccountId]]; // 只查指定账号
+    } else {
+      waSessionIds = Object.values(acctToSession); // 所有WA账号
+    }
+    console.log('[DEBUG conversations] reqAccountId=', reqAccountId, 'userId=', req.userId, 'waSessionIds=', waSessionIds, 'reqPlatform=', reqPlatform);
     const tgAccounts = await prisma.whatsAppAccount.findMany({
       where: { userId: req.userId, platform: 'telegram', status: 'connected' },
       select: { id: true, telegramBotUsername: true },
@@ -387,6 +402,17 @@ router.get('/conversations', async (req, res) => {
     else sessionIds = [...waSessionIds, ...tgSessionIds];
 
     const defaultAccountId = 1;
+
+    // 如果指定了accountId，先从Conversation表获取该账号的jid白名单
+    let allowedJids = null;
+    if (reqAccountId != null) {
+      const convs = await prisma.conversation.findMany({
+        where: { accountId: reqAccountId, platform: 'whatsapp' },
+        select: { jid: true },
+      });
+      allowedJids = new Set(convs.map(c => c.jid));
+      console.log('[FILTER] accountId=', reqAccountId, 'allowedJids count=', allowedJids.size);
+    }
 
     const allMsgs = await prisma.wAMessage.findMany({
       where: { sessionId: { in: sessionIds } }, orderBy: { timestamp: 'desc' }, take: 1000,
@@ -400,6 +426,8 @@ router.get('/conversations', async (req, res) => {
       const platform = contactJid.endsWith('@telegram') ? 'telegram' : 'whatsapp';
       // 如果前端指定了platform，直接过滤掉跨渠道消息
       if (reqPlatform && reqPlatform !== platform) continue;
+      // 如果指定了accountId，只保留该账号Conversation表中的jid
+      if (allowedJids && !allowedJids.has(contactJid)) continue;
       if (!contactMap.has(contactJid)) {
         contactMap.set(contactJid, {
           lastMsg: msg,
