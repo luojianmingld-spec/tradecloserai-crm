@@ -11,10 +11,16 @@
 
 ### 🚀 工程治理基线（Week 1）
 - 服务器代码纳入 Git 管理，建立第一次基线 Commit
-- 8 个治理文件落盘项目根目录：AGENTS.md / PROJECT_STATE.md / ARCHITECTURE.md / AI_CODING_RULES.md / SECURITY.md / TESTING.md / BUG_FIX_SOP.md / CHANGELOG.md
+- 9 个治理文件落盘项目根目录：AGENTS.md / PROJECT_STATE.md / ARCHITECTURE.md / AI_CODING_RULES.md / SECURITY.md / TESTING.md / BUG_FIX_SOP.md / CHANGELOG.md / SECURITY_INCIDENTS.md
 - 总规则：任何 AI Agent 读取代码前必须先读治理文件；冲突操作停止并报告
 - Git 安全清理：session.txt / crm.log / uploads 媒体文件移除跟踪；remote URL 明文 Token 清理
 - 备份：三环境时间戳备份 /root/git_governance_backup_20260904/
+
+### 🛡 安全事件处置（INC-2026-09-04-001）
+- **事件**：GitHub PAT 与 TG session.txt 曾进入 Git 历史并推送到远端
+- **处置**：Token 撤销 + TG session 轮换 + git filter-repo 重写历史（清除 session.txt / crm.db / .env.bak / 日志 / uploads / tar.gz）+ remote URL 全部去 Token + force push
+- **新增**：SECURITY_INCIDENTS.md 安全事件记录文件，后续安全事件必须登记
+- **验证**：历史中敏感文件归零；.env/session/db/uploads 均不在 git 跟踪
 
 ### 🐛 TG 扫码登录 + 登录后体验修复（beta）
 - **扫码登录修复**：后端 tg-userbot-connector 4 处 + 前端 1 处；扫码后正常登录
