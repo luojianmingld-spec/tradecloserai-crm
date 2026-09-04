@@ -9,13 +9,59 @@ import { resolveToPhoneJid, recordLidMapping } from "./lid-mapping.js";
 const prisma = new PrismaClient();
 
 const EVO_API_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
-const EVO_API_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
-const INSTANCES = ["jeremy-main", "jeremy-eric"];
-const SESSION_MAP = { "jeremy-main": "user_1", "jeremy-eric": "user_2" };
-const OWNER_JIDS = {
-  "jeremy-main": "8613016242602@s.whatsapp.net",
-  "jeremy-eric": "8618038118960@s.whatsapp.net",
-};
+const EVO_API_KEY = process.env.EVOLUTION_API_KEY;
+// Dynamic instance resolution from database
+let _cachedInstances = null;
+let _cachedSessionMap = null;
+let _cachedOwnerJids = null;
+
+async function loadInstancesFromDB() {
+  try {
+    const accounts = await prisma.whatsAppAccount.findMany({
+      where: { platform: "whatsapp", instanceName: { not: null } },
+      orderBy: { id: "asc" },
+    });
+    // Also load WAConnection for owner phone numbers
+    const connections = await prisma.wAConnection.findMany({
+      select: { sessionId: true, phone: true },
+    });
+    const connPhoneMap = {};
+    connections.forEach(c => { if (c.phone) connPhoneMap[c.sessionId] = c.phone; });
+
+    const instances = [];
+    const sessionMap = {};
+    const ownerJids = {};
+    for (const acc of accounts) {
+      const instName = acc.instanceName;
+      if (!instName) continue;
+      instances.push(instName);
+      // Match webhook logic: sessionId = user_{accountId}
+      const sessionId = "user_" + acc.id;
+      sessionMap[instName] = sessionId;
+      // Owner JID: try matching by sessionId, or fallback to any WAConnection phone
+      let ownerPhone = connPhoneMap[sessionId] || acc.phone || null;
+      if (!ownerPhone && connections.length > 0) {
+        // Fallback: use any available WAConnection phone
+        ownerPhone = connections.find(c => c.phone)?.phone || null;
+      }
+      if (ownerPhone) {
+        ownerJids[instName] = ownerPhone + "@s.whatsapp.net";
+      }
+    }
+    _cachedInstances = instances;
+    _cachedSessionMap = sessionMap;
+    _cachedOwnerJids = ownerJids;
+    console.log("[Backfill] Loaded instances from DB:", instances.join(", "));
+    console.log("[Backfill] Session map:", JSON.stringify(sessionMap));
+    console.log("[Backfill] Owner JIDs:", JSON.stringify(ownerJids));
+  } catch(e) {
+    console.warn("[Backfill] Failed to load instances from DB:", e.message);
+  }
+}
+
+function getInstances() { return _cachedInstances || []; }
+function getSessionMap() { return _cachedSessionMap || {}; }
+function getOwnerJids() { return _cachedOwnerJids || {}; }
 const LOOKBACK_SEC = 180;       // 补拉最近3分钟
 const INTERVAL_MS = 60_000;     // 每60秒跑一次
 const INITIAL_DELAY_MS = 30_000;
@@ -55,7 +101,7 @@ function extractBody(m) {
 // 从Evolution拉最近消息（直接拉最近100条，本地过滤）
 async function fetchRecentMessages() {
   let all = [];
-  for (const inst of INSTANCES) {
+  for (const inst of getInstances()) {
     try {
       const url = `${EVO_API_URL}/chat/findMessages/${inst}?page=1`;
       const resp = await fetch(url, {
@@ -91,6 +137,7 @@ let running = false;
 async function runBackfill(io) {
   if (running) return;
   running = true;
+  if (!getInstances().length) await loadInstancesFromDB();
   let backfilled = 0;
   try {
     const records = await fetchRecentMessages();
@@ -125,7 +172,7 @@ async function runBackfill(io) {
       if (isGroup(remoteJid)) continue;
       if (remoteJid === "status@broadcast") continue;
       if (key.fromMe) continue; // 出站消息不补拉（自己发的不会丢）
-      if (remoteJid === (OWNER_JIDS[m._instance] || OWNER_JIDS["jeremy-main"])) continue;
+      if (remoteJid === (getOwnerJids()[m._instance])) continue;
 
       resolved.push({ m, key, remoteJid });
     }
@@ -154,7 +201,7 @@ async function runBackfill(io) {
         if (extracted.type === "unknown") continue;
 
         const direction = fromMe ? "outbound" : "inbound";
-        const ownerJid = OWNER_JIDS[m._instance] || OWNER_JIDS["jeremy-main"];
+        const ownerJid = getOwnerJids()[m._instance];
         const from = fromMe ? ownerJid : remoteJid;
         const to = fromMe ? remoteJid : ownerJid;
         const pushName = m.pushName || "";
@@ -165,7 +212,7 @@ async function runBackfill(io) {
           where: { waMessageId },
           update: {}, // 已存在则不动
           create: {
-            sessionId: SESSION_MAP[m._instance] || "user_1", from, to,
+            sessionId: getSessionMap()[m._instance] || "user_1", from, to,
             body: extracted.body, type: extracted.type, direction,
             timestamp: ts, waMessageId,
             fileName: extracted.fileName || null,
@@ -191,7 +238,7 @@ async function runBackfill(io) {
             const ts2 = await getTranslationSettings(remoteJid, 1);
             if (ts2?.receiveEnabled) {
               const aiSvc = await import("./ai.service.js");
-              let engine = ts2.receiveEngine || "google";
+              let engine = ts2.receiveEngine || "deepl";
               let src = ts2.receiveSourceLang || "auto";
               const tgt = ts2.receiveTargetLang || "zh";
               if (src === "auto" && aiSvc.detectLanguage) src = await aiSvc.detectLanguage(extracted.body, engine);

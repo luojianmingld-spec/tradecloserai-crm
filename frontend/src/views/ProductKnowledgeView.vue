@@ -486,14 +486,15 @@ const startImport = async () => {
       res = await api.post('/product-knowledge/import/url', {
         url: importUrl.value.trim(),
         note: importNote.value.trim(),
-      })
+      }, { timeout: 300000 })
     } else {
       // File upload via FormData
       const fd = new FormData()
       fd.append('file', importFile.value)
       res = await api.post('/product-knowledge/import/file', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        params: { note: importNote.value.trim() }
+        params: { note: importNote.value.trim() },
+        timeout: 300000
       })
     }
 

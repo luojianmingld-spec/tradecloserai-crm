@@ -32,7 +32,7 @@ export async function scrapeUrl(url) {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
     },
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(60000),
   });
   
   if (!resp.ok) {
@@ -40,6 +40,12 @@ export async function scrapeUrl(url) {
   }
   
   const html = await resp.text();
+
+  // Check for Cloudflare challenge page
+  if (html.includes('cf-browser-verification') || html.includes('challenge-platform') || html.includes('Checking your browser')) {
+    throw new Error('该网站有防爬虫保护（Cloudflare），请尝试手动复制网页内容后使用文件上传方式导入');
+  }
+
   const text = stripHtml(html);
   
   // Find product links for deeper crawling
@@ -65,7 +71,7 @@ export async function scrapeUrl(url) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'text/html,application/xhtml+xml',
         },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(30000),
       });
       if (subResp.ok) {
         const subHtml = await subResp.text();
@@ -79,10 +85,40 @@ export async function scrapeUrl(url) {
     }
   }
   
-  const combinedText = text.slice(0, 8000) + '\n\n--- SUB PAGES ---\n\n' + subTexts.join('\n---\n');
+  // ── Extract JSON-LD structured data ──
+  let structuredData = '';
+  const jsonLdRegex = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let jsonLdMatch;
+  while ((jsonLdMatch = jsonLdRegex.exec(html)) !== null) {
+    try {
+      const parsed = JSON.parse(jsonLdMatch[1].trim());
+      structuredData += ' ' + JSON.stringify(parsed);
+    } catch (e) {
+      // skip invalid JSON-LD
+    }
+  }
+
+  // ── Extract meta tags (title, description, og:*) ──
+  let metaInfo = '';
+  const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+  if (titleMatch) metaInfo += ' Title: ' + titleMatch[1].trim();
+  const metaRegex = /<meta[^>]*(?:name|property)=["']([^"']+)["'][^>]*content=["']([^"']*)["']/gi;
+  let metaMatch;
+  while ((metaMatch = metaRegex.exec(html)) !== null) {
+    const name = metaMatch[1].toLowerCase();
+    const val = metaMatch[2].trim();
+    if (val && (name.includes('description') || name.includes('og:') || name.includes('keywords') || name.includes('product'))) {
+      metaInfo += ' ' + name + ': ' + val + ';';
+    }
+  }
+
+  // ── Combine structured data, meta info, and main text ──
+  const enhancedText = (metaInfo + ' ' + structuredData + ' ' + text).trim();
+
+  const combinedText = enhancedText.slice(0, 8000) + '\n\n--- SUB PAGES ---\n\n' + subTexts.join('\n---\n');
   
   return {
-    text: combinedText.slice(0, 25000),
+    text: combinedText.slice(0, 35000),
     productLinkCount: productLinks.length,
     scannedPages: subTexts.length + 1,
   };
@@ -91,6 +127,7 @@ export async function scrapeUrl(url) {
 // ── AI提取产品数据 ──
 export async function extractProductsFromText(text, sourceType = 'url', userNote = '') {
   console.log('[ProductImport] Extracting products, text length:', text.length, 'source:', sourceType, 'hasNote:', !!userNote);
+  console.log('[ProductImport] Starting AI extraction...');
   
   const noteSection = userNote 
     ? `\n\n【业务员备注】\n${userNote}\n\n请特别注意以上备注中的信息，如目标市场、产品定位、价格策略等，据此调整提取的产品信息和生成的问题。`
@@ -128,12 +165,14 @@ export async function extractProductsFromText(text, sourceType = 'url', userNote
 
 如果文本中没有识别到任何产品，返回：{"products": [], "message": "未识别到产品信息"}`;
 
-  const maxLen = 12000;
+  const maxLen = 8000;
   const truncatedText = text.length > maxLen ? text.slice(0, maxLen) + '\n[...内容已截断...]' : text;
   const sourceLabel = sourceType === 'url' ? '网站' : '文档';
   
-  const userPrompt = `以下是从${sourceLabel}中提取的文本内容，请分析并提取所有产品信息：${noteSection}\n\n${truncatedText}`;
+  const userPrompt = `从以下${sourceLabel}内容中提取产品信息，输出精简JSON。${noteSection}\n\n${truncatedText}`;
   
+  console.log('[ProductImport] Calling AI with', truncatedText.length, 'chars');
+  const startTime = Date.now();
   const result = await chatComplete(
     [
       { role: 'system', content: systemPrompt },
@@ -142,11 +181,12 @@ export async function extractProductsFromText(text, sourceType = 'url', userNote
     {
       temperature: 0.3,
       max_tokens: 8000,
-      timeout: 60000,
-      timeout: 60000,
+      timeout: 120000,  // 2 minutes for complex product extraction
     }
   );
   
+  const elapsed = Date.now() - startTime;
+  console.log('[ProductImport] AI call completed in', elapsed, 'ms, response length:', result.length);
   let cleaned = result.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');

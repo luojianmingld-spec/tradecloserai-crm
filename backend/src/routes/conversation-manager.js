@@ -60,7 +60,7 @@ async function findContactByJid(jid) {
 
 /** Resolve AI provider for LLM calls */
 async function resolveProvider() {
-  const gptProvider = await getProviderById('p1784629520517');
+  const gptProvider = await getProviderById('p1786604068598');
   return {
     provider: gptProvider || null,
     modelId: gptProvider ? gptProvider.model : 'gpt-4o-mini'
@@ -463,7 +463,7 @@ Respond with:
           temperature: 0.7,
           maxTokens: 1000,
           provider,
-          timeout: 60000,
+          timeout: 120000,
         });
 
         const result = safeParseLLMJson(raw);
@@ -535,7 +535,7 @@ Respond with:
           temperature: 0.5,
           maxTokens: 1500,
           provider,
-          timeout: 60000,
+          timeout: 120000,
         });
 
         const result = safeParseLLMJson(raw);

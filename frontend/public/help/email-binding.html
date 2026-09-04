@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>添加邮箱 · 授权码获取操作说明 - TradeCloser AI 帮助中心</title>
+<style>
+  :root{
+    --bg:#F6F8FB;
+    --card:#FFFFFF;
+    --text:#152033;
+    --sub:#637089;
+    --brand:#2F6BFF;
+    --brand-soft:#EEF3FF;
+    --success:#16A37B;
+    --success-soft:#E8F7F2;
+    --warn:#D97706;
+    --warn-soft:#FEF4E6;
+    --danger:#D64545;
+    --danger-soft:#FCEFEF;
+    --line:#E6EAF2;
+    --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Inter,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+    font-size:15px;
+    line-height:1.75;
+  }
+  .page{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+  header.hero{
+    background:linear-gradient(135deg,#152033 0%,#1F3A6B 100%);
+    color:#fff;
+    margin:0 -20px;
+    padding:44px 40px 40px;
+  }
+  .hero .crumb{font-size:13px;opacity:.75;margin:0 0 10px}
+  .hero h1{margin:0 0 10px;font-size:28px;line-height:1.4;font-weight:700}
+  .hero p{max-width:760px;margin:0;opacity:.92;font-size:15px}
+  .hero .badge{display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:3px 14px;font-size:13px;margin-bottom:14px}
+  .quick{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;
+    margin:24px 0 8px;
+  }
+  .quick .q{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:0 1px 2px rgba(21,32,51,.04);
+  }
+  .quick .q .t{font-weight:700;font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .quick .q .t .n{background:var(--brand-soft);color:var(--brand);border-radius:8px;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .quick .q p{margin:0;font-size:13px;color:var(--sub);line-height:1.6}
+  nav.toc{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 20px;margin:24px 0 8px;
+  }
+  nav.toc h2{margin:0 0 10px;font-size:15px;color:var(--sub);font-weight:600}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:40px}
+  nav.toc a{color:var(--brand);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  @media(max-width:640px){nav.toc ol{columns:1}}
+  .step{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px 26px;margin:18px 0;
+  }
+  .step>h2{
+    display:flex;align-items:flex-start;gap:12px;
+    margin:0 0 6px;font-size:19px;
+  }
+  .step>h2 .sn{
+    flex:0 0 34px;height:34px;border-radius:10px;background:var(--brand);
+    color:#fff;display:inline-flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:700;
+  }
+  .step>h2 .tt{line-height:34px}
+  .step .desc{color:var(--sub);margin:0 0 14px;padding-left:46px}
+  .step .goal{
+    display:flex;align-items:flex-start;gap:8px;
+    background:var(--brand-soft);border-radius:8px;padding:10px 14px;margin:0 0 16px;margin-left:46px;
+    font-size:14px;color:#1c3f8f;
+  }
+  .step .goal b{white-space:nowrap}
+  ul.clean{margin:10px 0 14px;padding-left:22px}
+  ul.clean li{margin:5px 0}
+  ol.clean{margin:10px 0 14px;padding-left:22px}
+  ol.clean li{margin:5px 0}
+  .tip,.warnbox,.okbox{
+    border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;
+    border-left:4px solid;
+  }
+  .tip{background:var(--brand-soft);border-color:var(--brand)}
+  .warnbox{background:var(--warn-soft);border-color:var(--warn)}
+  .okbox{background:var(--success-soft);border-color:var(--success)}
+  .tip b,.warnbox b,.okbox b{display:block;margin-bottom:2px}
+  .tip a{font-weight:600}
+  .flow{
+    display:flex;align-items:stretch;gap:0;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;margin:22px 0;
+  }
+  .flow .node{flex:1 1 120px;min-width:120px;text-align:center;padding:8px;position:relative}
+  .flow .node .ic{width:44px;height:44px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+    display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:8px}
+  .flow .node .lb{font-size:13px;font-weight:600;color:var(--text)}
+  .flow .node .sb{font-size:12px;color:var(--sub);margin-top:2px}
+  .flow .arrow{display:flex;align-items:center;color:#B9C4D4;font-size:18px;padding:0 2px}
+  @media(max-width:640px){.flow .arrow{transform:rotate(90deg)}}
+  .pwd-demo{
+    background:#152033;border-radius:10px;padding:16px;color:#fff;max-width:560px;margin:10px 0 4px;
+    font-size:13px;
+  }
+  .pwd-demo .pd-h{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:8px;margin-bottom:10px}
+  .pwd-demo .pd-f{margin:8px 0}
+  .pwd-demo .pd-l{display:block;color:#9FB0C8;font-size:12px;margin-bottom:3px}
+  .pwd-demo .pd-i{background:rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#DDE6F2;font-family:var(--mono);font-size:12px}
+  .pwd-demo .pd-ok{color:#3ED6A7;font-size:12px;margin-top:6px}
+  .provider-list{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+  @media(max-width:760px){.provider-list{grid-template-columns:1fr}}
+  .pv{
+    border:1px solid var(--line);border-radius:10px;background:#FBFCFE;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .pv .pv-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .pv .pv-logo{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+  .pv .pv-name{font-weight:700;font-size:15px}
+  .pv .pv-sub{font-size:12px;color:var(--sub)}
+  .pv .pv-body{padding:14px 16px;flex:1}
+  .pv .pv-body h4{margin:2px 0 8px;font-size:14px;color:var(--text)}
+  .pv ol{margin:0 0 12px;padding-left:20px}
+  .pv ol li{font-size:13px;line-height:1.7;margin:4px 0}
+  .pv .pv-goal{font-size:12.5px;color:var(--sub);background:#F1F5FB;border-radius:8px;padding:8px 12px;margin-bottom:12px}
+  .pv .pv-goal b{color:var(--text)}
+  .pv a.pv-btn{
+    display:inline-flex;align-items:center;gap:6px;margin-top:auto;
+    background:var(--brand);color:#fff;text-decoration:none;border-radius:8px;
+    padding:9px 14px;font-size:13px;font-weight:600;align-self:flex-start;
+  }
+  .pv a.pv-btn:hover{background:#2457D8}
+  .pv a.pv-btn::after{content:"↗"}
+  .pv .pv-note{margin-top:10px;font-size:12px;color:var(--sub)}
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px;
+  }
+  .checklist li:last-child{border-bottom:none}
+  .checklist .cb{
+    flex:0 0 20px;height:20px;border:2px solid var(--brand);border-radius:6px;margin-top:2px;
+    display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:13px;
+  }
+  .faq details{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    margin:10px 0;padding:0 18px;
+  }
+  .faq summary{
+    cursor:pointer;font-weight:600;font-size:15px;padding:14px 0;list-style:none;
+    display:flex;align-items:center;gap:8px;
+  }
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::before{content:"Q";flex:0 0 24px;height:24px;border-radius:8px;background:var(--brand-soft);color:var(--brand);
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .faq details[open] summary{border-bottom:1px solid var(--line)}
+  .faq .ans{padding:12px 0 16px;font-size:14px;color:#33405A}
+  .faq .ans code{font-family:var(--mono);background:#F1F5FB;padding:1px 6px;border-radius:5px;font-size:13px}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--sub);font-size:13px;text-align:center}
+  a{color:var(--brand)}
+  a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+  @media print{
+    body{background:#fff;font-size:12px}
+    .page{max-width:none;padding:0}
+    header.hero{margin:0;border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    nav.toc ol{columns:1}
+    .step{break-inside:avoid;page-break-inside:avoid}
+    .flow,.quick{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <p class="crumb">TradeCloser AI · 帮助中心 / 邮箱</p>
+  <span class="badge">邮箱绑定 · 首次设置</span>
+  <h1>添加邮箱 · 授权码获取操作说明</h1>
+  <p>在本系统中绑定邮箱后，Agent 可以代收发邮件、跟进客户往来。绑定只需要一个「邮箱地址 + 授权码（应用专用密码）」。本页说明从第一次打开邮箱设置到测试成功的完整流程，并给出 Gmail、Outlook、QQ、163、iCloud、Yahoo、腾讯企业邮等常用邮箱的授权码获取方法与跳转链接。</p>
+</header>
+
+<main class="page">
+
+  <div class="quick">
+    <div class="q"><div class="t"><span class="n">1</span>选择邮箱类型</div><p>点开「添加邮箱」，在品牌卡片里选你的邮箱服务商</p></div>
+    <div class="q"><div class="t"><span class="n">2</span>获取授权码</div><p>到邮箱服务商处生成「应用专用密码/授权码」（不是登录密码）</p></div>
+    <div class="q"><div class="t"><span class="n">3</span>填写并添加</div><p>填入邮箱地址 + 授权码，点「添加并测试连接」</p></div>
+    <div class="q"><div class="t"><span class="n">4</span>测试成功</div><p>显示连接成功即完成，可收发邮件</p></div>
+  </div>
+
+  <nav class="toc">
+    <h2>本页导航</h2>
+    <ol>
+      <li><a href="#add">在系统内添加邮箱（4 步）</a></li>
+      <li><a href="#what">什么是授权码（应用专用密码）</a></li>
+      <li><a href="#gmail">Gmail 谷歌邮箱</a></li>
+      <li><a href="#outlook">Outlook / Hotmail 微软邮箱</a></li>
+      <li><a href="#qq">QQ 邮箱</a></li>
+      <li><a href="#163">163 网易邮箱</a></li>
+      <li><a href="#icloud">iCloud 苹果邮箱</a></li>
+      <li><a href="#yahoo">Yahoo 雅虎邮箱</a></li>
+      <li><a href="#exmail">腾讯企业邮</a></li>
+      <li><a href="#other">其他邮箱 / 自定义</a></li>
+      <li><a href="#check">添加自检清单</a></li>
+      <li><a href="#faq">常见问题</a></li>
+    </ol>
+  </nav>
+
+  <!-- 流程总览 -->
+  <div class="flow" aria-label="添加邮箱流程总览">
+    <div class="node"><div class="ic">📧</div><div class="lb">打开邮箱设置</div><div class="sb">点「添加邮箱」</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">🗂️</div><div class="lb">选邮箱类型</div><div class="sb">品牌卡片点选</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">🔑</div><div class="lb">获取授权码</div><div class="sb">服务商页面生成</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">✍️</div><div class="lb">填写信息</div><div class="sb">地址+授权码</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">✅</div><div class="lb">测试连接</div><div class="sb">成功即完成</div></div>
+  </div>
+
+  <!-- 在系统内添加邮箱 -->
+  <section class="step" id="add">
+    <h2><span class="sn">1</span><span class="tt">在系统内添加邮箱（4 步）</span></h2>
+    <p class="desc">第一次使用时，邮箱区域为空，点击中间的「添加邮箱」弹窗开始。</p>
+    <div class="goal"><b>完成标志：</b>邮箱列表出现该账号，状态为「已连接」，可收发邮件</div>
+    <ol class="clean">
+      <li>进入「<b>邮箱</b>」页面，点击「<b>＋ 添加邮箱</b>」打开弹窗。</li>
+      <li>在<b>品牌卡片</b>中点击你的邮箱类型（Gmail / Outlook / QQ / 163 / iCloud / Yahoo / 企业邮等）。选择后系统会自动填好对应的收件（IMAP）与发件（SMTP）服务器，无需手动配置。</li>
+      <li>填写<b>邮箱地址</b>与<b>授权码</b>（也叫应用专用密码）。授权码不是邮箱登录密码，需要到邮箱服务商处生成，见下方各邮箱说明。</li>
+      <li>点击「<b>添加并测试连接</b>」，出现「连接成功」即完成。若提示失败，对照 <a href="#faq">常见问题</a> 排查。</li>
+    </ol>
+    <div class="pwd-demo" aria-label="添加邮箱弹窗示意">
+      <div class="pd-h"><span>＋ 添加邮箱</span><span>✕</span></div>
+      <div class="pd-f"><span class="pd-l">邮箱类型</span><div class="pd-i">[ Gmail ] [ Outlook ] [ QQ ] [ 163 ] …</div></div>
+      <div class="pd-f"><span class="pd-l">邮箱地址</span><div class="pd-i">you@example.com</div></div>
+      <div class="pd-f"><span class="pd-l">授权码（应用专用密码）</span><div class="pd-i">•••• •••• •••• ••••</div></div>
+      <div class="pd-ok">✓ 连接成功</div>
+    </div>
+    <div class="tip"><b>提示</b>选择「自定义/其他企业邮箱」时，需手动填写 IMAP/SMTP 服务器地址与端口，可向你的邮箱管理员索取。</div>
+  </section>
+
+  <!-- 什么是授权码 -->
+  <section class="step" id="what">
+    <h2><span class="sn">2</span><span class="tt">什么是授权码（应用专用密码）？</span></h2>
+    <p class="desc">为了保证账号安全，大部分邮箱不允许第三方软件直接使用「邮箱登录密码」收发邮件，而是要求使用专用的「应用专用密码 / 授权码」。</p>
+    <ul class="clean">
+      <li><b>不是你的登录密码</b>：授权码是一串独立生成的字符（通常 16 位），只在第三方应用中使用。</li>
+      <li><b>需要先开启「两步验证」</b>：多数邮箱（Gmail、Outlook、iCloud、Yahoo 等）要求先开启两步验证，才能生成应用专用密码。</li>
+      <li><b>有些邮箱叫「授权码」</b>：QQ、163 等国内邮箱在开启 IMAP/SMTP 服务时生成，也叫客户端授权码。</li>
+      <li><b>生成后要立即复制</b>：很多邮箱的授权码只完整显示一次，建议先存到记事本。</li>
+    </ul>
+    <div class="warnbox"><b>常见误解</b>把「邮箱登录密码」填进授权码栏，几乎必然连接失败。请按下方你所用邮箱的步骤，去服务商页面生成授权码。</div>
+  </section>
+
+  <!-- 各家邮箱 -->
+  <h2 style="margin:28px 0 4px;font-size:19px;">各邮箱授权码获取方法</h2>
+  <p style="color:var(--sub);font-size:14px;margin:0 0 14px;">找到你的邮箱服务商，按步骤在<b>其官网</b>完成设置，再把授权码填回系统。每家都附了直达链接。</p>
+  <div class="provider-list">
+
+    <div class="pv" id="gmail">
+      <div class="pv-h"><span class="pv-logo" style="background:#EA4335">G</span><div><div class="pv-name">Gmail 谷歌邮箱</div><div class="pv-sub">需先开启两步验证</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录 Google 账号，进入「安全性」。</li>
+          <li>开启「两步验证」（未开启的话）。</li>
+          <li>打开「应用专用密码」页面，点「开始」。</li>
+          <li>应用选「邮件」或自定名称，点「生成」。</li>
+          <li>复制 16 位授权码（4 段 × 4 位，粘贴时去掉空格）。</li>
+        </ol>
+        <div class="pv-goal"><b>授权码样式：</b>xxxx xxxx xxxx xxxx</div>
+        <a class="pv-btn" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">去 Google 生成授权码</a>
+        <div class="pv-note">2022 年 5 月起谷歌已关闭低安全应用登录，必须用应用专用密码或 OAuth。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="outlook">
+      <div class="pv-h"><span class="pv-logo" style="background:#0078D4">O</span><div><div class="pv-name">Outlook / Hotmail 微软邮箱</div><div class="pv-sub">需先开启双重验证</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录 Microsoft 账户，进入「安全性」。</li>
+          <li>开启「双重验证」。</li>
+          <li>进入「高级安全选项」→「应用密码」。</li>
+          <li>点「创建新应用密码」，按提示生成。</li>
+          <li>复制生成的密码（格式：xxxx xxxx xxxx xxxx）。</li>
+        </ol>
+        <div class="pv-goal"><b>授权码样式：</b>xxxx xxxx xxxx xxxx</div>
+        <a class="pv-btn" href="https://account.microsoft.com/security" target="_blank" rel="noopener noreferrer">去 Microsoft 安全中心</a>
+        <div class="pv-note">微软官方指引：support.microsoft.com 搜索「应用密码」。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="qq">
+      <div class="pv-h"><span class="pv-logo" style="background:#12B7F5">QQ</span><div><div class="pv-name">QQ 邮箱</div><div class="pv-sub">需先绑定手机号</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录 <b>mail.qq.com</b>，进入「设置 → 账户」。</li>
+          <li>找到「IMAP/SMTP 服务」，点「开启」。</li>
+          <li>按提示用<u>手机发送短信验证</u>。</li>
+          <li>验证通过后页面显示 16 位<b>授权码</b>（大小写敏感）。</li>
+          <li>复制授权码填入系统密码栏。</li>
+        </ol>
+        <div class="pv-goal"><b>注意：</b>授权码≠QQ密码，只显示一次，务必立即复制。</div>
+        <a class="pv-btn" href="https://mail.qq.com" target="_blank" rel="noopener noreferrer">去 QQ 邮箱开启</a>
+        <div class="pv-note">路径：QQ邮箱 → 设置 → 账户 → 开启 IMAP/SMTP 服务。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="163">
+      <div class="pv-h"><span class="pv-logo" style="background:#D72A1F">163</span><div><div class="pv-name">163 网易邮箱</div><div class="pv-sub">需手机短信验证</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录 <b>mail.163.com</b>，进入「设置 → POP3/SMTP/IMAP」。</li>
+          <li>开启「IMAP/SMTP 服务」。</li>
+          <li>按提示用<u>手机发送短信验证</u>。</li>
+          <li>验证通过后生成<b>客户端授权码</b>（16 位字母组合）。</li>
+          <li>复制授权码填入系统密码栏。</li>
+        </ol>
+        <div class="pv-goal"><b>注意：</b>授权码只显示一次，忘记需重新生成。</div>
+        <a class="pv-btn" href="https://mail.163.com" target="_blank" rel="noopener noreferrer">去 163 邮箱开启</a>
+        <div class="pv-note">路径：设置 → POP3/SMTP/IMAP → 开启 IMAP/SMTP 服务。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="icloud">
+      <div class="pv-h"><span class="pv-logo" style="background:#3B9CFF">i</span><div><div class="pv-name">iCloud 苹果邮箱</div><div class="pv-sub">需开启双重认证</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录 <b>account.apple.com</b>。</li>
+          <li>进入「登录与安全」，确认已开启「双重认证」。</li>
+          <li>点「App 专用密码」→「生成 App 专用密码」。</li>
+          <li>按提示验证后得到 16 位密码（格式 xxxx-xxxx-xxxx-xxxx）。</li>
+          <li>复制（<b>保留连字符</b>）填入系统密码栏。</li>
+        </ol>
+        <div class="pv-goal"><b>授权码样式：</b>xxxx-xxxx-xxxx-xxxx</div>
+        <a class="pv-btn" href="https://account.apple.com/sign-in" target="_blank" rel="noopener noreferrer">去 Apple 账户管理</a>
+        <div class="pv-note">必须保留 4 位一组的连字符，去掉可能连接失败。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="yahoo">
+      <div class="pv-h"><span class="pv-logo" style="background:#5F01D1">Y</span><div><div class="pv-name">Yahoo 雅虎邮箱</div><div class="pv-sub">需开启两步验证</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录 Yahoo，进入「Account Security（账户安全）」。</li>
+          <li>开启「两步验证」。</li>
+          <li>找到「External connections（外部连接）」。</li>
+          <li>点「Generate app password（生成应用密码）」。</li>
+          <li>输入名称生成 16 位密码，复制填入系统。</li>
+        </ol>
+        <div class="pv-goal"><b>授权码样式：</b>16 位无空格密码</div>
+        <a class="pv-btn" href="https://login.yahoo.com/account/security" target="_blank" rel="noopener noreferrer">去 Yahoo 账户安全</a>
+        <div class="pv-note">路径：Account Security → External connections → Generate app password。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="exmail">
+      <div class="pv-h"><span class="pv-logo" style="background:#2E6BE6">企</span><div><div class="pv-name">腾讯企业邮</div><div class="pv-sub">管理员开通 + 个人开启</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li><b>管理员</b>在企业微信后台，开启成员的「IMAP/SMTP 服务范围」。</li>
+          <li>用户登录企业邮 →「设置 → 收发信设置」，开启 IMAP/SMTP。</li>
+          <li>邮箱绑定中开启「安全登录」。</li>
+          <li>生成「客户端专用密码」（16 位）。</li>
+          <li>复制专用密码填入系统密码栏。</li>
+        </ol>
+        <div class="pv-goal"><b>前提：</b>需企业管理员先开通服务范围，否则看不到入口。</div>
+        <a class="pv-btn" href="https://exmail.qq.com" target="_blank" rel="noopener noreferrer">去腾讯企业邮</a>
+        <div class="pv-note">企业邮后台入口与个人 QQ 邮箱不同，用企业邮箱账号登录。</div>
+      </div>
+    </div>
+
+    <div class="pv" id="other">
+      <div class="pv-h"><span class="pv-logo" style="background:#6B7280">自</span><div><div class="pv-name">其他邮箱 / 自定义</div><div class="pv-sub">阿里企业邮 · Zoho · 自建邮箱等</div></div></div>
+      <div class="pv-body">
+        <ol>
+          <li>登录你的邮箱服务商网页版。</li>
+          <li>进入「设置」，找到 IMAP/POP/SMTP 相关选项并开启。</li>
+          <li>开启后按提示生成「客户端专用密码 / 授权码」。</li>
+          <li>在系统里选择「自定义/其他企业邮箱」，手动填写服务商提供的 IMAP/SMTP 服务器与端口。</li>
+          <li>填入邮箱地址 + 授权码，测试连接。</li>
+        </ol>
+        <div class="pv-goal"><b>提示：</b>阿里企业邮 / Zoho 等通常在网页版设置里开启 IMAP 后生成专用密码。</div>
+        <a class="pv-btn" href="https://qiye.aliyun.com" target="_blank" rel="noopener noreferrer">阿里企业邮入口</a>
+        <div class="pv-note">不确定服务器地址，可在邮箱设置页「帮助/说明」中查找，或联系邮箱管理员。</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 自检清单 -->
+  <section class="step" id="check">
+    <h2><span class="sn">✓</span><span class="tt">添加自检清单</span></h2>
+    <p class="desc">连接失败时按顺序核对，绝大多数问题都出在下面几点。</p>
+    <ul class="checklist">
+      <li><span class="cb">✓</span>已在邮箱服务商处开启 IMAP/SMTP 服务（QQ、163 必须）</li>
+      <li><span class="cb">✓</span>已按服务商要求开启两步验证/双重认证（Gmail、Outlook、iCloud、Yahoo 必须）</li>
+      <li><span class="cb">✓</span>填的是「应用专用密码/授权码」，不是邮箱登录密码</li>
+      <li><span class="cb">✓</span>授权码复制完整、无多余空格（iCloud 保留连字符）</li>
+      <li><span class="cb">✓</span>邮箱类型选对，使用系统自动填写的 IMAP/SMTP 配置</li>
+      <li><span class="cb">✓</span>（自定义类型时）IMAP/SMTP 服务器与端口填写正确</li>
+    </ul>
+  </section>
+
+  <!-- FAQ -->
+  <section class="step faq" id="faq">
+    <h2><span class="sn">?</span><span class="tt">常见问题</span></h2>
+    <p class="desc">添加邮箱时最常遇到的问题与解决办法。</p>
+
+    <details>
+      <summary>为什么不能直接填邮箱登录密码？</summary>
+      <div class="ans">出于安全考虑，Gmail、Outlook、QQ、163、iCloud、Yahoo 等绝大多数邮箱不允许第三方软件使用登录密码收发邮件。必须去邮箱服务商页面生成「应用专用密码 / 授权码」填入。这是正常的安全机制，不是系统问题。</div>
+    </details>
+    <details>
+      <summary>提示「连接失败 / 认证失败 / 用户名或密码错误」怎么办？</summary>
+      <div class="ans">① 确认填的是授权码而非登录密码；② 确认该邮箱已开启 IMAP/SMTP 服务（QQ、163 必须）；③ 确认已开启两步验证并生成应用密码（Gmail、Outlook、iCloud、Yahoo）；④ 重新复制授权码，注意别带空格、别漏字符；⑤ 刚生成授权码后等待 1-2 分钟再试，部分服务商同步有延迟。</div>
+    </details>
+    <details>
+      <summary>提示「IMAP 不可用 / 服务器不支持」怎么办？</summary>
+      <div class="ans">一般是该邮箱未开启 IMAP 服务，或选择的邮箱类型与账号不匹配（例如把企业邮箱选成了 QQ）。请按本页对应邮箱说明开启 IMAP/SMTP；若用自定义类型，核对服务器地址和端口（IMAP 常用 993/SSL，SMTP 常用 465/SSL）。</div>
+    </details>
+    <details>
+      <summary>Gmail 里找不到「应用专用密码」选项？</summary>
+      <div class="ans">必须先开启「两步验证」，应用专用密码入口才会出现。路径：Google 账号 → 安全性 → 两步验证（开启）→ 再回到安全性 → 应用专用密码。如果企业/学校管理的 Gmail（Google Workspace），需管理员允许「应用专用密码」功能。</div>
+    </details>
+    <details>
+      <summary>授权码只显示一次，我忘了怎么办？</summary>
+      <div class="ans">授权码无法找回，需到服务商页面重新生成（生成新授权码后旧的自动失效）。在系统里重新添加或修改账号密码即可，无需删除邮箱账号。</div>
+    </details>
+    <details>
+      <summary>添加成功但收不到 / 发不出邮件？</summary>
+      <div class="ans">① 收不到：确认系统处于在线状态、邮箱账号状态为「已连接」，必要时点刷新/重新同步；② 发不出：检查发件 SMTP 配置是否由系统自动填写正确，自定义类型时核对发件端口；③ 部分邮箱对新设备/新 IP 有保护，首次连接后等待几分钟再试。</div>
+    </details>
+    <details>
+      <summary>换了授权码，需要重新配置吗？</summary>
+      <div class="ans">需要。授权码变更后，原授权码立即失效，请在系统邮箱设置中修改该账号的密码为新的授权码，再测试连接。无需删除账号重新添加。</div>
+    </details>
+  </section>
+
+  <div class="footer">
+    TradeCloser AI 帮助中心 · 添加邮箱与授权码获取操作说明 · 2026-09-01<br>
+    若仍无法添加，请联系平台管理员协助排查。
+  </div>
+
+</div>
+</main>
+</body>
+</html>

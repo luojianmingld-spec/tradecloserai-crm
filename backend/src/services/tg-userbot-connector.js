@@ -537,7 +537,194 @@ export async function logout() {
   connectionState = 'disconnected';
   handlerRegistered = false;
   me = null;
+  cleanupQRLogin();
 }
+
+
+
+/** QR码登录状态（真实实现） */
+let qrLoginState = {
+  token: null,
+  expiresAt: 0,
+  client: null,
+  loginPromise: null,
+  status: 'idle',        // idle | waiting_scan | password_needed | connected | expired | error
+  user: null,
+  error: null,
+  resolvePassword: null,
+};
+
+function qrTokenToBase64url(token) {
+  // token 是 Uint8Array，转 base64url（无 padding）
+  return Buffer.from(token).toString('base64url');
+}
+
+function cleanupQRLogin() {
+  // 若当前 client 已提升为全局登录 client，不能断开（否则会杀死已成功登录的连接）
+  if (qrLoginState.client && qrLoginState.client !== client &&
+      (qrLoginState.status === 'waiting_scan' || qrLoginState.status === 'password_needed')) {
+    try { qrLoginState.client.disconnect(); } catch {}
+  }
+  qrLoginState = {
+    token: null, expiresAt: 0, client: null, loginPromise: null,
+    status: 'idle', user: null, error: null, resolvePassword: null,
+  };
+}
+
+/**
+ * 生成真实 TG 登录二维码 token
+ * @param {object} creds { apiId, apiHash }
+ */
+export async function getQRCode(creds = {}) {
+  const { apiId, apiHash } = creds;
+  if (!apiId || !apiHash) throw new Error('需要 apiId 和 apiHash');
+  if (isConnected()) return { status: 'already_connected', user: getMe() };
+
+  // 复用未过期的进行中流程（前端刷新/轮询场景）；并发请求不得重建流程
+  if (qrLoginState.client &&
+      ['waiting_scan', 'password_needed'].includes(qrLoginState.status)) {
+    if (qrLoginState.token) {
+      return { status: 'pending', token: qrLoginState.token, expires: qrLoginState.expiresAt };
+    }
+    // token 尚未生成，等待最多 10s
+    const dl = Date.now() + 10000;
+    while (!qrLoginState.token && Date.now() < dl) await new Promise(r => setTimeout(r, 200));
+    if (qrLoginState.token) {
+      return { status: 'pending', token: qrLoginState.token, expires: qrLoginState.expiresAt };
+    }
+  }
+
+  // 清理旧流程
+  cleanupQRLogin();
+
+  const stringSession = new StringSession('');
+  const qrClient = new TelegramClient(stringSession, Number(apiId), String(apiHash), {
+    connectionRetries: 3,
+  });
+
+  qrLoginState = {
+    token: null, expiresAt: 0, client: qrClient, loginPromise: null,
+    status: 'waiting_scan', user: null, error: null, resolvePassword: null,
+  };
+
+  // 先连接，再用 signInUserWithQrCode 走真实 QR 登录流程
+  await qrClient.connect();
+  const loginPromise = qrClient.signInUserWithQrCode({ apiId: Number(apiId), apiHash: String(apiHash) }, {
+    qrCode: async (qr) => {
+      // qr.token: Buffer, qr.expires: 秒
+      qrLoginState.token = qrTokenToBase64url(qr.token);
+      qrLoginState.expiresAt = Date.now() + 60000; // 固定60s窗口，覆盖扫码+手机确认耗时
+      console.log('[TG-UB] QR token ready, expires in', qr.expires, 's');
+    },
+    password: async () => {
+      qrLoginState.status = 'password_needed';
+      console.log('[TG-UB] QR 2FA password needed');
+      return await new Promise((resolve) => { qrLoginState.resolvePassword = resolve; });
+    },
+    onError: async (err) => {
+      console.error('[TG-UB] QR login onError:', err.message);
+      if (qrLoginState.status !== 'connected') {
+        qrLoginState.status = 'error';
+        qrLoginState.error = err.message;
+      }
+      return false; // 不终止，让流程继续（避免 token 过期即失败）
+    },
+  }).then(async (user) => {
+    // 登录成功：保存 session，提升为全局 client
+    const sessionStr = qrClient.session.save();
+    saveSession(sessionStr);
+    client = qrClient;
+    me = user;
+    connectionState = 'connected';
+    registerUpdateHandler();
+    startPolling();
+    qrLoginState.status = 'connected';
+    qrLoginState.user = user;
+    console.log('[TG-UB] QR login success:', (user.username || user.phone || user.id.toString()));
+    return user;
+  }).catch((e) => {
+    if (e && e.errorMessage === 'SESSION_PASSWORD_NEEDED') return; // 由 password 回调接管
+    console.error('[TG-UB] QR login failed:', e && e.message);
+    if (qrLoginState.status !== 'connected') {
+      qrLoginState.status = 'error';
+      qrLoginState.error = (e && e.message) || String(e);
+    }
+  });
+
+  qrLoginState.loginPromise = loginPromise;
+
+  // 等待 token 生成（最多 10 秒）
+  const deadline = Date.now() + 10000;
+  while (!qrLoginState.token && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 200));
+  }
+  if (!qrLoginState.token) {
+    qrLoginState.status = 'error';
+    qrLoginState.error = 'QR token generation timeout';
+    return { status: 'error', error: qrLoginState.error };
+  }
+  return { status: 'pending', token: qrLoginState.token, expires: qrLoginState.expiresAt };
+}
+
+/** 轮询 QR 登录状态 */
+export async function pollQRLogin(qrToken) {
+  // 全局已连接：直接返回 connected（不管 token 是否匹配），避免前端一直卡在刷新循环
+  if (isConnected()) return { status: 'connected', user: getMe() };
+  if (!qrLoginState.token || qrLoginState.token !== qrToken) {
+    return { status: 'invalid' };
+  }
+  if (qrLoginState.status === 'connected') {
+    return { status: 'connected', user: qrLoginState.user };
+  }
+  if (qrLoginState.status === 'password_needed') {
+    return { status: 'password_needed' };
+  }
+  if (qrLoginState.status === 'error') {
+    return { status: 'error', error: qrLoginState.error };
+  }
+  if (Date.now() > qrLoginState.expiresAt + 10000) {
+    qrLoginState.status = 'expired';
+    return { status: 'expired' };
+  }
+  return { status: 'pending', token: qrLoginState.token, expires: qrLoginState.expiresAt };
+}
+
+/** 提交 QR 登录 2FA 密码 */
+export async function submitQRPassword(password) {
+  if (qrLoginState.status !== 'password_needed' || !qrLoginState.resolvePassword) {
+    throw new Error('没有等待中的 QR 2FA 流程');
+  }
+  const resolve = qrLoginState.resolvePassword;
+  qrLoginState.resolvePassword = null;
+  resolve(password);
+  return { status: 'submitted' };
+}
+
+
+/** 发送文件/图片/视频（通过 GramJS sendFile） */
+export async function sendFile(peerId, buffer, fileName = 'file', options = {}) {
+  if (!client || connectionState !== 'connected') throw new Error('TG User Bot not connected');
+  const numericPeer = typeof peerId === 'string' ? Number(peerId) : peerId;
+  const caption = options.caption || '';
+  const mt = (options.mimeType || '').toLowerCase();
+  let forceDocument = false;
+  if (mt.startsWith('image/')) forceDocument = false;
+  else if (mt.startsWith('video/')) forceDocument = false;
+  else forceDocument = true;
+  const result = await client.sendFile(numericPeer, {
+    file: buffer,
+    caption: caption,
+    forceDocument: forceDocument,
+    fileName: fileName,
+  });
+  return {
+    id: result.id,
+    caption: caption,
+    fromMe: true,
+    timestamp: result.date ? (result.date * 1000) : Date.now(),
+  };
+}
+
 
 export function getClient() { return client; }
 export function getState() { return connectionState; }

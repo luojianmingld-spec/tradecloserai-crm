@@ -68,8 +68,8 @@ router.post('/products', async (req, res) => {
         productImageUrl,
         pricingUnit,
         basePrice: basePrice ? parseFloat(basePrice) : null,
-        moq: moq || null,
-        deliveryDays: deliveryDays || null,
+        moq: (moq !== undefined && moq !== null && moq !== '') ? parseInt(moq, 10) : null,
+        deliveryDays: (deliveryDays !== undefined && deliveryDays !== null && deliveryDays !== '') ? parseInt(deliveryDays, 10) : null,
         paymentTerms,
         questions: {
           create: questions.map((q, index) => ({
@@ -129,8 +129,8 @@ router.put('/products/:id', async (req, res) => {
         productImageUrl,
         pricingUnit,
         basePrice: basePrice ? parseFloat(basePrice) : null,
-        moq: moq || null,
-        deliveryDays: deliveryDays || null,
+        moq: (moq !== undefined && moq !== null && moq !== '') ? parseInt(moq, 10) : null,
+        deliveryDays: (deliveryDays !== undefined && deliveryDays !== null && deliveryDays !== '') ? parseInt(deliveryDays, 10) : null,
         paymentTerms,
         isActive,
         questions: {

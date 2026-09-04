@@ -25,7 +25,13 @@
     <div class="email-content">
       <!-- Left: Account List -->
       <div class="account-panel">
-        <div v-if="accounts.length === 0" class="empty-state">
+        <div v-if="accountsLoading" class="account-skeleton-wrap">
+          <div v-for="n in 3" :key="n" class="account-skeleton">
+            <div class="skeleton-avatar"></div>
+            <div class="skeleton-lines"><div class="skeleton-line w80"></div><div class="skeleton-line w50"></div></div>
+          </div>
+        </div>
+        <div v-else-if="accounts.length === 0" class="empty-state">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           <p>还没有添加邮箱</p>
           <button class="btn-primary" @click="showAddAccountDialog = true">添加邮箱账号</button>
@@ -113,6 +119,10 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
               {{ generatingAI ? '生成中...' : 'AI回复' }}
             </button>
+            <button class="btn-secondary assign-email-btn" @click="openEmailAssignDialog()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.6-6.3 4.6L8 13.8 2 9.2h7.6z"/></svg>
+              发给 Agent
+            </button>
             <button class="btn-secondary" @click="matchCustomer(selectedEmail)" :disabled="matchingCustomer">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
               {{ matchingCustomer ? '匹配中...' : '匹配客户' }}
@@ -124,7 +134,7 @@
             <div class="translation-text">{{ selectedEmail.translation }}</div>
           </div>
           <!-- Email body -->
-          <div class="email-body" v-html="selectedEmail.bodyHtml || formatText(selectedEmail.body)"></div>
+          <div class="email-body" v-html="sanitizeHtml(selectedEmail.bodyHtml) || formatText(selectedEmail.body)"></div>
           <!-- Reply area -->
           <div v-if="showReplyArea" class="email-reply-area">
             <div v-if="aiReplies.length > 0" class="ai-replies">
@@ -214,15 +224,50 @@
 
     <!-- Toast notification -->
     <div v-if="toast.show" class="toast" :class="toast.type">{{ toast.message }}</div>
+
+    <!-- 发给 Agent 指派弹窗（V1.0 F6 邮件入口） -->
+    <div v-if="showAssignDialog" class="dialog-overlay" @click.self="showAssignDialog = false">
+      <div class="assign-dialog">
+        <div class="assign-dialog-header">
+          <span>🤖 发给 Agent</span>
+          <button class="assign-dialog-close" @click="showAssignDialog = false">✕</button>
+        </div>
+        <div class="assign-dialog-body">
+          <div v-if="assignCustomerLoading" class="assign-loading">正在按发件人邮箱匹配客户...</div>
+          <template v-else>
+            <div v-if="assignCustomer" class="assign-cust-info">
+              <span class="aci-icon">👤</span>
+              <span class="aci-name">{{ assignCustomer.companyName || assignCustomer.name || assignCustomer.contactName || ('客户#' + assignCustomer.id) }}</span>
+              <span class="aci-email">{{ assignCustomer.email }}</span>
+            </div>
+            <div v-else class="assign-cust-info warn">⚠️ 未找到与该发件人邮箱匹配的客户，请先在「匹配客户」中建立客户档案</div>
+            <div class="assign-agents">
+              <div v-for="ag in ASSIGN_AGENTS" :key="ag.type" class="assign-agent-card" :class="{ active: assignAgentType === ag.type }" @click="assignAgentType = ag.type">
+                <span class="aa-icon">{{ ag.icon }}</span>
+                <div class="aa-info"><div class="aa-name">{{ ag.name }}</div><div class="aa-desc">{{ ag.desc }}</div></div>
+                <span class="aa-check" v-if="assignAgentType === ag.type">✓</span>
+              </div>
+            </div>
+            <textarea v-model="assignInstruction" class="assign-input" rows="3" placeholder="给 Agent 的跟进指令（选填），如：回复该询盘邮件，重点报价跟进"></textarea>
+          </template>
+        </div>
+        <div class="assign-dialog-footer">
+          <button class="assign-dialog-btn cancel" @click="showAssignDialog = false">取消</button>
+          <button class="assign-dialog-btn primary" :disabled="assigning || !assignCustomer" @click="doAssignFromEmail">{{ assigning ? '指派中...' : '确认指派' }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import api from '../utils/api.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
 
 // State
 const accounts = ref([]);
+const accountsLoading = ref(true);
 const selectedAccountId = ref(null);
 const emails = ref([]);
 const selectedEmail = ref(null);
@@ -274,6 +319,7 @@ function onProviderChange() {
 
 // Load accounts
 async function loadAccounts() {
+  accountsLoading.value = true;
   try {
     const { data } = await api.get('/emails/accounts');
     accounts.value = data;
@@ -283,6 +329,8 @@ async function loadAccounts() {
     }
   } catch (err) {
     console.error('Failed to load accounts:', err);
+  } finally {
+    accountsLoading.value = false;
   }
 }
 
@@ -530,6 +578,63 @@ let searchTimer;
 function debouncedSearch() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => loadEmails(), 400);
+}
+
+// ── 发给 Agent（V1.0 F6 邮件入口） ──
+const ASSIGN_AGENTS = [
+  { type: 'sales-champion', icon: '🚀', name: '外贸销冠', desc: '智能跟单 · 话术 · 成交' },
+  { type: 'background-report', icon: '🔍', name: '客户背调', desc: '背景调查 · 风险评估' },
+  { type: 'customs-agent', icon: '📋', name: '外贸单证', desc: '报关单证 · HS编码' },
+  { type: 'doc-agent', icon: '🏭', name: '工厂对接', desc: '验厂评估 · 生产跟进' },
+  { type: 'freight-agent', icon: '🚢', name: '货代对接', desc: '海运空运 · 报关报检' },
+  { type: 'legal-agent', icon: '⚖️', name: '外贸法务', desc: '合同审查 · 纠纷处理' },
+];
+const showAssignDialog = ref(false);
+const assignCustomerLoading = ref(false);
+const assignCustomer = ref(null);
+const assignAgentType = ref('sales-champion');
+const assignInstruction = ref('');
+const assigning = ref(false);
+
+function extractEmailAddr(fromStr) {
+  if (!fromStr) return '';
+  const m = String(fromStr).match(/<([^<>]+)>/);
+  if (m) return m[1].trim();
+  return String(fromStr).trim();
+}
+async function openEmailAssignDialog() {
+  showAssignDialog.value = true;
+  assignAgentType.value = 'sales-champion';
+  assignInstruction.value = '';
+  assignCustomer.value = null;
+  const addr = extractEmailAddr(selectedEmail.value?.from || '');
+  if (!addr) { return; }
+  assignCustomerLoading.value = true;
+  try {
+    const { data } = await api.get('/customers?search=' + encodeURIComponent(addr) + '&pageSize=20');
+    const list = (data && data.items) || [];
+    assignCustomer.value = list.find(c => c.email && String(c.email).toLowerCase() === addr.toLowerCase()) || null;
+  } catch (e) {
+    assignCustomer.value = null;
+  } finally { assignCustomerLoading.value = false; }
+}
+async function doAssignFromEmail() {
+  if (!assignCustomer.value) return;
+  assigning.value = true;
+  try {
+    const { data } = await api.post('/agent/tasks', {
+      agentType: assignAgentType.value,
+      customerIds: [assignCustomer.value.id],
+      instruction: assignInstruction.value.trim() || null,
+      source: 'email_page'
+    });
+    const r = (data.results || [])[0];
+    if (r && r.status === 'failed') showToast(r.error || '指派失败', 'error');
+    else showToast(r && r.status === 'exists' ? '该客户已在此 Agent 的指派任务中' : '指派成功，Agent 对话页即可选择该客户跟进');
+    showAssignDialog.value = false;
+  } catch (e) {
+    showToast('指派失败', 'error');
+  } finally { assigning.value = false; }
 }
 
 // Init
@@ -1128,5 +1233,54 @@ onMounted(() => {
   .mobile-back-btn { display: flex; align-items: center; }
   .email-page .email-detail-actions { flex-wrap: wrap; gap: 6px; }
   .email-page .email-detail-actions button { flex: 1; min-width: 80px; }
+}
+.assign-email-btn { border-color: var(--whatsapp, #25d366) !important; color: var(--whatsapp, #25d366) !important; }
+.assign-dialog { width: 92%; max-width: 460px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+.assign-dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; font-weight: 600; font-size: 15px; border-bottom: 1px solid rgba(0,0,0,.08); }
+.assign-dialog-close { background: none; border: none; color: #666; font-size: 16px; cursor: pointer; }
+.assign-dialog-body { padding: 14px 18px; }
+.assign-loading { color: #888; font-size: 13px; padding: 10px 0; }
+.assign-cust-info { display: flex; align-items: center; gap: 8px; background: rgba(37,211,102,.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+.assign-cust-info.warn { background: rgba(245,158,11,.12); color: #b45309; }
+.aci-icon { font-size: 15px; }
+.aci-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aci-email { color: #888; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assign-agents { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.assign-agent-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid rgba(0,0,0,.12); cursor: pointer; transition: all .15s; background: #fff; }
+.assign-agent-card:hover { border-color: #25d366; }
+.assign-agent-card.active { border-color: #25d366; background: rgba(37,211,102,.08); }
+.aa-icon { font-size: 20px; }
+.aa-info { flex: 1; min-width: 0; }
+.aa-name { font-size: 13px; font-weight: 600; }
+.aa-desc { font-size: 11px; color: #888; }
+.aa-check { color: #25d366; font-weight: 700; font-size: 16px; }
+.assign-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); font-size: 13px; resize: vertical; }
+.assign-dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(0,0,0,.08); }
+.assign-dialog-btn { padding: 7px 16px; border-radius: 8px; border: none; font-size: 13px; cursor: pointer; font-weight: 500; }
+.assign-dialog-btn.cancel { background: #f0f0f0; color: #333; }
+.assign-dialog-btn.primary { background: #25d366; color: #fff; }
+.assign-dialog-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 邮箱账号加载骨架屏 */
+.account-skeleton-wrap { padding: 8px 0; }
+.account-skeleton {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+}
+.skeleton-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--border-color, #e5e7eb);
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+.skeleton-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.skeleton-line {
+  height: 12px; border-radius: 4px;
+  background: var(--border-color, #e5e7eb);
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+.w80 { width: 80%; } .w50 { width: 50%; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 </style>

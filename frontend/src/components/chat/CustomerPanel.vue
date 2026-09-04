@@ -198,24 +198,10 @@
               v-model="settings.targetLanguage"
               size="small"
               style="width: 100%"
+              filterable
               @change="saveSettings"
             >
-              <el-option label="中文" value="zh" />
-              <el-option label="英语" value="en" />
-              <el-option label="日语" value="ja" />
-              <el-option label="韩语" value="ko" />
-              <el-option label="西班牙语" value="es" />
-              <el-option label="法语" value="fr" />
-              <el-option label="德语" value="de" />
-              <el-option label="葡萄牙语" value="pt" />
-              <el-option label="俄语" value="ru" />
-              <el-option label="阿拉伯语" value="ar" />
-              <el-option label="印尼语" value="id" />
-              <el-option label="越南语" value="vi" />
-              <el-option label="意大利语" value="it" />
-              <el-option label="荷兰语" value="nl" />
-              <el-option label="土耳其语" value="tr" />
-              <el-option label="泰语" value="th" />
+              <el-option v-for="lang in LANG_OPTIONS" :key="lang.value" :label="lang.label" :value="lang.value" />
             </el-select>
           </div>
 
@@ -372,15 +358,24 @@
           </el-option>
         </el-select>
         <el-button
+          v-if="chatStore.aiGenerating"
+          type="danger"
+          size="small"
+          class="generate-btn"
+          @click="handleStopGenerate"
+        >
+          ⏹ 终止
+        </el-button>
+        <el-button
+          v-else
           type="primary"
           size="small"
-          :loading="chatStore.aiGenerating"
           :disabled="!jid"
           class="generate-btn"
           @click="handleGenerateReply"
         >
-          <el-icon v-if="!chatStore.aiGenerating"><MagicStick /></el-icon>
-          {{ chatStore.aiGenerating ? '生成中...' : '生成回复' }}
+          <el-icon><MagicStick /></el-icon>
+          生成回复
         </el-button>
       </div>
 
@@ -555,6 +550,7 @@ import { ChatDotRound, MagicStick, Document, Loading, Promotion, Refresh } from 
 import { ElMessage } from 'element-plus';
 import api from '../../utils/api.js';
 import { useChatStore } from '../../stores/chat.js';
+import { LANG_OPTIONS } from '../../utils/languages.js';
 
 const props = defineProps({
   contact: { type: Object, default: null },
@@ -718,13 +714,19 @@ async function handleGenerateReply() {
     return;
   }
   try {
-    await chatStore.generateAIReply(null, props.jid, replyStyle.value);
-    if (chatStore.aiReplies.length === 0) {
+    const r = await chatStore.generateAIReply(null, props.jid, replyStyle.value); // 【终止按钮】返回 'stopped' 表示被终止
+    if (r !== 'stopped' && chatStore.aiReplies.length === 0) {
       ElMessage.info('暂无回复建议，请先与客户对话');
     }
   } catch (err) {
     ElMessage.error('生成回复失败');
   }
+}
+
+// 【终止按钮】点击「终止」：中断当前生成并提示
+function handleStopGenerate() {
+  chatStore.stopAiGenerating();
+  ElMessage.info('已终止生成');
 }
 
 function handleInsertReply(text) {

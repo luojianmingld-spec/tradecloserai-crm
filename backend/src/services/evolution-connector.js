@@ -6,6 +6,14 @@
 
 import { resolveSendTarget } from "./lid-mapping.js";
 
+// 双重保险：确保 .env 中的环境变量在模块加载时就生效
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+
 const EVO_API_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
 const EVO_API_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
 const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
@@ -306,7 +314,7 @@ class EvolutionConnector {
 // 多实例连接器池
 const _connectors = new Map();
 export function getEvolutionConnector(name) {
-  const key = name || 'jeremy-eric';
+  const key = name || DEFAULT_INSTANCE;
   if (!_connectors.has(key)) {
     _connectors.set(key, new EvolutionConnector(key));
   }

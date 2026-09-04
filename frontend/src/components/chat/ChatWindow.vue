@@ -72,7 +72,7 @@
               <el-checkbox :model-value="selectedMsgs.includes(msg.id)" @change="toggleMsgSelect(msg.id)" />
             </div>
 
-            <div class="message-bubble" :class="{ outgoing: msg.fromMe, incoming: !msg.fromMe }">
+            <div class="message-bubble" :class="{ outgoing: msg.fromMe, incoming: !msg.fromMe, 'media-only': isMediaOnly(msg) }">
               <!-- Reactions display -->
               <div v-if="msg.reactions && msg.reactions.length" class="msg-reactions">
                 <span v-for="(r, ri) in msg.reactions" :key="ri" class="msg-reaction-chip">{{ r.emoji }}</span>
@@ -104,7 +104,7 @@
                 <audio :src="getMediaUrl(msg)" controls class="msg-audio-player" preload="metadata" />
               </div>
 
-              <div class="message-content">
+              <div class="message-content" v-if="msg.content && !(msg.messageType === 'image' || msg.type === 'image')">
                 <!-- Outgoing: show translation first, then original -->
                 <template v-if="msg.fromMe && msg.translation">
                   <span class="msg-text">{{ msg.translation }}</span>
@@ -243,17 +243,8 @@
             <div class="language-row">
               <span class="source-lang">中文</span>
               <span class="arrow">→</span>
-              <el-select v-model="chatStore.translationSettings.targetLanguage" size="default" style="flex: 1">
-                <el-option label="English (英语)" value="en" />
-                <el-option label="日本語 (日语)" value="ja" />
-                <el-option label="한국어 (韩语)" value="ko" />
-                <el-option label="Français (法语)" value="fr" />
-                <el-option label="Deutsch (德语)" value="de" />
-                <el-option label="Español (西班牙语)" value="es" />
-                <el-option label="Português (葡萄牙语)" value="pt" />
-                <el-option label="Русский (俄语)" value="ru" />
-                <el-option label="العربية (阿拉伯语)" value="ar" />
-                <el-option label="Italiano (意大利语)" value="it" />
+              <el-select v-model="chatStore.translationSettings.targetLanguage" size="default" style="flex: 1" filterable>
+                <el-option v-for="lang in LANG_OPTIONS" :key="lang.value" :label="lang.label" :value="lang.value" />
               </el-select>
             </div>
           </div>
@@ -422,6 +413,7 @@
 import { ref, computed, watch, nextTick, reactive, onUnmounted } from 'vue';
 import { useChatStore } from '../../stores/chat.js';
 import { ElMessage } from 'element-plus';
+import { LANG_OPTIONS } from '../../utils/languages.js';
 
 const props = defineProps({
   jid: { type: String, required: true },
@@ -599,6 +591,12 @@ function formatMessageTime(timestamp) {
   if (!timestamp) return '';
   const date = new Date(timestamp);
   return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function isMediaOnly(msg) {
+  const hasMedia = msg.messageType === 'image' || msg.type === 'image' || msg.messageType === 'video' || msg.type === 'video';
+  const hasText = msg.content && msg.content.trim().length > 0;
+  return hasMedia && !hasText;
 }
 
 function formatFileSize(bytes) {
@@ -1189,6 +1187,22 @@ async function handleAISummarize() {
   border-top-right-radius: 0;
 }
 
+/* Remove background and padding for media-only messages */
+.message-bubble.media-only {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border-radius: 8px !important;
+}
+
+.message-bubble.media-only .msg-media {
+  margin-bottom: 0;
+}
+
+.message-bubble.media-only .msg-image {
+  border-radius: 8px;
+}
+
 /* Reactions on message */
 .msg-reactions {
   display: flex;
@@ -1282,7 +1296,7 @@ async function handleAISummarize() {
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 12px;
   line-height: 1.4;
 }

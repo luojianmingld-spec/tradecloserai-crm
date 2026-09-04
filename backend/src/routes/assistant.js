@@ -64,25 +64,52 @@ router.post('/chat', auth, upload.array('files', 5), async (req, res) => {
       size: f.size
     }));
 
+    const agentType = req.body.agentType || 'general';
+    const sessionId = req.body.sessionId || null;
+    const customerId = req.body.customerId ? parseInt(req.body.customerId, 10) : null;
+    // 执行过程可视化：通过 socket 推送每一步（assistant:step）
+    const _io = req.app.get('io');
+    const emitStep = (step, detail) => {
+      if (!_io) return;
+      _io.emit('assistant:step', {
+        userId, agentType, sessionId, customerId: customerId || null, step, detail, ts: Date.now(),
+      });
+    };
     const result = await assistantService.processMessage(userId, message || '', providerId, {
-      dataset, skills, attachments
+      dataset, skills, attachments, agentType, sessionId, customerId, emitStep
     });
     res.json(result);
   } catch (err) {
     console.error('[Assistant] chat error:', err);
-    res.status(500).json({ error: err.message || '处理失败' });
+    res.status(500).json({ error: '服务暂时不可用，请稍后重试' });
   }
 });
 
-// GET /api/assistant/conversations - 查询对话历史
+// GET /api/assistant/conversations - 查询对话历史（支持 sessionId 过滤）
 router.get('/conversations', auth, async (req, res) => {
   try {
     const userId = req.userId || 1;
+    const agentType = req.query.agentType || null;
+    const sessionId = req.query.sessionId || null;
+    const scope = req.query.scope || null;
     const limit = parseInt(req.query.limit) || 50;
-    const conversations = await assistantService.getConversations(userId, limit);
+    const conversations = await assistantService.getConversations(userId, limit, agentType, sessionId, scope);
     res.json(conversations);
   } catch (err) {
     console.error('[Assistant] conversations error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/assistant/sessions - 会话列表（通用+客户会话）
+router.get('/sessions', auth, async (req, res) => {
+  try {
+    const userId = req.userId || 1;
+    const agentType = req.query.agentType || null;
+    const sessions = await assistantService.getSessionList(userId, agentType);
+    res.json({ sessions });
+  } catch (err) {
+    console.error('[Assistant] sessions error:', err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -58,7 +58,35 @@
       </div>
     </div>
 
-    <!-- ③ 快捷操作行 -->
+    <!-- 客户盘点漏斗 -->
+    <div class="overview-panel" v-if="overviewData">
+      <div class="overview-header">
+        <span class="overview-title">📊 客户盘点</span>
+        <span class="overview-sub">总客户 {{ overviewData.total }} · 转化率 {{ overviewData.conversionRate }}%</span>
+      </div>
+      <div class="funnel-row">
+        <div v-for="f in overviewData.funnel" :key="f.stage" class="funnel-item">
+          <div class="funnel-bar" :style="{ height: funnelHeight(f.count) + 'px', background: f.color }"></div>
+          <div class="funnel-label">{{ f.label }}</div>
+          <div class="funnel-count">{{ f.count }}</div>
+        </div>
+      </div>
+      <div class="quality-row" v-if="qualityStats">
+        <span class="quality-title">线索质量</span>
+        <div class="quality-bars">
+          <div class="q-bar" v-for="q in qualityBars" :key="q.key" :style="{ width: q.pct + '%', background: q.color }" :title="q.key + ': ' + q.count">
+            <span class="q-label" v-if="q.pct > 12">{{ q.key }}({{ q.count }})</span>
+          </div>
+        </div>
+      </div>
+            <div class="overview-stats-row">
+        <div class="ov-stat"><span class="ov-val">{{ overviewData.todayNew }}</span><span class="ov-lbl">今日新增</span></div>
+        <div class="ov-stat"><span class="ov-val">{{ overviewData.todayFollowup }}</span><span class="ov-lbl">今日跟进</span></div>
+        <div class="ov-stat"><span class="ov-val">{{ levelA }}/{{ levelB }}/{{ levelC }}/{{ levelD }}</span><span class="ov-lbl">A/B/C/D 分布</span></div>
+      </div>
+    </div>
+
+        <!-- ③ 快捷操作行 -->
     <div class="quick-row">
       <div class="quick-item" @click="router.push('/chat')">
         <span class="quick-ic">💬</span>
@@ -342,9 +370,55 @@ function formatNum(n) {
   return n
 }
 
+// Overview data
+const overviewData = ref(null);
+const qualityStats = ref(null);
+const qualityBars = computed(() => {
+  if (!qualityStats.value) return [];
+  const s = qualityStats.value.stats;
+  const total = (s.A || 0) + (s.B || 0) + (s.C || 0) + (s.D || 0) || 1;
+  return [
+    { key: 'A', count: s.A || 0, pct: ((s.A || 0) / total * 100), color: '#10b981' },
+    { key: 'B', count: s.B || 0, pct: ((s.B || 0) / total * 100), color: '#3b82f6' },
+    { key: 'C', count: s.C || 0, pct: ((s.C || 0) / total * 100), color: '#f59e0b' },
+    { key: 'D', count: s.D || 0, pct: ((s.D || 0) / total * 100), color: '#94a3b8' },
+  ];
+});
+const levelA = computed(() => overviewData.value?.levelDistribution?.A || 0);
+const levelB = computed(() => overviewData.value?.levelDistribution?.B || 0);
+const levelC = computed(() => overviewData.value?.levelDistribution?.C || 0);
+const levelD = computed(() => overviewData.value?.levelDistribution?.D || 0);
+
+function funnelHeight(count) {
+  if (!overviewData.value) return 20;
+  const max = Math.max(...overviewData.value.funnel.map(f => f.count), 1);
+  return Math.max(20, (count / max) * 80);
+}
+
+async function loadQuality() {
+  try {
+    const res = await fetch('/api/dashboard/qualify-leads', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' }
+    });
+    if (res.ok) qualityStats.value = await res.json();
+  } catch (e) { console.error('Quality load error:', e); }
+}
+
+async function loadOverview() {
+  try {
+    const res = await fetch('/api/dashboard/overview', {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+    });
+    if (res.ok) overviewData.value = await res.json();
+  } catch (e) { console.error('Overview load error:', e); }
+}
+
 onMounted(async () => {
   authStore.checkAuth?.()
   await loadAll()
+  await loadOverview()
+  await loadQuality()
   refreshTimer = setInterval(loadAll, 30000)
 })
 
@@ -356,10 +430,15 @@ onUnmounted(() => {
 <style scoped>
 .dashboard-page {
   padding: 24px;
-  background: var(--mgmt-bg);
+  background: var(--mgmt-bg) !important;
   max-width: none;
+  width: 100%;
+  min-height: 100%;
+  flex: 1;
   margin: 0;
   color: var(--text-primary);
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 /* ① 欢迎横条 */
@@ -686,6 +765,81 @@ onUnmounted(() => {
 .tips-list b { color: var(--text-primary); }
 
 /* ⑤ 响应式 */
+.overview-panel {
+  background: var(--mgmt-card-bg);
+  border: 1px solid var(--mgmt-divider);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.overview-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.overview-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.overview-sub { font-size: 12px; color: var(--text-secondary); }
+.funnel-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 100px;
+  padding: 0 8px;
+  margin-bottom: 12px;
+}
+.funnel-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.funnel-bar {
+  width: 100%;
+  max-width: 60px;
+  border-radius: 6px 6px 0 0;
+  min-height: 16px;
+  transition: height 0.3s;
+}
+.funnel-label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.funnel-count { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.quality-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+.quality-title { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.quality-bars {
+  display: flex;
+  height: 22px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex: 1;
+  gap: 2px;
+}
+.q-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  min-width: 12px;
+  transition: width 0.3s;
+}
+.q-label { font-size: 10px; color: #fff; font-weight: 600; }
+
+.overview-stats-row {
+  display: flex;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mgmt-divider);
+}
+.ov-stat { display: flex; flex-direction: column; gap: 2px; }
+.ov-val { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.ov-lbl { font-size: 11px; color: var(--text-secondary); }
+
 @media (max-width: 1024px) {
   .stat-grid { grid-template-columns: repeat(3, 1fr); }
   .two-col { grid-template-columns: 1fr; }

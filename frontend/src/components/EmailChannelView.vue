@@ -53,13 +53,13 @@
       </div>
 
       <!-- 邮件列表栏 -->
-      <div class="email-list-panel">
+      <div class="email-list-panel" v-if="accounts.length > 0">
         <div class="epanel-header">
           <button v-if="isMobile" class="btn-icon mobile-back-btn" @click="mobileView = 'accounts'" title="返回">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
           <input v-model="emailSearch" placeholder="搜索邮件..." class="email-search" @input="debouncedSearch" />
-          <button class="btn-icon" @click="loadEmails();loadAccounts();" title="刷新" :disabled="emailsLoading">
+          <button class="btn-icon" @click="refreshEmails()" title="刷新" :disabled="emailsLoading || syncing">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
           </button>
         </div>
@@ -113,6 +113,10 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
               {{ generatingAI ? '生成中...' : 'AI回复' }}
             </button>
+            <button class="btn-secondary assign-email-btn" @click="openEmailAssignDialog()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.6-6.3 4.6L8 13.8 2 9.2h7.6z"/></svg>
+              发给 Agent
+            </button>
             <button class="btn-secondary" @click="matchCustomer(selectedEmail)" :disabled="matchingCustomer">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
               {{ matchingCustomer ? '匹配中...' : '匹配客户' }}
@@ -130,12 +134,16 @@
               删除
             </button>
           </div>
-          <div v-if="selectedEmail.translation" class="email-translation">
-            <div class="translation-label">翻译结果：</div>
-            <div class="translation-text">{{ selectedEmail.translation }}</div>
-          </div>
           <div class="email-body-scroll">
-            <div class="email-body" v-html="selectedEmail.bodyHtml || formatText(selectedEmail.body)"></div>
+            <div class="email-body" v-html="sanitizeHtml(selectedEmail.bodyHtml) || formatText(selectedEmail.body)"></div>
+            <div v-if="translating && !selectedEmail.translation" class="email-translation">
+              <div class="translation-label">翻译中...</div>
+              <div class="translation-text" style="color:var(--text-secondary);">正在翻译邮件内容，请稍候</div>
+            </div>
+            <div v-if="selectedEmail.translation" class="email-translation">
+              <div class="translation-label">翻译结果：</div>
+              <div class="translation-text">{{ selectedEmail.translation }}</div>
+            </div>
           </div>
           <div v-if="showReplyArea" class="email-reply-area">
             <div v-if="aiReplies.length > 0" class="ai-replies">
@@ -195,9 +203,15 @@
             </div>
 
             <!-- 正文 -->
-            <div class="m-body" v-html="selectedEmail.bodyHtml || formatText(selectedEmail.body)"></div>
+            <div class="m-body" v-html="sanitizeHtml(selectedEmail.bodyHtml) || formatText(selectedEmail.body)"></div>
 
             <!-- 中文译文（内联在正文下方） -->
+            <div v-if="translating && !selectedEmail.translation" class="m-trans-inline">
+              <div class="m-trans-head-inline">
+                <span class="m-trans-label">🌐 中文译文</span>
+              </div>
+              <div class="m-trans-body-inline" style="color:var(--text-secondary);">正在翻译...</div>
+            </div>
             <div v-if="showTransPanel && selectedEmail.translation" class="m-trans-inline">
               <div class="m-trans-head-inline">
                 <span class="m-trans-label">🌐 中文译文</span>
@@ -273,7 +287,7 @@
                 <div class="m-quote-line">发送时间：{{ formatDateTime(selectedEmail.createdAt) }}</div>
                 <div class="m-quote-line">收件人：{{ selectedEmail.to }}</div>
                 <div class="m-quote-line">主题：{{ selectedEmail.subject }}</div>
-                <div class="m-quote-body" v-html="selectedEmail.bodyHtml || formatText(selectedEmail.body)"></div>
+                <div class="m-quote-body" v-html="sanitizeHtml(selectedEmail.bodyHtml) || formatText(selectedEmail.body)"></div>
               </div>
               <div style="height:80px;"></div>
             </div>
@@ -307,22 +321,18 @@
         <div class="dialog-body">
           <div class="form-group">
             <label>邮箱类型</label>
-            <select v-model="newAccount.provider" @change="onProviderChange">
-              <option value="">请选择邮箱类型</option>
-              <option value="gmail">Gmail</option>
-              <option value="outlook">Outlook/Hotmail</option>
-              <option value="qq">QQ邮箱</option>
-              <option value="163">163网易邮箱</option>
-              <option value="exmail">腾讯企业邮</option>
-              <option value="aliyun">阿里企业邮</option>
-              <option value="icloud">iCloud</option>
-              <option value="yahoo">Yahoo</option>
-              <option value="zoho">Zoho</option>
-              <option value="custom">自定义/其他企业邮箱</option>
-            </select>
-            <div v-if="newAccount.provider && APP_PASSWORD_HINT[newAccount.provider]" class="form-hint">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px;"><path d="M12 9v4M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
-              {{ APP_PASSWORD_HINT[newAccount.provider] }}
+            <div class="provider-grid">
+              <div v-for="p in PROVIDER_OPTIONS" :key="p.value" class="provider-item" :class="{ active: newAccount.provider === p.value }" @click="onProviderSelect(p.value)">
+                <span class="provider-logo" :style="{ background: p.bg }">{{ p.short }}</span>
+                <span class="provider-name">{{ p.label }}</span>
+              </div>
+            </div>
+            <div v-if="newAccount.provider && APP_PASSWORD_STEPS[newAccount.provider]" class="apppwd-steps">
+              <div class="apppwd-title">如何获取授权码</div>
+              <ol class="apppwd-list">
+                <li v-for="s in APP_PASSWORD_STEPS[newAccount.provider]" :key="s">{{ s }}</li>
+              </ol>
+              <a class="apppwd-link" href="/help/email-binding.html" target="_blank" rel="noopener noreferrer">不知道在哪生成？查看授权码获取教程 →</a>
             </div>
           </div>
           <div class="form-group">
@@ -331,7 +341,10 @@
           </div>
           <div class="form-group">
             <label>密码 / 授权码</label>
-            <input v-model="newAccount.password" type="password" placeholder="邮箱密码或应用专用密码" />
+            <div class="pwd-wrap">
+              <input v-model="newAccount.password" :type="showPwd ? 'text' : 'password'" placeholder="邮箱密码或应用专用密码" />
+              <button type="button" class="pwd-toggle" @click="showPwd = !showPwd">{{ showPwd ? '隐藏' : '显示' }}</button>
+            </div>
           </div>
           <div v-if="newAccount.provider === 'custom'" class="form-row">
             <div class="form-group">
@@ -364,12 +377,103 @@
     </div>
 
     <div v-if="toast.show" class="toast" :class="toast.type">{{ toast.message }}</div>
+
+    <!-- 发给 Agent 指派弹窗（V1.0 F6 邮件入口） -->
+    <div v-if="showAssignDialog" class="dialog-overlay" @click.self="showAssignDialog = false">
+      <div class="assign-dialog">
+        <div class="assign-dialog-header">
+          <span>🤖 发给 Agent</span>
+          <button class="assign-dialog-close" @click="showAssignDialog = false">✕</button>
+        </div>
+        <div class="assign-dialog-body">
+          <div v-if="assignCustomerLoading" class="assign-loading">正在按发件人邮箱匹配客户...</div>
+          <template v-else>
+            <div v-if="assignCustomer" class="assign-cust-info">
+              <span class="aci-icon">👤</span>
+              <span class="aci-name">{{ assignCustomer.companyName || assignCustomer.name || assignCustomer.contactName || ('客户#' + assignCustomer.id) }}</span>
+              <span class="aci-email">{{ assignCustomer.email }}</span>
+            </div>
+            <div v-else class="assign-cust-info warn">⚠️ 未找到与该发件人邮箱匹配的客户，请先在「匹配客户」中建立客户档案</div>
+            <div class="assign-agents">
+              <div v-for="ag in ASSIGN_AGENTS" :key="ag.type" class="assign-agent-card" :class="{ active: assignAgentType === ag.type }" @click="assignAgentType = ag.type">
+                <span class="aa-icon">{{ ag.icon }}</span>
+                <div class="aa-info"><div class="aa-name">{{ ag.name }}</div><div class="aa-desc">{{ ag.desc }}</div></div>
+                <span class="aa-check" v-if="assignAgentType === ag.type">✓</span>
+              </div>
+            </div>
+            <textarea v-model="assignInstruction" class="assign-input" rows="3" placeholder="给 Agent 的跟进指令（选填），如：回复该询盘邮件，重点报价跟进"></textarea>
+          </template>
+        </div>
+        <div class="assign-dialog-footer">
+          <button class="assign-dialog-btn cancel" @click="showAssignDialog = false">取消</button>
+          <button class="assign-dialog-btn primary" :disabled="assigning || !assignCustomer" @click="doAssignFromEmail">{{ assigning ? '指派中...' : '确认指派' }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import api from '../utils/api.js';
+import { sanitizeHtml } from '../utils/sanitize.js';
+
+// ── 发给 Agent（V1.0 F6 邮件入口） ──
+const ASSIGN_AGENTS = [
+  { type: 'sales-champion', icon: '🚀', name: '外贸销冠', desc: '智能跟单 · 话术 · 成交' },
+  { type: 'background-report', icon: '🔍', name: '客户背调', desc: '背景调查 · 风险评估' },
+  { type: 'customs-agent', icon: '📋', name: '外贸单证', desc: '报关单证 · HS编码' },
+  { type: 'doc-agent', icon: '🏭', name: '工厂对接', desc: '验厂评估 · 生产跟进' },
+  { type: 'freight-agent', icon: '🚢', name: '货代对接', desc: '海运空运 · 报关报检' },
+  { type: 'legal-agent', icon: '⚖️', name: '外贸法务', desc: '合同审查 · 纠纷处理' },
+];
+const showAssignDialog = ref(false);
+const assignCustomerLoading = ref(false);
+const assignCustomer = ref(null);
+const assignAgentType = ref('sales-champion');
+const assignInstruction = ref('');
+const assigning = ref(false);
+
+function extractEmailAddr(fromStr) {
+  if (!fromStr) return '';
+  const m = String(fromStr).match(/<([^<>]+)>/);
+  if (m) return m[1].trim();
+  return String(fromStr).trim();
+}
+async function openEmailAssignDialog() {
+  showAssignDialog.value = true;
+  assignAgentType.value = 'sales-champion';
+  assignInstruction.value = '';
+  assignCustomer.value = null;
+  const addr = extractEmailAddr(selectedEmail.value?.from || '');
+  if (!addr) { return; }
+  assignCustomerLoading.value = true;
+  try {
+    const { data } = await api.get('/customers?search=' + encodeURIComponent(addr) + '&pageSize=20');
+    const list = (data && data.items) || [];
+    assignCustomer.value = list.find(c => c.email && String(c.email).toLowerCase() === addr.toLowerCase()) || null;
+  } catch (e) {
+    assignCustomer.value = null;
+  } finally { assignCustomerLoading.value = false; }
+}
+async function doAssignFromEmail() {
+  if (!assignCustomer.value) return;
+  assigning.value = true;
+  try {
+    const { data } = await api.post('/agent/tasks', {
+      agentType: assignAgentType.value,
+      customerIds: [assignCustomer.value.id],
+      instruction: assignInstruction.value.trim() || null,
+      source: 'email_page'
+    });
+    const r = (data.results || [])[0];
+    if (r && r.status === 'failed') showToast(r.error || '指派失败', 'error');
+    else showToast(r && r.status === 'exists' ? '该客户已在此 Agent 的指派任务中' : '指派成功，Agent 对话页即可选择该客户跟进');
+    showAssignDialog.value = false;
+  } catch (e) {
+    showToast('指派失败', 'error');
+  } finally { assigning.value = false; }
+}
 
 const props = defineProps({
   embedded: { type: Boolean, default: true }
@@ -425,6 +529,7 @@ const newAccount = ref({
   email: '', password: '', provider: '',
   imapHost: '', imapPort: 993, smtpHost: '', smtpPort: 465,
 });
+const showPwd = ref(false);
 
 const PROVIDER_PRESETS = {
   gmail: { label:'Gmail', imapHost:'imap.gmail.com',imapPort:993,smtpHost:'smtp.gmail.com',smtpPort:465,needAppPassword:true },
@@ -438,18 +543,36 @@ const PROVIDER_PRESETS = {
   zoho: { label:'Zoho', imapHost:'imap.zoho.com',imapPort:993,smtpHost:'smtp.zoho.com',smtpPort:465 },
   custom: { label:'自定义(企业邮箱/自建)', imapHost:'',imapPort:993,smtpHost:'',smtpPort:465 },
 };
-const APP_PASSWORD_HINT = {
-  gmail: 'Gmail需开启两步验证，然后在"Google账号→安全性→应用专用密码"生成16位授权码',
-  outlook: 'Outlook/Hotmail如开启两步验证，需在"账户安全→应用密码"生成授权码',
-  qq: 'QQ邮箱需先在"设置→账户"开启IMAP/SMTP服务，获取授权码填到密码栏',
-  '163': '163邮箱需先在"设置→POP3/SMTP/IMAP"开启IMAP，获取授权码填到密码栏',
-  icloud: 'iCloud需在appleid.apple.com→"登录与安全→App专用密码"生成密码',
-  yahoo: 'Yahoo需在"Account Security→Generate app password"生成16位密码',
+const APP_PASSWORD_STEPS = {
+  gmail: ['打开 Google 账号 → 安全性', '开启「两步验证」', '在「应用专用密码」生成16位授权码，粘贴到下方密码栏'],
+  outlook: ['登录 Microsoft 账户 → 安全', '开启双重验证', '在「应用密码」创建密码，粘贴到下方密码栏'],
+  qq: ['进入 QQ邮箱 → 设置 → 账户', '开启「IMAP/SMTP服务」', '按提示获取授权码，粘贴到下方密码栏'],
+  '163': ['进入 163邮箱 → 设置 → POP3/SMTP/IMAP', '开启「IMAP/SMTP服务」', '按提示获取授权码，粘贴到下方密码栏'],
+  icloud: ['进入 appleid.apple.com → 登录与安全', '开启双重认证', '生成「App专用密码」，粘贴到下方密码栏'],
+  yahoo: ['登录 Yahoo → Account Security', '开启两步验证', 'Generate app password 生成16位密码，粘贴到下方密码栏'],
 };
+
+const PROVIDER_OPTIONS = [
+  { value: 'gmail', label: 'Gmail', short: 'G', bg: '#EA4335' },
+  { value: 'outlook', label: 'Outlook', short: 'O', bg: '#0078D4' },
+  { value: 'qq', label: 'QQ', short: 'QQ', bg: '#12B7F5' },
+  { value: '163', label: '163', short: '163', bg: '#D72A1F' },
+  { value: 'exmail', label: '企业邮', short: '企', bg: '#2E6BE6' },
+  { value: 'aliyun', label: '阿里邮', short: '阿', bg: '#FF6A00' },
+  { value: 'icloud', label: 'iCloud', short: 'i', bg: '#3B9CFF' },
+  { value: 'yahoo', label: 'Yahoo', short: 'Y', bg: '#5F01D1' },
+  { value: 'zoho', label: 'Zoho', short: 'Z', bg: '#F0483F' },
+  { value: 'custom', label: '自定义', short: '自', bg: '#6B7280' },
+];
 
 function onProviderChange() {
   const preset = PROVIDER_PRESETS[newAccount.value.provider];
   if (preset) Object.assign(newAccount.value, preset);
+}
+
+function onProviderSelect(v) {
+  newAccount.value.provider = v;
+  onProviderChange();
 }
 
 function avatarColorFor(key) {
@@ -525,6 +648,8 @@ async function selectEmail(email) {
       loadAccounts(true);
     } catch(e){}
   }
+  // 打开邮件自动翻译（静默），译文显示在原文下方
+  if (!email.translation) autoTranslateEmail(email);
 }
 
 async function syncAccount(acc) {
@@ -538,9 +663,18 @@ async function syncAccount(acc) {
   syncing.value = false; syncingId.value = null;
 }
 
+async function refreshEmails() {
+  if (selectedAccountId.value) {
+    await syncAccount({ id: selectedAccountId.value });
+  } else {
+    await loadAccounts(true);
+  }
+}
+
 function closeAddDialog() {
   showAddAccountDialog.value = false;
   addAccountError.value = ''; addAccountSuccess.value = '';
+  showPwd.value = false;
   newAccount.value = { email:'', password:'', provider:'', imapHost:'', imapPort:993, smtpHost:'', smtpPort:465 };
 }
 
@@ -555,7 +689,13 @@ async function addAccount() {
     addAccountSuccess.value = `邮箱 ${data.email} 添加成功，正在测试连接...`;
     try {
       const tr = await api.post(`/emails/accounts/${data.id}/test`);
-      if (tr.data.imap && tr.data.smtp) addAccountSuccess.value = `邮箱 ${data.email} 添加成功，连接正常！`;
+      if (tr.data.imap && tr.data.smtp) {
+        addAccountSuccess.value = `邮箱 ${data.email} 添加成功，正在同步邮件...`;
+        try {
+          const sr = await api.post(`/emails/accounts/${data.id}/sync`);
+          addAccountSuccess.value = `邮箱 ${data.email} 添加成功，已同步 ${sr.data.synced} 封邮件`;
+        } catch(e) { addAccountSuccess.value = `邮箱 ${data.email} 添加成功，但自动同步失败，可点刷新重试`; }
+      }
       else addAccountSuccess.value = `邮箱已添加，但连接测试失败。IMAP: ${tr.data.imap?'OK':'FAIL'}, SMTP: ${tr.data.smtp?'OK':'FAIL'}`;
     } catch(e) { addAccountSuccess.value = '邮箱已添加，但连接测试出错'; }
     await loadAccounts(true);
@@ -574,6 +714,18 @@ async function deleteAccount(acc) {
     await loadAccounts(true);
     showToast('邮箱已删除');
   } catch(e) { showToast('删除失败', 'error'); }
+}
+
+async function autoTranslateEmail(email) {
+  if (!email || !email.body || email.translation) return;
+  translating.value = true;
+  try {
+    const { data } = await api.post(`/emails/${email.id}/translate`, { targetLang: 'zh' });
+    email.translation = data.translation;
+    email.sourceLang = data.sourceLang;
+    if (isMobile.value) showTransPanel.value = true;
+  } catch(e) { /* 静默失败，不打扰用户 */ }
+  translating.value = false;
 }
 
 async function translateEmail(email) {
@@ -986,7 +1138,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--border-color);
 }
 .email-translation {
-  margin: 10px 16px;
+  margin: 8px 0 0 0;
   background: rgba(0,168,132,0.1);
   border: 1px solid rgba(0,168,132,0.3);
   border-radius: 8px;
@@ -1090,6 +1242,23 @@ onUnmounted(() => {
 .form-row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
 .form-error { color:#ef4444; font-size:12px; padding:7px 10px; background:rgba(239,68,68,0.1); border-radius:8px; }
 .form-success { color:var(--accent); font-size:12px; padding:7px 10px; background:rgba(0,168,132,0.1); border-radius:8px; }
+.provider-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.provider-item { display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 4px; border:1px solid #3b4a54; border-radius:10px; cursor:pointer; transition:border-color .15s, background .15s; }
+.provider-item:hover { border-color:var(--accent); background:rgba(0,168,132,0.06); }
+.provider-item.active { border-color:var(--accent); background:rgba(0,168,132,0.12); }
+.provider-logo { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:700; flex-shrink:0; }
+.provider-name { font-size:11px; color:var(--text-secondary); white-space:nowrap; }
+.provider-item.active .provider-name { color:var(--text-primary); }
+.apppwd-steps { margin-top:2px; padding:10px 12px; background:rgba(0,168,132,0.07); border:1px solid rgba(0,168,132,0.2); border-radius:8px; }
+.apppwd-title { font-size:12px; font-weight:600; color:var(--accent); margin-bottom:4px; }
+.apppwd-list { margin:0; padding-left:18px; }
+.apppwd-list li { font-size:11.5px; color:var(--text-secondary); line-height:1.7; }
+.pwd-wrap { position:relative; }
+.pwd-wrap input { padding-right:56px; }
+.pwd-toggle { position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-secondary); font-size:11px; cursor:pointer; padding:4px 8px; border-radius:6px; }
+.pwd-toggle:hover { color:var(--accent); background:rgba(0,168,132,0.1); }
+.apppwd-link { display:inline-block; margin-top:8px; font-size:12px; color:var(--accent); text-decoration:none; }
+.apppwd-link:hover { text-decoration:underline; }
 
 .toast {
   position: fixed; bottom:24px; left:50%; transform:translateX(-50%);
@@ -1477,4 +1646,30 @@ onUnmounted(() => {
     font-weight: 600;
   }
 }
+.assign-email-btn { border-color: var(--whatsapp, #25d366) !important; color: var(--whatsapp, #25d366) !important; }
+.assign-dialog { width: 92%; max-width: 460px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+.assign-dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; font-weight: 600; font-size: 15px; border-bottom: 1px solid rgba(0,0,0,.08); }
+.assign-dialog-close { background: none; border: none; color: #666; font-size: 16px; cursor: pointer; }
+.assign-dialog-body { padding: 14px 18px; }
+.assign-loading { color: #888; font-size: 13px; padding: 10px 0; }
+.assign-cust-info { display: flex; align-items: center; gap: 8px; background: rgba(37,211,102,.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; }
+.assign-cust-info.warn { background: rgba(245,158,11,.12); color: #b45309; }
+.aci-icon { font-size: 15px; }
+.aci-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aci-email { color: #888; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assign-agents { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.assign-agent-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid rgba(0,0,0,.12); cursor: pointer; transition: all .15s; background: #fff; }
+.assign-agent-card:hover { border-color: #25d366; }
+.assign-agent-card.active { border-color: #25d366; background: rgba(37,211,102,.08); }
+.aa-icon { font-size: 20px; }
+.aa-info { flex: 1; min-width: 0; }
+.aa-name { font-size: 13px; font-weight: 600; }
+.aa-desc { font-size: 11px; color: #888; }
+.aa-check { color: #25d366; font-weight: 700; font-size: 16px; }
+.assign-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); font-size: 13px; resize: vertical; }
+.assign-dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(0,0,0,.08); }
+.assign-dialog-btn { padding: 7px 16px; border-radius: 8px; border: none; font-size: 13px; cursor: pointer; font-weight: 500; }
+.assign-dialog-btn.cancel { background: #f0f0f0; color: #333; }
+.assign-dialog-btn.primary { background: #25d366; color: #fff; }
+.assign-dialog-btn:disabled { opacity: .5; cursor: not-allowed; }
 </style>

@@ -1,126 +1,139 @@
 <template>
   <div class="conv-page">
     <!-- ========== 状态一：未连接 WhatsApp ========== -->
-    <template v-if="false && !chatStore.isConnected && !qrViewVisible">
-      <div class="wa-intro">
-        <div class="wa-intro-art" aria-hidden="true">
-          <svg viewBox="0 0 303 172" width="303" height="172" class="wa-intro-svg">
-            <defs>
-              <linearGradient id="waLaptopGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#364147"/>
-                <stop offset="100%" stop-color="#233138"/>
-              </linearGradient>
-            </defs>
-            <path fill="#364147" d="M229.26 161.53h-148.5c-.8 0-1.46.65-1.46 1.46v7.04c0 .8.65 1.46 1.46 1.46h148.5c.8 0 1.46-.65 1.46-1.46v-7.04c0-.8-.66-1.46-1.46-1.46z"/>
-            <path fill="#233138" d="M231.34 164.69H80.51c-.8 0-1.46.65-1.46 1.46v2.42c0 .8.65 1.46 1.46 1.46h150.83c.8 0 1.46-.65 1.46-1.46v-2.42c0-.8-.66-1.46-1.46-1.46z"/>
-            <path fill="url(#waLaptopGrad)" d="M72.73 154.69h165.57V25.06c0-5.9-4.79-10.69-10.69-10.69H83.42c-5.9 0-10.69 4.79-10.69 10.69v129.63z"/>
-            <path fill="#0b141a" d="M79.54 30.47h151.96v118.3H79.54z"/>
-            <path fill="#00a884" d="M155.52 61.5c-20.7 0-37.5 16.8-37.5 37.5 0 7.96 2.49 15.35 6.72 21.5l-4.33 15.82 16.24-4.24c5.85 3.72 12.77 5.87 20.2 5.87h.01c20.7 0 37.5-16.8 37.5-37.5s-16.8-38.95-38.84-38.95z" opacity=".15"/>
-            <path fill="#00a884" d="M187.52 117.73c-1.57 4.1-7.57 7.54-11.36 8.03-2.94.38-6.69.54-10.68-.57-2.45-.68-5.6-1.82-9.64-3.57-16.98-7.35-28.08-24.39-28.92-25.5-.83-1.12-6.81-9.06-6.81-17.3 0-8.23 4.33-12.28 5.87-13.97.67-.73 1.46-.92 1.95-.92l4.19-.05c.62 0 1.48-.23 2.28 1.73.83 2.04 2.85 7.04 3.1 7.55.25.5.42 1.09.08 1.75-.33.67-.5 1.09-1 1.67-.5.59-1.06 1.31-1.51 1.76-.5.5-1.02 1.05-.44 2.06.58 1 2.6 4.3 5.59 6.97 3.84 3.43 7.09 4.49 8.08 5 .99.5 1.57.42 2.15-.25.58-.68 2.45-2.88 3.1-3.87.65-.99 1.31-.83 2.21-.5.91.33 5.76 2.72 6.76 3.22 1 .5 1.67.75 1.92 1.16.25.42.25 2.4-1.32 5.64z"/>
-            <path fill="#00a884" d="M155.52 66.5c-18.03 0-32.7 14.67-32.7 32.7 0 7.14 2.3 13.74 6.2 19.11l-.67-.89-4.07 14.85 15.24-3.98-.67-.48c5.13 3.16 11.12 5 17.5 5h.01c18.03 0 32.7-14.67 32.7-32.7s-14.67-33.61-33.54-33.61zm0 60.2c-5.67 0-11.01-1.59-15.52-4.34l-.99-.58-10.41 2.72 2.78-10.15-.65-.99c-3.12-4.79-4.93-10.46-4.93-16.51 0-16.41 13.36-29.76 29.77-29.76s29.77 13.35 29.77 29.76-13.35 29.85-29.82 29.85z"/>
-            <circle cx="145" cy="96" r="2" fill="#00a884"/>
-            <circle cx="156" cy="96" r="2" fill="#00a884"/>
-            <circle cx="167" cy="96" r="2" fill="#00a884"/>
-            <path d="M198 50l12-14 14 14" stroke="#53bdeb" stroke-width="2" fill="none"/>
-            <path d="M210 36v15" stroke="#00a884" stroke-width="2"/>
-            <path fill="#fff" d="M194 60h24l-12-12z" opacity=".05"/>
-            <path fill="#00a884" d="M224 104c0 6.63-5.37 12-12 12s-12-5.37-12-12 5.37-12 12-12 12 5.37 12 12z"/>
-            <path fill="#111b21" d="M217 100.5v7l-6-3.5z"/>
-          </svg>
-        </div>
-        <h1 class="wa-intro-title">WhatsApp Web</h1>
-        <p class="wa-intro-sub">发送私密消息，免费体验简单可靠的通话，这些功能均可在全球手机上使用。</p>
-        <button class="wa-login-btn" @click="startQrLogin" :disabled="startingQr">
+    <template v-if="chatLoginVisible && !qrViewVisible && !phoneViewVisible">
+      <div class="wa-welcome-card">
+        <img src="/wa-logo.png" alt="WhatsApp" class="wa-welcome-logo" />
+        <h1 class="wa-welcome-title">欢迎使用 WhatsApp</h1>
+        <p class="wa-welcome-sub">安全、可靠的消息服务，随时随地与世界保持联系。</p>
+        <button class="wa-login-btn" @click="onWelcomePrimary()">
           <svg v-if="startingQr" class="wa-spin" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" opacity=".25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
           <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4zm13-2h-2v3h-3v2h3v3h2v-3h3v-2h-3z"/></svg>
-          {{ startingQr ? '正在加载...' : 'Log in with QR code' }}
+          {{ startingQr ? '正在加载...' : (chatStore.currentWaAccountId === null ? '新建会话' : '登录') }}
         </button>
         <div class="wa-intro-tips">
-          <p><span class="wa-lock">🔒</span> Your personal messages are end-to-end encrypted</p>
+          <p><span class="wa-lock">🔒</span> 您的个人消息已启用端到端加密</p>
         </div>
       </div>
     </template>
 
     <!-- ========== 状态二：扫码大卡片 ========== -->
-    <template v-else-if="!chatStore.isConnected && phoneViewVisible">
+    <template v-else-if="chatLoginVisible && phoneViewVisible">
       <div class="wa-scan-wrap">
         <div class="wa-scan-card" style="max-width:480px">
           <div style="padding:40px 48px;width:100%">
-            <h2 class="wa-scan-title" style="margin-bottom:8px">Log in with phone number</h2>
-            <p style="color:#8696a0;font-size:13px;margin:0 0 24px">输入WhatsApp手机号（含国家码，如8613800138000），我们会给你一个8位配对码，在手机WhatsApp里输入即可登录。</p>
+            <h2 class="wa-scan-title" style="margin-bottom:8px;text-align:center">使用电话号码登录</h2>
+            <p style="color:#8696a0;font-size:13px;margin:0 0 24px;text-align:center">选择国家/地区并输入你的电话号码，我们会给你一个8位配对码，在手机WhatsApp里输入即可登录。</p>
             <div v-if="!chatStore.pairingCode?.code">
-              <label style="display:block;font-size:12px;color:#8696a0;margin-bottom:6px">手机号（含国家码，不要+号）</label>
-              <div style="display:flex;gap:8px">
-                <input v-model="phoneInput" placeholder="例如 8613800138000"
-                  style="flex:1;background:#2a3942;border:1px solid #374248;color:#e9edef;border-radius:8px;padding:10px 14px;font-size:14px;outline:none"
+              <div class="wa-phone-country-wrap">
+                <div class="wa-phone-country" @click="phoneCountryOpen = true">
+                  <span class="wa-phone-country-flag">{{ selectedCountry.flag }}</span>
+                  <span class="wa-phone-country-name">{{ selectedCountry.name }}</span>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;color:#8696a0"><path d="M6 9l6 6 6-6"/></svg>
+                </div>
+                <div v-if="phoneCountryOpen" class="wa-country-backdrop" @click="phoneCountryOpen = false"></div>
+                <div v-if="phoneCountryOpen" class="wa-country-dialog">
+                  <div class="wa-country-search">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input v-model="phoneCountrySearch" placeholder="搜索国家或区号" autofocus />
+                  </div>
+                  <div class="wa-country-list">
+                    <div v-for="c in filteredPhoneCountries" :key="c.name + c.code" class="wa-country-item" :class="{active: c.name === selectedCountry.name && c.code === selectedCountry.code}" @click="selectPhoneCountry(c)">
+                      <span class="wa-country-item-flag">{{ c.flag }}</span>
+                      <span class="wa-country-item-names">
+                        <span class="wa-country-item-name">{{ c.name }}</span>
+                        <span class="wa-country-item-en">{{ c.name_en }}</span>
+                      </span>
+                      <span class="wa-country-item-code">{{ c.code }}</span>
+                      <svg v-if="c.name === selectedCountry.name && c.code === selectedCountry.code" class="wa-country-item-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#22bb55" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="wa-phone-field">
+                <span class="wa-phone-prefix">{{ selectedCountry.code }}</span>
+                <span class="wa-phone-field-divider"></span>
+                <input v-model="phoneLocal" placeholder="电话号码" inputmode="numeric"
+                  class="wa-phone-input"
                   @keydown.enter="submitPairing" />
-                <button class="qr-reload-btn" @click="submitPairing" :disabled="chatStore.pairingLoading || !phoneInput"
-                  style="white-space:nowrap;padding:10px 18px;border-radius:8px;font-size:14px">
+              </div>
+              <div style="display:flex;justify-content:center;margin-top:16px">
+                <button class="wa-phone-submit" @click="submitPairing" :disabled="chatStore.pairingLoading || !phoneLocal">
                   <span v-if="chatStore.pairingLoading">请求中...</span>
                   <span v-else>获取配对码</span>
                 </button>
               </div>
               <p v-if="chatStore.pairingError" style="color:#f15c6d;font-size:12px;margin:8px 0 0">{{ chatStore.pairingError }}</p>
-              <p style="color:#8696a0;font-size:12px;margin:12px 0 0">操作路径：打开WhatsApp → 设置 → 已关联设备 → 关联设备 → 没有二维码？使用配对码</p>
             </div>
-            <div v-else style="text-align:center">
-              <div style="font-size:13px;color:#8696a0;margin-bottom:12px">配对码已生成，请在手机WhatsApp输入：</div>
-              <div style="font-family:'Courier New',monospace;font-size:40px;font-weight:700;letter-spacing:8px;color:#00a884;background:#111b21;border:2px dashed #00a884;border-radius:12px;padding:24px;margin:0 auto;display:inline-block;user-select:all">{{ chatStore.pairingCode.code }}</div>
-              <p style="color:#8696a0;font-size:12px;margin:16px 0 0">手机号 +{{ chatStore.pairingCode.phone }} · 等待手机确认...<br/>WhatsApp → 设置 → 已关联设备 → 关联设备 → 使用配对码</p>
-              <button class="qr-reload-btn" @click="cancelPairing" style="margin-top:16px">取消 / 切换方式</button>
+            <div v-else style="text-align:left">
+              <h3 class="wa-pair-title">在手机上输入代码</h3>
+              <p class="wa-pair-sub">正在关联 WhatsApp 账户 <strong>{{ pairingDisplayPhone }}</strong><span class="wa-pair-edit" @click="chatStore.clearPairing()">（编辑）</span></p>
+              <div class="wa-pair-code-box">
+                <span v-for="(ch, i) in pairingCodeFormatted.slice(0,4)" :key="'a'+i" class="wa-pair-char">{{ ch }}</span>
+                <span class="wa-pair-dash">-</span>
+                <span v-for="(ch, i) in pairingCodeFormatted.slice(4,8)" :key="'b'+i" class="wa-pair-char">{{ ch }}</span>
+              </div>
+              <ol class="wa-pair-steps">
+                <li>在你的手机上打开WhatsApp</li>
+                <li>在Android手机上，轻触'菜单' · 在iPhone上，轻触'设置'</li>
+                <li>依次轻触'已关联的设备'和'关联设备'</li>
+                <li>轻触'改用电话号码关联'，然后在你的手机上输入此验证码</li>
+              </ol>
+            </div>
+            <div class="wa-phone-link-bottom" @click="cancelPairing" style="margin-top:24px">
+              使用二维码登录
             </div>
           </div>
         </div>
-        <button class="wa-scan-back" @click="backToIntro" title="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <button class="wa-scan-back" style="top:auto;bottom:16px;left:16px" @click="cancelPairing" title="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
       </div>
+
     </template>
 
-    <template v-else-if="!chatStore.isConnected">
+    <template v-else-if="chatLoginVisible">
       <div class="wa-scan-wrap">
         <div class="wa-scan-card">
           <div class="wa-scan-left">
-            <h2 class="wa-scan-title">Scan to log in</h2>
+            <h2 class="wa-scan-title">登录 WhatsApp</h2>
             <ol class="wa-scan-steps">
-              <li><span class="step-num">1</span><span class="step-text">Open WhatsApp on your phone</span></li>
-              <li><span class="step-num">2</span><span class="step-text">Tap <strong>Menu</strong> <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" style="vertical-align:-2px"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2.9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg> or <strong>Settings</strong> and select <strong>Linked devices</strong></span></li>
-              <li><span class="step-num">3</span><span class="step-text">Tap <strong>Link a device</strong> and point your phone at this screen</span></li>
+              <li><span class="step-num">1</span><span class="step-text">使用手机摄像头扫描二维码</span></li>
+              <li><span class="step-num">2</span><span class="step-text">轻触链接以打开WhatsApp <img src="/wa-logo.png" alt="WA" style="width:14px;height:14px;vertical-align:-2px;display:inline;" /></span></li>
+              <li><span class="step-num">3</span><span class="step-text">再次扫描二维码以关联到你的账户</span></li>
             </ol>
-            <a class="wa-help-link" href="javascript:void(0)" @click="onHelpClick">Need help getting started?</a>
+            <a class="wa-help-link" href="https://faq.whatsapp.com/1317564962315842/?cms_platform=android&lang=zh-CN" target="_blank">需要帮助？ <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg></a>
             <label class="wa-stay-logged">
               <input type="checkbox" v-model="stayLoggedIn" />
               <span class="checkbox-box" :class="{checked: stayLoggedIn}">
                 <svg v-if="stayLoggedIn" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#111b21" stroke-width="3.5"><path d="M5 12l5 5L20 7"/></svg>
               </span>
-              <span>Stay logged in on this browser</span>
+              <span>在此电脑上保持登录状态</span>
             </label>
-            <!-- pairing code登录方式用户拒绝使用 -->
-            <div style="display:none" class="wa-phone-login" @click="onPhoneLoginClick">Log in with phone number <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
           </div>
           <div class="wa-scan-right">
             <template v-if="qrError">
               <div class="qr-error-box">
                 <div class="qr-error-icon">!</div>
                 <div class="qr-error-text">{{ qrError }}</div>
-                <button class="qr-reload-btn" @click="retryQR"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> Reload QR code</button>
+                <button class="qr-reload-btn" @click="retryQR"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> 重新加载二维码</button>
               </div>
             </template>
             <template v-else-if="qrExpired">
               <div class="qr-expired-box">
-                <div class="qr-expired-title">QR code expired</div>
-                <button class="qr-reload-btn" @click="retryQR"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> Click to reload</button>
+                <div class="qr-expired-title">二维码已过期</div>
+                <button class="qr-reload-btn" @click="retryQR"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg> 点击重新加载</button>
               </div>
             </template>
             <template v-else-if="chatStore.qrCode?.qr && isDataUrl(chatStore.qrCode.qr)">
               <div class="qr-frame">
                 <img :src="chatStore.qrCode.qr" class="qr-img" alt="QR code" />
                 <div class="qr-overlay-logo">
-                  <svg viewBox="0 0 32 32" width="32" height="32" fill="#00a884"><path d="M16.003 3C9.385 3 4 8.384 4 15.002c0 2.416.719 4.669 1.956 6.542L4 27l5.567-1.874a11.94 11.94 0 006.436 1.878c6.617 0 12.002-5.384 12.002-12.001C28.005 8.384 22.62 3 16.003 3zm6.953 15.79c-.291-.146-1.724-.849-1.992-.945-.268-.097-.464-.146-.659.147-.194.292-.752.945-.922 1.138-.17.195-.34.22-.632.073-.292-.147-1.233-.455-2.348-1.448-.866-.772-1.452-1.727-1.623-2.018-.17-.292-.018-.45.128-.597.132-.132.293-.342.439-.513.146-.17.195-.293.292-.488.098-.195.049-.366-.024-.513-.073-.147-.658-1.586-.904-2.172-.239-.567-.483-.49-.658-.498-.17-.008-.365-.01-.56-.01-.195 0-.513.073-.782.366-.269.293-1.026 1.002-1.026 2.443 0 1.442 1.05 2.834 1.197 3.03.146.194 2.058 3.14 4.987 4.397.697.301 1.24.48 1.665.614.699.223 1.335.192 1.837.116.56-.085 1.725-.705 1.968-1.387.243-.681.243-1.264.17-1.386-.072-.122-.268-.195-.56-.34z"/></svg>
+                  <img src="/wa-qr-logo.png" alt="WhatsApp" style="width:60px;height:60px;" />
                 </div>
                 <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
               </div>
               <div class="qr-hint-text">
-                <span v-if="qrCountdown > 0">QR code refreshes in <strong>{{ qrCountdown }}s</strong></span>
-                <span v-else>Scanning...</span>
+                <span v-if="qrCountdown > 0">二维码将在 <strong>{{ qrCountdown }}s</strong></span>
+                <span v-else>扫描中...</span>
               </div>
             </template>
             <template v-else-if="chatStore.connectionStatus === 'scanning'">
@@ -144,14 +157,13 @@
               </div>
             </template>
             <template v-else>
-              <div class="qr-loading-box"><div class="qr-loading-spin"></div><div class="qr-loading-text">Loading QR code...</div></div>
+              <div class="qr-loading-box"><div class="qr-loading-spin"></div><div class="qr-loading-text">正在加载二维码...</div></div>
             </template>
+            <div class="wa-phone-link-bottom" @click="onPhoneLoginClick">使用电话号码登录</div>
           </div>
         </div>
         <div class="wa-scan-footer">
-          <p class="wa-scan-lock"><svg viewBox="0 0 24 24" width="13" height="13" fill="#8696a0" style="margin-right:6px;vertical-align:-2px"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg> Your personal messages are end-to-end encrypted</p>
-          <p class="wa-scan-terms"><a href="javascript:void(0)">Terms</a><span class="dot">·</span><a href="javascript:void(0)">Privacy Policy</a></p>
-          <p class="wa-scan-create">Don't have a WhatsApp account? <a href="javascript:void(0)">Get started</a></p>
+          <p class="wa-scan-lock"><svg viewBox="0 0 24 24" width="13" height="13" fill="#8696a0" style="margin-right:6px;vertical-align:-2px"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg> 您的个人消息已启用端到端加密</p>
         </div>
         <button class="wa-scan-back" @click="backToIntro" title="Back"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
       </div>
@@ -165,12 +177,54 @@
         <div class="ch-info">
           <div class="ch-name-row">
             <div class="ch-name">{{ chatStore.activeConversation.name }}</div>
+          </div>
+          <div class="ch-status-row">
             <span v-if="cultureIso && cultureInfo" class="ch-cul-badge" :class="'cul-s-'+cultureWorkStatus.status" @click="openCulturePanel" :title="'当地'+cultureWorkStatus.localTime+' · '+cultureWorkStatus.tip">
               {{ cultureInfo.name }} {{ cultureWorkStatus.localTime }} <span class="ch-cul-icon">{{ cultureWorkStatus.icon }}</span>
             </span>
+            <button class="ch-conv-gen-btn assign-to-agent-btn" @click.stop="openAssignDialog()" title="发给 Agent 跟进">
+              <span>🤖 发Agent</span>
+            </button>
+            <button class="ch-conv-gen-btn doc-archive-btn" @click.stop="openDocPanel" title="文档储存">
+              <span>📁 文档储存</span>
+            </button>
           </div>
-          <div class="ch-status"><span class="online-dot offline"></span>{{ chatStore.activeConversation.phone ? chatStore.activeConversation.phone + ' · ' : '' }}最近在线</div>
           <!-- Phase 4: Conversation Status Indicators -->
+          <!-- 发给 Agent 指派弹窗（V1.0 F6 沟通页入口） -->
+          <transition name="fade">
+            <div v-if="assignDialogOpen" class="assign-dialog-overlay" @click.self="assignDialogOpen = false">
+              <div class="assign-dialog">
+                <div class="assign-dialog-header">
+                  <span>🤖 发给 Agent</span>
+                  <button class="assign-dialog-close" @click="assignDialogOpen = false">✕</button>
+                </div>
+                <div class="assign-dialog-body">
+                  <div v-if="assignCustomerLoading" class="assign-loading">正在识别会话客户...</div>
+                  <template v-else>
+                    <div v-if="assignCustomer" class="assign-cust-info">
+                      <span class="aci-icon">👤</span>
+                      <span class="aci-name">{{ assignCustomer.companyName || assignCustomer.name || assignCustomer.contactName || ('客户#' + assignCustomer.id) }}</span>
+                    </div>
+                    <div v-else class="assign-cust-info warn">⚠️ 该会话未绑定客户，请先在客户管理中为该联系人建立客户档案</div>
+                    <div class="assign-agents">
+                      <div v-for="ag in ASSIGN_AGENTS" :key="ag.type" class="assign-agent-card" :class="{ active: assignAgentType === ag.type }" @click="assignAgentType = ag.type">
+                        <span class="aa-icon">{{ ag.icon }}</span>
+                        <div class="aa-info"><div class="aa-name">{{ ag.name }}</div><div class="aa-desc">{{ ag.desc }}</div></div>
+                        <span class="aa-check" v-if="assignAgentType === ag.type">✓</span>
+                      </div>
+                    </div>
+                    <div class="assign-label">📝 跟进指令 <span class="assign-required">（必填）</span></div>
+                    <textarea v-model="assignInstruction" class="assign-input" rows="3" placeholder="如：重点跟进报价，本周内发首封开发信，并预约下次跟进"></textarea>
+                  </template>
+                </div>
+                <div class="assign-dialog-footer">
+                  <button class="assign-dialog-btn cancel" @click="assignDialogOpen = false">取消</button>
+                  <button class="assign-dialog-btn primary" :disabled="assigning || !assignCustomer" @click="doAssignFromChat">{{ assigning ? '指派中...' : '确认指派' }}</button>
+                </div>
+              </div>
+            </div>
+          </transition>
+
           <div class="ch-conv-status" v-if="convStatus && !convStatus.error" @click="convDetailOpen = true">
             <div class="ch-conv-progress">
               <div class="ch-conv-bar">
@@ -545,6 +599,60 @@
     </div>
     </transition>
 
+      <!-- ========== 📁 文档储存 右侧抽屉（2026-08-31 单证存档） ========== -->
+    <transition name="profile-slide">
+    <div v-if="docPanelOpen" class="profile-drawer doc-drawer" @click.self="closeDocPanel">
+      <div class="profile-panel doc-panel">
+        <!-- 顶部栏 -->
+        <div class="pp-header">
+          <button class="pp-back" @click="closeDocPanel"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+          <div class="pp-title">📁 文档储存</div>
+          <button class="pp-edit-btn" @click="closeDocPanel" title="关闭"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+        </div>
+        <div class="pp-scroll">
+          <!-- 用量提示区 -->
+          <div class="doc-usage" v-if="docUsage">
+            <div class="doc-usage-row">
+              <span class="doc-usage-label">已用 <b>{{ docUsage.usedMB }}</b> MB / 免费 {{ docUsage.freeQuotaMB }} MB</span>
+              <span class="doc-usage-balance">积分余额 {{ docUsage.balance }}</span>
+            </div>
+            <div class="doc-usage-bar">
+              <div class="doc-usage-fill" :style="{ width: Math.min(100, (docUsage.usedMB / docUsage.freeQuotaMB) * 100) + '%' }"></div>
+            </div>
+            <div class="doc-usage-tip" v-if="!docUsage.overQuota">免费额度内存档不扣积分，超出后按 4积分/MB 计费</div>
+            <div class="doc-usage-tip" v-else style="color:#e74c3c">已超出免费额度，本次起按 4积分/MB 扣积分</div>
+          </div>
+
+          <!-- 上传按钮 -->
+          <div class="doc-upload-area">
+            <button class="doc-upload-btn" :disabled="docUploading" @click="triggerDocUpload">
+              {{ docUploading ? '上传中...' : '＋ 上传单证' }}
+            </button>
+            <input ref="docFileInput" type="file" style="display:none" :accept="docAccept" @change="onDocFileChosen" />
+          </div>
+
+          <!-- 文件列表 -->
+          <div class="doc-list">
+            <div v-if="docLoading" class="doc-empty">加载中...</div>
+            <div v-else-if="!docList.length" class="doc-empty">暂无存档单证，点击上方按钮上传</div>
+            <div v-for="item in docList" :key="item.id" class="doc-item">
+              <div class="doc-item-icon">📄</div>
+              <div class="doc-item-info">
+                <div class="doc-item-name" :title="item.fileName">{{ item.fileName }}</div>
+                <div class="doc-item-meta">{{ formatDocSize(item.fileSize) }} · {{ formatDocTime(item.createdAt) }}</div>
+              </div>
+              <div class="doc-item-actions">
+                <button class="doc-act-btn" title="下载" @click="downloadDoc(item)">⬇</button>
+                <button class="doc-act-btn doc-act-del" title="删除" @click="deleteDoc(item)">🗑</button>
+              </div>
+            </div>
+          </div>
+          <div class="pp-bottom-spacer"></div>
+        </div>
+      </div>
+    </div>
+    </transition>
+
 <!-- ⚡ 首响等待提示 -->
       <div v-if="activeFirstResponse && !frWaitDismissedJids[chatStore.activeJid]" class="fr-wait-banner">
         <span class="fr-wb-icon">⚡</span>
@@ -552,6 +660,14 @@
           该客户已等待首响 <b>{{ activeFirstResponseLive.minutes }} 分 {{ activeFirstResponseLive.seconds }} 秒</b>，请尽快回复！
         </span>
         <button class="fr-wb-dismiss" @click="frWaitDismissedJids[chatStore.activeJid]=true">知道了</button>
+      </div>
+
+      <!-- 🤖 自动接待步骤流（销冠 Agent 实时步骤） -->
+      <div v-if="activeAutoSteps.length" class="auto-step-banner">
+        <span class="asb-title">🤖 销冠自动接待</span>
+        <span v-for="(st, si) in activeAutoSteps" :key="si" class="asb-item">
+          <span class="asb-ico">{{ st.done ? '✅' : (si < activeAutoSteps.length - 1 ? '✓' : '⏳') }}</span>{{ st.detail }}
+        </span>
       </div>
 
       <div class="conv-messages" ref="msgArea">
@@ -562,7 +678,7 @@
             <p class="wa-noselect-sub">发送私密消息，免费体验简单可靠的通话，这些功能均可在全球手机上使用。</p>
             <div class="wa-noselect-divider"></div>
             <p class="wa-noselect-tip">从左侧列表选择一个会话开始沟通</p>
-            <p class="wa-noselect-encrypt">🔒 Your personal messages are end-to-end encrypted</p>
+            <p class="wa-noselect-encrypt">🔒 您的个人消息已启用端到端加密</p>
           </div>
         </template>
 
@@ -596,7 +712,7 @@
               <div v-if="editingMsgId===msg.id" class="msg-edit-wrap">
                 <input ref="editInputEl" class="msg-edit-input" v-model="editingText" @keydown.enter="submitEdit(msg)" @keydown.esc="cancelEdit" @blur="cancelEdit"/>
               </div>
-              <div v-else class="msg-bubble">
+              <div v-else class="msg-bubble" :class="{ 'msg-bubble-media': isMediaMsg(msg) }">
 
                 <template v-if="msg.messageType === 'video' || msg.type === 'video' || (msg.mimeType && msg.mimeType.startsWith('video/'))">
                   <div class="msg-media-video">
@@ -621,24 +737,24 @@
                   <div
                     v-if="msg.mediaUrl"
                     class="msg-media-doc msg-media-doc-link"
-                    :class="{ 'msg-media-pdf': isPdfMsg(msg) }"
+                    :class="{ 'msg-media-pdf': isPreviewableMsg(msg) }"
                     @click="onMediaDocClick(msg)"
                   >
-                    <div class="mmd-icon">{{ isPdfMsg(msg) ? '📕' : '📄' }}</div>
+                    <div class="mmd-icon">{{ isPdfMsg(msg) ? '📕' : (isPreviewableMsg(msg) ? '👁' : '📄') }}</div>
                     <div class="mmd-info">
                       <div class="mmd-name">{{ msg.fileName || msg.body || '文件' }}</div>
-                      <div class="mmd-size">{{ isPdfMsg(msg) ? (msg.fileSize ? formatFileSize(msg.fileSize) + ' · 点击预览' : '点击预览PDF') : (msg.fileSize ? formatFileSize(msg.fileSize) : '点击下载') }}</div>
+                      <div class="mmd-size">{{ isPreviewableMsg(msg) ? (msg.fileSize ? formatFileSize(msg.fileSize) + ' · 点击预览' : '点击预览') : (msg.fileSize ? formatFileSize(msg.fileSize) : '点击下载') }}</div>
                     </div>
-                    <a v-if="!isPdfMsg(msg)" class="mmd-download-hidden" :href="'/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl) + '&dl=1'" :download="msg.fileName || 'file'" target="_blank"></a>
+                    <a v-if="!isPreviewableMsg(msg)" class="mmd-download-hidden" :href="'/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl) + '&dl=1'" :download="msg.fileName || 'file'" target="_blank"></a>
                   </div>
                   <div v-else-if="msg.fromMe || msg.direction === 'outbound'" class="msg-media-doc msg-media-doc-sent msg-media-doc-link"
-                       :class="{ 'msg-media-pdf': isPdfMsg(msg) }"
+                       :class="{ 'msg-media-pdf': isPreviewableMsg(msg) }"
                        @click="onMediaDocClick(msg)"
                   >
-                    <div class="mmd-icon">{{ isPdfMsg(msg) ? '📕' : '📄' }}</div>
+                    <div class="mmd-icon">{{ isPdfMsg(msg) ? '📕' : (isPreviewableMsg(msg) ? '👁' : '📄') }}</div>
                     <div class="mmd-info">
                       <div class="mmd-name">{{ msg.fileName || msg.body || '文件' }}</div>
-                      <div class="mmd-size">{{ (msg.fileSize ? formatFileSize(msg.fileSize) + ' · ' : '') + (msg.pending ? '发送中…' : (isPdfMsg(msg) ? '点击预览' : '已发送 · 点击下载')) }}</div>
+                      <div class="mmd-size">{{ (msg.fileSize ? formatFileSize(msg.fileSize) + ' · ' : '') + (msg.pending ? '发送中…' : (isPreviewableMsg(msg) ? '点击预览' : '已发送 · 点击下载')) }}</div>
                     </div>
                   </div>
                   <div v-else class="msg-media-doc">
@@ -854,6 +970,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 
 const emit = defineEmits(['go-back','open-translate-panel']);
 const chatStore = useChatStore();
+
 const route = useRoute();
 const router = useRouter();
 
@@ -869,6 +986,10 @@ const activeFirstResponse = computed(() => {
 });
 // 实时秒数计时
 const activeFirstResponseLive = reactive({ minutes: 0, seconds: 0 });
+// 自动接待步骤流（whatsapp:auto-step）
+const autoStepsByJid = reactive({});
+let autoStepSocketHandler = null;
+const activeAutoSteps = computed(() => (autoStepsByJid[chatStore.activeJid] || []).slice(-8));
 let frLiveTimer = null;
 function updateFrLive() {
   const fr = activeFirstResponse.value;
@@ -1436,6 +1557,25 @@ function isPdfMsg(msg) {
   return mt === 'application/pdf' || fn.endsWith('.pdf');
 }
 
+function isMediaMsg(msg) {
+  if (!msg) return false;
+  const mt = msg.messageType || msg.type || '';
+  if (mt === 'image' || mt === 'video') return true;
+  if (msg.mimeType && (msg.mimeType.startsWith('image/') || msg.mimeType.startsWith('video/'))) return true;
+  return false;
+}
+
+// 是否可在浏览器在线预览（pdf/图片/文本类）；Office 等二进制不在此列，保持下载
+const PREVIEW_EXT = /\.(pdf|jpg|jpeg|png|gif|webp|svg|bmp|txt|csv|json|log|md|xml)$/i;
+function isPreviewableMsg(msg) {
+  if (!msg) return false;
+  if (isPdfMsg(msg)) return true;
+  const mt = (msg.mimeType || '').toLowerCase();
+  if (mt.startsWith('image/') || mt.startsWith('text/')) return true;
+  if (msg.fileName && PREVIEW_EXT.test(msg.fileName)) return true;
+  return false;
+}
+
 async function onRetranslate(msg) {
   if (!msg || msg.id == null || retranslatingIds.has(msg.id)) return;
   retranslatingIds.add(msg.id);
@@ -1455,22 +1595,22 @@ async function onRetranslate(msg) {
 function onMediaDocClick(msg) {
   if (!msg || !msg.mediaUrl) return;
   const mediaBase = '/api/wa/media?url=' + encodeURIComponent(msg.mediaUrl);
-  if (isPdfMsg(msg)) {
-    // 手机端Chrome/Via对iframe加载PDF常直接弹下载，改用新窗口打开inline URL
-    // 浏览器原生PDF阅读器负责预览；用户可在预览页下载
+  if (isPreviewableMsg(msg)) {
+    // 可在线预览类型（PDF/图片/文本类）：手机端新窗口打开 inline URL，PC 端 iframe 弹层预览
+    // 浏览器原生阅读器负责预览；用户可在预览页下载
     const inlineUrl = mediaBase + '&inline=1&download=0';
     // 检测是否移动端
     const isMobileView = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth <= 900;
     if (isMobileView) {
-      // 手机端：新标签页打开（浏览器自带PDF阅读器）
+      // 手机端：新标签页打开（浏览器自带阅读器）
       window.open(inlineUrl, '_blank', 'noopener');
     } else {
-      // PC端：保留iframe弹层预览（桌面Chrome/Firefox/Safari都支持iframe PDF）
+      // PC端：保留iframe弹层预览（桌面Chrome/Firefox/Safari都支持iframe）
       pdfPreviewUrl.value = inlineUrl;
-      pdfPreviewFileName.value = msg.fileName || 'document.pdf';
+      pdfPreviewFileName.value = msg.fileName || 'document';
     }
   } else {
-    // 非PDF文档：直接下载
+    // 其他类型（Office 等二进制）：直接下载
     const a = document.createElement('a');
     a.href = mediaBase + '&dl=1';
     a.download = msg.fileName || 'file';
@@ -1611,7 +1751,7 @@ function applyAiReply(text) {
 }
 // 让 AI 建议条的 onSuggestClick 能复用 applyAiReply
 _applyAiReplyRef = applyAiReply;
-defineExpose({ applyAiReply });
+defineExpose({ applyAiReply, openAssignDialog });
 
 // 输入框变更 -> 防抖重译
 watch(draftMsg, (val) => {
@@ -1805,20 +1945,256 @@ const qrCountdown = ref(0);
 const stayLoggedIn = ref(true);
 let qrTimer = null;
 
-function startQrLogin() {
+const chatLoginVisible = computed(() => chatStore.currentWaAccountId === null || !chatStore.isConnected);
+// 欢迎卡主按钮：未选中账号→新建会话；已选中断开账号→登录
+function onWelcomePrimary() {
+  if (chatStore.currentWaAccountId === null) {
+    window.dispatchEvent(new CustomEvent('wa:add-account'));
+  } else {
+    handleLoginClick();
+  }
+}
+
+function startQrLogin(accountId) {
   startingQr.value = true; qrError.value = null; qrExpired.value = false; qrViewVisible.value = true;
-  chatStore.requestQR().finally(() => { startingQr.value = false; });
+  chatStore.requestQR(accountId).finally(() => { startingQr.value = false; });
 }
 function backToIntro() { qrViewVisible.value = false; phoneViewVisible.value = false; qrError.value = null; qrExpired.value = false; chatStore.clearPairing(); if (qrTimer) { clearInterval(qrTimer); qrTimer = null; } }
-function retryQR() { qrError.value = null; qrExpired.value = false; chatStore.qrCode = null; chatStore.requestQR(); }
+function retryQR() { qrError.value = null; qrExpired.value = false; chatStore.qrCode = null; chatStore.requestQR(chatStore.currentWaAccountId); }
 function onHelpClick() { window.open('https://faq.whatsapp.com/1317546212400204', '_blank'); }
 const phoneViewVisible = ref(false);
-const phoneInput = ref('');
+const phoneCountries = [
+
+  { code: "+86", name: "中国", name_en: "China", flag: "🇨🇳" },
+  { code: "+852", name: "中国香港", name_en: "Hong Kong", flag: "🇭🇰" },
+  { code: "+853", name: "中国澳门", name_en: "Macau", flag: "🇲🇴" },
+  { code: "+886", name: "中国台湾", name_en: "Taiwan", flag: "🇨🇳" },
+  { code: "+1", name: "美国/加拿大", name_en: "USA/Canada", flag: "🇺🇸" },
+  { code: "+1", name: "加拿大", name_en: "Canada", flag: "🇨🇦" },
+  { code: "+44", name: "英国", name_en: "United Kingdom", flag: "🇬🇧" },
+  { code: "+61", name: "澳大利亚", name_en: "Australia", flag: "🇦🇺" },
+  { code: "+64", name: "新西兰", name_en: "New Zealand", flag: "🇳🇿" },
+  { code: "+353", name: "爱尔兰", name_en: "Ireland", flag: "🇮🇪" },
+  { code: "+81", name: "日本", name_en: "Japan", flag: "🇯🇵" },
+  { code: "+82", name: "韩国", name_en: "South Korea", flag: "🇰🇷" },
+  { code: "+65", name: "新加坡", name_en: "Singapore", flag: "🇸🇬" },
+  { code: "+60", name: "马来西亚", name_en: "Malaysia", flag: "🇲🇾" },
+  { code: "+66", name: "泰国", name_en: "Thailand", flag: "🇹🇭" },
+  { code: "+84", name: "越南", name_en: "Vietnam", flag: "🇻🇳" },
+  { code: "+62", name: "印度尼西亚", name_en: "Indonesia", flag: "🇮🇩" },
+  { code: "+63", name: "菲律宾", name_en: "Philippines", flag: "🇵🇭" },
+  { code: "+95", name: "缅甸", name_en: "Myanmar", flag: "🇲🇲" },
+  { code: "+855", name: "柬埔寨", name_en: "Cambodia", flag: "🇰🇭" },
+  { code: "+856", name: "老挝", name_en: "Laos", flag: "🇱🇦" },
+  { code: "+673", name: "文莱", name_en: "Brunei", flag: "🇧🇳" },
+  { code: "+91", name: "印度", name_en: "India", flag: "🇮🇳" },
+  { code: "+92", name: "巴基斯坦", name_en: "Pakistan", flag: "🇵🇰" },
+  { code: "+880", name: "孟加拉国", name_en: "Bangladesh", flag: "🇧🇩" },
+  { code: "+94", name: "斯里兰卡", name_en: "Sri Lanka", flag: "🇱🇰" },
+  { code: "+977", name: "尼泊尔", name_en: "Nepal", flag: "🇳🇵" },
+  { code: "+971", name: "阿联酋", name_en: "UAE", flag: "🇦🇪" },
+  { code: "+966", name: "沙特阿拉伯", name_en: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "+974", name: "卡塔尔", name_en: "Qatar", flag: "🇶🇦" },
+  { code: "+965", name: "科威特", name_en: "Kuwait", flag: "🇰🇼" },
+  { code: "+973", name: "巴林", name_en: "Bahrain", flag: "🇧🇭" },
+  { code: "+968", name: "阿曼", name_en: "Oman", flag: "🇴🇲" },
+  { code: "+967", name: "也门", name_en: "Yemen", flag: "🇾🇪" },
+  { code: "+962", name: "约旦", name_en: "Jordan", flag: "🇯🇴" },
+  { code: "+961", name: "黎巴嫩", name_en: "Lebanon", flag: "🇱🇧" },
+  { code: "+963", name: "叙利亚", name_en: "Syria", flag: "🇸🇾" },
+  { code: "+964", name: "伊拉克", name_en: "Iraq", flag: "🇮🇶" },
+  { code: "+98", name: "伊朗", name_en: "Iran", flag: "🇮🇷" },
+  { code: "+90", name: "土耳其", name_en: "Turkey", flag: "🇹🇷" },
+  { code: "+972", name: "以色列", name_en: "Israel", flag: "🇮🇱" },
+  { code: "+970", name: "巴勒斯坦", name_en: "Palestine", flag: "🇵🇸" },
+  { code: "+20", name: "埃及", name_en: "Egypt", flag: "🇪🇬" },
+  { code: "+212", name: "摩洛哥", name_en: "Morocco", flag: "🇲🇦" },
+  { code: "+213", name: "阿尔及利亚", name_en: "Algeria", flag: "🇩🇿" },
+  { code: "+216", name: "突尼斯", name_en: "Tunisia", flag: "🇹🇳" },
+  { code: "+218", name: "利比亚", name_en: "Libya", flag: "🇱🇾" },
+  { code: "+249", name: "苏丹", name_en: "Sudan", flag: "🇸🇩" },
+  { code: "+234", name: "尼日利亚", name_en: "Nigeria", flag: "🇳🇬" },
+  { code: "+27", name: "南非", name_en: "South Africa", flag: "🇿🇦" },
+  { code: "+254", name: "肯尼亚", name_en: "Kenya", flag: "🇰🇪" },
+  { code: "+233", name: "加纳", name_en: "Ghana", flag: "🇬🇭" },
+  { code: "+251", name: "埃塞俄比亚", name_en: "Ethiopia", flag: "🇪🇹" },
+  { code: "+255", name: "坦桑尼亚", name_en: "Tanzania", flag: "🇹🇿" },
+  { code: "+256", name: "乌干达", name_en: "Uganda", flag: "🇺🇬" },
+  { code: "+260", name: "赞比亚", name_en: "Zambia", flag: "🇿🇲" },
+  { code: "+263", name: "津巴布韦", name_en: "Zimbabwe", flag: "🇿🇼" },
+  { code: "+237", name: "喀麦隆", name_en: "Cameroon", flag: "🇨🇲" },
+  { code: "+225", name: "科特迪瓦", name_en: "Ivory Coast", flag: "🇨🇮" },
+  { code: "+221", name: "塞内加尔", name_en: "Senegal", flag: "🇸🇳" },
+  { code: "+243", name: "刚果(金)", name_en: "DR Congo", flag: "🇨🇩" },
+  { code: "+244", name: "安哥拉", name_en: "Angola", flag: "🇦🇴" },
+  { code: "+258", name: "莫桑比克", name_en: "Mozambique", flag: "🇲🇿" },
+  { code: "+261", name: "马达加斯加", name_en: "Madagascar", flag: "🇲🇬" },
+  { code: "+49", name: "德国", name_en: "Germany", flag: "🇩🇪" },
+  { code: "+33", name: "法国", name_en: "France", flag: "🇫🇷" },
+  { code: "+34", name: "西班牙", name_en: "Spain", flag: "🇪🇸" },
+  { code: "+39", name: "意大利", name_en: "Italy", flag: "🇮🇹" },
+  { code: "+31", name: "荷兰", name_en: "Netherlands", flag: "🇳🇱" },
+  { code: "+32", name: "比利时", name_en: "Belgium", flag: "🇧🇪" },
+  { code: "+41", name: "瑞士", name_en: "Switzerland", flag: "🇨🇭" },
+  { code: "+43", name: "奥地利", name_en: "Austria", flag: "🇦🇹" },
+  { code: "+46", name: "瑞典", name_en: "Sweden", flag: "🇸🇪" },
+  { code: "+47", name: "挪威", name_en: "Norway", flag: "🇳🇴" },
+  { code: "+45", name: "丹麦", name_en: "Denmark", flag: "🇩🇰" },
+  { code: "+358", name: "芬兰", name_en: "Finland", flag: "🇫🇮" },
+  { code: "+351", name: "葡萄牙", name_en: "Portugal", flag: "🇵🇹" },
+  { code: "+30", name: "希腊", name_en: "Greece", flag: "🇬🇷" },
+  { code: "+48", name: "波兰", name_en: "Poland", flag: "🇵🇱" },
+  { code: "+420", name: "捷克", name_en: "Czech Republic", flag: "🇨🇿" },
+  { code: "+36", name: "匈牙利", name_en: "Hungary", flag: "🇭🇺" },
+  { code: "+40", name: "罗马尼亚", name_en: "Romania", flag: "🇷🇴" },
+  { code: "+380", name: "乌克兰", name_en: "Ukraine", flag: "🇺🇦" },
+  { code: "+7", name: "俄罗斯", name_en: "Russia", flag: "🇷🇺" },
+  { code: "+375", name: "白俄罗斯", name_en: "Belarus", flag: "🇧🇾" },
+  { code: "+371", name: "拉脱维亚", name_en: "Latvia", flag: "🇱🇻" },
+  { code: "+370", name: "立陶宛", name_en: "Lithuania", flag: "🇱🇹" },
+  { code: "+372", name: "爱沙尼亚", name_en: "Estonia", flag: "🇪🇪" },
+  { code: "+381", name: "塞尔维亚", name_en: "Serbia", flag: "🇷🇸" },
+  { code: "+385", name: "克罗地亚", name_en: "Croatia", flag: "🇭🇷" },
+  { code: "+421", name: "斯洛伐克", name_en: "Slovakia", flag: "🇸🇰" },
+  { code: "+386", name: "斯洛文尼亚", name_en: "Slovenia", flag: "🇸🇮" },
+  { code: "+359", name: "保加利亚", name_en: "Bulgaria", flag: "🇧🇬" },
+  { code: "+55", name: "巴西", name_en: "Brazil", flag: "🇧🇷" },
+  { code: "+52", name: "墨西哥", name_en: "Mexico", flag: "🇲🇽" },
+  { code: "+54", name: "阿根廷", name_en: "Argentina", flag: "🇦🇷" },
+  { code: "+56", name: "智利", name_en: "Chile", flag: "🇨🇱" },
+  { code: "+57", name: "哥伦比亚", name_en: "Colombia", flag: "🇨🇴" },
+  { code: "+51", name: "秘鲁", name_en: "Peru", flag: "🇵🇪" },
+  { code: "+58", name: "委内瑞拉", name_en: "Venezuela", flag: "🇻🇪" },
+  { code: "+593", name: "厄瓜多尔", name_en: "Ecuador", flag: "🇪🇨" },
+  { code: "+598", name: "乌拉圭", name_en: "Uruguay", flag: "🇺🇾" },
+  { code: "+595", name: "巴拉圭", name_en: "Paraguay", flag: "🇵🇾" },
+  { code: "+591", name: "玻利维亚", name_en: "Bolivia", flag: "🇧🇴" },
+  { code: "+507", name: "巴拿马", name_en: "Panama", flag: "🇵🇦" },
+  { code: "+506", name: "哥斯达黎加", name_en: "Costa Rica", flag: "🇨🇷" },
+  { code: "+503", name: "萨尔瓦多", name_en: "El Salvador", flag: "🇸🇻" },
+  { code: "+502", name: "危地马拉", name_en: "Guatemala", flag: "🇬🇹" },
+  { code: "+504", name: "洪都拉斯", name_en: "Honduras", flag: "🇭🇳" },
+  { code: "+505", name: "尼加拉瓜", name_en: "Nicaragua", flag: "🇳🇮" },
+  { code: "+509", name: "海地", name_en: "Haiti", flag: "🇭🇹" },
+  { code: "+53", name: "古巴", name_en: "Cuba", flag: "🇨🇺" },
+  { code: "+1809", name: "多米尼加", name_en: "Dominican Republic", flag: "🇩🇴" },
+  { code: "+1876", name: "牙买加", name_en: "Jamaica", flag: "🇯🇲" },
+  { code: "+1787", name: "波多黎各", name_en: "Puerto Rico", flag: "🇵🇷" },
+  { code: "+1242", name: "巴哈马", name_en: "Bahamas", flag: "🇧🇸" },
+  { code: "+1246", name: "巴巴多斯", name_en: "Barbados", flag: "🇧🇧" },
+  { code: "+1268", name: "安提瓜和巴布达", name_en: "Antigua and Barbuda", flag: "🇦🇬" },
+  { code: "+1868", name: "特立尼达和多巴哥", name_en: "Trinidad and Tobago", flag: "🇹🇹" }
+];
+const selectedCountry = ref(phoneCountries[0]);
+const phoneLocal = ref('');
+const phoneCountryOpen = ref(false);
+const phoneCountrySearch = ref('');
+const filteredPhoneCountries = computed(() => {
+  const kw = phoneCountrySearch.value.trim().toLowerCase();
+  if (!kw) return phoneCountries;
+  return phoneCountries.filter(c =>
+    c.name.toLowerCase().includes(kw) || c.name_en.toLowerCase().includes(kw) || c.code.includes(kw.replace('+', ''))
+  );
+});
+function selectPhoneCountry(c) { selectedCountry.value = c; phoneCountryOpen.value = false; phoneCountrySearch.value = ''; }
+const pairingDisplayPhone = computed(() => {
+  const p = chatStore.pairingCode?.phone || '';
+  return p ? '+' + String(p).replace(/[^0-9]/g, '') : '';
+});
+const pairingCodeFormatted = computed(() => {
+  const code = chatStore.pairingCode?.code || '';
+  return code.replace(/[^A-Za-z0-9]/g, '').toUpperCase().split('');
+});
+async function handleLoginClick() {
+  // Step 1: 获取 WA 账号 ID
+  let accId = null;
+  try {
+    if (chatStore.currentWaAccountId) {
+      accId = chatStore.currentWaAccountId;
+    } else {
+      const { data: accounts } = await api.get('/accounts');
+      const waAccount = accounts.find(a => a.platform === 'whatsapp');
+      if (waAccount) accId = waAccount.id;
+    }
+  } catch(e) {
+    console.warn('Failed to fetch accounts:', e);
+  }
+
+  // Step 2: 检查代理配置状态
+  let proxyConfigured = false;
+  if (accId) {
+    try {
+      const { data } = await api.get('/accounts/wa/' + accId + '/proxy');
+      proxyConfigured = data.proxy && data.proxy.enabled !== false && data.proxy.proxyServer;
+    } catch(e) {
+      console.warn('Proxy check failed:', e);
+    }
+  }
+
+  // Step 3: 未配置代理时弹窗提示，选否则打开代理面板（非阻塞，QR流程正常继续）
+  if (!proxyConfigured) {
+    try {
+      const _proxyTipPromise = ElMessageBox.confirm(
+        "\u26a0\ufe0f 尚未配置代理IP，建议使用静态住宅独享IP以降低封号风险。\n\n点击\"取消\"打开代理设置面板，点击\"确定\"跳过直接登录。",
+        '提示',
+        { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消', center: true, customClass: 'proxy-tip-modal' }
+      );
+      // 首帧即定位到 WhatsApp 登录图标正下方，消除"先居中再跳变"的阴影闪现
+      const _positionProxyTip = () => {
+        const _tipModal = document.querySelector('.proxy-tip-modal');
+        const _waLogo = document.querySelector('.wa-welcome-logo');
+        const _tipOverlay = document.querySelector('.el-overlay-message-box');
+        if (_tipModal && _waLogo && _tipOverlay) {
+          const _lr = _waLogo.getBoundingClientRect();
+          const _mw = _tipModal.offsetWidth || 400;
+          const _mh = _tipModal.offsetHeight || 200;
+          let _left = _lr.x + _lr.width / 2 - _mw / 2;
+          let _top = _lr.bottom + 30;
+          if (_left < 16) _left = 16;
+          if (_left + _mw > window.innerWidth - 16) _left = window.innerWidth - _mw - 16;
+          if (_top + _mh > window.innerHeight - 16) _top = window.innerHeight - _mh - 16;
+          if (_top < 16) _top = 16;
+          _tipOverlay.style.setProperty('padding', '0', 'important');
+          _tipModal.style.setProperty('margin', '0', 'important');
+          _tipModal.style.setProperty('margin-left', _left + 'px', 'important');
+          _tipModal.style.setProperty('margin-top', _top + 'px', 'important');
+          _tipModal.style.setProperty('margin-right', 'auto', 'important');
+          _tipModal.style.setProperty('margin-bottom', 'auto', 'important');
+        }
+      };
+      // 弹窗 DOM 由 ElMessageBox 同步创建，requestAnimationFrame 保证首帧绘制前完成定位
+      requestAnimationFrame(() => {
+        _positionProxyTip();
+        if (!document.querySelector('.proxy-tip-modal')) {
+          setTimeout(_positionProxyTip, 50);
+        }
+      });
+      const shouldContinue = await _proxyTipPromise;
+      if (!shouldContinue) {
+        window.dispatchEvent(new CustomEvent('open-proxy-panel'));
+        return;
+      }
+    } catch(e) {
+      // 用户点击取消或关闭弹窗 -> 打开代理面板
+      window.dispatchEvent(new CustomEvent('open-proxy-panel'));
+      return;
+    }
+  }
+
+  // Step 4: 进入扫码登录
+  qrViewVisible.value = true;
+  startingQr.value = true;
+  chatStore.requestQR(chatStore.currentWaAccountId);
+}
+
 function onPhoneLoginClick() { phoneViewVisible.value = true; qrViewVisible.value = false; }
 function cancelPairing() { phoneViewVisible.value = false; qrViewVisible.value = true; chatStore.clearPairing(); }
 async function submitPairing() {
-  if (!phoneInput.value.trim()) return;
-  await chatStore.requestPairingCode(phoneInput.value.trim());
+  if (!phoneLocal.value.trim()) return;
+  const cc = selectedCountry.value.code.replace(/[^0-9]/g, '');
+  const local = phoneLocal.value.replace(/[^0-9]/g, '');
+  if (!local) return;
+  await chatStore.requestPairingCode(cc + local);
 }
 
 function resetQrCountdown() {
@@ -1900,6 +2276,170 @@ async function openProfile() {
   }
 }
 function closeProfile() { profileOpen.value = false; profileEditing.value = false; }
+
+// ── 📁 文档储存（2026-08-31 单证存档，按租户100MB免费+超出4积分/MB） ──
+const docPanelOpen = ref(false);
+const docList = ref([]);
+const docUsage = ref(null);
+const docLoading = ref(false);
+const docUploading = ref(false);
+const docFileInput = ref(null);
+const docAccept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf,application/msword,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function formatDocSize(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+function formatDocTime(t) {
+  if (!t) return '';
+  const d = new Date(t);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function loadDocUsage() {
+  try {
+    const { data } = await api.get('/doc-archive/usage');
+    docUsage.value = data.data;
+  } catch (e) {
+    console.error('loadDocUsage failed:', e);
+  }
+}
+
+async function loadDocList() {
+  if (!chatStore.activeConversation?.jid) return;
+  docLoading.value = true;
+  try {
+    const jid = encodeURIComponent(chatStore.activeConversation.jid);
+    const { data } = await api.get('/doc-archive/list?jid=' + jid);
+    docList.value = data.data || [];
+  } catch (e) {
+    console.error('loadDocList failed:', e);
+    ElMessage.error('获取单证列表失败');
+  } finally {
+    docLoading.value = false;
+  }
+}
+
+function openDocPanel() {
+  if (!chatStore.activeConversation?.jid) {
+    ElMessage.warning('请先选择一个客户会话');
+    return;
+  }
+  docPanelOpen.value = true;
+  loadDocUsage();
+  loadDocList();
+}
+function closeDocPanel() { docPanelOpen.value = false; }
+
+function triggerDocUpload() {
+  if (docFileInput.value) docFileInput.value.click();
+}
+
+async function onDocFileChosen(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!chatStore.activeConversation?.jid) {
+    ElMessage.warning('请先选择一个客户会话');
+    return;
+  }
+  // 1) 预检：算本次扣分
+  let pre;
+  try {
+    const { data } = await api.post('/doc-archive/precheck', { size: file.size });
+    pre = data.data;
+  } catch (err) {
+    console.error('precheck failed:', err);
+    ElMessage.error('预检失败，请稍后重试');
+    return;
+  }
+  const sizeTxt = formatDocSize(file.size) || (pre.sizeMB + ' MB');
+  // 2) 弹确认框，明明白白
+  let msg;
+  if (pre.costCredits === 0) {
+    msg = `文件「${file.name}」(${sizeTxt})\n\n租户已用 ${pre.usedMB} MB / 免费 ${pre.freeQuotaMB} MB，本次在免费额度内，不扣积分。\n\n确认上传存档？`;
+  } else if (pre.sufficient) {
+    msg = `文件「${file.name}」(${sizeTxt})\n\n租户已用 ${pre.usedMB} MB / 免费 ${pre.freeQuotaMB} MB\n本次将超出免费额度，扣除 <b>${pre.costCredits}</b> 积分（当前余额 ${pre.balance} 分）。\n\n确认上传存档？`;
+  } else {
+    msg = `文件「${file.name}」(${sizeTxt})\n\n本次将超出免费额度，需扣除 ${pre.costCredits} 积分，但当前余额不足（${pre.balance} 分）。`;
+  }
+  let ok = false;
+  try {
+    if (pre.sufficient) {
+      await ElMessageBox.confirm(msg, '📁 文档储存确认', { confirmButtonText: '确认上传', cancelButtonText: '取消', type: 'warning', dangerouslyUseHTMLString: true });
+      ok = true;
+    } else {
+      await ElMessageBox.confirm(msg + '\n\n是否前往充值？', '积分不足', { confirmButtonText: '去充值', cancelButtonText: '取消', type: 'warning', dangerouslyUseHTMLString: true });
+      window.location.href = '/credits';
+      return;
+    }
+  } catch (cancel) { return; }
+  if (!ok) return;
+  // 3) 上传
+  docUploading.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('jid', chatStore.activeConversation.jid);
+    fd.append('platform', chatStore.activeConversation.platform || 'whatsapp');
+    fd.append('file', file);
+    const { data } = await api.post('/doc-archive/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const res = data.data;
+    if (res.costCredits > 0) {
+      ElMessage.success(`上传成功，本次扣除 ${res.costCredits} 积分`);
+    } else {
+      ElMessage.success('上传成功（免费额度内）');
+    }
+    loadDocList();
+    loadDocUsage();
+  } catch (err) {
+    console.error('upload doc failed:', err);
+    const code = err.response?.data?.code;
+    if (code === 'INSUFFICIENT_CREDITS') {
+      ElMessage.error(err.response?.data?.error || '积分不足');
+    } else {
+      ElMessage.error('上传失败：' + (err.response?.data?.error || err.message));
+    }
+  } finally {
+    docUploading.value = false;
+  }
+}
+
+async function downloadDoc(item) {
+  try {
+    const resp = await api.get('/doc-archive/download/' + item.id, { responseType: 'blob' });
+    const blob = resp.data;
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = item.fileName || ('doc_' + item.id);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('downloadDoc failed:', e);
+    ElMessage.error('下载失败');
+  }
+}
+
+async function deleteDoc(item) {
+  try {
+    await ElMessageBox.confirm(`确认删除「${item.fileName}」？删除后空间将释放（不退还积分）。`, '删除单证', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' });
+  } catch (cancel) { return; }
+  try {
+    await api.delete('/doc-archive/' + item.id);
+    ElMessage.success('已删除');
+    loadDocList();
+    loadDocUsage();
+  } catch (e) {
+    console.error('deleteDoc failed:', e);
+    ElMessage.error('删除失败');
+  }
+}
+
 async function saveProfile() {
   if (!chatStore.activeConversation || !chatStore.activeConversation.jid) {
     alert('请先选择一个客户会话');
@@ -2037,7 +2577,8 @@ function goBack() { emit('go-back'); }
 
 function isDataUrl(s) { return typeof s === 'string' && (s.startsWith('data:') || s.startsWith('http')); }
 
-function onOpenQrEvent() { if (!chatStore.isConnected) startQrLogin(); }
+function onOpenQrEvent(e) { if (chatStore.currentWaAccountId === null || !chatStore.isConnected) startQrLogin(e?.detail?.accountId); }
+function onShowIntroEvent() { qrViewVisible.value = false; phoneViewVisible.value = false; qrError.value = null; qrExpired.value = false; if (qrTimer) { clearInterval(qrTimer); qrTimer = null; } }
 function onMhOpenProfileEvent() {
   if (chatStore.activeConversation) {
     profileOpen.value = true;
@@ -2048,6 +2589,7 @@ function onMhOpenProfileEvent() {
 onMounted(async () => {
   scrollToBottom();
   window.addEventListener('wa:open-qr', onOpenQrEvent);
+  window.addEventListener('wa:show-intro', onShowIntroEvent);
   window.addEventListener('wa:open-profile', onMhOpenProfileEvent);
   window.addEventListener('keydown', onPdfKeydown);
   updateMobileView();
@@ -2056,6 +2598,17 @@ onMounted(async () => {
   // 监听 socket 入站消息（兜底，watch currentMessages 之外的快速通道）
   try {
     const sock = useSocket();
+    if (sock && !autoStepSocketHandler) {
+      autoStepSocketHandler = (data) => {
+        if (!data || !data.detail) return;
+        const jid = data.jid || chatStore.activeJid;
+        if (!jid) return;
+        if (!autoStepsByJid[jid]) autoStepsByJid[jid] = [];
+        autoStepsByJid[jid].push({ step: data.step, detail: data.detail, done: data.step === 'sent' || data.step === 'need_human' || data.step === 'timeout_cancel', ts: data.ts });
+        nextTick(() => { if (msgArea.value) msgArea.value.scrollTop = msgArea.value.scrollHeight; });
+      };
+      sock.on('whatsapp:auto-step', autoStepSocketHandler);
+    }
     if (sock && !aiSuggestSocketHandler) {
       aiSuggestSocketHandler = (data) => {
         if (!isMobileView.value) return;
@@ -2117,12 +2670,7 @@ onMounted(async () => {
   };
   applyJump();
 
-  // 页面加载后自动触发QR连接，无需手动点按钮
-  if (!chatStore.isConnected) {
-    console.log('[ChatView] Auto-starting QR login...');
-    qrViewVisible.value = true;
-    chatStore.requestQR().catch(e => console.error('Auto QR failed:', e));
-  } else {
+  if (chatStore.isConnected) {
     // 已连接：从其他页面导航过来时 socket 早就 connected，
     // whatsapp:status 不会重复触发，需主动拉一次会话列表
     // 已连接：拉取会话列表（不自动选中，让用户自己选择）
@@ -2141,6 +2689,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('wa:open-qr', onOpenQrEvent);
+  window.removeEventListener('wa:show-intro', onShowIntroEvent);
   window.removeEventListener('wa:open-profile', onMhOpenProfileEvent);
   window.removeEventListener('keydown', onPdfKeydown);
   window.removeEventListener('resize', updateMobileView);
@@ -2150,17 +2699,87 @@ onUnmounted(() => {
   try {
     const sock = useSocket();
     if (sock && aiSuggestSocketHandler) sock.off('whatsapp:message', aiSuggestSocketHandler);
+    if (sock && autoStepSocketHandler) sock.off('whatsapp:auto-step', autoStepSocketHandler);
   } catch (_) {}
   aiSuggestSocketHandler = null;
+  autoStepSocketHandler = null;
   if (qrTimer) { clearInterval(qrTimer); qrTimer = null; }
 });
+// ── 发给 Agent（V1.0 F6 沟通页入口） ──
+const ASSIGN_AGENTS = [
+  { type: 'sales-champion', icon: '🚀', name: '外贸销冠', desc: '智能跟单 · 话术 · 成交' },
+  { type: 'background-report', icon: '🔍', name: '客户背调', desc: '背景调查 · 风险评估' },
+  { type: 'customs-agent', icon: '📋', name: '外贸单证', desc: '报关单证 · HS编码' },
+  { type: 'doc-agent', icon: '🏭', name: '工厂对接', desc: '验厂评估 · 生产跟进' },
+  { type: 'freight-agent', icon: '🚢', name: '货代对接', desc: '海运空运 · 报关报检' },
+  { type: 'legal-agent', icon: '⚖️', name: '外贸法务', desc: '合同审查 · 纠纷处理' },
+];
+const assignDialogOpen = ref(false);
+const assignCustomerLoading = ref(false);
+const assignCustomer = ref(null);
+const assignAgentType = ref('sales-champion');
+const assignInstruction = ref('');
+const assigning = ref(false);
+
+async function openAssignDialog() {
+  assignDialogOpen.value = true;
+  assignAgentType.value = 'sales-champion';
+  assignInstruction.value = '';
+  assignCustomer.value = null;
+  const jid = chatStore.activeJid;
+  if (!jid) { return; }
+  assignCustomerLoading.value = true;
+  try {
+    const r = await api.get('/customers/id-by-jid/' + encodeURIComponent(jid));
+    const id = r.data?.id;
+    if (id) {
+      const cd = await api.get('/customers/' + id);
+      assignCustomer.value = cd.data || { id };
+    }
+  } catch (e) {
+    assignCustomer.value = null;
+  } finally { assignCustomerLoading.value = false; }
+}
+async function doAssignFromChat() {
+  if (!assignCustomer.value) return;
+  if (!assignInstruction.value.trim()) { ElMessage.warning('请先填写给 Agent 的跟进指令'); return; }
+  assigning.value = true;
+  try {
+    const { data } = await api.post('/agent/tasks', {
+      agentType: assignAgentType.value,
+      customerIds: [assignCustomer.value.id],
+      instruction: assignInstruction.value.trim() || null,
+      source: 'chat_page'
+    });
+    const r = (data.results || [])[0];
+    if (r && r.status === 'failed') ElMessage.error(r.error || '指派失败');
+    else ElMessage.success(r && r.status === 'exists' ? '该客户已在此 Agent 的指派任务中' : (r && r.status === 'updated' ? '该客户已有指派任务，已更新最新指令' : '指派成功，Agent 对话页即可选择该客户跟进'));
+    assignDialogOpen.value = false;
+    // 指派成功自动跳转到对应 Agent 对话页（客户-Agent 双向指派 V1.0）
+    const agentRouteMap = {
+      'sales-champion': '/sales-champion',
+      'background-report': '/background-report',
+      'customs-agent': '/customs-agent',
+      'doc-agent': '/doc-agent',
+      'freight-agent': '/freight-agent',
+      'legal-agent': '/legal-agent'
+    };
+    const target = (agentRouteMap[assignAgentType.value] || '/sales-champion') + '?assign=1&cid=' + assignCustomer.value.id;
+    router.push(target);
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.error || '指派失败');
+  } finally { assigning.value = false; }
+}
 </script>
 
 <style scoped>
 .conv-page { display: flex; flex-direction: column; height: 100%; background: var(--chat-bg); position: relative; }
 
 /* ── 未连接/扫码/无会话 等页面样式（保持原样） ── */
-.wa-intro { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; color:var(--text-primary); background:var(--panel-bg); border-bottom:6px solid var(--accent); overflow-y:auto; }
+.wa-intro, .wa-welcome-card { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 32px; color:var(--text-primary); background:var(--panel-bg); border-bottom:6px solid var(--accent); overflow-y:auto; }
+.wa-welcome-logo { width:80px; height:80px; margin-bottom:24px; border-radius:16px; }
+.wa-welcome-title { font-size:28px; font-weight:600; color:var(--text-primary); margin:0 0 14px; }
+.wa-welcome-sub { font-size:14px; color:var(--text-secondary); text-align:center; max-width:440px; line-height:1.6; margin:0 0 32px; }
 .wa-intro-art { margin-bottom:28px; opacity:.9; }
 .wa-intro-svg { max-width:303px; width:100%; height:auto; }
 .wa-intro-title { font-size:28px; font-weight:300; color:var(--text-primary); margin:0 0 14px; }
@@ -2177,17 +2796,25 @@ onUnmounted(() => {
 .wa-scan-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--panel-bg); padding:24px; position:relative; }
 .wa-scan-back { position:absolute; top:16px; left:16px; width:36px; height:36px; background:var(--panel-header-bg); border:none; color:var(--text-primary); border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s; }
 .wa-scan-back:hover { background:var(--sidebar-active); }
-.wa-scan-card { display:flex; gap:40px; background:var(--panel-bg); border-radius:4px; padding:48px 56px 40px; max-width:820px; width:100%; align-items:flex-start; }
-.wa-scan-left { flex:1; min-width:0; color:var(--text-primary); }
+.wa-scan-card { display:flex; gap:40px; background:var(--bg-card, #fff); border-radius:4px; padding:48px 56px 40px; max-width:820px; width:100%; align-items:flex-start; color:var(--text-primary); --bg-card:#fff; --text-secondary:#667781; }
+.wa-scan-card * { color: inherit; }
+[data-theme='light'] .wa-scan-card { --bg-card:#fff; --text-primary:#111b21; --text-secondary:#667781; color:#111b21; }
+[data-theme='light'] .wa-scan-card * { color:inherit; }
+html:not([data-theme='light']) .wa-scan-card { --bg-card:#1f2c34; --text-primary:#e9edef; --text-secondary:#8696a0; color:#e9edef; }
+html:not([data-theme='light']) .wa-scan-card * { color:inherit; }
+.wa-scan-left { flex:0 0 380px; color:var(--text-primary, #111b21); }
 .wa-scan-right { flex-shrink:0; display:flex; flex-direction:column; align-items:center; }
-.wa-scan-title { font-size:28px; font-weight:300; color:var(--text-primary); margin:0 0 32px; line-height:1.2; }
+.wa-scan-title { font-size:28px; font-weight:300; color:var(--text-primary, #111b21); margin:0 0 32px; line-height:1.2; }
 .wa-scan-steps { list-style:none; padding:0; margin:0 0 32px; }
 .wa-scan-steps li { display:flex; align-items:flex-start; gap:18px; margin-bottom:20px; font-size:14px; line-height:1.5; color:var(--text-primary); }
-.step-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; background:transparent; border:2px solid var(--text-secondary); color:var(--text-secondary); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+.step-num { flex-shrink:0; width:24px; height:24px; border-radius:50%; background:transparent; border:2px solid var(--text-primary); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; }
+.step-text { color:var(--text-primary); }
 .step-text strong { color:var(--text-primary); font-weight:600; }
-.wa-help-link { display:inline-block; color:var(--accent-info); text-decoration:none; font-size:14px; margin-bottom:28px; }
+.wa-help-link { color:#00a884 !important; display:block; color:var(--accent-info); text-decoration:none; font-size:14px; margin-bottom:16px; }
 .wa-help-link:hover { text-decoration:underline; }
-.wa-stay-logged { display:inline-flex; align-items:center; gap:10px; font-size:14px; color:var(--text-primary); cursor:pointer; margin-bottom:24px; user-select:none; }
+.wa-phone-link-bottom { margin-top:18px; padding-top:0; font-size:14px; color:#25d366; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px; justify-content:center; width:100%; }
+.wa-phone-link-bottom:hover { text-decoration:underline; }
+.wa-stay-logged { display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text-primary); cursor:pointer; margin-bottom:24px; user-select:none; }
 .wa-stay-logged input { display:none; }
 .checkbox-box { width:18px; height:18px; border-radius:3px; border:2px solid var(--text-secondary); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
 .checkbox-box.checked { background:var(--accent); border-color:var(--accent); }
@@ -2195,13 +2822,13 @@ onUnmounted(() => {
 .wa-phone-login:hover { text-decoration:underline; }
 .qr-frame { position:relative; width:264px; height:264px; background:#fff; border-radius:4px; padding:12px; display:flex; align-items:center; justify-content:center; }
 .qr-img { width:240px; height:240px; display:block; }
-.qr-overlay-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:50px; height:50px; background:#fff; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:4px; }
+.qr-overlay-logo { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:60px; height:60px; background:transparent; border-radius:0; display:flex; align-items:center; justify-content:center; padding:0; z-index:2; }
 .corner { position:absolute; width:24px; height:24px; border:4px solid var(--accent); }
 .corner.tl { top:0; left:0; border-right:none; border-bottom:none; border-top-left-radius:4px; }
 .corner.tr { top:0; right:0; border-left:none; border-bottom:none; border-top-right-radius:4px; }
 .corner.bl { bottom:0; left:0; border-right:none; border-top:none; border-bottom-left-radius:4px; }
 .corner.br { bottom:0; right:0; border-left:none; border-top:none; border-bottom-right-radius:4px; }
-.qr-hint-text { margin-top:16px; font-size:12px; color:var(--text-secondary); text-align:center; }
+.qr-hint-text { margin-top:18px; font-size:13px; color:var(--text-secondary); text-align:center; }
 .qr-hint-text strong { color:var(--accent); }
 .qr-loading-box, .qr-expired-box, .qr-error-box { width:264px; height:264px; background:#fff; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center; }
 .qr-loading-spin { width:36px; height:36px; border:3px solid var(--text-primary); border-top-color:var(--accent); border-radius:50%; animation: wa-spin .8s linear infinite; }
@@ -2228,6 +2855,22 @@ onUnmounted(() => {
 .wa-noselect-encrypt { font-size:12px; color:var(--text-secondary); margin:0; }
 
 /* ── ⚡ 首响等待提示 banner ── */
+.auto-step-banner {
+  background: linear-gradient(90deg, rgba(0,168,132,0.18), rgba(0,168,132,0.08));
+  color: #c8e6d8;
+  padding: 8px 12px 8px 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(0,168,132,0.25);
+  flex-wrap: wrap;
+}
+.asb-title { font-weight: 600; color: #00c49a; font-size: 13px; white-space: nowrap; }
+.asb-item { display: inline-flex; align-items: center; gap: 3px; color: #bcd9ca; }
+.asb-ico { font-size: 11px; }
+
 .fr-wait-banner {
   background: linear-gradient(90deg, var(--danger), #b9303f);
   color: #fff;
@@ -2262,13 +2905,14 @@ onUnmounted(() => {
 .fr-wb-text b { font-size: 15px; }
 
 /* ── 对话 Header ── */
-.conv-header { height:56px; background:var(--panel-header-bg); border-bottom:1px solid var(--border-color); display:flex; align-items:center; padding:0 16px; gap:12px; flex-shrink:0; }
+.conv-header { min-height:60px; background:var(--panel-header-bg); border-bottom:1px solid var(--border-color); display:flex; align-items:center; padding:8px 16px; gap:12px; flex-shrink:0; }
 .back-btn { display:none; background:none; border:none; color:var(--text-primary); cursor:pointer; padding:6px; }
 .ch-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; flex-shrink:0; overflow:hidden; }
 .ch-avatar-img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
 .ch-info { flex:1; min-width:0; }
 .ch-name { font-size:15px; font-weight:500; color:var(--text-primary); }
-.ch-status { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:4px; margin-top:1px; }
+.ch-status { font-size:12px; color:var(--text-secondary); display:flex; align-items:center; gap:4px; }
+.ch-status-row { display:flex; align-items:center; gap:8px; margin-top:5px; min-width:0; }
 .online-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); }
 .online-dot.offline { background:var(--text-muted); }
 .ch-actions { display:flex; gap:6px; }
@@ -2291,12 +2935,13 @@ onUnmounted(() => {
   display:flex; flex-direction:column; gap:0;
 }
 .msg.incoming .msg-bubble { background:var(--panel-header-bg); color:var(--text-primary); border-top-left-radius:2px; }
+.msg-bubble.msg-bubble-media { background:transparent !important; box-shadow:none !important; padding:2px 34px 2px 0; border-radius:8px; }
 .msg.outgoing .msg-bubble { background:var(--msg-outgoing); color:var(--text-primary); border-top-right-radius:2px; }
 .msg-text { padding-right:0; white-space:pre-wrap; word-break:break-word; font-size:15px; }
 .msg-translation {
   margin-top:6px; padding-top:6px; padding-bottom:2px;
   border-top:1px dashed rgba(255,255,255,0.2);
-  font-size:14px; color:#a8b4ba; font-style:normal; line-height:1.4;
+  font-size:14px; color:var(--text-primary); font-style:normal; line-height:1.4;
   display:flex; align-items:center; gap:8px;
 }
 .msg-translation::after { content: none; }
@@ -2532,6 +3177,22 @@ onUnmounted(() => {
   display:flex; align-items:center; justify-content:center;
   font-size:16px; flex-shrink:0; color:#fff;
 }
+/* 日间模式附件菜单 */
+[data-theme='light'] .attach-menu {
+  background:#fff;
+  border-color:#e0e0e0;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+}
+[data-theme='light'] .attach-arrow {
+  background:#fff;
+  border-color:#e0e0e0;
+}
+[data-theme='light'] .attach-item {
+  color:#111b21;
+}
+[data-theme='light'] .attach-item:hover {
+  background:#f0f2f5;
+}
 
 /* ── 附件预览条 ── */
 .media-preview-bar {
@@ -2581,8 +3242,8 @@ onUnmounted(() => {
 /* ── 消息气泡中的媒体 ── */
 .msg-media-img { max-width:280px; max-height:280px; border-radius:6px; overflow:hidden; margin-right:50px; margin-bottom:4px; }
 .msg-media-img img { max-width:100%; max-height:280px; display:block; border-radius:6px; object-fit:cover; cursor:pointer; }
-.msg-media-video { max-width:320px; margin-right:50px; margin-bottom:4px; border-radius:8px; overflow:hidden; background:#000; }
-.msg-video-player { width:100%; max-height:420px; display:block; border-radius:8px; background:#000; }
+.msg-media-video { max-width:320px; margin-right:50px; margin-bottom:4px; border-radius:8px; overflow:hidden; }
+.msg-video-player { width:100%; max-height:420px; display:block; border-radius:8px; }
 .msg-video-placeholder { padding:28px 18px; color:#fff; text-align:center; font-size:14px; background:var(--panel-header-bg); border-radius:8px; }
 .msg-media-doc {
   display:flex; align-items:center; gap:10px;
@@ -2801,6 +3462,31 @@ onUnmounted(() => {
   .profile-panel{max-width:100%}
 }
 
+/* ── 📁 文档储存抽屉（2026-08-31） ── */
+.doc-panel{max-width:420px}
+.doc-usage{padding:14px 16px;background:var(--panel-bg);border-bottom:1px solid var(--border-color)}
+.doc-usage-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--text-secondary);margin-bottom:8px}
+.doc-usage-balance{color:var(--accent);font-size:12px}
+.doc-usage-bar{height:6px;border-radius:6px;background:var(--sidebar-active);overflow:hidden}
+.doc-usage-fill{height:100%;background:var(--accent);border-radius:6px;transition:width .3s}
+.doc-usage-tip{font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5}
+.doc-upload-area{padding:14px 16px;background:var(--panel-bg);border-bottom:1px solid var(--border-color)}
+.doc-upload-btn{width:100%;background:var(--accent);color:var(--accent-text);border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.doc-upload-btn:hover{background:var(--accent-hover)}
+.doc-upload-btn:disabled{opacity:.5;cursor:not-allowed}
+.doc-list{background:var(--panel-bg);padding:8px 0}
+.doc-empty{padding:32px 16px;text-align:center;color:var(--text-muted);font-size:13px}
+.doc-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border-color);transition:background .15s}
+.doc-item:hover{background:var(--sidebar-active)}
+.doc-item-icon{font-size:22px;flex-shrink:0}
+.doc-item-info{flex:1;min-width:0}
+.doc-item-name{font-size:14px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc-item-meta{font-size:12px;color:var(--text-muted);margin-top:2px}
+.doc-item-actions{display:flex;gap:4px;flex-shrink:0}
+.doc-act-btn{background:transparent;border:none;color:var(--text-secondary);cursor:pointer;padding:6px;border-radius:50%;font-size:15px;display:flex;align-items:center;justify-content:center}
+.doc-act-btn:hover{background:var(--panel-header-bg);color:var(--text-primary)}
+.doc-act-del:hover{color:#e74c3c}
+
 .ch-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ch-cul-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -2982,13 +3668,20 @@ onUnmounted(() => {
 }
 
 /* ═══ Phase 4: Conversation Manager Styles ═══ */
+.ch-assign-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 0;
+}
 .ch-conv-status {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 2px;
+  margin-top: 6px;
   cursor: pointer;
-  padding: 2px 0;
+  padding: 3px 0;
 }
 .ch-conv-progress {
   display: flex;
@@ -3473,4 +4166,92 @@ onUnmounted(() => {
   color: white !important;
 }
 
-    </style>
+    .assign-to-agent-btn { border-color: rgba(37,211,102,.5); color: #25d366; }
+.assign-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.assign-dialog { width: 100%; max-width: 440px; background: #111b21; border-radius: 14px; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+.assign-dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; font-weight: 600; font-size: 15px; color: #e9edef; border-bottom: 1px solid rgba(255,255,255,.08); }
+.assign-dialog-close { background: none; border: none; color: #8696a0; font-size: 16px; cursor: pointer; }
+.assign-dialog-body { padding: 14px 18px; }
+.assign-loading { color: #8696a0; font-size: 13px; padding: 10px 0; }
+.assign-cust-info { display: flex; align-items: center; gap: 8px; background: rgba(37,211,102,.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; color: #e9edef; }
+.assign-cust-info.warn { background: rgba(245,158,11,.12); color: #f5c34d; }
+.aci-icon { font-size: 15px; }
+.aci-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assign-agents { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.assign-agent-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.1); cursor: pointer; transition: all .15s; background: rgba(255,255,255,.03); }
+.assign-agent-card:hover { border-color: #25d366; }
+.assign-agent-card.active { border-color: #25d366; background: rgba(37,211,102,.1); }
+.aa-icon { font-size: 20px; }
+.aa-info { flex: 1; min-width: 0; }
+.aa-name { font-size: 13px; font-weight: 600; color: #e9edef; }
+.aa-desc { font-size: 11px; color: #8696a0; }
+.aa-check { color: #25d366; font-weight: 700; font-size: 16px; }
+.assign-label { font-size: 12px; color: #8696a0; margin-bottom: 6px; }
+.assign-required { color: #f5c34d; font-weight: 600; }
+.assign-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: #e9edef; font-size: 13px; resize: vertical; }
+.assign-dialog-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,.08); }
+.assign-dialog-btn { padding: 7px 16px; border-radius: 8px; border: none; font-size: 13px; cursor: pointer; font-weight: 500; }
+.assign-dialog-btn.cancel { background: rgba(255,255,255,.08); color: #e9edef; }
+.assign-dialog-btn.primary { background: #25d366; color: #0b141a; }
+.assign-dialog-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ===== 手机号登录·国家选择与配对码（对齐 WhatsApp Web 官方样式）===== */
+.wa-phone-country-wrap { position:relative; }
+.wa-phone-country { display:flex; align-items:center; gap:10px; background:#111b21; border:1px solid #374248; border-radius:8px; padding:11px 14px; cursor:pointer; color:#e9edef; }
+.wa-phone-country:hover { background:#202c33; }
+.wa-phone-country-flag { font-size:22px; line-height:1; }
+.wa-phone-country-name { font-size:15px; font-weight:500; }
+.wa-country-backdrop { position:fixed; inset:0; z-index:990; }
+.wa-country-dialog { position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:1000; background:#111b21; border:1px solid #374248; border-radius:10px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+.wa-country-search { display:flex; align-items:center; gap:8px; margin:8px; padding:8px 12px; border:2px solid #22bb55; border-radius:8px; color:#22bb55; }
+.wa-country-search input { flex:1; background:transparent; border:none; color:#e9edef; font-size:14px; outline:none; }
+.wa-country-search input::placeholder { color:#8696a0; }
+.wa-country-list { overflow-y:auto; max-height:236px; }
+.wa-country-item { display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; }
+.wa-country-item:hover { background:#202c33; }
+.wa-country-item.active { background:#202c33; }
+.wa-country-item-flag { font-size:20px; width:26px; flex:0 0 auto; text-align:center; }
+.wa-country-item-names { flex:1; display:flex; flex-direction:column; min-width:0; }
+.wa-country-item-name { font-size:14px; color:#e9edef; }
+.wa-country-item-en { font-size:12px; color:#8696a0; }
+.wa-country-item-code { font-size:14px; color:#8696a0; margin-left:8px; flex:0 0 auto; }
+.wa-country-item-check { flex:0 0 auto; }
+.wa-phone-field { display:flex; align-items:center; background:#111b21; border:1px solid #374248; border-radius:8px; margin-top:12px; overflow:hidden; }
+.wa-phone-field:focus-within { border-color:#22bb55; }
+.wa-phone-prefix { padding:11px 0 11px 14px; color:#e9edef; font-size:15px; flex:0 0 auto; }
+.wa-phone-field-divider { width:1px; height:20px; background:#374248; margin:0 10px; flex:0 0 auto; }
+.wa-phone-input { flex:1; background:transparent; border:none; color:#e9edef; font-size:15px; padding:11px 14px 11px 0; outline:none; min-width:0; }
+.wa-phone-input::placeholder { color:#8696a0; }
+.wa-phone-submit { background:#22bb55; color:#fff; border:none; border-radius:24px; padding:11px 30px; font-size:15px; font-weight:600; cursor:pointer; }
+.wa-phone-submit:hover:not(:disabled) { background:#1fa94c; }
+.wa-phone-submit:disabled { background:#2a3942; color:#7d8a93; cursor:not-allowed; box-shadow:inset 0 0 0 1px #374248; opacity:.9; }
+.wa-pair-title { font-size:20px; font-weight:500; margin:0 0 6px; color:#e9edef; }
+.wa-pair-sub { font-size:13px; color:#8696a0; margin:0 0 20px; }
+.wa-pair-sub strong { color:#e9edef; }
+.wa-pair-edit { color:#25d366; cursor:pointer; font-weight:500; }
+.wa-pair-code-box { display:flex; align-items:center; gap:6px; justify-content:center; background:#111b21; border:2px dashed #25d366; border-radius:12px; padding:24px; margin:0 auto 20px; user-select:all; }
+.wa-pair-char { font-family:'Courier New',monospace; font-size:34px; font-weight:700; color:#25d366; letter-spacing:2px; }
+.wa-pair-dash { font-family:'Courier New',monospace; font-size:30px; font-weight:700; color:#25d366; margin:0 6px; }
+.wa-pair-steps { margin:0; padding-left:20px; color:#e9edef; font-size:13px; line-height:1.9; }
+.wa-pair-steps li { margin-bottom:2px; }
+
+/* ==== WA官方样式颜色加固：固定深色底控件内文字不被 .wa-scan-card *{color:inherit} 覆盖 ==== */
+.wa-phone-country { color:#e9edef !important; }
+.wa-phone-country-name { color:#e9edef !important; }
+.wa-country-search { color:#22bb55 !important; }
+.wa-country-search input { color:#e9edef !important; }
+.wa-country-search input::placeholder { color:#8696a0 !important; }
+.wa-country-item-name { color:#e9edef !important; }
+.wa-country-item-en { color:#8696a0 !important; }
+.wa-country-item-code { color:#8696a0 !important; }
+.wa-phone-prefix { color:#e9edef !important; }
+.wa-phone-input { color:#e9edef !important; }
+.wa-phone-input::placeholder { color:#8696a0 !important; }
+.wa-phone-submit { color:#fff !important; }
+.wa-phone-submit:disabled { color:#8696a0 !important; }
+.wa-phone-link-bottom { color:#22bb55 !important; }
+.wa-pair-edit { color:#25d366 !important; }
+.wa-pair-char { color:#25d366 !important; }
+.wa-pair-dash { color:#25d366 !important; }
+
+</style>

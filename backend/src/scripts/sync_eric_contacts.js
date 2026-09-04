@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 const EVO_API_URL = "http://127.0.0.1:8081";
-const EVO_API_KEY = "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
+const EVO_API_KEY = process.env.EVOLUTION_API_KEY;
 const prisma = new PrismaClient();
 
 async function sync() {

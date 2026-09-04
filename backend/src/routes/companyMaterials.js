@@ -9,12 +9,18 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authMiddleware } from '../middleware/auth.js';
+import { ensureDefaultCategories } from './companyCategories.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const router = Router();
 const prisma = new PrismaClient();
+
+function getAccountId(req) {
+  const b = req.body || {};
+  return parseInt(req.accountId) || parseInt(req.query.accountId) || parseInt(b.accountId) || 1;
+}
 
 // Upload dir: /opt/whatsapp-crm/backend/uploads/company/YYYY-MM
 const UPLOAD_BASE = path.resolve(__dirname, '../../uploads/company');
@@ -75,127 +81,57 @@ function serialize(m) {
 }
 
 // ─── Seed default materials on first call ───
-const DEFAULT_MATERIALS = [
+const SAMPLE_MATERIALS = [
   {
-    category: 'company', title: 'Company Profile (Brief)', lang: 'en', type: 'text',
-    content: `JZJ Glass (金至晶特种玻璃) — Professional Glass Manufacturer Since 2013
+    category: 'company', title: '公司介绍（样例）', lang: 'zh', type: 'text',
+    content: `公司名称：
+成立时间：
+主营业务：
+核心优势：
+主要认证：
+产能/规模：
 
-Headquartered in Shenzhen with a second production base in Changzhou, China, JZJ Glass is a leading manufacturer of high-performance architectural and industrial glass products.
-
-Our core products:
-• Tempered Glass (flat / curved / heat-soaked)
-• Laminated Glass (PVB / SGP / acoustic)
-• Insulated Glass Units (double / triple glazed, warm-edge)
-• Low-E Coated Glass, Fire-rated Glass, Bullet-resistant Glass
-• Custom-cut glass for facades, partitions, shower enclosures, balustrades & furniture
-
-Why choose us:
-✓ 10+ years of manufacturing & export experience
-✓ Certified to CE, CCC, ISO 9001, SGCC, AS/NZS 2208
-✓ Dual production bases — combined monthly capacity over 80,000 m²
-✓ Strict QC — in-house tempering furnace, autoclave & heat-soak test
-✓ Export to 60+ countries across Europe, North America, Middle East, Southeast Asia & Oceania
-✓ OEM/ODM welcome; custom sizes, thicknesses, edgework & logos available
-
-We welcome inquiries and factory visits. Contact us for a free quote today.`
+（请替换为贵司真实介绍）`
   },
   {
-    category: 'company', title: '公司介绍（中文简版）', lang: 'zh', type: 'text',
-    content: `金至晶特种玻璃（JZJ Glass）—— 始于2013年的专业玻璃制造商
+    category: 'product', title: '产品目录（样例）', lang: 'zh', type: 'text',
+    content: `产品名称：
+型号/规格：
+材质/工艺：
+价格区间：
+最小起订量（MOQ）：
+交期：
 
-总部位于深圳，在常州设有第二生产基地，是国内高性能建筑及工业玻璃领域的领先制造商。
-
-主营产品：
-• 钢化玻璃（平钢化/弯钢化/热浸处理）
-• 夹胶玻璃（PVB/SGP/隔音）
-• 中空玻璃（双玻/三玻/暖边条）
-• Low-E镀膜玻璃、防火玻璃、防弹玻璃
-• 幕墙/隔断/淋浴房/护栏/家具等定制玻璃
-
-我们的优势：
-✓ 10年以上生产与出口经验
-✓ CE、CCC、ISO 9001、SGCC、澳标等多项认证
-✓ 双基地生产，月产能超8万平方米
-✓ 自有钢化炉、高压釜、热浸测试，严格品控
-✓ 产品出口欧洲、北美、中东、东南亚、大洋洲等60+国家
-✓ 支持OEM/ODM，可定制尺寸、厚度、磨边、丝印Logo
-
-欢迎咨询报价，欢迎来厂参观。`
+（请替换为贵司真实产品信息）`
   },
   {
-    category: 'payment', title: 'Payment Terms (Standard)', lang: 'en', type: 'text',
-    content: `Standard Payment Terms:
-• 30% T/T deposit upon order confirmation
-• 70% balance before shipment (after inspection & copy of B/L)
-• L/C at sight (for orders over USD 30,000)
-• Western Union / MoneyGram for small sample orders (under USD 500)
-• Trade Assurance via Alibaba is also supported
+    category: 'payment', title: '付款方式（样例）', lang: 'zh', type: 'text',
+    content: `付款条款：
+• 30% T/T 定金（订单确认后支付）
+• 70% 发货前付清（验货合格后）
+• 支持即期信用证（大额订单）
 
-Please confirm the payment method when placing the order. All bank details will be provided on the Proforma Invoice signed & stamped by our company.`
-  },
-  {
-    category: 'payment', title: '付款方式（标准）', lang: 'zh', type: 'text',
-    content: `标准付款方式：
-• 30% T/T 电汇定金（订单确认后支付）
-• 70% 尾款发货前付清（验货合格、提供提单副本后）
-• 即期信用证（订单金额超过3万美金可接受）
-• 西联汇款 / MoneyGram（样品小单，500美金以下）
-• 支持阿里巴巴信保订单
-
-付款方式请在下单时确认，具体银行账户信息以我司盖章PI为准。`
-  },
-  {
-    category: 'logistics', title: 'Shipping & Delivery', lang: 'en', type: 'text',
-    content: `Shipping & Delivery Options:
-
-• Sea Freight (FOB Shenzhen / Shanghai / CFR / CIF to your port) — most economical for full containers; lead time 15–35 days depending on destination.
-• Air Freight — for urgent small orders; airport-to-airport, 3–7 days.
-• Express Courier (DHL / FedEx / UPS) — for samples and documents; door-to-door, 3–5 days.
-• LCL (Less than Container Load) — for small batch orders; consolidated container.
-• Land transport available for Central Asia / Russia.
-
-Trade Terms: EXW, FOB, CFR, CIF, DAP, DDP (per request).
-Standard lead time: 10–20 days after deposit for standard sizes; 20–30 days for custom/large projects.
-Packing: seaworthy plywood crates with foam interlayers and protective corner guards; fumigation-free packaging available.`
-  },
-  {
-    category: 'warranty', title: 'Quality Warranty', lang: 'en', type: 'text',
-    content: `Quality Warranty Policy:
-
-• Insulated Glass Units (IGU): 5-year warranty against seal failure & internal fogging.
-• Tempered Glass / Laminated Glass: 10-year warranty against spontaneous breakage under normal use (excluding NiS inclusion risk — heat-soak tested available).
-• Coated / Low-E Glass: 10-year warranty against coating degradation.
-• Any defective product confirmed by our QC report (or third-party inspection) will be replaced free of charge in the next shipment, or refunded.
-
-Warranty does not cover: breakage from improper installation, physical impact, extreme thermal stress outside design parameters, or misuse.
-We provide after-sales technical support within 24 hours on working days.`
-  },
-  {
-    category: 'other', title: 'Welcome Message', lang: 'en', type: 'text',
-    content: `Hi there! 👋
-
-Thank you for contacting JZJ Glass. This is [Your Name] from the sales team. How can I help you today?
-
-Feel free to let me know your requirements — glass type, thickness, size, quantity, and destination port — and I'll get back to you with a quote promptly. 😊`
+（请替换为贵司真实付款政策）`
   },
 ];
 
-async function seedIfEmpty() {
+async function ensureAccountSeed(accountId) {
   try {
-    const count = await prisma.companyMaterial.count();
-    if (count > 0) return;
-    for (const m of DEFAULT_MATERIALS) {
+    await ensureDefaultCategories(accountId);
+    const cnt = await prisma.companyMaterial.count({ where: { accountId } });
+    if (cnt > 0) return;
+    for (const m of SAMPLE_MATERIALS) {
       await prisma.companyMaterial.create({
-        data: { ...m, isDefault: true, sortOrder: 0 }
+        data: { accountId, ...m, isDefault: true, sortOrder: 0 }
       });
     }
-    console.log('[companyMaterials] Seeded', DEFAULT_MATERIALS.length, 'default materials');
+    console.log('[companyMaterials] Seeded', SAMPLE_MATERIALS.length, 'sample materials for account', accountId);
   } catch (e) {
     console.error('[companyMaterials] seed error:', e.message);
   }
 }
 // Seed async (don't block startup)
-setTimeout(seedIfEmpty, 1000);
+setTimeout(() => { ensureAccountSeed(1); }, 1000);
 
 // ─── Routes ───
 
@@ -203,7 +139,7 @@ setTimeout(seedIfEmpty, 1000);
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const { category } = req.query;
-    const where = {};
+    const where = { accountId: getAccountId(req) };
     if (category && category !== 'all') where.category = category;
     const list = await prisma.companyMaterial.findMany({
       where,
@@ -238,6 +174,7 @@ router.post('/', authMiddleware, async (req, res) => {
     const m = await prisma.companyMaterial.create({
       data: {
         type: 'text',
+        accountId: getAccountId(req),
         category, title, content,
         lang: lang || 'en',
         sortOrder: parseInt(sortOrder) || 0,
@@ -279,7 +216,7 @@ router.post('/upload', authMiddleware, (req, res) => {
 
       const m = await prisma.companyMaterial.create({
         data: {
-          type, category, title,
+          type, accountId: getAccountId(req), category, title,
           content: req.body.content || '',
           lang,
           fileName: req.file.originalname,
@@ -342,4 +279,4 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 export default router;
-export { seedIfEmpty };
+export { ensureAccountSeed };

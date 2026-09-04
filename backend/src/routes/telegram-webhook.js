@@ -322,7 +322,7 @@ async function translateInboundAsync(saved, jid, io, waDbId) {
     if (body.startsWith("[") && body.endsWith("]")) return;
     const settings = await getTranslationSettings(jid, saved.accountId || 1);
     if (!settings.receiveEnabled) return;
-    const engine = settings.receiveEngine || "google";
+    const engine = settings.receiveEngine || "deepl";
     let sourceLang = settings.receiveSourceLang || "auto";
     const targetLang = settings.receiveTargetLang || "zh";
     if (sourceLang === "auto") sourceLang = await detectLanguage(body, engine);

@@ -11,6 +11,7 @@
  */
 import { Router } from 'express';
 import { authMiddleware as auth } from '../middleware/auth.js';
+import { chargeCredits } from '../middleware/credit-charge.js';
 import {
   translateText,
   translateOutgoing,
@@ -74,14 +75,30 @@ function buildContextForChat(messages, contact) {
 
 const router = Router();
 
-router.post('/translate', auth, async (req, res) => {
+// ─── 【终止按钮】客户端断开时中断上游 LLM 调用 ───
+// 前端 AbortController abort → 连接提前关闭 → 本 signal 中止 → OpenAI SDK 中断请求，避免浪费 tokens
+// 注意：Node18+ 正常响应完成后也会触发 req close，故必须检查 res.writableEnded
+function bindAbortOnClientClose(req, res) {
+  const ac = new AbortController();
+  // Node 18+/22：req 的 close 在请求接收阶段即可能触发，不可靠；
+  // res 的 close 在底层连接关闭时触发（正常完成时 writableEnded=true，提前断开时为 false）
+  res.on('close', () => {
+    if (!res.writableEnded && !ac.signal.aborted) {
+      console.log('[AI route] client connection closed early, aborting upstream LLM call');
+      ac.abort();
+    }
+  });
+  return ac.signal;
+}
+
+router.post('/translate', auth, chargeCredits(), async (req, res) => {
   try {
     const { text, sourceLang, targetLang, engine } = req.body;
     if (!text) return res.status(400).json({ error: 'text is required' });
 
     const src = sourceLang || 'auto';
     const tgt = targetLang || 'zh';
-    const eng = engine || 'google';
+    const eng = engine || 'deepl';
 
     let detectedLang = src;
     if (src === 'auto') {
@@ -97,7 +114,8 @@ router.post('/translate', auth, async (req, res) => {
 });
 
 // ─── POST /api/ai/reply — AI 话术生成 (Phase 5: +length, +includeContext) ───
-router.post('/reply', auth, async (req, res) => {
+router.post('/reply', auth, chargeCredits(), async (req, res) => {
+  const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { accountId, jid, style, model, messages, length, includeContext, extraPrompt } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
@@ -116,9 +134,12 @@ router.post('/reply', auth, async (req, res) => {
       length: length || 'medium',
       includeContext: !!includeContext,
       extraPrompt: typeof extraPrompt === 'string' ? extraPrompt.trim() : undefined,
+      signal, // 【终止按钮】
     });
+    if (signal.aborted) return; // 【终止按钮】客户端已终止，不写响应（避免2xx触发扣分）
     res.json(result);
   } catch (err) {
+    if (signal.aborted) { console.log('[AI Reply] aborted by client'); return; } // 【终止按钮】
     console.error('[AI Reply Error]', err);
     res.status(500).json({ error: '话术生成失败: ' + err.message });
   }
@@ -161,7 +182,7 @@ router.post('/reply/all-lengths', auth, async (req, res) => {
 
 
 // ─── POST /api/ai/closing-reply — AI 成交模式回复（感知 Pipeline 阶段） ───
-router.post('/closing-reply', auth, async (req, res) => {
+router.post('/closing-reply', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid } = req.body;
     if (!jid) {
@@ -182,9 +203,11 @@ router.post('/closing-reply', auth, async (req, res) => {
 
 // ─── POST /api/ai/analyze — AI 深度分析（翻译+意图分析+3版回复，元宝风格） ───
 router.post('/analyze', auth, async (req, res) => {
+  const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { accountId, jid, model, messages, targetLang, feedback } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
+    console.log('[AI Analyze req]', JSON.stringify({ jid: jid || null, directMsgs: Array.isArray(messages) ? messages.length : 0, t: new Date().toISOString() }));
     if (!messages?.length && !jid) {
       return res.status(400).json({ success: false, error: 'Provide jid or messages array' });
     }
@@ -197,20 +220,23 @@ router.post('/analyze', auth, async (req, res) => {
       messages,
       targetLang: targetLang || 'auto',
       feedback: typeof feedback === 'string' ? feedback.trim() : undefined,
+      signal, // 【终止按钮】
     });
 
+    if (signal.aborted) return; // 【终止按钮】客户端已终止，不写响应
     if (result && result.success === false) {
       return res.status(200).json(result); // 业务友好错误，不抛500
     }
     res.json(result);
   } catch (err) {
+    if (signal.aborted) { console.log('[AI Analyze] aborted by client'); return; } // 【终止按钮】
     console.error('[AI Analyze Error]', err);
     res.status(500).json({ success: false, error: 'AI分析失败: ' + err.message });
   }
 });
 
 // ─── POST /api/ai/summarize — AI 需求总结 ───
-router.post('/summarize', auth, async (req, res) => {
+router.post('/summarize', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, messages } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
@@ -269,7 +295,7 @@ router.post('/summarize-need', auth, async (req, res) => {
 
 
 // ─── POST /api/ai/extract-info — 提取客户信息 ───
-router.post("/extract-info", auth, async (req, res) => {
+router.post("/extract-info", auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, messages } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
@@ -291,7 +317,7 @@ router.post("/extract-info", auth, async (req, res) => {
 });
 
 // ─── POST /api/ai/generate-document — 生成单证 ───
-router.post("/generate-document", auth, async (req, res) => {
+router.post("/generate-document", auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, messages, docType, customerInfo } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
@@ -334,7 +360,8 @@ router.post("/generate-document", auth, async (req, res) => {
 
 // ─── POST /api/ai/chat — AI多轮对话（自动拼接WhatsApp会话上下文） ───
 // body: { jid, accountId?, model?, messages: [{role:"user"|"assistant", content}] }
-router.post('/chat', auth, async (req, res) => {
+router.post('/chat', auth, chargeCredits(), async (req, res) => {
+  const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { jid, accountId, model, messages, targetLang } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
@@ -351,13 +378,16 @@ router.post('/chat', auth, async (req, res) => {
       model: model || null,
       history: messages,
       targetLang: targetLang || 'auto',
+      signal, // 【终止按钮】
     });
 
+    if (signal.aborted) return; // 【终止按钮】客户端已终止，不写响应（避免2xx触发扣分）
     if (result && result.success === false) {
       return res.status(200).json(result);
     }
     res.json(result);
   } catch (err) {
+    if (signal.aborted) { console.log('[AI Chat] aborted by client'); return; } // 【终止按钮】
     console.error('[AI Chat Error]', err);
     res.status(500).json({ success: false, error: 'AI对话失败: ' + err.message });
   }

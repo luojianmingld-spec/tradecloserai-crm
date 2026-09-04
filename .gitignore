@@ -30,3 +30,12 @@ backend/package.json.bak*
 backend/src/**/*.bak*
 frontend/src/**/*.bak*
 frontend/src/**/*.orig
+
+# 2026-09-04 工程治理补充
+backend/data/tg-userbot/
+backend/crm.log
+backend/src/uploads/
+*.tar.gz
+backups/
+.codegraph/
+backend/staging.log

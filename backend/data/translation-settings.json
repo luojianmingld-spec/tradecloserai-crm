@@ -1,10 +1,10 @@
 {
   "receiveEnabled": true,
-  "receiveEngine": "google",
+  "receiveEngine": "deepl",
   "receiveSourceLang": "auto",
   "receiveTargetLang": "zh",
   "sendEnabled": true,
-  "sendEngine": "google",
+  "sendEngine": "deepl",
   "sendSourceLang": "auto",
   "sendTargetLang": "en",
   "groupAutoTranslate": false,
@@ -13,7 +13,7 @@
   "translationColor": "#8696a0",
   "translationSize": "12px",
   "translationEnabled": true,
-  "translationEngine": "google",
+  "translationEngine": "deepl",
   "targetLanguage": "zh",
   "sendTargetLanguage": "en"
 }

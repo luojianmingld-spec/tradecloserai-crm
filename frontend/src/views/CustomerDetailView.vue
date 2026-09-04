@@ -33,6 +33,9 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
           <span>Email</span>
         </button>
+        <button class="action-btn assign-btn" @click="openAssignDialog" title="指派给 Agent 跟进">
+          <span>🤖</span><span>发给 Agent</span>
+        </button>
         <button class="action-btn edit-btn" @click="startEdit" v-if="!editing">
           <span>✏️</span><span>编辑</span>
         </button>
@@ -493,6 +496,28 @@
         <el-button type="primary" @click="addManualFu">添加</el-button>
       </template>
     </el-dialog>
+
+    <!-- 发给 Agent Dialog（V1.0 F2 客户详情指派） -->
+    <el-dialog v-model="showAssignDialog" :title="`🤖 发给 Agent：${customer.companyName || customer.name || ''}`" width="92%" :append-to-body="true" :close-on-click-modal="false">
+      <div class="assign-tip">指派后可在对应 Agent 的对话页选择该客户继续跟进，Agent 会加载该客户的全渠道沟通历史。</div>
+      <div class="assign-agents">
+        <div v-for="ag in ASSIGN_AGENTS" :key="ag.type" class="assign-agent-card" :class="{ active: assignAgentType === ag.type }" @click="assignAgentType = ag.type">
+          <span class="aa-icon">{{ ag.icon }}</span>
+          <div class="aa-info">
+            <div class="aa-name">{{ ag.name }}</div>
+            <div class="aa-desc">{{ ag.desc }}</div>
+          </div>
+          <span class="aa-check" v-if="assignAgentType === ag.type">✓</span>
+        </div>
+      </div>
+      <div class="assign-instruction">
+        <textarea v-model="assignInstruction" class="assign-input" rows="3" placeholder="给 Agent 的跟进指令（选填），如：该客户询价 8mm 钢化玻璃，重点报价跟进"></textarea>
+      </div>
+      <template #footer>
+        <el-button @click="showAssignDialog=false">取消</el-button>
+        <el-button type="primary" :loading="assigning" @click="doAssign">确认指派</el-button>
+      </template>
+    </el-dialog>
   </div>
 
   <div v-else class="cust-detail-page"><div class="loading">加载中...</div></div>
@@ -912,6 +937,43 @@ async function executeSuggestion(s) {
   } catch(e) { ElMessage.error('操作失败'); }
 }
 
+// ── 发给 Agent（V1.0 F2 客户详情指派） ──
+const ASSIGN_AGENTS = [
+  { type: 'sales-champion', icon: '🚀', name: '外贸销冠', desc: '智能跟单 · 话术 · 成交' },
+  { type: 'background-report', icon: '🔍', name: '客户背调', desc: '背景调查 · 风险评估' },
+  { type: 'customs-agent', icon: '📋', name: '外贸单证', desc: '报关单证 · HS编码' },
+  { type: 'doc-agent', icon: '🏭', name: '工厂对接', desc: '验厂评估 · 生产跟进' },
+  { type: 'freight-agent', icon: '🚢', name: '货代对接', desc: '海运空运 · 报关报检' },
+  { type: 'legal-agent', icon: '⚖️', name: '外贸法务', desc: '合同审查 · 纠纷处理' },
+];
+const showAssignDialog = ref(false);
+const assignAgentType = ref('sales-champion');
+const assignInstruction = ref('');
+const assigning = ref(false);
+
+function openAssignDialog() {
+  assignAgentType.value = 'sales-champion';
+  assignInstruction.value = '';
+  showAssignDialog.value = true;
+}
+async function doAssign() {
+  assigning.value = true;
+  try {
+    const { data } = await api.post('/agent/tasks', {
+      agentType: assignAgentType.value,
+      customerIds: [customerId.value],
+      instruction: assignInstruction.value.trim() || null,
+      source: 'customer_detail'
+    });
+    const r = (data.results || [])[0];
+    if (r && r.status === 'failed') ElMessage.error(r.error || '指派失败');
+    else ElMessage.success(r && r.status === 'exists' ? '该客户已在此 Agent 的指派任务中，已复用' : '指派成功，Agent 对话页即可选择该客户跟进');
+    showAssignDialog.value = false;
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.error || '指派失败');
+  } finally { assigning.value = false; }
+}
+
 onMounted(load);
 </script>
 
@@ -1252,4 +1314,16 @@ onMounted(load);
   .att-metrics { grid-template-columns:1fr; }
   .att-trend-item { flex-wrap:wrap; }
 }
+.assign-btn { border-color: var(--mgmt-whatsapp) !important; color: var(--mgmt-whatsapp) !important; }
+.assign-tip { font-size:12px; color: var(--mgmt-text-secondary); margin-bottom:10px; }
+.assign-agents { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:12px; }
+.assign-agent-card { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1.5px solid var(--mgmt-input-border, rgba(0,0,0,.12)); cursor:pointer; transition:all .15s; background:var(--mgmt-card-bg, #fff); }
+.assign-agent-card:hover { border-color: var(--mgmt-whatsapp); }
+.assign-agent-card.active { border-color: var(--mgmt-whatsapp); background: rgba(37,211,102,.08); }
+.aa-icon { font-size:20px; }
+.aa-info { flex:1; min-width:0; }
+.aa-name { font-size:14px; font-weight:600; }
+.aa-desc { font-size:11px; color: var(--mgmt-text-secondary); }
+.aa-check { color: var(--mgmt-whatsapp); font-weight:700; font-size:16px; }
+.assign-input { width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px; border:1px solid var(--mgmt-input-border, rgba(0,0,0,.12)); font-size:13px; resize:vertical; }
 </style>

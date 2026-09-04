@@ -1,3 +1,4 @@
+import crypto from "crypto";
 /**
  * WhatsApp API 路由 — 修复版
  * POST /api/whatsapp/send 修复：
@@ -47,18 +48,60 @@ const router = Router();
 const prisma = new PrismaClient();
 router.use(authMiddleware);
 
-/** POST /api/whatsapp/qr — 生成二维码，开始连接 */
+/** POST /api/whatsapp/qr — 生成二维码（走 Evolution API） */
 router.post('/qr', async (req, res) => {
   try {
     const userId = req.userId;
-    const sessionId = `user_${userId}`;
-    const result = await whatsappProvider.connect(sessionId, userId);
-    if (result.status === 'unavailable') {
-      return res.status(503).json({ error: result.message, status: 'unavailable' });
+    const instanceName = `user_${userId}`;
+    const EVO_URL = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
+    const EVO_KEY = process.env.EVOLUTION_API_KEY;
+
+    // 1. Check if instance exists
+    const fetchRes = await fetch(`${EVO_URL}/instance/fetchInstances`, { headers: { apikey: EVO_KEY } });
+    const instances = await fetchRes.json();
+    const existing = instances.find(i => i.name === instanceName);
+
+    if (!existing) {
+      // 2. Create instance
+      const createRes = await fetch(`${EVO_URL}/instance/create`, {
+        method: 'POST',
+        headers: { apikey: EVO_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceName, token: crypto.randomUUID() }),
+      });
+      const created = await createRes.json();
+      if (!createRes.ok) {
+        return res.status(500).json({ error: `Failed to create instance: ${JSON.stringify(created)}`, status: 'error' });
+      }
     }
-    res.json({ ...result, sessionId });
+
+    // 3. Get QR code
+    const qrRes = await fetch(`${EVO_URL}/instance/connect/${instanceName}`, { headers: { apikey: EVO_KEY } });
+    const qrData = await qrRes.json();
+
+    if (!qrRes.ok || !qrData.base64) {
+      // Instance exists but not in QR state (maybe already connected)
+      const connState = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, { headers: { apikey: EVO_KEY } });
+      const cs = await connState.json();
+      if (cs?.instance?.connectionState === 'open') {
+        return res.json({ qr: null, sessionId: instanceName, status: 'connected' });
+      }
+      return res.status(503).json({ error: 'QR code not available, instance may be connecting', status: 'connecting' });
+    }
+
+    // 4. Upsert WhatsAppAccount record
+    const prisma = req.app.get('prisma') || new (await import('@prisma/client')).PrismaClient();
+    let account = await prisma.whatsAppAccount.findFirst({ where: { userId, instanceName } });
+    if (account) {
+      await prisma.whatsAppAccount.update({ where: { id: account.id }, data: { status: 'connecting' } });
+    } else {
+      await prisma.whatsAppAccount.create({
+        data: { userId, platform: 'whatsapp', name: instanceName, instanceName, status: 'connecting' },
+      });
+    }
+
+    res.json({ qr: qrData.base64, sessionId: instanceName, status: 'waiting_qr', instanceName });
   } catch (err) {
-    console.error('[WA QR Error]', err.message);
+    console.error('[WA QR Error]', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -82,7 +125,7 @@ router.post('/send', async (req, res) => {
     try {
       const ts = await getTranslationSettings(toJid, req.userId);
       let targetLang = ts.sendTargetLang || null;
-      const engine = ts.sendEngine || 'google';
+      const engine = ts.sendEngine || 'deepl';
       if (!skipTranslate && ts.sendEnabled && targetLang && targetLang !== 'auto') {
         const fastOk = isAlreadyInLang(outgoingText, targetLang);
         // 检测源语言
@@ -142,7 +185,7 @@ router.post('/send', async (req, res) => {
     // 2. 查出我方连接信息
     let meFrom, saveSessionId;
     if (isTg) {
-      const tgAcc = await prisma.whatsAppAccount.findFirst({ where: { userId: req.userId, platform: 'telegram', status: 'connected' } });
+      const tgAcc = await prisma.whatsAppAccount.findFirst({ where: { platform: 'telegram', status: 'connected' } });
       saveSessionId = tgAcc ? `tg_${tgAcc.telegramBotUsername || tgAcc.id}` : sessionId;
       meFrom = tgAcc ? `${tgAcc.id}@telegram` : 'me';
     } else {
@@ -223,13 +266,43 @@ router.post('/send', async (req, res) => {
   }
 });
 
-/** GET /api/whatsapp/status */
+/** GET /api/whatsapp/status - query Evolution API real connection state */
 router.get('/status', async (req, res) => {
   try {
-    const sessionId = req.query.sessionId || `user_${req.userId}`;
-    const status = whatsappProvider.getStatus(sessionId);
-    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
-    res.json({ ...status, sessionId, lastConnectedAt: conn?.lastConnectedAt });
+    const sessionId = req.query.sessionId || 'user_' + req.userId;
+    const EVO_URL = process.env.EVOLUTION_API_URL || 'http://127.0.0.1:8081';
+    const EVO_KEY = process.env.EVOLUTION_API_KEY;
+    let evoState = 'close';
+    let evoPhone = null;
+    try {
+      const r = await fetch(EVO_URL + '/instance/connectionState/' + sessionId, {
+        headers: { apikey: EVO_KEY }
+      });
+      if (r.ok) {
+        const json = await r.json();
+        evoState = json && json.instance && json.instance.state || 'close';
+        const ownerJid = json && json.instance && json.instance.ownerJid;
+        if (ownerJid) evoPhone = ownerJid.split('@')[0];
+      }
+    } catch(e) { /* Evolution API unreachable */ }
+
+    let status = 'disconnected';
+    if (evoState === 'open') status = 'connected';
+    else if (evoState === 'connecting') status = 'connecting';
+
+    const conn = await prisma.wAConnection.findFirst({ where: { sessionId: sessionId } });
+    if (conn) {
+      evoPhone = evoPhone || conn.phone;
+    }
+
+    res.json({
+      status: status,
+      sessionId: sessionId,
+      phone: evoPhone,
+      pushName: null,
+      lastConnectedAt: conn ? conn.lastConnectedAt : null,
+      ownerJid: evoPhone ? evoPhone + '@s.whatsapp.net' : null
+    });
   } catch (err) {
     console.error('[WA Status Error]', err.message);
     res.status(500).json({ error: err.message });
@@ -293,10 +366,23 @@ router.get('/messages', async (req, res) => {
     if (!jid) return res.status(400).json({ error: 'jid is required' });
 
     const platform = jid.endsWith('@telegram') ? 'telegram' : 'whatsapp';
-    let sessionIds = [`user_${req.userId}`];
+    // 【Bug修复 2026-08-23】sessionId 动态映射，与 /conversations 保持一致：
+    // 原 user_${req.userId} 硬编码导致 userId!=1 用户(如账号87)消息存于 user_1 却查不到，聊天框空白/消息消失
+    const allWaAccts = await prisma.whatsAppAccount.findMany({
+      where: { userId: req.userId, platform: 'whatsapp' },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    const acctToSession = {};
+    allWaAccts.forEach((a, i) => { acctToSession[a.id] = `user_${i + 1}`; });
+    let sessionIds = Object.values(acctToSession);
+    if (req.query.accountId) {
+      const _aid = parseInt(req.query.accountId);
+      if (acctToSession[_aid]) sessionIds = [acctToSession[_aid]];
+    }
     if (platform === 'telegram') {
       const tgAccounts = await prisma.whatsAppAccount.findMany({
-        where: { userId: req.userId, platform: 'telegram', status: 'connected' },
+        where: { platform: 'telegram', status: 'connected' },
         select: { telegramBotUsername: true, id: true },
       });
       sessionIds.push(...tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`));
@@ -392,7 +478,7 @@ router.get('/conversations', async (req, res) => {
     }
     console.log('[DEBUG conversations] reqAccountId=', reqAccountId, 'userId=', req.userId, 'waSessionIds=', waSessionIds, 'reqPlatform=', reqPlatform);
     const tgAccounts = await prisma.whatsAppAccount.findMany({
-      where: { userId: req.userId, platform: 'telegram', status: 'connected' },
+      where: { platform: 'telegram', status: 'connected' },
       select: { id: true, telegramBotUsername: true },
     });
     const tgSessionIds = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
@@ -463,14 +549,16 @@ router.get('/conversations', async (req, res) => {
     const contactRecords = allQueryJids.size
       ? await prisma.contact.findMany({
           where: { jid: { in: [...allQueryJids] } },
-          select: { jid: true, pushName: true, phone: true },
+          select: { jid: true, pushName: true, phone: true, avatarUrl: true },
         })
       : [];
     const pushNameMap = new Map();
     const contactPhoneMap = new Map();
+    const avatarMap = new Map();
     for (const cr of contactRecords) {
       if (cr.jid && cr.pushName) pushNameMap.set(cr.jid, cr.pushName);
       if (cr.jid && cr.phone) contactPhoneMap.set(cr.jid, cr.phone);
+      if (cr.jid && cr.avatarUrl) avatarMap.set(cr.jid, cr.avatarUrl);
     }
 
     // 构建 Customer 映射：同 phone 有多条时，优先保留有真名的记录
@@ -550,8 +638,13 @@ router.get('/conversations', async (req, res) => {
         : name;
       const convPlatform = (entry.platform === 'telegram') ? 'telegram' : 'whatsapp';
       const contactPhone = contactPhoneMap.get(jid) || contactPhoneMap.get(rJid) || '';
+      const storedAvatar = avatarMap.get(jid) || avatarMap.get(rJid) || '';
+      // For WA contacts with stored CDN URLs, use proxy endpoint to handle expiration
+      const avatarUrl = (storedAvatar && storedAvatar.includes('pps.whatsapp.net'))
+        ? ''  // Let the avatar proxy handle it (it checks Evolution API + CRM fallback)
+        : storedAvatar;
       conversations.push({
-        jid: rJid, phone, name: displayName, contactPhone,
+        jid: rJid, phone, name: displayName, contactPhone, avatarUrl,
         lastMessage: entry.lastMsg.body,
         lastMessageTime: entry.lastMsg.timestamp,
         direction: entry.lastMsg.direction,
@@ -563,11 +656,11 @@ router.get('/conversations', async (req, res) => {
       });
     }
 
-    // 去重：同一个 resolvedJid 可能有多条(如 @lid 和 @s.whatsapp.net 同时存在)
+    // 去重：同一 phone 号码可能有多条(如不同@lid映射到同一号码)
     // 保留最新消息的那条
     const deduped = new Map();
     for (const conv of conversations) {
-      const key = conv.jid; // jid 已经是 resolved 后的 rJid
+      const key = conv.phone;
       if (!deduped.has(key) || new Date(conv.lastMessageTime) > new Date(deduped.get(key).lastMessageTime)) {
         deduped.set(key, conv);
       }

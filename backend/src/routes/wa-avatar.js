@@ -11,8 +11,8 @@ import path from 'path';
 const prisma = new PrismaClient();
 
 const EVO_API_URL = process.env.EVOLUTION_API_URL || 'http://127.0.0.1:8081';
-const EVO_API_KEY = process.env.EVOLUTION_API_KEY || 'B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1';
-const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'jeremy-main';
+const EVO_API_KEY = process.env.EVOLUTION_API_KEY;
+const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || 'default';
 
 // urlCache: key -> { url: string|null, ts: number }
 const urlCache = new Map();
@@ -70,7 +70,19 @@ async function fetchAvatarUrlFromPictureApi(jid, instance) {
 }
 
 // All WA instances to try (fallback order)
-const WA_INSTANCES = ['jeremy-main', 'jeremy-eric'];
+let WA_INSTANCES = process.env.WA_INSTANCES ? process.env.WA_INSTANCES.split(",") : [];
+async function _ensureWAInstances() {
+  if (WA_INSTANCES.length) return;
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    const p = new PrismaClient();
+    const accs = await p.whatsAppAccount.findMany({ where: { platform: "whatsapp" }, select: { instanceName: true } });
+    WA_INSTANCES = accs.map(a => a.instanceName).filter(Boolean);
+    await p.$disconnect();
+    if (WA_INSTANCES.length) console.log("[wa-avatar] Loaded WA instances from DB:", WA_INSTANCES.join(", "));
+  } catch(e) { console.warn("[wa-avatar] DB load failed:", e.message); }
+}
+_ensureWAInstances();
 
 async function _fetchAvatarUrl(jid, instance) {
   // Try requested instance first
@@ -133,6 +145,14 @@ const avatarHandler = async (req, res) => {
   }
   const instance = (req.query.instance || DEFAULT_INSTANCE).toString().trim();
 
+  // 号码合法性预检（Bug⑤ 加固）：纯测试假 jid（如 "3"、"1234567890"）直接短路 404，不调 Evolution
+  if (jid.endsWith('@s.whatsapp.net')) {
+    const digits = jid.split('@')[0].replace(/\D/g, '');
+    if (digits.length < 7 || digits.length > 15) {
+      return res.status(404).set('Cache-Control', 'public, max-age=300').set('Content-Type', 'text/plain').send('Invalid jid');
+    }
+  }
+
   // TG JID: look up avatarUrl from Contact table directly
   if (jid.endsWith('@telegram')) {
     try {
@@ -146,7 +166,7 @@ const avatarHandler = async (req, res) => {
       }
       // Support local file paths (e.g. /uploads/tg_avatars/xxx.jpg)
       if (picUrl.startsWith('/uploads/')) {
-        const fullPath = path.join('/opt/whatsapp-crm/backend/src', picUrl);
+        const fullPath = path.join('/opt/whatsapp-crm/backend', picUrl);
         if (!fs.existsSync(fullPath)) {
           return res.status(404).set('Content-Type', 'text/plain').send('Avatar file not found');
         }
@@ -185,19 +205,77 @@ const avatarHandler = async (req, res) => {
   }
 
   try {
-    const picUrl = await fetchAvatarUrl(jid, instance);
+    // Step 1: Try Evolution API (DB + fetchProfilePictureUrl) with caching
+    let picUrl = await fetchAvatarUrl(jid, instance);
+    
+    // Step 2: If not found, check CRM Contact table for stored avatarUrl
     if (!picUrl) {
-      return res.status(404).set('Content-Type', 'text/plain').send('No avatar');
+      try {
+        const contact = await prisma.contact.findFirst({
+          where: { jid, avatarUrl: { not: null, not: '' } },
+          select: { avatarUrl: true },
+        });
+        if (contact?.avatarUrl) picUrl = contact.avatarUrl;
+      } catch (_) {}
+    }
+    
+    if (!picUrl) {
+      return res.status(404).set('Cache-Control', 'public, max-age=300').set('Content-Type', 'text/plain').send('No avatar');
     }
 
-    const upRes = await fetch(picUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (WhatsApp-CRM-Proxy)' },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!upRes.ok || !upRes.body) {
+    // Step 3: Try to fetch the image
+    let upRes;
+    try {
+      upRes = await fetch(picUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (WhatsApp-CRM-Proxy)' },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch (_) {
+      upRes = null;
+    }
+    
+    // Step 4: If fetch failed (expired URL), try fresh fetch from Evolution API
+    if (!upRes || !upRes.ok || !upRes.body) {
       urlCache.delete(instance + ':' + jid);
-      return res.status(404).set('Content-Type', 'text/plain').send('Avatar fetch failed');
+      // Try fetching fresh from all Evolution instances
+      for (const inst of WA_INSTANCES) {
+        try {
+          const freshUrl = await fetchAvatarUrlFromPictureApi(jid, inst);
+          if (freshUrl) {
+            // Update CRM Contact table with fresh URL
+            try {
+              await prisma.contact.updateMany({
+                where: { jid },
+                data: { avatarUrl: freshUrl, updatedAt: new Date() },
+              });
+            } catch (_) {}
+            // Try fetching the fresh URL
+            try {
+              upRes = await fetch(freshUrl, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (WhatsApp-CRM-Proxy)' },
+                redirect: 'follow',
+                signal: AbortSignal.timeout(5000),
+              });
+              if (upRes.ok && upRes.body) {
+                picUrl = freshUrl;
+                break;
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
+    }
+    
+    if (!upRes || !upRes.ok || !upRes.body) {
+      // Clear expired URL from CRM
+      try {
+        await prisma.contact.updateMany({
+          where: { jid, avatarUrl: { not: null, not: '' } },
+          data: { avatarUrl: '', updatedAt: new Date() },
+        });
+      } catch (_) {}
+      return res.status(404).set('Cache-Control', 'public, max-age=300').set('Content-Type', 'text/plain').send('Avatar fetch failed');
     }
 
     const ct = upRes.headers.get('content-type') || 'image/jpeg';

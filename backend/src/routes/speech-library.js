@@ -45,7 +45,7 @@ function safeParseLLMJson(raw) {
 }
 
 async function resolveProvider() {
-  const gptProvider = await getProviderById('p1784629520517');
+  const gptProvider = await getProviderById('p1786604068598');
   return {
     provider: gptProvider || null,
     modelId: gptProvider ? gptProvider.model : 'gpt-4o-mini'
@@ -112,6 +112,36 @@ export async function smartMatchSamples(jid, query = null) {
       return { samples: [], query: searchQuery };
     }
 
+    // Detect conversation language from recent messages
+    const recentMsgs = await prisma.message.findMany({
+      where: { contactId: contact.id },
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+    });
+    const recentTexts = recentMsgs.map(m => m.content || '').filter(Boolean).join(' ');
+    let convLang = 'en'; // Default to English
+    if (recentTexts) {
+      try {
+        const { detectLanguage } = await import('../services/ai.service.js');
+        convLang = await detectLanguage(recentTexts.slice(0, 500), 'deepl');
+        if (!convLang || convLang === 'unknown') convLang = 'en';
+      } catch (e) {
+        console.warn('[SpeechLibrary] Language detection failed, defaulting to en');
+      }
+    }
+    console.log(`[SpeechLibrary] Detected conversation language: ${convLang}`);
+
+    // Prioritize samples matching conversation language
+    const langMatchedSamples = allSamples.filter(s => 
+      s.salesReplyLang === convLang || s.customerMsgLang === convLang
+    );
+    const otherSamples = allSamples.filter(s => 
+      s.salesReplyLang !== convLang && s.customerMsgLang !== convLang
+    );
+    // Use language-matched samples first, then others
+    const prioritizedSamples = [...langMatchedSamples, ...otherSamples];
+    console.log(`[SpeechLibrary] ${langMatchedSamples.length} samples match ${convLang}, ${otherSamples.length} others`);
+
     // Use LLM for semantic matching
     const { modelId, provider } = await resolveProvider();
 
@@ -119,7 +149,7 @@ export async function smartMatchSamples(jid, query = null) {
 
 You must respond with valid JSON only, no markdown, no explanation.`;
 
-    const samplesText = allSamples.map((s, i) => {
+    const samplesText = prioritizedSamples.map((s, i) => {
       const meta = [];
       if (s.industry) meta.push(`行业:${s.industry}`);
       if (s.productLine) meta.push(`产品:${s.productLine}`);
@@ -161,7 +191,7 @@ Respond with this exact JSON:
       });
       const result = safeParseLLMJson(raw);
       if (result && Array.isArray(result.matchedIndices)) {
-        matchedIndices = result.matchedIndices.filter(i => i >= 0 && i < allSamples.length).slice(0, 5);
+        matchedIndices = result.matchedIndices.filter(i => i >= 0 && i < prioritizedSamples.length).slice(0, 5);
       }
     } catch (e) {
       console.error('[SpeechLibrary] LLM matching error:', e.message);
@@ -191,7 +221,7 @@ Respond with this exact JSON:
       matchedIndices = scored.filter(s => s.score > 0).slice(0, 5).map(s => s.idx);
     }
 
-    const matchedSamples = matchedIndices.map(i => allSamples[i]).filter(Boolean);
+    const matchedSamples = matchedIndices.map(i => prioritizedSamples[i]).filter(Boolean);
 
     return {
       success: true,
@@ -242,9 +272,10 @@ export async function autoSaveSample(accountId, contactJid, customerMsg, salesRe
  */
 router.get('/', async (req, res) => {
   try {
-    const { accountId = 1, scene, productLine, favorited, search, page = 1, pageSize = 20 } = req.query;
+    const { accountId = 1, scene, productLine, favorited, search, lang, page = 1, pageSize = 50 } = req.query;
     const where = { accountId: parseInt(accountId) };
 
+    if (lang) where.salesReplyLang = lang;
     if (scene) where.scene = scene;
     if (productLine) where.productLine = productLine;
     if (favorited === 'true') where.favorited = true;
@@ -257,7 +288,7 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const [samples, total] = await Promise.all([
+    let [samples, total] = await Promise.all([
       prisma.messageSample.findMany({
         where,
         orderBy: [
@@ -270,6 +301,23 @@ router.get('/', async (req, res) => {
       }),
       prisma.messageSample.count({ where }),
     ]);
+    // 【Bug修复 2026-08-23】当前账号无语术样本时回退到账号1（主账号沉淀样本），保证话术库可用
+    if (total === 0 && (parseInt(accountId) || 1) !== 1) {
+      const fbWhere = { ...where, accountId: 1 };
+      [samples, total] = await Promise.all([
+        prisma.messageSample.findMany({
+          where: fbWhere,
+          orderBy: [
+            { favorited: 'desc' },
+            { qualityScore: 'desc' },
+            { createdAt: 'desc' },
+          ],
+          skip: (parseInt(page) - 1) * parseInt(pageSize),
+          take: parseInt(pageSize),
+        }),
+        prisma.messageSample.count({ where: fbWhere }),
+      ]);
+    }
 
     res.json({
       success: true,
@@ -378,9 +426,8 @@ router.delete('/:id', async (req, res) => {
  */
 router.post('/match', async (req, res) => {
   try {
-    const { jid, query } = req.body;
-    if (!jid) return res.status(400).json({ error: 'jid required' });
-    const result = await smartMatchSamples(jid, query);
+    const { platform, jid, email, query, scene, industry, productLine, limit, accountId } = req.body;
+    const result = await smartMatchAll({ platform, jid, email, query, scene, industry, productLine, limit, accountId });
     if (result.error) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
@@ -408,5 +455,271 @@ router.post('/auto-save', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── 多源统一匹配（话术库核心大脑：MessageSample + 社区经验 + 问答知识库）──
+
+/**
+ * 多通道上下文获取：解析当前会话最新客户消息
+ * whatsapp: jid -> contact -> Message 表，空则 fallback WAMessage
+ * telegram: jid -> contact(platform=telegram) -> Message 表
+ * email:    email -> EmailMessage 最新 inbound 邮件
+ */
+async function resolveContext({ platform, jid, email }) {
+  const ctx = { query: '', contact: null, hasContext: false };
+  try {
+    if (platform === 'whatsapp' && jid) {
+      const variants = normalizeJid(jid);
+      const contact = await prisma.contact.findFirst({
+        where: { platform: 'whatsapp', jid: { in: variants } },
+        orderBy: { id: 'desc' },
+      });
+      if (contact) {
+        ctx.contact = contact;
+        const latest = await prisma.message.findFirst({
+          where: { contactId: contact.id, fromMe: false },
+          orderBy: { timestamp: 'desc' },
+        });
+        if (latest?.content) {
+          ctx.query = latest.content;
+        } else {
+          // fallback: WA 消息实际存 WAMessage 表
+          const wa = await prisma.wAMessage.findFirst({
+            where: { direction: 'inbound', from: { in: variants } },
+            orderBy: { timestamp: 'desc' },
+          });
+          if (wa?.body) ctx.query = wa.body;
+        }
+      }
+    } else if (platform === 'telegram' && jid) {
+      const contact = await prisma.contact.findFirst({
+        where: { platform: 'telegram', jid },
+        orderBy: { id: 'desc' },
+      });
+      if (contact) {
+        ctx.contact = contact;
+        const latest = await prisma.message.findFirst({
+          where: { platform: 'telegram', contactId: contact.id, fromMe: false },
+          orderBy: { timestamp: 'desc' },
+        });
+        if (latest?.content) ctx.query = latest.content;
+      }
+    } else if (platform === 'email') {
+      const latestEmail = await prisma.emailMessage.findFirst({
+        where: { direction: 'inbound', ...(email ? { OR: [{ from: email }, { to: email }] } : {}) },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (latestEmail) {
+        ctx.query = ((latestEmail.subject || '') + ' ' + (latestEmail.body || '')).slice(0, 500);
+      }
+    }
+    ctx.hasContext = !!ctx.query;
+    return ctx;
+  } catch (e) {
+    console.warn('[SpeechLibrary] resolveContext error:', e.message);
+    return ctx;
+  }
+}
+
+/**
+ * 话术库关键词+场景匹配（MessageSample）
+ */
+async function matchMessageSamples(searchQuery, { scene, industry, productLine }, limit = 5, accountId = null) {
+  try {
+    // 【Bug修复 2026-08-23】按当前账号匹配话术库，空则回退账号1，不再硬编码 accountId=1
+    const accId = parseInt(accountId) || 1;
+    let all = await prisma.messageSample.findMany({
+      where: { accountId: accId },
+      orderBy: [{ favorited: 'desc' }, { qualityScore: 'desc' }, { createdAt: 'desc' }],
+      take: 200,
+    });
+    if (!all.length && accId !== 1) {
+      all = await prisma.messageSample.findMany({
+        where: { accountId: 1 },
+        orderBy: [{ favorited: 'desc' }, { qualityScore: 'desc' }, { createdAt: 'desc' }],
+        take: 200,
+      });
+    }
+    if (all.length === 0) return [];
+    const kw = (searchQuery || '').toLowerCase();
+    const kwWords = kw.split(/\s+/).filter((w) => w.length > 1);
+    const scored = all.map((s) => {
+      let score = 0;
+      if (scene && s.scene && s.scene.toLowerCase().includes(String(scene).toLowerCase())) score += 8;
+      if (industry && s.industry && s.industry.toLowerCase().includes(String(industry).toLowerCase())) score += 6;
+      if (productLine && s.productLine && s.productLine.toLowerCase().includes(String(productLine).toLowerCase())) score += 6;
+      const hay = [s.customerMsg, s.salesReply, s.scene, s.industry, s.productLine, s.application, s.customerMsgTranslated, s.salesReplyTranslated].join(' ').toLowerCase();
+      for (const w of kwWords) {
+        if (hay.includes(w)) score += 3;
+      }
+      if (s.favorited) score += 5;
+      if (s.qualityScore) score += s.qualityScore * 0.5;
+      return { s, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored
+      .filter((x) => x.score > 0)
+      .slice(0, limit)
+      .map((x) => ({
+        source: 'message_sample',
+        sourceLabel: '话术库',
+        id: x.s.id,
+        customerMsg: x.s.customerMsg,
+        salesReply: x.s.salesReply,
+        scene: x.s.scene,
+        industry: x.s.industry,
+        productLine: x.s.productLine,
+        application: x.s.application,
+        favorited: x.s.favorited,
+        qualityScore: x.s.qualityScore,
+      }));
+  } catch (e) {
+    console.warn('[SpeechLibrary] matchMessageSamples error:', e.message);
+    return [];
+  }
+}
+
+/**
+ * 知识源召回：社区经验 + 问答知识库（按场景/行业/产品/关键词过滤）
+ */
+/**
+ * 关键词分词：英文按单词拆分，中文按 2-gram 切分，用于知识源召回
+ */
+function splitKeywords(text) {
+  const t = String(text || '').toLowerCase();
+  const words = new Set();
+  (t.match(/[a-z0-9]+(?:[-'][a-z0-9]+)*/g) || []).forEach((w) => {
+    if (w.length > 1) words.add(w);
+  });
+  (t.match(/[\u4e00-\u9fa5]+/g) || []).forEach((seg) => {
+    if (seg.length > 1) words.add(seg);
+    for (let i = 0; i + 1 < seg.length; i++) {
+      const g = seg.slice(i, i + 2);
+      if (g.length === 2) words.add(g);
+    }
+  });
+  return [...words];
+}
+
+async function recallKnowledgeSources({ scene, industry, productLine, keyword, limit = 5 }) {
+  const results = [];
+  try {
+    const common = { accountId: 1, status: 'published', isActive: true };
+    const kwWords = keyword && String(keyword).trim() ? splitKeywords(keyword) : [];
+    const hasCondition = scene || industry || productLine || kwWords.length > 0;
+
+    // 社区经验
+    const communities = await prisma.communityExperience
+      .findMany({ where: common, orderBy: [{ createdAt: 'desc' }], take: 500 })
+      .catch((e) => {
+        console.warn('[SpeechLibrary] community recall failed:', e.message);
+        return [];
+      });
+    let commScored = communities.map((c) => {
+      let score = 0;
+      if (scene && c.scene && String(c.scene).toLowerCase().includes(String(scene).toLowerCase())) score += 8;
+      if (industry && c.industry && String(c.industry).toLowerCase().includes(String(industry).toLowerCase())) score += 6;
+      if (productLine && c.productLine && String(c.productLine).toLowerCase().includes(String(productLine).toLowerCase())) score += 6;
+      const hay = [c.title, c.content, c.tags, c.scene, c.industry, c.productLine].join(' ').toLowerCase();
+      for (const w of kwWords) if (hay.includes(w)) score += 3;
+      return { c, score };
+    });
+    if (!hasCondition) {
+      commScored = communities.slice(0, limit).map((c) => ({ c, score: 1 }));
+    } else {
+      commScored = commScored.filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, limit);
+    }
+    for (const { c } of commScored) {
+      results.push({
+        source: 'community',
+        sourceLabel: '社区经验',
+        id: c.id,
+        title: c.title,
+        content: c.content,
+        scene: c.scene,
+        industry: c.industry,
+        productLine: c.productLine,
+        tags: c.tags,
+      });
+    }
+
+    // 问答知识库
+    const qas = await prisma.qAKnowledge
+      .findMany({ where: common, orderBy: [{ createdAt: 'desc' }], take: 500 })
+      .catch((e) => {
+        console.warn('[SpeechLibrary] qa recall failed:', e.message);
+        return [];
+      });
+    let qaScored = qas.map((q) => {
+      let score = 0;
+      if (scene && q.scene && String(q.scene).toLowerCase().includes(String(scene).toLowerCase())) score += 8;
+      if (industry && q.industry && String(q.industry).toLowerCase().includes(String(industry).toLowerCase())) score += 6;
+      if (productLine && q.productLine && String(q.productLine).toLowerCase().includes(String(productLine).toLowerCase())) score += 6;
+      const hay = [q.question, q.answer, q.tags, q.scene, q.industry, q.productLine].join(' ').toLowerCase();
+      for (const w of kwWords) if (hay.includes(w)) score += 3;
+      return { q, score };
+    });
+    if (!hasCondition) {
+      qaScored = qas.slice(0, limit).map((q) => ({ q, score: 1 }));
+    } else {
+      qaScored = qaScored.filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, limit);
+    }
+    for (const { q } of qaScored) {
+      results.push({
+        source: 'qa',
+        sourceLabel: '问答知识库',
+        id: q.id,
+        question: q.question,
+        questionEn: q.questionEn,
+        answer: q.answer,
+        answerEn: q.answerEn,
+        scene: q.scene,
+        industry: q.industry,
+        productLine: q.productLine,
+        tags: q.tags,
+      });
+    }
+    return results;
+  } catch (e) {
+    console.warn('[SpeechLibrary] recallKnowledgeSources error:', e.message);
+    return results;
+  }
+}
+
+
+/**
+ * 统一多源匹配入口（Phase A）：按当前沟通通道上下文召回话术库 + 社区经验 + 问答知识库
+ * @param {object} opts { platform, jid, email, query, scene, industry, productLine, limit }
+ */
+export async function smartMatchAll({ platform = 'whatsapp', jid, email, query, scene, industry, productLine, limit = 10, accountId } = {}) {
+  try {
+    const ctx = await resolveContext({ platform, jid, email });
+    const searchQuery = query && query.trim() ? query.trim() : ctx.query;
+
+    const [librarySamples, knowledgeSamples] = await Promise.all([
+      matchMessageSamples(searchQuery, { scene, industry, productLine }, Math.min(limit, 10), accountId),
+      recallKnowledgeSources({ scene, industry, productLine, keyword: searchQuery, limit: Math.min(limit, 10) }),
+    ]);
+
+    const communityCount = knowledgeSamples.filter((s) => s.source === 'community').length;
+    const qaCount = knowledgeSamples.filter((s) => s.source === 'qa').length;
+
+    return {
+      success: true,
+      query: searchQuery || '',
+      context: {
+        platform,
+        jid: jid || null,
+        email: email || null,
+        hasContext: !!searchQuery,
+      },
+      samples: [...librarySamples, ...knowledgeSamples],
+      total: librarySamples.length + knowledgeSamples.length,
+      sources: { messageSample: librarySamples.length, community: communityCount, qa: qaCount },
+    };
+  } catch (err) {
+    console.error('[SpeechLibrary] smartMatchAll error:', err.message);
+    return { error: err.message };
+  }
+}
 
 export default router;

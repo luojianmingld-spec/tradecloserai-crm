@@ -3,6 +3,7 @@
  * 不再依赖裸BaileysProvider，改用Evolution REST API + 本地DB
  */
 import { getEvolutionConnector } from '../services/evolution-connector.js';
+import jwt from 'jsonwebtoken';
 
 const DEFAULT_SESSION_ID = "user_1";
 
@@ -11,8 +12,30 @@ export function setupSocketHandlers(io, prisma) {
     const userId = socket.handshake.auth?.userId;
     const token = socket.handshake.auth?.token;
 
+    // JWT token 验证
+    if (!token) {
+      console.warn('[Socket] Connection without token - rejected');
+      socket.disconnect(true);
+      return;
+    }
+    try {
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) { console.error('[Socket] JWT_SECRET not set'); socket.disconnect(true); return; }
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.userId !== userId) {
+        console.warn('[Socket] Token userId mismatch');
+        socket.disconnect(true);
+        return;
+      }
+    } catch (e) {
+      console.warn('[Socket] Invalid token - rejected');
+      socket.disconnect(true);
+      return;
+    }
+
     if (!userId) {
       console.warn('[Socket] Connection without userId');
+      socket.disconnect(true);
       return;
     }
 

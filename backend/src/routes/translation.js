@@ -29,11 +29,11 @@ const SETTINGS_FILE = path.join(DATA_DIR, "translation-settings.json");
 // Defaults for NEW users / reset state.  Existing persisted settings keep their values.
 export const DEFAULT_TRANSLATION_SETTINGS = {
   receiveEnabled: true,
-  receiveEngine: "google",
+  receiveEngine: "deepl",
   receiveSourceLang: "auto",
   receiveTargetLang: "zh",
   sendEnabled: true,
-  sendEngine: "google",
+  sendEngine: "deepl",
   sendSourceLang: "auto",
   sendTargetLang: "en",
   groupAutoTranslate: false,
@@ -44,7 +44,7 @@ export const DEFAULT_TRANSLATION_SETTINGS = {
 };
 
 export const TRANSLATION_ENGINES = [
-  { value: "google", label: "谷歌翻译(推荐/免费)" },
+  { value: "deepl", label: "DeepL(推荐)" },
   { value: "deepseek", label: "DeepSeek" },
   { value: "doubao", label: "豆包AI" },
   { value: "openai", label: "GPT-4o-mini" },
@@ -144,6 +144,8 @@ export async function getTranslationSettings(jid, userId) {
 
 export async function saveCustomerTranslationSettings(jid, userId, patch) {
   if (!jid) throw new Error("jid required");
+  // 拦截无效 jid（前端可能把 undefined 当字符串传入，产生 undefined@s.whatsapp.net 脏数据）
+  if (/^(undefined|null|NaN)$/i.test(String(jid).split("@")[0] || "")) throw new Error("无效的客户标识");
   const where = { userId: userId || 1 };
   if (jid.includes("@")) {
     where.jid = jid;
@@ -201,6 +203,17 @@ router.get("/engines", auth, (_req, res) => {
   } catch (err) {
     console.error("[Translation Engines Error]", err);
     res.status(500).json({ error: "获取引擎列表失败" });
+  }
+});
+
+// ─── 全球语言目录（200+，前端下拉/搜索用）───
+router.get("/languages", auth, async (_req, res) => {
+  try {
+    const { LANGUAGES } = await import("../data/languages.js");
+    res.json({ languages: LANGUAGES });
+  } catch (err) {
+    console.error("[Translation Languages Error]", err);
+    res.status(500).json({ error: "获取语言列表失败" });
   }
 });
 

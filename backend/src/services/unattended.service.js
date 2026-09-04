@@ -88,7 +88,7 @@ async function generateAutoReply(customerName, customerMessage, customer) {
     return config.customTemplate;
   }
 
-  // smart模式：AI智能生成
+  // smart模式：外贸销冠Agent接待（默认）
   const customerInfo = customer ? `
 Customer context:
 - Name: ${customerName || 'Unknown'}
@@ -97,28 +97,51 @@ Customer context:
 - Industry: ${customer.industry || 'Unknown'}
 ` : '';
 
-  const prompt = `You are a B2B sales assistant responding on behalf of a salesperson during off-hours.
+  // 加载产品知识库上下文（销冠需了解产品线才能专业接待）
+  let productContext = '';
+  try {
+    const products = await prisma.productKnowledgeBase.findMany({
+      where: { accountId: 1, isActive: true },
+      take: 20
+    });
+    if (products.length > 0) {
+      productContext = products.map(p => {
+        let line = `- ${p.productNameEn || p.productNameCn}${p.productDesc ? '：' + p.productDesc : ''}`;
+        if (p.basePrice != null) line += `，参考价 ${p.basePrice}${p.pricingUnit || ''}`;
+        if (p.moq != null) line += `，MOQ ${p.moq}`;
+        if (p.deliveryDays != null) line += `，交期约 ${p.deliveryDays} 天`;
+        return line;
+      }).join('\n');
+    }
+  } catch (e) {
+    console.warn('[Unattended] load product knowledge failed:', e.message);
+  }
 
-The customer sent this message:
+  const prompt = `你是金至晶玻璃（Jinzhijing Glass）的外贸销冠Agent，正在夜间无人值守时段专业接待海外客户询盘。
+
+公司主营产品线：
+${productContext || '- AR防眩光玻璃 / AG防眩光玻璃 / 触摸屏盖板玻璃 / 显示与工业玻璃等特种玻璃（金至晶玻璃）'}
+
+客户刚发来消息：
 "${customerMessage}"
 
 ${customerInfo}
 
-Requirements:
-- Acknowledge their message warmly
-- Let them know you're currently offline but will respond during business hours
-- Keep it professional, friendly, and brief (2-3 sentences max)
-- If they asked a specific question, indicate you'll provide details during business hours
-- Do NOT make up product details, prices, or commitments
-- Language: ALWAYS reply in Chinese (简体中文). Do NOT use English or any other language.
+外贸销冠接待要求：
+1. 用专业、热情、简洁的口吻回应，让客户感到被重视
+2. 若客户咨询产品/价格/MOQ/交期/样品等，先礼貌确认具体需求（产品类型、数量、目的国、用途），引导客户留下关键信息
+3. 不承诺具体价格、折扣、交期等商务条款，告知客户"我们的专业销售会在工作时间与您详细沟通"
+4. 篇幅 3-4 句以内，符合 WhatsApp 商务沟通习惯
+5. 先用简体中文起草（系统会自动翻译成客户语言）
+6. 不编造产品细节、价格或公司承诺，产品信息以产品线清单为准
 
-Return ONLY the reply message in Chinese, no explanations.`;
+只返回回复正文，不要任何解释、前缀或引号。`;
 
   try {
     const reply = await chatComplete([
       { role: 'system', content: prompt },
       { role: 'user', content: 'Generate the auto-reply now.' }
-    ], { temperature: 0.5, maxTokens: 200 });
+    ], { temperature: 0.6, maxTokens: 250 });
     return reply.trim();
   } catch (e) {
     console.error('[Unattended] AI generation failed:', e.message);
@@ -145,10 +168,10 @@ async function handleUnattendedReply({ remoteJid, body, pushName, customer }) {
   let sendText = zhReply;
   let translationObj = null;
   try {
-    const srcLang = await detectLanguage(body || '', 'google');
+    const srcLang = await detectLanguage(body || '', 'deepl');
     const tgtLang = srcLang && srcLang !== 'zh' && srcLang !== 'unknown' ? srcLang : null;
     if (tgtLang) {
-      const tr = await translateText(zhReply, 'zh', tgtLang, 'google', USER_ID);
+      const tr = await translateText(zhReply, 'zh', tgtLang, 'deepl', USER_ID);
       if (tr && tr.translated) {
         sendText = tr.translated;
         translationObj = JSON.stringify({

@@ -1,0 +1,940 @@
+// ============================================================================
+// Multi-Tenant Prisma Schema - PostgreSQL
+// Generated for: WhatsApp CRM Staging
+// Migration: SQLite → PostgreSQL + Multi-tenant (tenantId)
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 租户模型
+// ============================================================================
+
+model Tenant {
+  id        Int      @id @default(autoincrement())
+  name      String
+  plan      String   @default("free")   // free / pro / enterprise
+  status    String   @default("active") // active / suspended / deleted
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Reverse relations
+  user User[] @relation("UserTenant")
+  whatsAppAccount WhatsAppAccount[] @relation("WhatsAppAccountTenant")
+  contact Contact[] @relation("ContactTenant")
+  setting Setting[] @relation("SettingTenant")
+  message Message[] @relation("MessageTenant")
+  conversation Conversation[] @relation("ConversationTenant")
+  wAConnection WAConnection[] @relation("WAConnectionTenant")
+  wAMessage WAMessage[] @relation("WAMessageTenant")
+  customer Customer[] @relation("CustomerTenant")
+  emailAccount EmailAccount[] @relation("EmailAccountTenant")
+  automationRule AutomationRule[] @relation("AutomationRuleTenant")
+  automationCustomer AutomationCustomer[] @relation("AutomationCustomerTenant")
+  automationQueueItem AutomationQueueItem[] @relation("AutomationQueueItemTenant")
+  document Document[] @relation("DocumentTenant")
+  documentItem DocumentItem[] @relation("DocumentItemTenant")
+  customerFollowUp CustomerFollowUp[] @relation("CustomerFollowUpTenant")
+  messageSample MessageSample[] @relation("MessageSampleTenant")
+  companyMaterial CompanyMaterial[] @relation("CompanyMaterialTenant")
+  assistantConversation AssistantConversation[] @relation("AssistantConversationTenant")
+  assistantTask AssistantTask[] @relation("AssistantTaskTenant")
+  topicSubscription TopicSubscription[] @relation("TopicSubscriptionTenant")
+  topicBriefing TopicBriefing[] @relation("TopicBriefingTenant")
+  productKnowledgeBase ProductKnowledgeBase[] @relation("ProductKnowledgeBaseTenant")
+  productQuestion ProductQuestion[] @relation("ProductQuestionTenant")
+  customerBackgroundCheck CustomerBackgroundCheck[] @relation("CustomerBackgroundCheckTenant")
+  customerBantScore CustomerBantScore[] @relation("CustomerBantScoreTenant")
+  customerAttitude CustomerAttitude[] @relation("CustomerAttitudeTenant")
+  actionSuggestion ActionSuggestion[] @relation("ActionSuggestionTenant")
+  speechEffectiveness SpeechEffectiveness[] @relation("SpeechEffectivenessTenant")
+
+}
+
+// ============================================================================
+// 用户与认证
+// ============================================================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  tenant      Tenant   @relation("UserTenant", fields: [tenantId], references: [id])
+  username  String
+  password  String
+  name      String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+
+  accounts           WhatsAppAccount[]
+  settings           Setting[]
+  waConnection       WAConnection[]
+  customers          Customer[]          @relation("CustomerOwner")
+  assignedCustomers  Customer[]          @relation("CustomerAssignee")
+  emailAccounts      EmailAccount[]
+  automationRules    AutomationRule[]
+  automationCustomers AutomationCustomer[]
+  automationQueue    AutomationQueueItem[]
+
+  @@unique([tenantId, username])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 消息平台账号
+// ============================================================================
+
+model WhatsAppAccount {
+  id                  Int      @id @default(autoincrement())
+  tenantId            Int
+  tenant      Tenant   @relation("WhatsAppAccountTenant", fields: [tenantId], references: [id])
+  userId              Int
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform            String   @default("whatsapp") // whatsapp | telegram
+  phone               String?
+  name                String?
+  pushName            String?
+  status              String   @default("disconnected") // disconnected/connecting/connected
+  sessionDir          String?  @unique
+  instanceName        String?  // Evolution API instance name
+  avatarUrl           String?
+  // Telegram 专用
+  telegramBotToken    String?
+  telegramBotUsername String?
+  telegramBotInfo     String?  @db.Text // JSON getMe() 缓存
+  createdAt           DateTime @default(now())
+  lastActiveAt        DateTime?
+
+  contacts      Contact[]
+  conversations Conversation[]
+  messages      Message[]
+
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 联系人
+// ============================================================================
+
+model Contact {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("ContactTenant", fields: [tenantId], references: [id])
+  accountId   Int
+  account     WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  platform    String   @default("whatsapp") // whatsapp | telegram
+  jid         String
+  name        String?
+  phone       String?
+  pushName    String?
+  avatarUrl   String?
+  tags        String?
+  notes       String?  @db.Text
+  country     String?
+  language    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages     Message[]
+  conversation Conversation?
+
+  @@unique([accountId, platform, jid])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 设置
+// ============================================================================
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int
+  tenant      Tenant   @relation("SettingTenant", fields: [tenantId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 翻译缓存（系统表，无需 tenantId）
+// ============================================================================
+
+model TranslationCache {
+  id           Int      @id @default(autoincrement())
+  sourceText   String   @db.Text
+  sourceLang   String
+  targetLang   String
+  engine       String
+  translated   String   @db.Text
+  createdAt    DateTime @default(now())
+
+  @@unique([sourceText, sourceLang, targetLang, engine])
+}
+
+// ============================================================================
+// 消息
+// ============================================================================
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("MessageTenant", fields: [tenantId], references: [id])
+  accountId   Int
+  account     WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  platform    String   @default("whatsapp") // whatsapp | telegram
+  contactId   Int
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jid         String
+  fromMe      Boolean
+  content     String   @db.Text
+  translation String?  @db.Text
+  sourceLang  String?
+  messageType String   @default("text")
+  mediaUrl    String?
+  mediaKey    String?
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 会话
+// ============================================================================
+
+model Conversation {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  tenant      Tenant   @relation("ConversationTenant", fields: [tenantId], references: [id])
+  accountId     Int
+  account       WhatsAppAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  platform      String   @default("whatsapp") // whatsapp | telegram
+  contactId     Int      @unique
+  contact       Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jid           String
+  lastMessage   String?  @db.Text
+  lastMessageAt DateTime?
+  unreadCount   Int      @default(0)
+  pinned        Boolean  @default(false)
+  starred       Boolean  @default(false)
+  blocked       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([accountId, platform, jid])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// WA 连接
+// ============================================================================
+
+model WAConnection {
+  id              Int       @id @default(autoincrement())
+  tenantId        Int
+  tenant      Tenant   @relation("WAConnectionTenant", fields: [tenantId], references: [id])
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId       String    @unique
+  phone           String?
+  status          String    @default("disconnected")
+  lastConnectedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  messages        WAMessage[]
+
+  @@index([tenantId])
+}
+
+// ============================================================================
+// WA 消息
+// ============================================================================
+
+model WAMessage {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("WAMessageTenant", fields: [tenantId], references: [id])
+  sessionId   String
+  connection  WAConnection @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  from        String
+  to          String
+  body        String   @db.Text
+  type        String   @default("text")
+  direction   String   @default("inbound")
+  timestamp   DateTime
+  read        Boolean  @default(false)
+  deliveredAt DateTime?
+  readAt      DateTime?
+  ackError    String?  @db.Text
+  waMessageId String?  @unique
+  mediaUrl    String?
+  fileName    String?
+  mimeType    String?
+  // 入站WhatsApp加密媒体解密所需字段
+  mediaKey          String?  @db.Text // base64 mediaKey
+  mediaDirectPath   String?
+  mediaEncSha256    String?
+  mediaSha256       String?
+  fileLength        Int?
+  waKeyJson         String?  @db.Text // 完整key对象JSON
+  waMsgTimestamp    Int?
+  translation       String?  @db.Text
+  sourceLang        String?
+  createdAt         DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 客户
+// ============================================================================
+
+model Customer {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  tenant      Tenant   @relation("CustomerTenant", fields: [tenantId], references: [id])
+  userId        Int
+  user          User     @relation("CustomerOwner", fields: [userId], references: [id], onDelete: Cascade)
+  jid           String?  // WhatsApp JID
+  name          String   @default("")
+  companyName   String?  // 客户公司名
+  contactName   String?  // 联系人名
+  title         String?  // 职位/头衔
+  website       String?
+  customerLevel String   @default("C") // A/B/C
+  firstContactAt DateTime?
+  businessProfileSyncedAt DateTime?
+  aiExtractedAt DateTime?
+  aiAutoFields  String?  @map("ai_auto_fields") @db.Text // JSON array
+  phone         String?
+  email         String?
+  company       String?  // legacy 旧字段
+  country       String?
+  city          String?
+  address       String?
+  industry      String?
+  tags          String?  @default("[]") @db.Text
+  notes         String?  @db.Text
+  source        String?  @default("whatsapp")
+  intentLevel   Int      @default(5)
+  status        String   @default("potential")
+  assignedTo    Int?
+  assignee      User?    @relation("CustomerAssignee", fields: [assignedTo], references: [id])
+  lastContactAt DateTime?
+  // 需求总结模块
+  requirementSummary   String?   @map("requirement_summary") @db.Text
+  requirementProducts  String?   @map("requirement_products") @db.Text
+  requirementBudget    String?   @map("requirement_budget") @db.Text
+  requirementQuantity  String?   @map("requirement_quantity") @db.Text
+  requirementDelivery  String?   @map("requirement_delivery") @db.Text
+  requirementUpdatedAt DateTime? @map("requirement_updated_at")
+  requirementSource    String?   @map("requirement_source") @db.Text
+  automationAssignments AutomationCustomer[]
+  documents    Document[]
+  followUps    CustomerFollowUp[]
+  automationQueueItems AutomationQueueItem[]
+  // 客户背调模块
+  bgReport     String?  @db.Text
+  bgUpdatedAt  DateTime?
+  // 销售漏斗
+  dealStage     String   @default("new") // new/qualified/quoting/negotiating/won/completed/lost
+  dealStageAt   DateTime?
+  dealValue     Float?   @default(0) @db.DoublePrecision
+  translationSettings String?  @map("translation_settings") @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, jid])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 邮件账号
+// ============================================================================
+
+model EmailAccount {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("EmailAccountTenant", fields: [tenantId], references: [id])
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email       String
+  provider    String   @default("custom")
+  imapHost    String
+  imapPort    Int      @default(993)
+  smtpHost    String
+  smtpPort    Int      @default(465)
+  password    String
+  status      String   @default("disconnected")
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  emails      EmailMessage[]
+
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 邮件消息（无 tenantId，通过 EmailAccount 隔离）
+// ============================================================================
+
+model EmailMessage {
+  id              Int      @id @default(autoincrement())
+  accountId       Int
+  account         EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messageId       String?
+  from            String
+  to              String
+  subject         String
+  body            String   @db.Text
+  bodyHtml        String?  @db.Text
+  bodyPlain       String?  @db.Text
+  direction       String   @default("inbound")
+  translation     String?  @db.Text
+  sourceLang      String?
+  attachmentNames String?  @db.Text
+  createdAt       DateTime @default(now())
+  read            Boolean  @default(false)
+
+  @@unique([accountId, messageId])
+}
+
+// ============================================================================
+// 自动化规则
+// ============================================================================
+
+model AutomationRule {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  tenant      Tenant   @relation("AutomationRuleTenant", fields: [tenantId], references: [id])
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String
+  enabled       Boolean  @default(false)
+  schedule      String   @default("{}") @db.Text // JSON
+  languageMode  String   @default("auto")
+  defaultLang   String?
+  aiPrompt      String?  @db.Text
+  lastRunAt     DateTime?
+  nextRunAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items         AutomationQueueItem[]
+
+  @@unique([userId, type])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 自动化客户
+// ============================================================================
+
+model AutomationCustomer {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  tenant      Tenant   @relation("AutomationCustomerTenant", fields: [tenantId], references: [id])
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId   Int
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  types        String   @default("[]") @db.Text // JSON array
+  customLang   String?
+  lastSentAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, customerId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 自动化队列
+// ============================================================================
+
+model AutomationQueueItem {
+  id            Int      @id @default(autoincrement())
+  tenantId      Int
+  tenant      Tenant   @relation("AutomationQueueItemTenant", fields: [tenantId], references: [id])
+  userId        Int
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId        Int
+  rule          AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  customerId    Int
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type          String
+  language      String   @default("en")
+  content       String   @db.Text
+  subject       String?
+  reference     String?  @db.Text
+  status        String   @default("pending")
+  editedContent String?  @db.Text
+  sentAt        DateTime?
+  waMessageId   String?
+  errorMsg      String?  @db.Text
+  scheduledFor  DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 报价单 / 形式发票
+// ============================================================================
+
+model Document {
+  id            String   @id @default(cuid())
+  tenantId      Int
+  tenant      Tenant   @relation("DocumentTenant", fields: [tenantId], references: [id])
+  userId        Int      @default(1)
+  customerId    Int?
+  customerJid   String?
+  type          String   // QUOTATION / PI
+  docNumber     String   @unique
+  title         String
+  issueDate     DateTime @default(now())
+  validUntil    DateTime?
+  currency      String   @default("USD")
+  totalAmount   Float    @default(0) @db.DoublePrecision
+  amountInWords String?  @db.Text
+  status        String   @default("DRAFT")
+  sellerInfo    Json
+  buyerInfo     Json
+  tradeTerm     String?
+  paymentTerm   String?
+  portOfLoading String?
+  portOfDest    String?
+  shipDate      String?
+  remarks       String?  @db.Text
+  items         DocumentItem[]
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, customerId])
+  @@index([type])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 报价单明细
+// ============================================================================
+
+model DocumentItem {
+  id          String   @id @default(cuid())
+  tenantId    Int
+  tenant      Tenant   @relation("DocumentItemTenant", fields: [tenantId], references: [id])
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sortOrder   Int      @default(0)
+  productName String
+  model       String?
+  spec        String?  @db.Text
+  quantity    Float    @default(1) @db.DoublePrecision
+  unit        String   @default("pcs")
+  unitPrice   Float    @default(0) @db.DoublePrecision
+  amount      Float    @default(0) @db.DoublePrecision
+  remark      String?  @db.Text
+
+  @@index([documentId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 客户跟进记录
+// ============================================================================
+
+model CustomerFollowUp {
+  id         String   @id @default(cuid())
+  tenantId   Int
+  tenant      Tenant   @relation("CustomerFollowUpTenant", fields: [tenantId], references: [id])
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  content    String   @db.Text
+  source     String   @default("manual")
+  metadata   String?  @db.Text // JSON
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 话术样本
+// ============================================================================
+
+model MessageSample {
+  id                    Int      @id @default(autoincrement())
+  tenantId              Int
+  tenant      Tenant   @relation("MessageSampleTenant", fields: [tenantId], references: [id])
+  accountId             Int      @default(1)
+  contactJid            String
+  customerMsg           String   @db.Text
+  customerMsgTranslated String?  @db.Text
+  customerMsgLang       String?
+  salesReply            String   @db.Text
+  salesReplyTranslated  String?  @db.Text
+  salesReplyLang        String?
+  usedAi                Boolean  @default(false)
+  aiSuggestion          String?  @db.Text
+  aiModified            Boolean  @default(false)
+  contextBefore         String?  @db.Text
+  industry              String?
+  productLine           String?
+  application           String?
+  scene                 String?
+  favorited             Boolean  @default(false)
+  qualityScore          Float?   @db.DoublePrecision
+  createdAt             DateTime @default(now())
+
+  @@index([accountId, contactJid, createdAt])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 公司资料
+// ============================================================================
+
+model CompanyMaterial {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("CompanyMaterialTenant", fields: [tenantId], references: [id])
+  accountId   Int      @default(1)
+  type        String   @default("text") // text/pdf/image/video
+  category    String   // company/payment/certification/logistics/warranty/product/other
+  title       String
+  content     String   @db.Text
+  lang        String   @default("en")
+  fileName    String?
+  filePath    String?
+  fileSize    Int?
+  mimeType    String?
+  sortOrder   Int      @default(0)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([accountId, category])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// AI 销售助理 - 对话
+// ============================================================================
+
+model AssistantConversation {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("AssistantConversationTenant", fields: [tenantId], references: [id])
+  userId      Int      // 销售用户ID
+  role        String   // "user" 或 "assistant"
+  content     String   @db.Text
+  tasks       String?  @db.Text // 关联的任务ID（JSON数组）
+  attachments String?  @db.Text // 附件信息（JSON数组）
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// AI 销售助理 - 任务
+// ============================================================================
+
+model AssistantTask {
+  id             Int       @id @default(autoincrement())
+  tenantId       Int
+  tenant      Tenant   @relation("AssistantTaskTenant", fields: [tenantId], references: [id])
+  conversationId Int?      // 关联的对话ID
+  userId         Int       // 销售用户ID
+  type           String    // "send_message", "create_order", "update_customer"等
+  status         String    @default("pending") // pending/confirmed/executed/failed
+  params         String    @db.Text // 任务参数（JSON）
+  result         String?   @db.Text // 执行结果（JSON）
+  confirmedAt    DateTime?
+  executedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, status])
+  @@index([conversationId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 话题订阅
+// ============================================================================
+
+model TopicSubscription {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("TopicSubscriptionTenant", fields: [tenantId], references: [id])
+  userId      Int
+  topic       String
+  description String?  @db.Text
+  keywords    String?  @db.Text
+  focusAreas  String?  @db.Text
+  frequency   String   @default("daily")
+  lastRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  active      Boolean  @default(true)
+
+  briefings   TopicBriefing[]
+
+  @@unique([userId, topic])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 话题简报
+// ============================================================================
+
+model TopicBriefing {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  tenant      Tenant   @relation("TopicBriefingTenant", fields: [tenantId], references: [id])
+  subscriptionId  Int
+  content         String   @db.Text
+  summary         String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  topicSubscription TopicSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 产品知识库
+// ============================================================================
+
+model ProductKnowledgeBase {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  tenant      Tenant   @relation("ProductKnowledgeBaseTenant", fields: [tenantId], references: [id])
+  accountId       Int      @default(1)
+
+  // 基本信息
+  productNameCn   String   // 产品中文名
+  productNameEn   String   // 产品英文名
+  productDesc     String?  @db.Text // 产品描述
+  productImageUrl String?  // 产品图片URL
+
+  // 报价规则
+  pricingUnit     String?  // 计价单位（kg/piece/set）
+  basePrice       Float?   @db.DoublePrecision // 基础价格
+  moq             String?  // 最小起订量
+  deliveryDays    String?  // 标准交期
+  paymentTerms    String?
+
+  // 配置状态
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  questions       ProductQuestion[]
+
+  @@index([accountId])
+  @@index([productNameEn])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 产品问题
+// ============================================================================
+
+model ProductQuestion {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  tenant      Tenant   @relation("ProductQuestionTenant", fields: [tenantId], references: [id])
+  productId    Int
+  product      ProductKnowledgeBase @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // 问题内容
+  questionCn   String   // 中文问题
+  questionEn   String   // 英文问题
+  questionType String   @default("text") // text/single_choice/multiple_choice/number
+  optionsJson  String?  @db.Text // 选项列表（JSON格式）
+
+  // 问题属性
+  priority     Int      @default(1) // 1=必须问，2=进阶问
+  sortOrder    Int      @default(0)
+
+  // 配置状态
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([productId, priority])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 客户背调
+// ============================================================================
+
+model CustomerBackgroundCheck {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("CustomerBackgroundCheckTenant", fields: [tenantId], references: [id])
+  contactId   Int      // 关联的Contact ID
+
+  // 公司信息
+  companyName String?
+  website     String?
+  country     String?
+  industry    String?
+  companySize String?
+
+  // 详细信息（JSON）
+  details     String?  @db.Text
+
+  // 分析结果
+  riskLevel   String?  // Low/Medium/High
+  notes       String?  @db.Text
+
+  // 元数据
+  source      String   @default("llm")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([contactId])
+  @@index([contactId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 客户 BANT 评分
+// ============================================================================
+
+model CustomerBantScore {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int
+  tenant      Tenant   @relation("CustomerBantScoreTenant", fields: [tenantId], references: [id])
+  contactId   Int      // 关联的Contact ID
+
+  // BANT四维评分（0-10）
+  budgetScore     Float  @default(0) @db.DoublePrecision
+  authorityScore  Float  @default(0) @db.DoublePrecision
+  needScore       Float  @default(0) @db.DoublePrecision
+  timelineScore   Float  @default(0) @db.DoublePrecision
+
+  // 综合评分
+  totalScore      Float  @default(0) @db.DoublePrecision
+  level           String @default("MEDIUM") // HIGH/MEDIUM/LOW
+
+  // 评估详情（JSON）
+  evaluationDetails String? @db.Text
+
+  // 元数据
+  evaluatedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contactId])
+  @@index([totalScore])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 客户态度分析
+// ============================================================================
+
+model CustomerAttitude {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  tenant      Tenant   @relation("CustomerAttitudeTenant", fields: [tenantId], references: [id])
+  contactId       Int      @unique // 关联的Contact ID
+
+  // 态度分析结果
+  intentLevel     String   @default("MEDIUM")  // HIGH/MEDIUM/LOW
+  sentiment       String   @default("NEUTRAL") // POSITIVE/NEUTRAL/NEGATIVE
+  urgency         String   @default("NORMAL")  // URGENT/NORMAL/PATIENT
+  focusPoints     String?  @db.Text // JSON数组
+  trend           String?  // IMPROVING/STABLE/DECLINING
+  confidenceScore Float    @default(0) @db.DoublePrecision // 0-1
+
+  // 分析上下文
+  analyzedMessages Int     @default(0)
+  reasoning        String? @db.Text
+  lastAnalyzedAt   DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contactId])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 行动建议
+// ============================================================================
+
+model ActionSuggestion {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  tenant      Tenant   @relation("ActionSuggestionTenant", fields: [tenantId], references: [id])
+  contactId       Int      // 关联的Contact ID
+
+  // 建议内容
+  actionType      String   // FOLLOW_UP_NOW/SEND_QUOTE/GATHER_INFO/SEND_MATERIAL/SCHEDULE_MEETING/NURTURE/ESCALATE/CLOSE_DEAL
+  priority        String   @default("NORMAL") // HIGH/NORMAL/LOW
+  suggestion      String   @db.Text
+  reason          String?  @db.Text
+  templateMessage String?  @db.Text
+
+  // 状态
+  status          String   @default("PENDING") // PENDING/ACCEPTED/DISMISSED/EXECUTED/EXPIRED
+  executedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contactId, status])
+  @@index([tenantId])
+}
+
+// ============================================================================
+// 话术效果追踪
+// ============================================================================
+
+model SpeechEffectiveness {
+  id              Int      @id @default(autoincrement())
+  tenantId        Int
+  tenant      Tenant   @relation("SpeechEffectivenessTenant", fields: [tenantId], references: [id])
+  sentMessageId   Int      @unique // 关联的已发消息ID
+  contactId       Int      // 关联的Contact ID
+  sampleId        Int?     // 关联的话术样本ID
+
+  // 发送内容
+  sentContent     String   @db.Text
+
+  // 效果数据
+  sentAt          DateTime
+  customerReplied Boolean  @default(false)
+  responseTimeHours Float? @db.DoublePrecision
+  responseLength  Int      @default(0)
+  effectivenessScore Float? @db.DoublePrecision // 0-100
+  evaluatedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([contactId])
+  @@index([effectivenessScore])
+  @@index([tenantId])
+}

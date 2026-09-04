@@ -5,7 +5,12 @@ import Components from 'unplugin-vue-components/vite';
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 
 export default defineConfig({
+  define: {
+    // 构建版本号：每次构建注入新时间戳，前端启动时据此自动清理旧缓存
+    __APP_BUILD__: JSON.stringify(new Date().toISOString()),
+  },
   build: {
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
         manualChunks: {

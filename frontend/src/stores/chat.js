@@ -6,6 +6,7 @@ import { useSocket } from '../utils/socket.js';
 export const useChatStore = defineStore('chat', () => {
   // WhatsApp Connection
   const connectionStatus = ref('disconnected');
+  const currentWaAccountId = ref(null); // 当前选中账号（null=未选中，欢迎态）
   let followupPollTimer = null; // 跟进提醒轮询timer
   const sessionId = ref(null);
   const connectedPhone = ref(null);
@@ -19,6 +20,7 @@ export const useChatStore = defineStore('chat', () => {
   const pairingCode = ref(null); // { code, phone }
   const pairingLoading = ref(false);
   const pairingError = ref(null);
+  let pairingPollTimer = null; // 配对码页连接状态轮询
 
   // Conversations
   const conversations = ref([]);
@@ -37,11 +39,11 @@ export const useChatStore = defineStore('chat', () => {
   // Translation (双向自动翻译设置)
   const DEFAULT_TRANSLATION_SETTINGS = {
     receiveEnabled: true,
-    receiveEngine: 'google',
+    receiveEngine: 'deepl',
     receiveSourceLang: 'auto',
     receiveTargetLang: 'zh',
     sendEnabled: true,
-    sendEngine: 'google',
+    sendEngine: 'deepl',
     sendSourceLang: 'auto',
     sendTargetLang: 'en',
     groupAutoTranslate: false,
@@ -69,6 +71,16 @@ export const useChatStore = defineStore('chat', () => {
   // Legacy AI state（兼容旧代码）
   const aiReplies = ref([]);
   const aiGenerating = ref(false);
+  // 【终止按钮】当前话术生成请求的 AbortController（generateAiReplies / generateAIReply 共用）
+  let aiGenAbortCtrl = null;
+  // 【终止按钮】立即终止当前 AI 话术生成：中断请求 + 复位状态，UI 恢复可操作
+  function stopAiGenerating() {
+    if (aiGenAbortCtrl) {
+      try { aiGenAbortCtrl.abort(); } catch (_) {}
+      aiGenAbortCtrl = null;
+    }
+    aiGenerating.value = false;
+  }
   const insertText = ref('');
   const needSummary = ref(null);
   const summarizeLoading = ref(false);
@@ -193,6 +205,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
    */
   function loadAvatar(jid, avatar) {
     if (!jid) return '';
+    if (jid.includes('@g.us')) return '';
     if (avatarFailed.value[jid]) return '';
     if (avatarCache.value[jid]) return avatarCache.value[jid];
     // 如果传入了直接头像URL（如TG头像），优先使用
@@ -224,39 +237,86 @@ const editingMsgId = ref(null); // 正在编辑的消息id
 
   async function fetchConnectionStatus() {
     try {
-      const { data } = await api.get('/whatsapp/status');
-      connectionStatus.value = data.status;
-      sessionId.value = data.sessionId;
-      connectedPhone.value = data.phone || null;
-      if (data.pushName) pushName.value = data.pushName;
-      if (data.ownerJid) ownerJid.value = data.ownerJid;
-      if (data.status === 'connected') {
+      // Use new multi-account endpoint
+      const { data: accounts } = await api.get('/accounts');
+      const waAccts = accounts.filter(a => a.platform === 'whatsapp');
+      if (waAccts.length === 0) {
+        connectionStatus.value = 'disconnected';
+        sessionId.value = null;
+        connectedPhone.value = null;
+        stopFollowupPoll();
+        return;
+      }
+      // 尊重当前选中账号；未选中时回退到第一个账号（供全局数据加载）
+      const acct = (currentWaAccountId.value != null && waAccts.find(a => a.id === currentWaAccountId.value)) || waAccts[0];
+      // 选中账号在线即视为已连接（status==='connected' 或 connectionStatus==='open'），保证刷新后 isConnected 正确
+      const isOnline = acct.status === 'connected' || acct.connectionStatus === 'open';
+      // 如果正在 QR 登录流程中，不要覆盖 connectionStatus（保留 connecting/waiting_qr/scanning 等状态）
+      const isQrFlowActive = ['connecting', 'waiting_qr', 'scanning', 'qr_refreshing'].includes(connectionStatus.value);
+      const newStatus = isOnline ? 'connected' : (isQrFlowActive ? connectionStatus.value : 'disconnected');
+      connectionStatus.value = newStatus;
+      sessionId.value = acct.instanceName || null;
+      connectedPhone.value = acct.phone || null;
+      if (acct.pushName) pushName.value = acct.pushName;
+      if (acct.ownerJid) ownerJid.value = acct.ownerJid;
+      if (connectionStatus.value === 'connected') {
         qrCode.value = null;
-        if (data.profilePicUrl) { /* 不直接用 —— 浏览器有跨域/Referer 问题，走自己代理 */ }
-        if (!ownerJid.value) ownerJid.value = (data.phone ? data.phone + '@s.whatsapp.net' : SELF_JID_FALLBACK);
+        if (!ownerJid.value) ownerJid.value = (connectedPhone.value ? connectedPhone.value + '@s.whatsapp.net' : SELF_JID_FALLBACK);
         preloadSelfAvatar();
         startFollowupPoll();
       } else {
         stopFollowupPoll();
       }
-      return data;
+      return accounts;
     } catch (err) {
       console.error('Failed to fetch connection status:', err);
       return null;
     }
   }
 
-  async function requestQR() {
+  async function requestQR(preferredAccountId = null) {
     try {
       qrCode.value = null;
       connectionStatus.value = 'connecting';
       waError.value = null;
-      const { data } = await api.post('/whatsapp/qr');
-      sessionId.value = data.sessionId;
-      if (data.qr) qrCode.value = { qr: data.qr, sessionId: data.sessionId };
-      if (data.status === 'connected') {
+      // Check if any WA accounts exist; if not, redirect to Settings
+      const { data: accounts } = await api.get('/accounts');
+      const waAccts = accounts.filter(a => a.platform === 'whatsapp');
+      if (waAccts.length === 0) {
+        // 无账号时自动创建当前用户自己的 WA 实例并获取 QR（多租户隔离，instanceName=user_{userId}）
+        try {
+          let uid = '';
+          try { uid = (JSON.parse(localStorage.getItem('crm_user') || '{}') || {}).id || ''; } catch (e) {}
+          const instName = 'user_' + uid;
+          const { data: autoData } = await api.post('/accounts/wa/connect', {
+            instanceName: instName,
+            name: 'WhatsApp',
+          });
+          if (autoData && autoData.base64) {
+            qrCode.value = { qr: autoData.base64, sessionId: instName };
+            connectionStatus.value = 'waiting_qr';
+            waError.value = null;
+            return autoData;
+          }
+        } catch (e) {
+          console.error('Auto-create WA account failed:', e);
+        }
+        connectionStatus.value = 'disconnected';
+        waError.value = 'no_account';
+        return { error: 'no_account', message: '请先在设置中添加 WhatsApp 账号' };
+      }
+      // 优先使用指定账号或当前选中账号，否则回退第一个
+      const targetId = preferredAccountId || currentWaAccountId.value || null;
+      const acct = waAccts.find(a => a.id === targetId) || waAccts[0];
+      const { data } = await api.get('/accounts/wa/' + acct.id + '/qr');
+      sessionId.value = acct.instanceName;
+      if (data.base64) {
+        qrCode.value = { qr: data.base64, sessionId: acct.instanceName };
+        connectionStatus.value = 'waiting_qr';
+      }
+      if (data.state === 'open' || data.connectionState === 'open') {
         connectionStatus.value = 'connected';
-        connectedPhone.value = data.phone;
+        connectedPhone.value = acct.phone;
         if (data.pushName) pushName.value = data.pushName;
         if (data.ownerJid) ownerJid.value = data.ownerJid;
         if (!ownerJid.value && data.phone) ownerJid.value = data.phone + '@s.whatsapp.net';
@@ -266,6 +326,11 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       if (data.status === 'unavailable') {
         connectionStatus.value = 'unavailable';
         waError.value = data.message || 'WhatsApp 库未安装';
+      }
+      // If no QR returned but not connected, schedule a retry
+      if (!data.base64 && data.state !== 'open' && connectionStatus.value !== 'disconnected') {
+        console.log('[QR] No QR yet, will retry in 3s...');
+        setTimeout(() => { if (!qrCode.value && connectionStatus.value !== 'connected') requestQR(); }, 3000);
       }
       return data;
     } catch (err) {
@@ -285,13 +350,19 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       if (connectionStatus.value !== 'waiting_qr' && connectionStatus.value !== 'connecting') {
         connectionStatus.value = 'connecting';
         waError.value = null;
-        const qrRes = await api.post('/whatsapp/qr');
-        sessionId.value = qrRes.data?.sessionId;
+        // Use accounts endpoint
+        const { data: accts } = await api.get('/accounts');
+        const wa = accts.find(a => a.platform === 'whatsapp');
+        if (wa) {
+          await api.get('/accounts/wa/' + wa.id + '/qr');
+          sessionId.value = wa.instanceName;
+        }
         // 等2.5秒让socket建立noise握手
         await new Promise(r => setTimeout(r, 2500));
       }
       const { data } = await api.post('/whatsapp/pairing-code', { phone });
       pairingCode.value = { code: data.code, phone: data.phone };
+      startPairingPoll();
       return data;
     } catch (err) {
       pairingError.value = err.response?.data?.error || err.message || '获取配对码失败';
@@ -302,7 +373,29 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     }
   }
 
+  // 配对码页连接状态轮询兜底：配对成功后若 webhook 事件延迟/丢失，前端主动探测连接状态
+  function startPairingPoll() {
+    stopPairingPoll();
+    pairingPollTimer = setInterval(async () => {
+      try {
+        const accts = await api.get('/accounts/wa/status');
+        const list = (accts.data || []);
+        const target = list.find(a => a.instanceName === sessionId.value) || list[0];
+        if (target && target.connectionState === 'open') {
+          handleStatus({ status: 'connected', phone: target.phone || null, instance: target.instanceName });
+          stopPairingPoll();
+        }
+      } catch (e) {
+        // 轮询失败静默，下轮重试
+      }
+    }, 3000);
+  }
+  function stopPairingPoll() {
+    if (pairingPollTimer) { clearInterval(pairingPollTimer); pairingPollTimer = null; }
+  }
+
   function clearPairing() {
+    stopPairingPoll();
     pairingCode.value = null;
     pairingError.value = null;
     pairingLoading.value = false;
@@ -344,6 +437,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     aiGenerating.value = false;
     needSummary.value = null;
     insertText.value = '';
+    stopPairingPoll();
     pairingCode.value = null;
     pairingError.value = null;
     pairingLoading.value = false;
@@ -448,6 +542,18 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       // Race guard: only apply if this is still the latest request
       if (seq !== _fetchMsgSeq) return;
       messages.value[jid] = data.map(normalizeMessage);
+      // Trigger batch retranslation for messages missing translations
+      const msgsNeedingTranslation = messages.value[jid].filter(m => 
+        (m.type === 'text' || m.messageType === 'text') && 
+        !m.translation && 
+        m.body && 
+        !m.body.startsWith('[') &&
+        !(m.direction === 'outbound' || m.direction === 'outgoing' || m.fromMe === true)
+      );
+      if (msgsNeedingTranslation.length > 0) {
+        console.log('[ChatStore] Found', msgsNeedingTranslation.length, 'messages needing translation, triggering batch retranslate');
+        setTimeout(() => retranslateBatchMissing(jid), 1000);
+      }
     } catch (err) { console.error('Failed to fetch messages:', err); }
     finally { if (seq === _fetchMsgSeq) loadingMessages.value = false; }
   }
@@ -529,16 +635,6 @@ const editingMsgId = ref(null); // 正在编辑的消息id
 
     const mediaType = msg.type || msg.messageType || 'text';
 
-    // Convert translation object to string for template rendering
-    // ChatWindow.vue expects msg.translation as a string:
-    //   - outgoing: Chinese original (original field)
-    //   - incoming: Chinese translation (translated field)
-    if (translation && typeof translation === 'object') {
-      translation = isOutbound
-        ? (translation.original || translation.translated || null)
-        : (translation.translated || translation.original || null);
-    }
-
     return {
       id: msg.id ?? msg.waMessageId ?? Date.now(),
       waMessageId: msg.waMessageId || null,
@@ -603,7 +699,9 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     }
     try {
       const sendPayload = { to: jid, message: text, quoted: _quoted || undefined };
-      if (accountFilter.value != null) sendPayload.accountId = accountFilter.value;
+      // 【P0修复】优先用当前会话的 accountId（确保发到正确的实例），其次用全局账号筛选
+      const _sendAccountId = conv?.accountId != null ? conv.accountId : (accountFilter.value != null ? accountFilter.value : null);
+      if (_sendAccountId != null) sendPayload.accountId = _sendAccountId;
       const { data } = await api.post('/whatsapp/send', sendPayload);
       // 发送成功后立刻更新乐观消息（不等socket）：译文覆盖body、translation带原文
       const list = messages.value[jid];
@@ -822,7 +920,9 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       fd.append('file', sendFile);
       fd.append('mediatype', type);
       if (caption) fd.append('caption', caption);
-      if (accountFilter.value != null) fd.append('accountId', accountFilter.value);
+      // 【P0修复】优先用当前会话的 accountId，其次用全局账号筛选
+      const _mediaAccountId = conv?.accountId != null ? conv.accountId : (accountFilter.value != null ? accountFilter.value : null);
+      if (_mediaAccountId != null) fd.append('accountId', _mediaAccountId);
       // 注意：不要手动设置 Content-Type，让浏览器/axios自动附带 multipart/form-data; boundary=...
       const { data } = await api.post('/whatsapp/send-media', fd, {
         timeout: 120000,
@@ -887,6 +987,33 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     qrCode.value = null;
     waError.value = data.message || '未知错误';
   }
+  // ── 登录成功后的会话列表延迟+重试补偿 ──
+  let _convRefreshTimer = null;
+  let _convRefreshAttempt = 0;
+  function _cancelConvRefresh() {
+    if (_convRefreshTimer) { clearTimeout(_convRefreshTimer); _convRefreshTimer = null; }
+  }
+  function scheduleConversationsRefresh() {
+    _cancelConvRefresh();
+    _convRefreshAttempt = 0;
+    const BASE_DELAY = 1500;
+    const MAX_ATTEMPTS = 6;
+    const attempt = async () => {
+      let list = [];
+      try { list = await fetchConversations(); } catch (_) {}
+      _convRefreshAttempt++;
+      const arr = Array.isArray(list) ? list : [];
+      const listEmpty = arr.length === 0;
+      const nameMissing = arr.some((c) => !c.name || c.name === c.phone);
+      const avatarMissing = arr.some((c) => !c.avatar && !c.avatarUrl);
+      // 列表为空或仍缺真实名字/头像则继续重试（等待 findChats 就绪 + 联系人同步回写）
+      if (_convRefreshAttempt < MAX_ATTEMPTS && (listEmpty || nameMissing || avatarMissing)) {
+        _convRefreshTimer = setTimeout(attempt, BASE_DELAY * _convRefreshAttempt);
+      }
+    };
+    _convRefreshTimer = setTimeout(attempt, BASE_DELAY);
+  }
+
   function handleStatus(data) {
     if (data.status === 'connected') {
       connectionStatus.value = 'connected';
@@ -897,17 +1024,40 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       qrCode.value = null;
       waError.value = null;
       preloadSelfAvatar();
-      // 重连后刷新会话列表（自动选中逻辑在 LayoutView.vue 按路由判断）
-      fetchConversations();
+      // 登录成功后延迟+重试刷新会话列表（自动选中逻辑在 LayoutView.vue 按路由判断）
+      // 原因：扫码登录瞬间 Evolution findChats 可能未就绪返回空；且联系人同步
+      //（findContacts 回写 pushName/avatarUrl）需要时间。延迟重试直到列表非空且名字/头像到位，
+      // 避免"登录后列表为空需手动刷新 + 名字头像不同步"。
+      scheduleConversationsRefresh();
     } else if (data.status === 'disconnected') {
-      // 服务端通知断开：清空会话/消息/AI 面板状态
-      clearOnDisconnect();
+      // 如果正在 QR 登录流程中，不要清空 QR 码
+      const isQrFlowActive = ['connecting', 'waiting_qr', 'scanning', 'qr_refreshing'].includes(connectionStatus.value);
+      if (!isQrFlowActive) {
+        // 多账号场景：socket 的 whatsapp:status 基于默认实例(jeremy-eric) 推送，不代表当前选中账号。
+        // 若已选中账号，以 /accounts 权威状态复核，避免在线账号被误判为断开导致客户列表隐藏（刷新后点两下 bug）。
+        if (currentWaAccountId.value != null) {
+          fetchConnectionStatus().then((accounts) => {
+            // 复核后若确实断开（非 connected），再清空会话/消息/AI 面板状态
+            if (connectionStatus.value !== 'connected') {
+              clearOnDisconnect();
+            }
+          }).catch(() => {});
+        } else {
+          // 服务端通知断开：清空会话/消息/AI 面板状态
+          clearOnDisconnect();
+        }
+      }
     } else if (data.status === 'error') {
       connectionStatus.value = 'error';
       qrCode.value = null;
       waError.value = data.message || '未知错误';
     } else if (['connecting','waiting_qr','reconnecting','scanning','qr_refreshing'].includes(data.status)) {
-      connectionStatus.value = data.status;
+      // Don't override if we're already in a valid QR state
+      if (['connecting','waiting_qr','scanning','qr_refreshing'].includes(connectionStatus.value)) {
+        // Keep current state during QR flow
+      } else {
+        connectionStatus.value = data.status;
+      }
     }
   }
 
@@ -1017,12 +1167,14 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         }
         newList[idx] = { ...m, ...patch };
         messages.value[jid] = newList;
+        console.log('[ChatStore] Translation applied to message', targetId, 'in jid', jid);
         break;
       }
     }
   }
 
     function handleMessageTranslated(data) {
+    console.log('[ChatStore] Translation event received:', { id: data.id, waMessageId: data.waMessageId, jid: data.jid, hasTranslation: !!data.translation });
     const targetId = data.id;
     const targetWaId = data.waMessageId;
     const eventJid = data.jid;
@@ -1040,20 +1192,13 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         const newList = [...list];
         let trans = data.translation;
         if (typeof trans === 'string') trans = { translated: trans };
-        // Normalize translation object to string for ChatWindow.vue rendering
-        let transStr = null;
-        if (trans && typeof trans === 'object') {
-          const isOut = newList[idx].fromMe || newList[idx].direction === 'outbound' || newList[idx].direction === 'outgoing';
-          transStr = isOut 
-            ? (trans.original || trans.translated || null)
-            : (trans.translated || trans.original || null);
-        }
         newList[idx] = {
           ...newList[idx],
-          translation: transStr || null,
+          translation: trans || null,
           sourceLang: data.sourceLang || (trans && trans.sourceLang) || newList[idx].sourceLang || null,
         };
         messages.value[jid] = newList;
+        console.log('[ChatStore] Translation applied to message', targetId, 'in jid', jid);
         break;
       }
     }
@@ -1085,6 +1230,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         if (data.fileName) newList[idx].fileName = data.fileName;
         if (data.mimeType) newList[idx].mimeType = data.mimeType;
         messages.value[jid] = newList;
+        console.log('[ChatStore] Translation applied to message', targetId, 'in jid', jid);
         break;
       }
     }
@@ -1105,7 +1251,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
       const merged = { ...DEFAULT_TRANSLATION_SETTINGS, ...(data || {}) };
       // UI-friendly aliases (backward compat — ChatWindow.vue references these)
       merged.translationEnabled = merged.receiveEnabled;
-      merged.translationEngine = merged.receiveEngine || 'google';
+      merged.translationEngine = merged.receiveEngine || 'deepl';
       merged.targetLanguage = merged.receiveTargetLang || 'zh';
       merged.sendTargetLanguage = merged.sendTargetLang || 'en';
       translationSettings.value = merged;
@@ -1145,11 +1291,11 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         translationSettings.value = {
           ...DEFAULT_TRANSLATION_SETTINGS,
           receiveEnabled: s.receiveEnabled !== undefined ? s.receiveEnabled : (s.translationEnabled !== undefined ? s.translationEnabled : true),
-          receiveEngine: s.receiveEngine || s.translationEngine || 'google',
+          receiveEngine: s.receiveEngine || s.translationEngine || 'deepl',
           receiveSourceLang: s.receiveSourceLang || 'auto',
           receiveTargetLang: s.receiveTargetLang || s.targetLanguage || 'zh',
           sendEnabled: s.sendEnabled !== undefined ? s.sendEnabled : true,
-          sendEngine: s.sendEngine || s.receiveEngine || s.translationEngine || 'google',
+          sendEngine: s.sendEngine || s.receiveEngine || s.translationEngine || 'deepl',
           sendSourceLang: s.sendSourceLang || 'auto',
           sendTargetLang: s.sendTargetLang || s.sendTargetLanguage || 'en',
           groupAutoTranslate: s.groupAutoTranslate || false,
@@ -1159,7 +1305,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
           translationSize: s.translationSize || '14px',
           // UI-friendly aliases
           translationEnabled: s.receiveEnabled !== undefined ? s.receiveEnabled : true,
-          translationEngine: s.receiveEngine || s.translationEngine || 'google',
+          translationEngine: s.receiveEngine || s.translationEngine || 'deepl',
           targetLanguage: s.receiveTargetLang || s.targetLanguage || 'zh',
           sendTargetLanguage: s.sendTargetLang || s.sendTargetLanguage || 'en',
         };
@@ -1323,8 +1469,17 @@ const editingMsgId = ref(null); // 正在编辑的消息id
    * @param extraPrompt 可选，用户在输入框里的补充要求
    * @param opts 可选，{ length: 'short'|'medium'|'long', includeContext: boolean }
    */
+  function fmtAiGenErr(err, fallback) { // 【超时修复】超时错误文案友好化
+    const m = err?.message || '';
+    if (/timeout of \d+ms exceeded/.test(m)) return '生成超时（已超过180秒），请重试或更换模型';
+    return err?.response?.data?.error || m || fallback;
+  }
+
   async function generateAiReplies(extraPrompt, opts = {}) {
     if (!activeJid.value) return;
+    if (aiGenAbortCtrl) { try { aiGenAbortCtrl.abort(); } catch (_) {} } // 【终止按钮】防并发残留
+    aiGenAbortCtrl = new AbortController();
+    const ac = aiGenAbortCtrl;
     aiGenerating.value = true;
     const style = replyStyle.value;
     const replyLength = opts.length || 'medium';
@@ -1338,7 +1493,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
           { role: 'user', content: aiFocusMessage.value.content },
         ];
       }
-      const { data } = await api.post('/ai/reply', body);
+      const { data } = await api.post('/ai/reply', body, { signal: ac.signal, timeout: 180000 }); // 【终止按钮】【超时修复】180s
       const styleMeta = STYLE_META[style] || STYLE_META.formal;
       // Phase 5: Handle bilingual response
       const raw = data?.replies || [];
@@ -1409,11 +1564,26 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         id: x.id, text: x.content, style: x.style, confidence: 0,
       }));
     } catch (err) {
+      if (ac.signal.aborted) { // 【终止按钮】用户主动终止
+        console.log('[generateAiReplies] aborted by user');
+        const stopMeta = STYLE_META[style] || STYLE_META.formal;
+        aiReplyResults.value.push({
+          id: 'r-stop-' + Date.now(),
+          content: '⏹ 已终止生成',
+          contentCn: '',
+          style,
+          styleIcon: stopMeta.icon,
+          styleName: stopMeta.label,
+          error: true,
+          length: replyLength,
+        });
+        return;
+      }
       console.error('[generateAiReplies error]', err);
       const styleMeta = STYLE_META[style] || STYLE_META.formal;
       aiReplyResults.value.push({
         id: 'r-err-' + Date.now(),
-        content: '⚠️ ' + (err?.response?.data?.error || err.message || '生成失败'),
+        content: '⚠️ ' + fmtAiGenErr(err, '生成失败'), // 【超时修复】
         contentCn: '',
         style,
         styleIcon: styleMeta.icon,
@@ -1422,6 +1592,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
         length: replyLength,
       });
     } finally {
+      if (aiGenAbortCtrl === ac) aiGenAbortCtrl = null; // 【终止按钮】
       aiGenerating.value = false;
     }
   }
@@ -1648,14 +1819,23 @@ const editingMsgId = ref(null); // 正在编辑的消息id
   // ─── 兼容旧 API ───
   async function generateAIReply(accountId, jid, style = 'formal') {
     if (!jid) return;
+    if (aiGenAbortCtrl) { try { aiGenAbortCtrl.abort(); } catch (_) {} } // 【终止按钮】防并发残留
+    aiGenAbortCtrl = new AbortController();
+    const ac = aiGenAbortCtrl;
     aiGenerating.value = true;
     aiReplies.value = [];
+    let stopped = false;
     try {
-      const { data } = await api.post('/ai/reply', { jid, style });
+      const { data } = await api.post('/ai/reply', { jid, style }, { signal: ac.signal, timeout: 180000 }); // 【终止按钮】【超时修复】180s
       if (data.replies) aiReplies.value = data.replies.map((text, i) => ({ id: i, text }));
-    } catch (err) { console.error('Failed to generate AI reply:', err); }
-    finally { aiGenerating.value = false; }
+    } catch (err) {
+      if (ac.signal.aborted) { stopped = true; console.log('[generateAIReply] aborted by user'); } // 【终止按钮】
+      else console.error('Failed to generate AI reply:', err);
+    }
+    finally { if (aiGenAbortCtrl === ac) aiGenAbortCtrl = null; aiGenerating.value = false; }
+    if (stopped) return 'stopped'; // 【终止按钮】终止后不展开 AI 模式面板，返回值供调用方区分
     startAIMode('reply');
+    return 'ok';
   }
   async function generateNeedSummary(accountId, jid) {
     if (!jid) return;
@@ -1700,15 +1880,28 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     return { replies };
   }
 
+  
+  // ─── Batch retranslate messages missing translations ───
+  async function retranslateBatchMissing(jid) {
+    if (!jid) return;
+    try {
+      const { data } = await api.post('/whatsapp/retranslate-batch', { jid });
+      console.log('[ChatStore] Batch retranslate result:', data);
+      return data;
+    } catch (e) {
+      console.warn('[ChatStore] Batch retranslate failed:', e.message);
+    }
+  }
+
   return {
     // State
-    connectionStatus, sessionId, connectedPhone, pushName, ownerJid, selfAvatarUrl, avatarCache, avatarFailed,
+    connectionStatus, currentWaAccountId, sessionId, connectedPhone, pushName, ownerJid, selfAvatarUrl, avatarCache, avatarFailed,
     qrCode, waError, pairingCode, pairingLoading, pairingError,
     conversations, activeJid, messages, loadingMessages,
     translationSettings, autoTranslateOutgoing,
     aiMode, aiChat, aiLoading, aiCollapsed, aiFocusMessage, replyStyle,
     aiReplyResults, aiSummaryResult, aiProfileResult,
-    aiReplies, aiGenerating, insertText, needSummary, summarizeLoading,
+    aiReplies, aiGenerating, stopAiGenerating, insertText, needSummary, summarizeLoading,
 
     // Followups
     pendingFollowups, showFollowupsOnly, followupMapByJid, followupCounts,
@@ -1730,6 +1923,7 @@ const editingMsgId = ref(null); // 正在编辑的消息id
     // Socket handlers
     handleQRCode, handleStatus, handleWAError,
     handleNewMessage, handleMessageSent, handleMessageTranslated, handleTranslation, handleMessageUpdate, handleReaction,
+    retranslateBatchMissing,
     handleConversations, handleMessages, handleReceipt,
 
     // Settings

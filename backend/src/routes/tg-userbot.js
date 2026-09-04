@@ -19,6 +19,9 @@ import {
   getState,
   getMe,
   isConnected,
+  getQRCode,
+  pollQRLogin,
+  submitQRPassword,
 } from '../services/tg-userbot-connector.js';
 
 const router = Router();
@@ -391,4 +394,98 @@ router.post('/sync-avatars', async (req, res) => {
   } catch(e) { res.status(500).json({error:e.message}); }
 });
 
+// --- 刷新当前 UserBot 账号信息（显示名 + 头像） ---
+router.post("/sync-me", async (req, res) => {
+  try {
+    if (!isConnected()) return res.status(400).json({ error: "未连接" });
+    const me = getMe();
+    if (!me) return res.status(400).json({ error: "无账号信息" });
+    const displayName = [me.firstName, me.lastName].filter(Boolean).join(" ").trim() || me.username || ("TG-" + me.id);
+    let account = await prisma.whatsAppAccount.findFirst({
+      where: { platform: "telegram", sessionDir: "tg_userbot_" + me.id }
+    });
+    if (!account) return res.status(400).json({ error: "账号未初始化" });
+    const avatarUrl = await downloadProfilePhoto(me.id);
+    await prisma.whatsAppAccount.update({
+      where: { id: account.id },
+      data: { name: displayName, pushName: displayName, ...(avatarUrl ? { avatarUrl } : {}) }
+    });
+    res.json({ ok: true, name: displayName, avatarUrl: avatarUrl || null });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- QR 登录 2FA 密码 ---
+router.post("/qr/password", async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: "需要密码" });
+    const result = await submitQRPassword(password);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;
+
+// --- QR Code Login ---
+
+router.get("/qr", async (req, res) => {
+  try {
+    if (isConnected()) return res.json({ status: "already_connected", user: getMe() });
+    const qrData = await getQRCode({ apiId: API_ID, apiHash: API_HASH });
+    res.json(qrData);
+  } catch (e) {
+    console.error("[TG-UB] QR generation error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/qr/poll", async (req, res) => {
+  try {
+    const { qrToken } = req.body;
+    if (!qrToken) return res.status(400).json({ error: "需要qrToken" });
+    const result = await pollQRLogin(qrToken);
+    
+    // 如果连接成功，同步创建账号记录
+    if (result.status === "connected" && result.user) {
+      const me = result.user;
+      const displayName = [me.firstName, me.lastName].filter(Boolean).join(" ").trim() || me.username || ("TG-" + me.id);
+      const accountData = {
+        userId: 1,
+        platform: "telegram",
+        phone: me.phone || "",
+        name: displayName,
+        pushName: displayName,
+        status: "connected",
+        sessionDir: "tg_userbot_" + me.id,
+        telegramBotInfo: JSON.stringify({ type: "userbot", userId: me.id, username: me.username, firstName: me.firstName || "", lastName: me.lastName || "" }),
+      };
+      let account = await prisma.whatsAppAccount.findFirst({
+        where: { platform: "telegram", sessionDir: "tg_userbot_" + me.id }
+      });
+      if (!account) {
+        account = await prisma.whatsAppAccount.create({ data: accountData });
+      } else {
+        await prisma.whatsAppAccount.update({
+          where: { id: account.id },
+          data: { name: displayName, pushName: displayName, status: "connected", lastActiveAt: new Date() }
+        });
+      }
+      // 下载真实头像（失败不阻断登录）
+      try {
+        const avatarUrl = await downloadProfilePhoto(me.id);
+        if (avatarUrl) {
+          await prisma.whatsAppAccount.update({ where: { id: account.id }, data: { avatarUrl } });
+        }
+      } catch (e) { console.warn("[TG-UB] avatar download error:", e.message); }
+      result.accountId = account.id;
+    }
+    
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});

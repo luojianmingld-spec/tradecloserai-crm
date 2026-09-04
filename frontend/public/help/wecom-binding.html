@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>企业微信绑定 · 工厂/货代对接操作说明 - TradeCloser AI 帮助中心</title>
+<style>
+  :root{
+    --bg:#F6F8FB;
+    --card:#FFFFFF;
+    --text:#152033;
+    --sub:#637089;
+    --brand:#2F6BFF;
+    --brand-soft:#EEF3FF;
+    --success:#16A37B;
+    --success-soft:#E8F7F2;
+    --warn:#D97706;
+    --warn-soft:#FEF4E6;
+    --danger:#D64545;
+    --danger-soft:#FCEFEF;
+    --line:#E6EAF2;
+    --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:Inter,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
+    font-size:15px;
+    line-height:1.75;
+  }
+  .page{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+  header.hero{
+    background:linear-gradient(135deg,#152033 0%,#1F3A6B 100%);
+    color:#fff;
+    margin:0 -20px;
+    padding:44px 40px 40px;
+  }
+  .hero .crumb{font-size:13px;opacity:.75;margin:0 0 10px}
+  .hero h1{margin:0 0 10px;font-size:28px;line-height:1.4;font-weight:700}
+  .hero p{max-width:760px;margin:0;opacity:.92;font-size:15px}
+  .hero .badge{display:inline-block;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:3px 14px;font-size:13px;margin-bottom:14px}
+  .quick{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;
+    margin:24px 0 8px;
+  }
+  .quick .q{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;box-shadow:0 1px 2px rgba(21,32,51,.04);
+  }
+  .quick .q .t{font-weight:700;font-size:15px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .quick .q .t .n{background:var(--brand-soft);color:var(--brand);border-radius:8px;min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .quick .q p{margin:0;font-size:13px;color:var(--sub);line-height:1.6}
+  nav.toc{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 20px;margin:24px 0 8px;
+  }
+  nav.toc h2{margin:0 0 10px;font-size:15px;color:var(--sub);font-weight:600}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:40px}
+  nav.toc a{color:var(--brand);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  @media(max-width:640px){nav.toc ol{columns:1}}
+  .step{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:24px 26px;margin:18px 0;
+  }
+  .step>h2{
+    display:flex;align-items:flex-start;gap:12px;
+    margin:0 0 6px;font-size:19px;
+  }
+  .step>h2 .sn{
+    flex:0 0 34px;height:34px;border-radius:10px;background:var(--brand);
+    color:#fff;display:inline-flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:700;
+  }
+  .step>h2 .tt{line-height:34px}
+  .step .desc{color:var(--sub);margin:0 0 14px;padding-left:46px}
+  .step .goal{
+    display:flex;align-items:flex-start;gap:8px;
+    background:var(--brand-soft);border-radius:8px;padding:10px 14px;margin:0 0 16px;margin-left:46px;
+    font-size:14px;color:#1c3f8f;
+  }
+  .step .goal b{white-space:nowrap}
+  .steptable{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  .steptable th,.steptable td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+  .steptable th{background:#F1F5FB;font-weight:600;white-space:nowrap}
+  .steptable code{font-family:var(--mono);background:#F1F5FB;padding:1px 6px;border-radius:5px;font-size:13px}
+  ul.clean{margin:10px 0 14px;padding-left:22px}
+  ul.clean li{margin:5px 0}
+  .tip,.warnbox,.okbox{
+    border-radius:8px;padding:12px 16px;margin:14px 0;font-size:14px;
+    border-left:4px solid;
+  }
+  .tip{background:var(--brand-soft);border-color:var(--brand)}
+  .warnbox{background:var(--warn-soft);border-color:var(--warn)}
+  .okbox{background:var(--success-soft);border-color:var(--success)}
+  .tip b,.warnbox b,.okbox b{display:block;margin-bottom:2px}
+  .flow{
+    display:flex;align-items:stretch;gap:0;flex-wrap:wrap;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;margin:22px 0;
+  }
+  .flow .node{flex:1 1 120px;min-width:120px;text-align:center;padding:8px;position:relative}
+  .flow .node .ic{width:44px;height:44px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+    display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:8px}
+  .flow .node .lb{font-size:13px;font-weight:600;color:var(--text)}
+  .flow .node .sb{font-size:12px;color:var(--sub);margin-top:2px}
+  .flow .arrow{display:flex;align-items:center;color:#B9C4D4;font-size:18px;padding:0 2px}
+  @media(max-width:640px){.flow .arrow{transform:rotate(90deg)}}
+  .credential-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:12px 0;
+  }
+  .cred{
+    border:1px solid var(--line);border-radius:10px;padding:16px;background:#FBFCFE;
+  }
+  .cred .k{font-weight:700;font-size:15px;margin-bottom:2px}
+  .cred .k em{color:var(--brand);font-style:normal}
+  .cred .where{font-size:13px;color:var(--sub);line-height:1.7}
+  .cred .where code{font-family:var(--mono);background:#F1F5FB;padding:1px 5px;border-radius:4px;font-size:12px}
+  .checklist{list-style:none;padding:0;margin:0}
+  .checklist li{
+    display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px;
+  }
+  .checklist li:last-child{border-bottom:none}
+  .checklist .cb{
+    flex:0 0 20px;height:20px;border:2px solid var(--brand);border-radius:6px;margin-top:2px;
+    display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:13px;
+  }
+  .faq details{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    margin:10px 0;padding:0 18px;
+  }
+  .faq summary{
+    cursor:pointer;font-weight:600;font-size:15px;padding:14px 0;list-style:none;
+    display:flex;align-items:center;gap:8px;
+  }
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::before{content:"Q";flex:0 0 24px;height:24px;border-radius:8px;background:var(--brand-soft);color:var(--brand);
+    display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .faq details[open] summary{border-bottom:1px solid var(--line)}
+  .faq .ans{padding:12px 0 16px;font-size:14px;color:#33405A}
+  .faq .ans code{font-family:var(--mono);background:#F1F5FB;padding:1px 6px;border-radius:5px;font-size:13px}
+  .panel-demo{
+    background:#152033;border-radius:10px;padding:16px;color:#fff;max-width:420px;margin:10px 0 4px;
+    font-size:13px;
+  }
+  .panel-demo .pd-h{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:8px;margin-bottom:10px}
+  .panel-demo .pd-f{margin:8px 0}
+  .panel-demo .pd-l{display:block;color:#9FB0C8;font-size:12px;margin-bottom:3px}
+  .panel-demo .pd-i{background:rgba(255,255,255,.1);border-radius:6px;padding:6px 10px;color:#DDE6F2;font-family:var(--mono);font-size:12px}
+  .panel-demo .pd-btn{display:inline-block;background:var(--brand);border-radius:6px;padding:6px 14px;margin:4px 6px 0 0;font-size:12px}
+  .panel-demo .pd-btn.gray{background:rgba(255,255,255,.14)}
+  .panel-demo .pd-ok{color:#3ED6A7;font-size:12px;margin-top:6px}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--sub);font-size:13px;text-align:center}
+  a{color:var(--brand)}
+  a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+  @media print{
+    body{background:#fff;font-size:12px}
+    .page{max-width:none;padding:0}
+    header.hero{margin:0;border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    nav.toc ol{columns:1}
+    .step{break-inside:avoid;page-break-inside:avoid}
+    .flow,.quick{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <p class="crumb">TradeCloser AI · 帮助中心 / 贸易Agent</p>
+  <span class="badge">工厂对接 · 货代对接</span>
+  <h1>企业微信绑定 · 流程操作说明</h1>
+  <p>工厂对接与货代对接通过企业微信与上下游伙伴沟通。绑定企业微信后，可以同步企微外部联系人、在企业微信中接管沟通。本页说明从企业微信管理后台准备，到在系统内完成绑定的完整步骤。</p>
+</header>
+
+<main class="page">
+
+  <div class="quick">
+    <div class="q"><div class="t"><span class="n">1</span>准备企微后台</div><p>登录企业微信管理后台，确认或创建自建应用</p></div>
+    <div class="q"><div class="t"><span class="n">2</span>获取三项凭证</div><p>复制 CorpID、AgentID、Secret 三个值</p></div>
+    <div class="q"><div class="t"><span class="n">3</span>配置可信IP</div><p>将服务器公网 IP 加入企业可信 IP，否则测试连接报 60020</p></div>
+    <div class="q"><div class="t"><span class="n">4</span>系统内绑定</div><p>在工厂/货代 Agent 右侧栏填入凭证，测试、保存、同步</p></div>
+  </div>
+
+  <nav class="toc">
+    <h2>本页导航</h2>
+    <ol>
+      <li><a href="#prep">前置准备</a></li>
+      <li><a href="#s1">登录企微管理后台并准备自建应用</a></li>
+      <li><a href="#s2">获取 CorpID / AgentID / Secret</a></li>
+      <li><a href="#s3">配置企业可信 IP（关键）</a></li>
+      <li><a href="#s4">开通客户联系 API 权限（同步联系人用）</a></li>
+      <li><a href="#s5">在系统内完成绑定</a></li>
+      <li><a href="#s6">同步企微联系人并验证</a></li>
+      <li><a href="#check">绑定自检清单</a></li>
+      <li><a href="#faq">常见问题</a></li>
+    </ol>
+  </nav>
+
+  <!-- 流程总览 -->
+  <div class="flow" aria-label="绑定流程总览">
+    <div class="node"><div class="ic">🏢</div><div class="lb">企微管理后台</div><div class="sb">准备自建应用</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">🔑</div><div class="lb">获取三项凭证</div><div class="sb">CorpID / AgentID / Secret</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">🛡️</div><div class="lb">配置可信IP</div><div class="sb">加入服务器公网IP</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">🔗</div><div class="lb">系统内绑定</div><div class="sb">填入凭证·测试·保存</div></div>
+    <div class="arrow">→</div>
+    <div class="node"><div class="ic">🔄</div><div class="lb">同步联系人</div><div class="sb">开始企微沟通</div></div>
+  </div>
+
+  <!-- 前置准备 -->
+  <section class="step" id="prep">
+    <h2><span class="sn">0</span><span class="tt">前置准备</span></h2>
+    <p class="desc">绑定前先确认以下三项，缺任何一项都无法完成绑定。</p>
+    <div class="goal"><b>要准备：</b>企业微信管理员账号 / 企业微信已注册企业 / 服务器公网 IP（可联系平台管理员获取）</div>
+    <ul class="clean">
+      <li><b>企业微信管理员账号：</b>只有管理员能创建自建应用、查看 Secret、配置可信 IP。</li>
+      <li><b>企业微信企业：</b>已在企业微信注册的企业（work.weixin.qq.com 登录即可查看）。</li>
+      <li><b>服务器公网 IP：</b>部署本系统的服务器出口公网 IP，用于配置企业可信 IP（第 3 步）。若不清楚，联系平台管理员索取。</li>
+    </ul>
+  </section>
+
+  <!-- 步骤1 -->
+  <section class="step" id="s1">
+    <h2><span class="sn">1</span><span class="tt">登录企业微信管理后台，确认/创建自建应用</span></h2>
+    <p class="desc">企业微信的配置都在「管理后台」完成，不是手机 App 里。</p>
+    <div class="goal"><b>完成标志：</b>管理后台「应用管理 → 自建」中已有本系统的自建应用</div>
+    <ol class="clean">
+      <li>用电脑浏览器打开 <a href="https://work.weixin.qq.com" target="_blank" rel="noopener noreferrer">https://work.weixin.qq.com</a>，用<b>管理员账号扫码登录</b>。</li>
+      <li>进入「<b>应用管理</b>」页签，在「<b>自建</b>」分类下查看是否有本系统对应的应用（通常名为 <b>TradeCloser AI 客服</b> 等）。</li>
+      <li>已有该应用 → 直接进入 <a href="#s2">第 2 步</a> 复制凭证。</li>
+      <li>没有该应用 → 点击「<b>创建应用</b>」，填写应用名称、上传 Logo、设置可见范围，点击「创建应用」即可生成。</li>
+    </ol>
+    <div class="tip"><b>说明</b>创建自建应用本身免费，无需付费购买企业微信任何增值服务。可见范围建议选择对接沟通相关的成员，只有可见范围内的成员数据才可通过 API 操作。</div>
+  </section>
+
+  <!-- 步骤2 -->
+  <section class="step" id="s2">
+    <h2><span class="sn">2</span><span class="tt">获取 CorpID / AgentID / Secret 三项凭证</span></h2>
+    <p class="desc">这三项分别来自企业微信管理后台的两个位置：企业信息 + 自建应用详情。</p>
+    <div class="goal"><b>完成标志：</b>复制好三个值，Secret 建议先粘贴到记事本临时保存</div>
+
+    <div class="credential-grid">
+      <div class="cred">
+        <div class="k">CorpID <em>(企业ID)</em></div>
+        <div class="where">路径：<b>「我的企业」→ 企业信息 → 企业ID</b><br>整串字符，全局唯一，用于标识你的企业。<br><code>如：ww1234567890abcdef</code></div>
+      </div>
+      <div class="cred">
+        <div class="k">AgentID <em>(应用ID)</em></div>
+        <div class="where">路径：<b>「应用管理」→ 自建 → 点开应用详情</b><br>页面顶部显示的 AgentId，一串数字。<br><code>如：1000002</code></div>
+      </div>
+      <div class="cred">
+        <div class="k">Secret <em>(应用密钥)</em></div>
+        <div class="where">路径：<b>应用详情 → Secret → 点击「查看」</b><br>需用<b>管理员手机企业微信确认</b>，确认后下发到企业微信 App。<br>⚠️ Secret 只完整显示一次，务必立即复制保存。</div>
+      </div>
+    </div>
+
+    <div class="warnbox"><b>Secret 获取要点</b>点击「查看」后，需要用管理员账号在<b>手机端企业微信 App</b> 内确认，确认通过后 Secret 才会发送到企业微信 App 上。不要关闭页面，确认后回管理后台复制。若遗忘只能重置，重置后旧配置全部失效。</div>
+  </section>
+
+  <!-- 步骤3 -->
+  <section class="step" id="s3">
+    <h2><span class="sn">3</span><span class="tt">配置企业可信 IP（关键，不做会报 60020）</span></h2>
+    <p class="desc">企业微信安全机制要求：自建应用只能从「企业可信 IP」内的服务器调用接口。本系统的服务器公网 IP 必须加入白名单，否则测试连接会报错。</p>
+    <div class="goal"><b>完成标志：</b>应用详情的「企业可信 IP」中已加入部署服务器公网 IP</div>
+    <ol class="clean">
+      <li>回到「<b>应用管理 → 自建 → 点开本系统应用</b>」详情页。</li>
+      <li>下拉到「<b>开发者接口</b>」区域，找到「<b>企业可信 IP</b>」，点击「<b>配置</b>」。</li>
+      <li>输入<b>部署本系统的服务器公网 IP</b>，多个 IP 用英文分号 <code>;</code> 分隔。</li>
+      <li>点击「确定」，保存成功即完成。</li>
+    </ol>
+    <div class="warnbox"><b>常见错误提示</b>若不配置可信 IP，测试连接会提示：<code>errcode:60020 not allow to access from your ip</code>。看到这个错误直接去应用详情配置可信 IP 即可。<br>若企业已认证，可能需要先配置<b>可信域名</b>才能配置可信 IP，按后台引导完成校验域名归属即可。</div>
+  </section>
+
+  <!-- 步骤4 -->
+  <section class="step" id="s4">
+    <h2><span class="sn">4</span><span class="tt">开通客户联系 API 权限（同步联系人用）</span></h2>
+    <p class="desc">系统同步企微外部联系人，依赖企业微信「客户联系」接口。需要在后台把本系统应用加入可调用接口的应用。</p>
+    <div class="goal"><b>完成标志：</b>客户联系中已把本系统应用加入「可调用接口的应用」</div>
+    <ol class="clean">
+      <li>管理后台左侧「<b>客户联系</b>」（旧称：外部联系人）。</li>
+      <li>进入「<b>权限配置</b>」，在「<b>使用范围</b>」中确认对接沟通成员已被配置为可使用客户联系功能（未配置则无法调用接口）。</li>
+      <li>在「<b>可调用接口的应用</b>」中，添加本系统自建应用（如 TradeCloser AI 客服）。</li>
+    </ol>
+    <div class="tip"><b>说明</b>只做「测试连接/保存配置」不要求此权限；只有需要「🔄 同步企微联系人」时才必须开通。若暂不需要同步联系人，可跳过本步。</div>
+  </section>
+
+  <!-- 步骤5 -->
+  <section class="step" id="s5">
+    <h2><span class="sn">5</span><span class="tt">在系统内完成绑定</span></h2>
+    <p class="desc">以上 4 步在企业微信后台完成。现在回到本系统，在工厂/货代 Agent 界面完成绑定。</p>
+    <div class="goal"><b>完成标志：</b>面板顶部显示「已接入企业微信」绿色状态</div>
+    <ol class="clean">
+      <li>登录系统，进入「<b>贸易Agent</b>」，切换到「<b>工厂对接</b>」或「<b>货代对接</b>」。</li>
+      <li>点击界面<b>右侧图标栏的 🏢 企业微信图标</b>，打开「企业微信设置」面板。</li>
+      <li>在表单中填入三项凭证：
+        <ul class="clean">
+          <li><b>CorpID（企业ID）</b> * 必填</li>
+          <li><b>CorpSecret（Secret）</b> * 必填</li>
+          <li><b>AgentID（应用ID）</b> 可选，用于发消息场景</li>
+        </ul>
+      </li>
+      <li>点击「<b>测试连接</b>」，看到「企微连接成功」即说明 CorpID / Secret 正确且可信 IP 已生效。</li>
+      <li>点击「<b>保存配置</b>」，面板顶部出现「已接入企业微信」即绑定完成。</li>
+    </ol>
+
+    <div class="panel-demo" aria-label="企业微信设置面板示意">
+      <div class="pd-h"><span>🏢 企业微信设置</span><span>✕</span></div>
+      <div class="pd-f"><span class="pd-l">CorpID (企业ID) *</span><div class="pd-i">ww1234567890abcdef</div></div>
+      <div class="pd-f"><span class="pd-l">CorpSecret (Secret) *</span><div class="pd-i">••••••••••••</div></div>
+      <div class="pd-f"><span class="pd-l">AgentID (应用ID，可选)</span><div class="pd-i">1000002</div></div>
+      <div><span class="pd-btn gray">测试连接</span><span class="pd-btn">保存配置</span></div>
+      <div class="pd-ok">✓ 企微连接成功</div>
+    </div>
+  </section>
+
+  <!-- 步骤6 -->
+  <section class="step" id="s6">
+    <h2><span class="sn">6</span><span class="tt">同步企微联系人并验证</span></h2>
+    <p class="desc">绑定成功后，可把企业微信中的外部联系人同步到本系统，作为工厂/货代伙伴。</p>
+    <div class="goal"><b>完成标志：</b>面板显示「已同步联系人 N」且系统伙伴列表出现企微同步的伙伴</div>
+    <ol class="clean">
+      <li>在「已接入企业微信」状态下，点击「<b>🔄 同步企微联系人</b>」。</li>
+      <li>系统会拉取企微外部联系人，成功后提示「同步完成：共 N 个外部联系人，新增 X 个，更新 Y 个」。</li>
+      <li>在工厂/货代的工作文件中即可看到同步过来的伙伴。</li>
+    </ol>
+    <div class="warnbox"><b>同步不到联系人的排查</b>① 第 4 步「客户联系可调用接口的应用」是否添加了本系统应用；② 成员的「使用范围」是否配置；③ 同步的是「外部联系人」，企业内部同事不会出现在列表中。</div>
+  </section>
+
+  <!-- 自检清单 -->
+  <section class="step" id="check">
+    <h2><span class="sn">✓</span><span class="tt">绑定自检清单</span></h2>
+    <p class="desc">按顺序核对，全部满足即绑定成功。</p>
+    <ul class="checklist">
+      <li><span class="cb">✓</span>企业微信管理后台「应用管理 → 自建」中有本系统自建应用</li>
+      <li><span class="cb">✓</span>已复制 CorpID（我的企业 → 企业信息 → 企业ID）</li>
+      <li><span class="cb">✓</span>已通过管理员确认获取 Secret（应用详情 → Secret → 查看）</li>
+      <li><span class="cb">✓</span>应用详情「企业可信 IP」已加入部署服务器公网 IP</li>
+      <li><span class="cb">✓</span>系统内工厂/货代右侧栏 🏢 面板已填入三项凭证</li>
+      <li><span class="cb">✓</span>「测试连接」显示企微连接成功</li>
+      <li><span class="cb">✓</span>「保存配置」后面板顶部显示「已接入企业微信」</li>
+      <li><span class="cb">✓</span>（如需）「同步企微联系人」成功并出现伙伴</li>
+    </ul>
+  </section>
+
+  <!-- FAQ -->
+  <section class="step faq" id="faq">
+    <h2><span class="sn">?</span><span class="tt">常见问题</span></h2>
+    <p class="desc">绑定过程中最常遇到的问题与解决办法。</p>
+
+    <details>
+      <summary>测试连接提示 60020 "not allow to access from your ip" 怎么办？</summary>
+      <div class="ans">这是最常见的错误，原因是没有把服务器公网 IP 加入<b>企业可信 IP</b>。回到企业微信管理后台 → 应用详情 → 开发者接口 → 企业可信 IP → 配置，填入部署本系统的服务器公网 IP，保存后稍等 1-2 分钟再测试。若企业已认证提示需先配可信域名，按后台引导完成域名归属校验即可。</div>
+    </details>
+    <details>
+      <summary>Secret 在哪里看？为什么我点查看没反应？</summary>
+      <div class="ans">Secret 在应用详情页（应用管理 → 自建 → 点开应用）的「开发者接口」区域，点击「查看」后需用<b>管理员手机企业微信</b>确认，确认后才会发送到企业微信 App。Secret 只完整显示一次，务必立即复制保存。</div>
+    </details>
+    <details>
+      <summary>AgentID 是必填吗？</summary>
+      <div class="ans">在系统面板中 AgentID 标注为「可选」。CorpID 和 CorpSecret 为必填；AgentID 主要用于消息发送等场景，建议一并填入对应自建应用的 AgentId（应用详情页顶部那串数字）。</div>
+    </details>
+    <details>
+      <summary>同步联系人提示失败 / 同步不到任何人？</summary>
+      <div class="ans">常见原因：① 未在「客户联系 → 权限配置 → 可调用接口的应用」中添加本系统应用；② 成员未配置「使用范围」；③ 企业微信里还没有外部联系人（只加内部同事不会同步）。请按第 4 步和第 6 步排查。</div>
+    </details>
+    <details>
+      <summary>CorpID、AgentID、Secret 填错/想改怎么办？</summary>
+      <div class="ans">重新打开工厂/货代右侧栏 🏢 企业微信设置面板，直接修改对应字段后再次「测试连接」→「保存配置」即可覆盖。Secret 输入框为空时表示沿用已保存的值，只有需要更换时才重新输入。</div>
+    </details>
+    <details>
+      <summary>工厂/货代为什么没有"客户绑定"功能？</summary>
+      <div class="ans">工厂对接与货代对接定位为通过<b>企业微信接管沟通</b>，沟通对象是上下游伙伴（外部联系人），因此不提供客户绑定。需要客户上下文的 Agent（如外贸销冠）才保留客户绑定入口。</div>
+    </details>
+  </section>
+
+  <div class="footer">
+    TradeCloser AI 帮助中心 · 企业微信绑定流程操作说明 · 2026-08-31<br>
+    若仍无法完成绑定，请联系平台管理员提供部署服务器公网 IP 或协助配置后台权限。
+  </div>
+
+</div>
+</main>
+</body>
+</html>

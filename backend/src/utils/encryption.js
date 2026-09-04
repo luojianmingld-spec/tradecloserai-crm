@@ -3,7 +3,11 @@ import crypto from 'crypto';
 
 // AES-256-GCM 加密/解密工具
 // 密钥从环境变量或硬编码（后续可迁移到 env）
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '3b8d41af3123ac14a5535076f110804a'; // 必须32字节
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
+  console.error('[FATAL] ENCRYPTION_KEY environment variable must be exactly 32 hex characters (16 bytes)');
+  process.exit(1);
+} // 必须32字节
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;

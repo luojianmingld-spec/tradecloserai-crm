@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telegram 登录页设计稿 — 扫码登录 / 手机号登录</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --surface:#ffffff;
+    --text:#1a1a1a;
+    --muted:#707579;
+    --muted-2:#a2a9b0;
+    --accent:#3390ec;
+    --accent-hover:#2f86db;
+    --accent-soft:#e8f3fe;
+    --border:#e4e7ea;
+    --border-strong:#cfd3d8;
+    --hover:#f1f4f7;
+    --radius:12px;
+    --radius-lg:16px;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--font);
+    background:var(--bg);
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:32px 20px;
+  }
+  button,input{font:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+  /* ---------- 页面容器 ---------- */
+  .stage{width:100%;max-width:420px;position:relative}
+
+  /* ---------- 顶栏品牌 ---------- */
+  .brand{
+    display:flex;align-items:center;gap:10px;
+    padding:6px 4px 22px;
+  }
+  .brand .logo-mini{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  .brand .name{font-size:19px;font-weight:700;letter-spacing:.2px}
+  .brand .name em{font-style:normal;color:var(--muted-2);font-weight:500;margin-left:6px;font-size:13px}
+
+  /* ---------- 卡片 ---------- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow);
+    padding:34px 30px 26px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  /* ---------- 视图切换 ---------- */
+  .view{display:none}
+  .view[hidden]{display:none !important}
+  .view.active{display:block;animation:viewIn .32s ease both}
+  .view.active.phone-view{display:flex}
+  @keyframes viewIn{
+    from{opacity:0;transform:translateY(6px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  /* ---------- 扫码视图 ---------- */
+  .qr-wrap{
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+  }
+  .qr-title{font-size:20px;font-weight:700;line-height:1.35;margin-bottom:6px}
+  .qr-sub{font-size:14px;color:var(--muted);line-height:1.55;margin-bottom:22px}
+  .qr-box{
+    width:230px;height:230px;padding:10px;
+    background:#fff;border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 1px 4px rgba(0,0,0,.05);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:24px;
+    position:relative;
+  }
+  .qr-box svg{width:100%;height:100%;display:block}
+  .qr-badge{
+    position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);
+    background:#fff;border:1px solid var(--border);border-radius:999px;
+    padding:4px 12px;font-size:11px;color:var(--muted);white-space:nowrap;
+  }
+  .qr-steps{
+    list-style:none;text-align:left;width:100%;
+    margin-bottom:24px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .qr-steps li{
+    display:flex;gap:12px;align-items:flex-start;
+    font-size:14px;line-height:1.5;color:var(--text);
+  }
+  .qr-steps .num{
+    flex:none;width:22px;height:22px;border-radius:50%;
+    background:var(--accent-soft);color:var(--accent);
+    font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    margin-top:1px;
+  }
+  .qr-steps b{font-weight:600}
+
+  .link-row{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .switch-link{
+    background:none;border:none;cursor:pointer;
+    color:var(--accent);font-size:13px;font-weight:600;
+    letter-spacing:.4px;text-transform:uppercase;padding:6px 10px;border-radius:8px;
+    transition:background .15s ease;
+  }
+  .switch-link:hover{background:var(--accent-soft)}
+  .switch-link small{font-size:11px;color:var(--muted-2);font-weight:500;text-transform:none;letter-spacing:0;margin-right:6px}
+
+  /* ---------- 手机号视图 ---------- */
+  .phone-view{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .logo-big{
+    width:76px;height:76px;border-radius:20px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:16px;
+    box-shadow:0 8px 20px rgba(51,144,236,.28);
+  }
+  .phone-title{font-size:22px;font-weight:700;margin-bottom:4px}
+  .phone-sub{font-size:13.5px;color:var(--muted);line-height:1.5;margin-bottom:22px}
+
+  .form{width:100%;text-align:left}
+
+  /* 国家选择 */
+  .country-field{
+    width:100%;
+    display:flex;align-items:center;gap:10px;
+    background:#fff;border:1.5px solid var(--border-strong);border-radius:10px;
+    padding:12px 14px;cursor:pointer;
+    transition:border-color .15s ease,box-shadow .15s ease;
+    margin-bottom:10px;
+  }
+  .country-field:hover{border-color:var(--accent)}
+  .country-field.open{border-color:var(--accent);box-shadow:0 0 0 3px rgba(51,144,236,.12)}
+  .country-field .flag{font-size:20px;line-height:1;flex:none}
+  .country-field .cname{flex:1;font-size:15px;font-weight:500;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .country-field .ccode{color:var(--muted);font-size:14px;font-weight:500}
+  .country-field .chev{flex:none;color:var(--muted-2);transition:transform .18s ease;display:flex}
+  .country-field.open .chev{transform:rotate(180deg)}
+
+  .country-drop{
+    position:absolute;left:30px;right:30px;top:206px;z-index:30;
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 12px 32px rgba(0,0,0,.12);
+    max-height:280px;display:none;flex-direction:column;
+    overflow:hidden;
+  }
+  .country-drop.open{display:flex;animation:dropIn .18s ease both}
+  @keyframes dropIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .drop-search{padding:10px 12px;border-bottom:1px solid var(--border);flex:none}
+  .drop-search input{
+    width:100%;border:1px solid var(--border-strong);border-radius:8px;
+    padding:9px 12px;font-size:14px;outline:none;transition:border-color .15s ease;
+  }
+  .drop-search input:focus{border-color:var(--accent)}
+  .drop-list{overflow-y:auto;flex:1}
+  .drop-item{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 14px;cursor:pointer;font-size:14.5px;
+    transition:background .12s ease;
+  }
+  .drop-item:hover{background:var(--hover)}
+  .drop-item.selected{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .drop-item .flag{font-size:19px;line-height:1;flex:none}
+  .drop-item .dname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+  .drop-item .dcode{color:var(--muted);font-size:13.5px}
+  .drop-empty{padding:20px;text-align:center;color:var(--muted);font-size:14px}
+
+  /* 手机号输入 */
+  .phone-field{
+    display:flex;align-items:center;gap:2px;
+    background:#fff;border:1.5px solid var(--border-strong);border-radius:10px;
+    padding:0 14px;height:50px;
+    transition:border-color .15s ease,box-shadow .15s ease;
+    margin-bottom:16px;
+  }
+  .phone-field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(51,144,236,.12)}
+  .phone-field .prefix{font-size:15px;font-weight:600;color:var(--text);padding-right:10px;border-right:1px solid var(--border)}
+  .phone-field input{
+    flex:1;border:none;outline:none;font-size:15px;padding:0 12px;min-width:0;
+    background:transparent;color:var(--text);
+  }
+  .phone-field input::placeholder{color:var(--muted-2)}
+
+  /* 保持登录 */
+  .keep-row{
+    display:flex;align-items:center;gap:9px;cursor:pointer;
+    margin-bottom:20px;user-select:none;font-size:14px;color:var(--text);width:fit-content;
+  }
+  .keep-row input{position:absolute;opacity:0;pointer-events:none}
+  .check{
+    width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border-strong);
+    display:inline-flex;align-items:center;justify-content:center;flex:none;
+    transition:all .15s ease;background:#fff;
+  }
+  .check svg{opacity:0;transform:scale(.4);transition:all .15s ease}
+  .keep-row input:checked + .check{background:var(--accent);border-color:var(--accent)}
+  .keep-row input:checked + .check svg{opacity:1;transform:scale(1)}
+  .keep-row input:focus-visible + .check{outline:2px solid var(--accent);outline-offset:2px}
+
+  .btn-next{
+    width:100%;border:none;cursor:pointer;
+    background:var(--accent);color:#fff;
+    font-size:15px;font-weight:600;letter-spacing:.2px;
+    border-radius:10px;height:50px;
+    transition:background .15s ease,transform .08s ease;
+    margin-bottom:14px;
+  }
+  .btn-next:hover{background:var(--accent-hover)}
+  .btn-next:active{transform:scale(.985)}
+
+  /* ---------- 提示条 ---------- */
+  .toast{
+    position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-12px);
+    background:#222;color:#fff;font-size:13px;padding:10px 18px;border-radius:999px;
+    opacity:0;pointer-events:none;transition:all .25s ease;z-index:99;
+    box-shadow:0 6px 18px rgba(0,0,0,.2);white-space:nowrap;max-width:92vw;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- 页脚提示（设计稿说明） ---------- */
+  .demo-hint{
+    margin-top:18px;text-align:center;font-size:12px;color:var(--muted-2);
+  }
+  .demo-hint button{
+    background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+  .view.active{animation:none}
+  .country-drop.open{animation:none}
+  .toast{transition:none}
+}
+@media (max-width:480px){
+    body{padding:20px 14px;justify-content:flex-start}
+    .card{padding:28px 22px 22px}
+    .country-drop{left:23px;right:23px;top:204px}
+  }
+  @media print{
+    .demo-hint,.toast{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <header class="brand">
+    <span class="logo-mini" aria-hidden="true">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff" role="img" aria-label="Telegram 纸飞机图标"><desc>Telegram 纸飞机图标</desc><path d="M9.04 15.51l-.38 5.33c.54 0 .78-.24 1.06-.52l2.55-2.44 5.28 3.87c.97.53 1.66.25 1.92-.9L22.9 4.32c.31-1.42-.52-1.97-1.46-1.63L2.58 9.47c-1.39.54-1.37 1.32-.24 1.67l4.75 1.48 11.03-6.94c.52-.32 1-.14.61.19L9.04 15.51z"/></svg>
+    </span>
+    <span class="name">Telegram<em>登录</em></span>
+  </header>
+
+  <main class="card">
+
+    <!-- 视图一：扫码登录 -->
+    <section class="view active" id="view-qr" aria-label="扫码登录">
+      <div class="qr-wrap">
+        <h1 class="qr-title">通过扫码登录 Telegram</h1>
+        <p class="qr-sub">使用手机上的 Telegram 扫描二维码，快速安全登录</p>
+
+        <div class="qr-box">
+          <svg id="qr-svg" viewBox="0 0 232 232" role="img" aria-label="登录二维码（示意）"></svg>
+          <span class="qr-badge">二维码区域 · 接入时替换为真实二维码</span>
+        </div>
+
+        <ol class="qr-steps">
+          <li><span class="num">1</span><span>打开手机上的 <b>Telegram</b> 应用</span></li>
+          <li><span class="num">2</span><span>进入 <b>设置 → 设备 → 扫码登录</b></span></li>
+          <li><span class="num">3</span><span>对准本屏幕扫描二维码，并在手机上确认登录</span></li>
+        </ol>
+
+        <div class="link-row">
+          <button type="button" class="switch-link" data-switch="phone"><small>没有二维码？</small>使用手机号登录</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视图二：手机号登录 -->
+    <section class="view phone-view" id="view-phone" aria-label="手机号登录" hidden>
+      <span class="logo-big" aria-hidden="true">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="#fff" role="img" aria-label="Telegram 图标"><desc>Telegram 纸飞机图标</desc><path d="M9.04 15.51l-.38 5.33c.54 0 .78-.24 1.06-.52l2.55-2.44 5.28 3.87c.97.53 1.66.25 1.92-.9L22.9 4.32c.31-1.42-.52-1.97-1.46-1.63L2.58 9.47c-1.39.54-1.37 1.32-.24 1.67l4.75 1.48 11.03-6.94c.52-.32 1-.14.61.19L9.04 15.51z"/></svg>
+      </span>
+      <h2 class="phone-title">Telegram</h2>
+      <p class="phone-sub">请确认国家区号并输入您的手机号</p>
+
+      <div class="form">
+        <div class="country-field" id="countryField" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="选择国家">
+          <span class="flag" id="selFlag">🇨🇳</span>
+          <span class="cname" id="selName">中国</span>
+          <span class="ccode" id="selCode">+86</span>
+          <span class="chev" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </span>
+        </div>
+
+        <div class="country-drop" id="countryDrop" role="listbox" aria-label="国家列表">
+          <div class="drop-search">
+            <input type="text" id="countrySearch" placeholder="搜索国家或区号…" autocomplete="off">
+          </div>
+          <div class="drop-list" id="countryList"></div>
+        </div>
+
+        <div class="phone-field">
+          <span class="prefix" id="phonePrefix">+86</span>
+          <input type="tel" id="phoneInput" placeholder="请输入手机号" inputmode="numeric" autocomplete="tel-national" aria-label="手机号">
+        </div>
+
+        <label class="keep-row">
+          <input type="checkbox" id="keepSigned" checked>
+          <span class="check" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.5"/></svg>
+          </span>
+          <span>保持登录状态</span>
+        </label>
+
+        <button type="button" class="btn-next" id="btnNext">下一步</button>
+
+        <div class="link-row">
+          <button type="button" class="switch-link" data-switch="qr"><small>没有手机验证码？</small>使用扫码登录</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <p class="demo-hint">TG 登录页交互设计稿 · 点击 <button type="button" data-switch="phone">手机号登录</button> / <button type="button" data-switch="qr">扫码登录</button> 切换视图</p>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- 视图切换 ---------- */
+  var qrView=document.getElementById('view-qr');
+  var phoneView=document.getElementById('view-phone');
+  var switchBtns=document.querySelectorAll('[data-switch]');
+  function switchView(name){
+    var toQr=(name==='qr');
+    qrView.classList.toggle('active',toQr);
+    qrView.hidden=!toQr;
+    phoneView.classList.toggle('active',!toQr);
+    phoneView.hidden=toQr;
+    closeDrop();
+    if(!toQr){
+      window.setTimeout(function(){document.getElementById('phoneInput').focus();},120);
+    }
+  }
+  switchBtns.forEach(function(b){b.addEventListener('click',function(){switchView(this.getAttribute('data-switch'));});});
+
+  /* ---------- 国家数据 ---------- */
+  var COUNTRIES=[
+    {name:'中国',flag:'🇨🇳',code:'+86'},
+    {name:'中国香港',flag:'🇭🇰',code:'+852'},
+    {name:'中国澳门',flag:'🇲🇴',code:'+853'},
+    {name:'美国',flag:'🇺🇸',code:'+1'},
+    {name:'新加坡',flag:'🇸🇬',code:'+65'},
+    {name:'马来西亚',flag:'🇲🇾',code:'+60'},
+    {name:'印度尼西亚',flag:'🇮🇩',code:'+62'},
+    {name:'泰国',flag:'🇹🇭',code:'+66'},
+    {name:'越南',flag:'🇻🇳',code:'+84'},
+    {name:'菲律宾',flag:'🇵🇭',code:'+63'},
+    {name:'缅甸',flag:'🇲🇲',code:'+95'},
+    {name:'柬埔寨',flag:'🇰🇭',code:'+855'},
+    {name:'老挝',flag:'🇱🇦',code:'+856'},
+    {name:'印度',flag:'🇮🇳',code:'+91'},
+    {name:'巴基斯坦',flag:'🇵🇰',code:'+92'},
+    {name:'孟加拉国',flag:'🇧🇩',code:'+880'},
+    {name:'尼泊尔',flag:'🇳🇵',code:'+977'},
+    {name:'斯里兰卡',flag:'🇱🇰',code:'+94'},
+    {name:'哈萨克斯坦',flag:'🇰🇿',code:'+7'},
+    {name:'乌兹别克斯坦',flag:'🇺🇿',code:'+998'},
+    {name:'蒙古',flag:'🇲🇳',code:'+976'},
+    {name:'日本',flag:'🇯🇵',code:'+81'},
+    {name:'韩国',flag:'🇰🇷',code:'+82'},
+    {name:'英国',flag:'🇬🇧',code:'+44'},
+    {name:'德国',flag:'🇩🇪',code:'+49'},
+    {name:'法国',flag:'🇫🇷',code:'+33'},
+    {name:'意大利',flag:'🇮🇹',code:'+39'},
+    {name:'西班牙',flag:'🇪🇸',code:'+34'},
+    {name:'葡萄牙',flag:'🇵🇹',code:'+351'},
+    {name:'荷兰',flag:'🇳🇱',code:'+31'},
+    {name:'比利时',flag:'🇧🇪',code:'+32'},
+    {name:'瑞士',flag:'🇨🇭',code:'+41'},
+    {name:'瑞典',flag:'🇸🇪',code:'+46'},
+    {name:'挪威',flag:'🇳🇴',code:'+47'},
+    {name:'丹麦',flag:'🇩🇰',code:'+45'},
+    {name:'芬兰',flag:'🇫🇮',code:'+358'},
+    {name:'波兰',flag:'🇵🇱',code:'+48'},
+    {name:'乌克兰',flag:'🇺🇦',code:'+380'},
+    {name:'俄罗斯',flag:'🇷🇺',code:'+7'},
+    {name:'土耳其',flag:'🇹🇷',code:'+90'},
+    {name:'阿联酋',flag:'🇦🇪',code:'+971'},
+    {name:'沙特阿拉伯',flag:'🇸🇦',code:'+966'},
+    {name:'卡塔尔',flag:'🇶🇦',code:'+974'},
+    {name:'科威特',flag:'🇰🇼',code:'+965'},
+    {name:'以色列',flag:'🇮🇱',code:'+972'},
+    {name:'埃及',flag:'🇪🇬',code:'+20'},
+    {name:'摩洛哥',flag:'🇲🇦',code:'+212'},
+    {name:'尼日利亚',flag:'🇳🇬',code:'+234'},
+    {name:'肯尼亚',flag:'🇰🇪',code:'+254'},
+    {name:'南非',flag:'🇿🇦',code:'+27'},
+    {name:'澳大利亚',flag:'🇦🇺',code:'+61'},
+    {name:'加拿大',flag:'🇨🇦',code:'+1'},
+    {name:'巴西',flag:'🇧🇷',code:'+55'},
+    {name:'墨西哥',flag:'🇲🇽',code:'+52'},
+    {name:'阿根廷',flag:'🇦🇷',code:'+54'}
+  ];
+
+  var field=document.getElementById('countryField');
+  var drop=document.getElementById('countryDrop');
+  var listEl=document.getElementById('countryList');
+  var searchEl=document.getElementById('countrySearch');
+  var selFlag=document.getElementById('selFlag');
+  var selName=document.getElementById('selName');
+  var selCode=document.getElementById('selCode');
+  var phonePrefix=document.getElementById('phonePrefix');
+  var selectedIdx=0;
+
+  function renderList(filter){
+    var kw=(filter||'').trim().toLowerCase();
+    var items=COUNTRIES.map(function(c,i){return {c:c,i:i};})
+      .filter(function(o){
+        if(!kw) return true;
+        return o.c.name.toLowerCase().indexOf(kw)>-1 || o.c.code.indexOf(kw)>-1;
+      });
+    listEl.innerHTML='';
+    if(!items.length){
+      var empty=document.createElement('div');
+      empty.className='drop-empty';
+      empty.textContent='未找到匹配的国家';
+      listEl.appendChild(empty);
+      return;
+    }
+    items.forEach(function(o){
+      var row=document.createElement('div');
+      row.className='drop-item'+(o.i===selectedIdx?' selected':'');
+      row.setAttribute('role','option');
+      row.setAttribute('aria-selected',o.i===selectedIdx?'true':'false');
+      var f=document.createElement('span');f.className='flag';f.textContent=o.c.flag;
+      var n=document.createElement('span');n.className='dname';n.textContent=o.c.name;
+      var d=document.createElement('span');d.className='dcode';d.textContent=o.c.code;
+      row.appendChild(f);row.appendChild(n);row.appendChild(d);
+      row.addEventListener('click',function(){selectCountry(o.i);});
+      listEl.appendChild(row);
+    });
+  }
+  function selectCountry(i){
+    selectedIdx=i;
+    var c=COUNTRIES[i];
+    selFlag.textContent=c.flag;
+    selName.textContent=c.name;
+    selCode.textContent=c.code;
+    phonePrefix.textContent=c.code;
+    closeDrop();
+    renderList('');
+  }
+  function openDrop(){
+    drop.classList.add('open');
+    field.classList.add('open');
+    field.setAttribute('aria-expanded','true');
+    renderList('');
+    window.setTimeout(function(){searchEl.focus();},50);
+  }
+  function closeDrop(){
+    drop.classList.remove('open');
+    field.classList.remove('open');
+    field.setAttribute('aria-expanded','false');
+    searchEl.value='';
+    renderList('');
+  }
+  field.addEventListener('click',function(){
+    if(drop.classList.contains('open')) closeDrop(); else openDrop();
+  });
+  field.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key===' '){e.preventDefault(); if(drop.classList.contains('open')) closeDrop(); else openDrop();}
+    if(e.key==='Escape') closeDrop();
+  });
+  searchEl.addEventListener('input',function(){renderList(this.value);});
+  document.addEventListener('click',function(e){
+    if(!field.contains(e.target)&&!drop.contains(e.target)) closeDrop();
+  });
+  renderList('');
+  selectCountry(0);
+
+  /* ---------- 手机号输入限制 ---------- */
+  var phoneInput=document.getElementById('phoneInput');
+  phoneInput.addEventListener('input',function(){
+    this.value=this.value.replace(/[^0-9\s\-+()]/g,'');
+  });
+
+  /* ---------- 下一步（原型演示） ---------- */
+  document.getElementById('btnNext').addEventListener('click',function(){
+    var num=phoneInput.value.replace(/[\s\-()]/g,'');
+    if(!num){
+      showToast('请输入手机号');
+      phoneInput.focus();
+      return;
+    }
+    showToast('原型演示：将向 '+phonePrefix.textContent+' '+num+' 发送登录验证码（待接入后端）');
+  });
+
+  /* ---------- Toast ---------- */
+  var toastEl=document.getElementById('toast');
+  var toastTimer=null;
+  function showToast(msg){
+    toastEl.textContent=msg;
+    toastEl.classList.add('show');
+    if(toastTimer) window.clearTimeout(toastTimer);
+    toastTimer=window.setTimeout(function(){toastEl.classList.remove('show');},2400);
+  }
+
+  /* ---------- 生成示意二维码（真实登录时替换） ---------- */
+  (function(){
+    var svg=document.getElementById('qr-svg');
+    var ns='http://www.w3.org/2000/svg';
+    var N=25, cell=232/N;
+    var rects=[];
+
+    function finder(x,y){
+      var corners=[[x,y],[x+6,y],[x,y+6],[x+6,y+6]];
+      var edges=[[x+1,y,4,1],[x+1,y+5,4,1],[x,y+1,1,4],[x+5,y+1,1,4]];
+      var mid=[x+2,y+2,3,3];
+      corners.forEach(function(c){rects.push([c[0],c[1],1,1]);});
+      edges.forEach(function(e){rects.push(e);});
+      rects.push(mid);
+    }
+    finder(0,0); finder(N-7,0); finder(0,N-7);
+
+    var seed=20260903;
+    function rand(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+    var sep=1;
+    for(var r=0;r<N;r++){
+      for(var c=0;c<N;c++){
+        var inFinder=(r<7&&c<7)||(r<7&&c>=N-7)||(r>=N-7&&c<7);
+        if(inFinder) continue;
+        if(rand()>0.48) rects.push([c,r,1,1]);
+      }
+    }
+    /* 去除中央 logo 区域的小块 */
+    for(var i=rects.length-1;i>=0;i--){
+      var rc=rects[i];
+      var cx=rc[0]+rc[2]/2, cy=rc[1]+rc[3]/2;
+      if(cx>N/2-4 && cx<N/2+4 && cy>N/2-4 && cy<N/2+4){ rects.splice(i,1); }
+    }
+
+    rects.forEach(function(rc){
+      var rect=document.createElementNS(ns,'rect');
+      rect.setAttribute('x',rc[0]*cell);
+      rect.setAttribute('y',rc[1]*cell);
+      rect.setAttribute('width',Math.max(rc[2]*cell-1,1));
+      rect.setAttribute('height',Math.max(rc[3]*cell-1,1));
+      rect.setAttribute('fill','#1a1a1a');
+      svg.appendChild(rect);
+    });
+
+    /* 中央 Telegram 纸飞机 */
+    var g=document.createElementNS(ns,'g');g.setAttribute('aria-hidden','true');
+    var bg=document.createElementNS(ns,'rect');
+    bg.setAttribute('x',N/2*cell-22);bg.setAttribute('y',N/2*cell-22);
+    bg.setAttribute('width',44);bg.setAttribute('height',44);
+    bg.setAttribute('rx',10);bg.setAttribute('fill','#fff');
+    var plane=document.createElementNS(ns,'path');
+    plane.setAttribute('d','M9.04 15.51l-.38 5.33c.54 0 .78-.24 1.06-.52l2.55-2.44 5.28 3.87c.97.53 1.66.25 1.92-.9L22.9 4.32c.31-1.42-.52-1.97-1.46-1.63L2.58 9.47c-1.39.54-1.37 1.32-.24 1.67l4.75 1.48 11.03-6.94c.52-.32 1-.14.61.19L9.04 15.51z');
+    plane.setAttribute('transform','translate('+(N/2*cell-9.5)+','+(N/2*cell-9.5)+') scale(0.8)');
+    plane.setAttribute('fill','#3390ec');
+    g.appendChild(bg);g.appendChild(plane);
+    svg.appendChild(g);
+  })();
+})();
+</script>
+</body>
+</html>

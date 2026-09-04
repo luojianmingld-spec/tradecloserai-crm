@@ -20,6 +20,8 @@ import https from "https";
 import http from "http";
 import { getEvolutionConnector } from "../services/evolution-connector.js";
 import { runFullBackgroundCheck } from "./background-check.js";
+import { resolveToPhoneJid } from "../services/lid-mapping.js";
+import { inferCountry } from "../utils/phone-country.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.resolve(__dirname, '../../data');
@@ -40,6 +42,7 @@ const JID_WRITABLE_FIELDS = [
   'requirementSummary', 'requirementProducts', 'requirementBudget',
   'requirementQuantity', 'requirementDelivery', 'requirementSource',
   'dealStage', 'dealStageAt', 'dealValue',
+  'isBusiness',
 ];
 
 // Fields allowed for :id CRUD (wider set)
@@ -52,6 +55,7 @@ const ID_WRITABLE_FIELDS = [
   'requirementSummary', 'requirementProducts', 'requirementBudget',
   'requirementQuantity', 'requirementDelivery',
   'dealStage', 'dealStageAt', 'dealValue',
+  'isBusiness',
 ];
 
 // 需求字段列表（PUT 时自动打时间戳）
@@ -122,27 +126,38 @@ router.get('/by-jid/:jid', async (req, res) => {
     if (!jid) return res.status(400).json({ error: 'jid required' });
     const userId = req.userId;
 
-    let customer = await findCustomerByJid(prisma, userId, jid);
+    // L2: LID 解析 —— @lid 先解析为真实手机号JID，避免同一人（@lid与真实号）重复建档
+    const realJid = jid.includes('@lid') ? resolveToPhoneJid(jid) : jid;
+    const lookupJids = [...new Set([jid, realJid])];
+
+    let customer = null;
+    for (const j of lookupJids) {
+      customer = await findCustomerByJid(prisma, userId, j);
+      if (customer) break;
+    }
 
     if (!customer) {
-      const firstMsg = await prisma.wAMessage.findFirst({
-        where: { OR: [{ from: jid }, { to: jid }] },
-        orderBy: { timestamp: 'asc' },
-      });
-      const lastMsg = await prisma.wAMessage.findFirst({
-        where: { OR: [{ from: jid }, { to: jid }] },
-        orderBy: { timestamp: 'desc' },
-      });
-      const phone = jid.split('@')[0] || null;
+      // L2: 空会话不自动建档 —— 两个jid下均无任何消息时返回404（杜绝"看一眼就建档"的幽灵客户）
+      const msgWhere = { OR: [{ from: { in: lookupJids } }, { to: { in: lookupJids } }] };
+      const msgCount = await prisma.wAMessage.count({ where: msgWhere });
+      if (msgCount === 0) {
+        return res.status(404).json({ error: 'Customer not found', code: 'NO_MESSAGES' });
+      }
+      const firstMsg = await prisma.wAMessage.findFirst({ where: msgWhere, orderBy: { timestamp: 'asc' } });
+      const lastMsg = await prisma.wAMessage.findFirst({ where: msgWhere, orderBy: { timestamp: 'desc' } });
+      const phone = realJid.split('@')[0] || null;
       let defaultName = phone || '';
       try {
-        const contact = await prisma.contact?.findFirst?.({ where: { jid } });
+        // 姓名从Contact表取：realJid优先，其次原jid
+        let contact = await prisma.contact?.findFirst?.({ where: { jid: realJid } });
+        if (!contact && realJid !== jid) contact = await prisma.contact?.findFirst?.({ where: { jid } });
         if (contact?.name || contact?.pushName) defaultName = contact.name || contact.pushName || defaultName;
       } catch {}
 
       customer = await prisma.customer.create({
         data: {
-          userId, jid, name: defaultName, phone, customerLevel: 'C',
+          userId, jid: realJid, name: defaultName, phone, customerLevel: 'C',
+          country: inferCountry(phone),
           source: 'whatsapp', status: 'potential', intentLevel: 5, assignedTo: userId,
           firstContactAt: firstMsg?.timestamp || new Date(),
           lastContactAt: lastMsg?.timestamp || new Date(),
@@ -151,14 +166,9 @@ router.get('/by-jid/:jid', async (req, res) => {
     } else {
       const patch = {};
       if (!customer.firstContactAt || !customer.lastContactAt) {
-        const firstMsg = await prisma.wAMessage.findFirst({
-          where: { OR: [{ from: jid }, { to: jid }] },
-          orderBy: { timestamp: 'asc' },
-        });
-        const lastMsg = await prisma.wAMessage.findFirst({
-          where: { OR: [{ from: jid }, { to: jid }] },
-          orderBy: { timestamp: 'desc' },
-        });
+        const msgWhere = { OR: [{ from: { in: lookupJids } }, { to: { in: lookupJids } }] };
+        const firstMsg = await prisma.wAMessage.findFirst({ where: msgWhere, orderBy: { timestamp: 'asc' } });
+        const lastMsg = await prisma.wAMessage.findFirst({ where: msgWhere, orderBy: { timestamp: 'desc' } });
         if (!customer.firstContactAt && firstMsg) patch.firstContactAt = firstMsg.timestamp;
         if (!customer.lastContactAt && lastMsg) patch.lastContactAt = lastMsg.timestamp;
         if (Object.keys(patch).length) {
@@ -224,7 +234,7 @@ router.post('/by-jid/:jid/extract-ai', async (req, res) => {
     const jid = decodeJid(req.params.jid);
     if (!jid) return res.status(400).json({ error: 'jid required' });
     const userId = req.userId;
-    const limit = Math.min(parseInt(req.body.limit) || 20, 50);
+    const limit = Math.min(parseInt(req.body?.limit) || 20, 50);
 
     const messages = await prisma.wAMessage.findMany({
       where: { OR: [{ from: jid }, { to: jid }] },
@@ -301,7 +311,7 @@ router.post('/by-jid/:jid/ask-company', async (req, res) => {
   try {
     const jid = decodeJid(req.params.jid);
     const userId = req.userId;
-    const limit = Math.min(parseInt(req.body.limit) || 20, 50);
+    const limit = Math.min(parseInt(req.body?.limit) || 20, 50);
     const messages = await prisma.wAMessage.findMany({
       where: { OR: [{ from: jid }, { to: jid }] },
       orderBy: { timestamp: 'desc' },
@@ -363,20 +373,20 @@ router.get('/id-by-jid/:jid', async (req, res) => {
 
 // ============ 新客户管理模块 API（数字 ID 路由） ============
 
-// Helper: compute KPIs
-async function computeKPIs(userId) {
+// Helper: compute KPIs（【TC-004修复】应用与列表一致的 where 筛选，保证 stats 与 items 口径统一）
+async function computeKPIs(userId, baseWhere = {}) {
   const now = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   const [total, active, aLevel, bLevel, dLevel, pending, newThisMonth] = await Promise.all([
-    prisma.customer.count({ where: { userId } }),
-    prisma.customer.count({ where: { userId, status: { in: ['active', 'following'] }, lastContactAt: { gte: thirtyDaysAgo } } }),
-    prisma.customer.count({ where: { userId, customerLevel: 'A' } }),
-    prisma.customer.count({ where: { userId, customerLevel: 'B' } }),
-    prisma.customer.count({ where: { userId, customerLevel: 'D' } }),
-    prisma.customer.count({ where: { userId, status: 'potential' } }),
-    prisma.customer.count({ where: { userId, createdAt: { gte: firstDayOfMonth } } }),
+    prisma.customer.count({ where: baseWhere }),
+    prisma.customer.count({ where: { ...baseWhere, status: { in: ['active', 'following'] }, lastContactAt: { gte: thirtyDaysAgo } } }),
+    prisma.customer.count({ where: { ...baseWhere, customerLevel: 'A' } }),
+    prisma.customer.count({ where: { ...baseWhere, customerLevel: 'B' } }),
+    prisma.customer.count({ where: { ...baseWhere, customerLevel: 'D' } }),
+    prisma.customer.count({ where: { ...baseWhere, status: 'potential' } }),
+    prisma.customer.count({ where: { ...baseWhere, createdAt: { gte: firstDayOfMonth } } }),
   ]);
   const cLevel = Math.max(0, total - aLevel - bLevel - dLevel);
   return { total, active, aLevel, bLevel, cLevel, dLevel, pending, newThisMonth };
@@ -402,13 +412,21 @@ router.get('/', async (req, res) => {
       const otherDomain = selfJid.includes("@s.whatsapp.net")
         ? selfJid.replace("@s.whatsapp.net", "@c.us")
         : selfJid.replace("@c.us", "@s.whatsapp.net");
-      where.jid = { notIn: [selfJid, otherDomain] };
+      // 兼容 jid NULL：NULL NOT IN (...) 在 SQL 中为 UNKNOWN，会把 email/manual 客户（jid=NULL）误过滤
+      where.AND = [{ OR: [{ jid: null }, { jid: { notIn: [selfJid, otherDomain] } }] }];
     }
     where.source = { not: "self" };
     if (level && ['A', 'B', 'C', 'D'].includes(level.toUpperCase())) where.customerLevel = level.toUpperCase();
     if (statusQ) where.status = statusQ;
     if (source) where.source = source;
     if (country) where.country = { contains: country, mode: 'insensitive' };
+    // isBusiness filter: true/false/null（客户管理列表只显示确认的业务客户：前端固定传 true）
+    if (req.query.isBusiness !== undefined && req.query.isBusiness !== '') {
+      const ib = req.query.isBusiness;
+      if (ib === 'null') where.isBusiness = null;
+      else if (ib === 'true') where.isBusiness = true;
+      else if (ib === 'false') where.isBusiness = false;
+    }
     if (search) {
       where.OR = [
         { name: { contains: search } }, { phone: { contains: search } },
@@ -435,7 +453,7 @@ router.get('/', async (req, res) => {
         },
       }),
       prisma.customer.count({ where }),
-      computeKPIs(userId),
+      computeKPIs(userId, where),
     ]);
 
     // Enrich with last message preview / pending doc / follow-up counts
@@ -514,6 +532,80 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ============ L2: Pending Business Confirmation ============
+// GET /pending-business-check - Get contacts with isBusiness=null that have messages
+router.get('/pending-business-check', async (req, res) => {
+  try {
+    const userId = req.userId;
+    const customers = await prisma.customer.findMany({
+      where: {
+        userId,
+        isBusiness: null,
+        jid: { not: { endsWith: '@g.us' } },
+      },
+      select: {
+        id: true,
+        jid: true,
+        name: true,
+        phone: true,
+        companyName: true,
+        email: true,
+      },
+      orderBy: { lastContactAt: 'desc' },
+      take: 20,
+    });
+
+    // Filter to only those who have at least one message
+    // LID增强：消息可能落在 @lid 或真实号任一 jid 下，两个都要统计，避免漏统计
+    const result = [];
+    for (const c of customers) {
+      const realJid = c.jid && c.jid.includes('@lid') ? resolveToPhoneJid(c.jid) : c.jid;
+      const jids = [...new Set([c.jid, realJid].filter(Boolean))];
+      const msgCount = await prisma.wAMessage.count({
+        where: { OR: [{ from: { in: jids } }, { to: { in: jids } }] },
+      });
+      if (msgCount > 0) {
+        result.push({
+          id: c.id,
+          jid: c.jid,
+          name: c.name,
+          phone: c.phone,
+          companyName: c.companyName,
+          email: c.email,
+          displayName: c.name || c.phone || c.jid?.split('@')[0] || 'Unknown',
+        });
+      }
+    }
+
+    res.json({ pending: result, count: result.length });
+  } catch (err) {
+    console.error('[pending-business-check] error:', err);
+    res.status(500).json({ error: 'Failed to fetch pending contacts' });
+  }
+});
+
+// PUT /pending-business-check/:id - Update business confirmation status
+router.put('/pending-business-check/:id', async (req, res) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: 'Invalid id' });
+    const id = parseInt(req.params.id);
+    const { isBusiness } = req.body;
+    if (typeof isBusiness !== 'boolean') return res.status(400).json({ error: 'isBusiness must be boolean' });
+
+    const updated = await prisma.customer.update({
+      where: { id },
+      data: {
+        isBusiness,
+        businessDetectedAt: new Date(),
+      },
+    });
+    res.json({ ok: true, customer: serializeCustomer(updated) });
+  } catch (err) {
+    console.error('[pending-business-check] update error:', err);
+    res.status(500).json({ error: 'Failed to update business status' });
+  }
+});
+
 // Get single customer by numeric id (with stats) - must come AFTER /by-jid & /by-phone etc.
 router.get('/:id', async (req, res, next) => {
   try {
@@ -582,6 +674,7 @@ router.post('/', async (req, res) => {
       status: b.status || 'new',
       intentLevel: b.intentLevel || 5,
       assignedTo: userId,
+      isBusiness: true, // L2: 用户手动建档 = 明确动作，直接视为业务客户
       firstContactAt: b.firstContactAt ? new Date(b.firstContactAt) : new Date(),
       lastContactAt: b.lastContactAt ? new Date(b.lastContactAt) : new Date(),
     };
@@ -739,7 +832,7 @@ router.post('/:id/generate-followups', async (req, res, next) => {
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
     if (!customer.jid) return res.status(400).json({ error: '该客户无WhatsApp JID，无法生成' });
 
-    const limit = Math.min(parseInt(req.body.limit) || 300, 800);
+    const limit = Math.min(parseInt(req.body?.limit) || 300, 800);
     const messages = await prisma.wAMessage.findMany({
       where: { OR: [{ from: customer.jid }, { to: customer.jid }] },
       orderBy: { timestamp: 'asc' },
@@ -928,34 +1021,65 @@ router.post('/:id/ai-requirement', async (req, res, next) => {
     try {
       raw = await chatCompleteLite(
         [{role:'system', content:systemPrompt}, {role:'user', content:userPrompt}],
-        { temperature: 0.3, maxTokens: 2500, timeout: 90000 }
+        { temperature: 0.3, maxTokens: 4000, timeout: 120000 }
       );
     } catch (e1) {
       console.warn('[Customers] ai-requirement chatCompleteLite failed, fallback to default:', e1.message);
       const defaultModel = await resolveModelId();
-      raw = await chatComplete(defaultModel, systemPrompt, userPrompt, { temperature: 0.3, maxTokens: 2500, timeout: 90000 });
+      raw = await chatComplete(defaultModel, systemPrompt, userPrompt, { temperature: 0.3, maxTokens: 4000, timeout: 120000 });
     }
 
     let rawText = (raw || '').trim();
     // 清理可能的markdown代码块包裹
     rawText = rawText.replace(/^```(?:json|markdown|md)?\s*/i, '').replace(/\s*```$/, '');
-    // 尝试解析JSON（首选AI返回的结构化数据）
-    let analysisData;
-    try {
-      // 找到第一个{和最后一个}之间的内容
-      const firstBrace = rawText.indexOf('{');
-      const lastBrace = rawText.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-        analysisData = JSON.parse(rawText.slice(firstBrace, lastBrace + 1));
-      }
-    } catch (e) {
-      console.warn('[Customers] ai-requirement JSON parse failed, fallback to raw text:', e.message);
+    // 【修复 2026-08-24】增强容错解析：LLM在json_object模式下常把JSON包成带转义引号的字符串
+    let analysisData = null;
+    // 1) 若整体是JSON字符串（以"开头），先解包
+    if (rawText.charAt(0) === '"') {
+      try {
+        const unwrapped = JSON.parse(rawText);
+        if (typeof unwrapped === 'string') rawText = unwrapped;
+      } catch (_) {}
     }
-    // 如果解析失败，包装成简单文本块
-    if (!analysisData || !analysisData.sections) {
+    // 2) 反转义常见的 \" 和 \n（模型偶发把JSON作为字符串字面量返回）
+    if (rawText.includes('\\"')) {
+      rawText = rawText.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
+    }
+    // 3) 找到第一个{和最后一个}之间的内容尝试解析
+    const firstBrace = rawText.indexOf('{');
+    const lastBrace = rawText.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = rawText.slice(firstBrace, lastBrace + 1);
+      const candidates = [candidate, candidate.replace(/,\s*([}\]])/g, '$1')];
+      for (const cand of candidates) {
+        try {
+          const obj = JSON.parse(cand);
+          if (obj && (Array.isArray(obj.sections) || Array.isArray(obj.replies))) { analysisData = obj; break; }
+        } catch (_) {}
+      }
+    }
+    // 4) 仍失败：把AI返回的（可能截断）内容清洗成可读文本，避免裸JSON字符
+    if (!analysisData) {
+      let cleaned = rawText
+        .replace(/\\"/g, '"')
+        .replace(/\\n/g, '\n')
+        .slice(0, 2500);
+      const lines = [];
+      const pairRe = /"label"\s*:\s*"([^"]*)"\s*,\s*"value"\s*:\s*"([^"]*)"/g;
+      let m; let found = false;
+      while ((m = pairRe.exec(cleaned))) { found = true; lines.push(m[1] + '：' + m[2]); }
+      if (!found) {
+        const titleRe = /"title"\s*:\s*"([^"]*)"/g;
+        while ((m = titleRe.exec(cleaned))) { found = true; lines.push(m[1]); }
+      }
+      if (found) {
+        cleaned = lines.join('\n');
+      } else {
+        cleaned = cleaned.replace(/[{}"[\]]/g, '').replace(/,\s*/g, '\n').replace(/\n{2,}/g, '\n').trim();
+      }
       analysisData = {
         title: '客户需求分析',
-        sections: [{ icon: '📝', title: 'AI分析', type: 'text', content: rawText.slice(0, 2000) }]
+        sections: [{ icon: '📝', title: 'AI分析', type: 'text', content: cleaned || rawText.slice(0, 1500) }]
       };
     }
     // 存一份JSON字符串到summary字段（前端解析渲染）
@@ -1327,6 +1451,10 @@ router.get('/by-jid/:jid/bg-check', async (req, res) => {
         const parsed = JSON.parse(bgCheck.details);
         if (Array.isArray(parsed.dimensions)) result.dimensions = parsed.dimensions;
         if (Array.isArray(parsed.sources)) result.sources = parsed.sources;
+        if (parsed.score !== undefined) result.score = parsed.score;
+        if (Array.isArray(parsed.chapters)) result.chapters = parsed.chapters;
+        if (parsed.executiveSummary) result.executiveSummary = parsed.executiveSummary;
+        if (parsed.recommendation) result.recommendation = parsed.recommendation;
       } catch {}
     }
     res.json(result);
@@ -1468,6 +1596,10 @@ ${searchText}
       }
     }
     const report = (rawReport || '').trim();
+    // 空报告不落库，直接报错提示重试
+    if (!report) {
+      return res.status(500).json({ error: 'AI生成背调失败：返回内容为空，请重试' });
+    }
 
     // missingInfo 判定（基于已知字段）
     const missingInfo = [];
@@ -1510,6 +1642,7 @@ ${searchText}
             country: country, phone: phone, email: customer.email,
             website: customer.website, source: customer.source || 'whatsapp',
             customerLevel: 'C', bgReport: report, bgUpdatedAt: now,
+            isBusiness: true, // L2: 用户主动发起背调建档 = 明确动作，直接视为业务客户
           },
         });
         try {
@@ -1712,13 +1845,18 @@ router.get('/:id/stage-history', async (req, res) => {
 export async function autoFillCustomer(jid, userId = 1) {
   try {
     if (!jid) return null;
-    const cust = await findCustomerByJid(prisma, userId, jid);
+    let cust = await findCustomerByJid(prisma, userId, jid);
+    if (!cust) {
+      // fallback：按 jid 查（兼容 userId 传错/多租户历史数据），取最新
+      const variants = normalizeJid(jid);
+      if (variants.length) cust = await prisma.customer.findFirst({ where: { jid: { in: variants } }, orderBy: { updatedAt: 'desc' } });
+    }
     if (!cust) return null;
     // 24h冷却：aiExtractedAt 24小时内跳过
     if (cust.aiExtractedAt && (Date.now() - new Date(cust.aiExtractedAt).getTime()) < 24*3600*1000) {
       return null;
     }
-    const extracted = await extractCustomerInfoFromChat(jid, 20);
+    const extracted = await extractCustomerInfoFromChat(jid, 50);
     if (!extracted) {
       await prisma.customer.update({ where: { id: cust.id }, data: { aiExtractedAt: new Date() } });
       return null;
@@ -1738,6 +1876,12 @@ export async function autoFillCustomer(jid, userId = 1) {
         if (!existingFields.includes(f)) existingFields.push(f);
         newlyFilled.push(f);
       }
+    }
+    // 城市同步：AI 抽取的 address 同时填充 city（前端"城市/地区"用 city 字段）
+    if (!updateData.city && extracted.address && !cust.city) {
+      updateData.city = extracted.address;
+      if (!existingFields.includes('city')) existingFields.push('city');
+      if (!newlyFilled.includes('city')) newlyFilled.push('city');
     }
     if (!newlyFilled.length) {
       await prisma.customer.update({ where: { id: cust.id }, data: { aiExtractedAt: new Date() } });
@@ -1759,7 +1903,12 @@ export async function autoFillCustomer(jid, userId = 1) {
 export async function autoBackgroundCheck(jid, userId = 1, io = null) {
   try {
     if (!jid) return { skipped: true, reason: 'no jid' };
-    const cust = await findCustomerByJid(prisma, userId, jid);
+    let cust = await findCustomerByJid(prisma, userId, jid);
+    if (!cust) {
+      // fallback：按 jid 查（兼容 userId 传错/多租户历史数据），取最新
+      const variants = normalizeJid(jid);
+      if (variants.length) cust = await prisma.customer.findFirst({ where: { jid: { in: variants } }, orderBy: { updatedAt: 'desc' } });
+    }
     if (!cust) return { skipped: true, reason: 'customer not found' };
 
     // 7天冷却
@@ -1820,7 +1969,11 @@ export async function autoBackgroundCheck(jid, userId = 1, io = null) {
           companyName, country, industry, companySize, website,
           details: JSON.stringify({
             dimensions: result.dimensions.map(d => ({ step: d.step, name: d.name, status: d.status, summary: d.summary || '' })),
-            sources: result.sources || [], completedAt: result.completedAt
+            sources: result.sources || [], completedAt: result.completedAt,
+            score: result.score || null,
+            chapters: result.chapters || [],
+            executiveSummary: result.executiveSummary || '',
+            recommendation: result.recommendation || ''
           }),
           riskLevel: rating, notes: summary, source: 'llm'
         },
@@ -1829,7 +1982,11 @@ export async function autoBackgroundCheck(jid, userId = 1, io = null) {
           companyName, country, industry, companySize, website,
           details: JSON.stringify({
             dimensions: result.dimensions.map(d => ({ step: d.step, name: d.name, status: d.status, summary: d.summary || '' })),
-            sources: result.sources || [], completedAt: result.completedAt
+            sources: result.sources || [], completedAt: result.completedAt,
+            score: result.score || null,
+            chapters: result.chapters || [],
+            executiveSummary: result.executiveSummary || '',
+            recommendation: result.recommendation || ''
           }),
           riskLevel: rating, notes: summary, source: 'llm'
         }

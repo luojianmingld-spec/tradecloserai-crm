@@ -28,7 +28,9 @@ import bgCheckRoutes from './routes/background-check.js';
 import bantScoreRoutes from './routes/bant-score.js';
 import automationRoutes from './routes/automation.js';
 import dashboardRoutes from './routes/dashboard.js';
-import evolutionWebhookRoutes from './routes/evolution-webhook.js';
+import dashboardAnalyticsRoutes from './routes/dashboard-analytics.js';
+import evolutionWebhookRoutes, { maybeSyncContactsOnDemand, startContactSyncScheduler } from './routes/evolution-webhook.js';
+import evolutionAdminRoutes from './routes/evolution-admin.js';
 import documentRoutes from './routes/documents.js';
 import waAvatarRoutes from './routes/wa-avatar.js';
 import telegramWebhookRoutes from './routes/telegram-webhook.js';
@@ -36,20 +38,40 @@ import { getTelegramConnector } from './services/telegram-connector.js';
 import tgUserbotRoutes from './routes/tg-userbot.js';
 import { autoConnectUserBot } from './services/tg-userbot-connector.js';
 import companyMaterialsRouter from './routes/companyMaterials.js';
+import companyCategoriesRouter from './routes/companyCategories.js';
 import assistantRoutes from './routes/assistant.js';
+import agentGroupRoutes from './routes/agent-group.js';
 import trackingRoutes from './routes/tracking.js';
+import contextRoutes from './routes/context.js';
+import agentTaskRoutes from './routes/agent-tasks.js';
+import customerChannelRoutes from './routes/customer-channels.js';
+import customerPanoramaRoutes from './routes/customer-panorama.js';
 import productKnowledgeRoutes from './routes/product-knowledge.js';
 import conversationManagerRoutes from './routes/conversation-manager.js';
 import attitudeAnalysisRoutes from './routes/attitude-analysis.js';
 import actionSuggestionsRoutes from './routes/action-suggestions.js';
 import speechLibraryRoutes from './routes/speech-library.js';
+import communityExperienceRoutes from './routes/community-experience.js';
+import tradeShowsRoutes from './routes/trade-shows.js';
+import qaKnowledgeRoutes from './routes/qa-knowledge.js';
 import effectTrackingRoutes from './routes/effect-tracking.js';
+import learningRoutes from './routes/learning.js';
+import paymentNotifyRoutes from './routes/payment-notify.js';
+import userCreditRoutes from './routes/user/credits.js';
+import cultureSettingsRoutes from './routes/culture-settings.js';
+import chatImportRoutes from './routes/chat-import.js';
+import docArchiveRoutes from './routes/doc-archive.js';
+import partnerRoutes from './routes/partners.js';
+import wecomRoutes from './routes/wecom.js';
+import wechatOfficialRoutes from './routes/wechat-official.js';
+import wechatNotifyRoutes from './routes/wechat-notify.js';import tradeAgentRoutes from './routes/trade-agent.js';import adminRoutes from './routes/admin/index.js';import openaiBridgeRoutes from './routes/openai-bridge.js';
 import { getPendingFollowups } from './services/followup.service.js';
 import { readTranslationSettings, getTranslationSettings } from "./routes/translation.js";
 import { detectLanguage as _detectLangForSend, translateText as _translateTextForSend } from "./services/ai.service.js";
 import { authMiddleware } from './middleware/auth.js';
 import { resolveToPhoneJid } from './services/lid-mapping.js';
 import { decrypt as dec, isEncrypted as isEnc } from './utils/encryption.js';
+import logger from './utils/logger.js';
 function decToken(t) { return t && isEnc(t) ? dec(t) : t; }
 import { recordSample } from "./services/speech-collector.js";
 import helmet from 'helmet';
@@ -87,13 +109,76 @@ const DEFAULT_SESSION_ID = "user_1";
 async function resolveSessionIdForAccount(accountId) {
   try {
     const acc = await prisma.whatsAppAccount.findUnique({ where: { id: accountId } });
-    if (!acc || !acc.phone) return DEFAULT_SESSION_ID;
-    const conn = await prisma.wAConnection.findFirst({ where: { userId: acc.userId || 1, phone: acc.phone, sessionId: { startsWith: 'user_' } } });
-    if (conn) return conn.sessionId;
+    if (!acc) {
+      return accountId === 1 ? "user_1" : `user_${accountId}`;
+    }
+    if (acc.phone) {
+      const conn = await prisma.wAConnection.findFirst({ where: { userId: acc.userId || 1, phone: acc.phone, sessionId: { startsWith: 'user_' } } });
+      if (conn) return conn.sessionId;
+    }
   } catch (e) {}
-  // fallback: user_1 for account 1, user_N for others
+  // 【P0安全修复】不允许 fallback 到全局 user_1（防跨租户串写/串读）；返回该账号自身 session
   if (accountId === 1) return "user_1";
   return `user_${accountId}`;
+}
+
+// 返回某账号 phone 关联的所有 WAConnection session（同一号码可能有多个 session）
+async function resolveSessionIdSetForAccount(accountId) {
+  try {
+    const acc = await prisma.whatsAppAccount.findUnique({ where: { id: accountId } });
+    if (!acc) return [];
+    const uid = acc.userId || 1;
+    // 该账号独立连接的 sessionId（精确归属）
+    let owned = [];
+    if (acc.phone) {
+      // 【修复 2026-08-26】wAConnection.userId 可能与该账号 userId 不一致(user_8.userId=1 而账号8.userId=2)，
+      // 按 userId+phone 匹配会漏 → 改为按 phone 唯一匹配(phone 是账号唯一标识,不串号)
+      const conns = await prisma.wAConnection.findMany({
+        where: { phone: acc.phone, sessionId: { startsWith: 'user_' } },
+        select: { sessionId: true },
+      });
+      owned = conns.map(c => c.sessionId);
+    }
+    // 显式兜底 user_{accountId}(webhook instanceToSessionId 落库约定: 实例→account.id→user_{id})
+    const _selfSid = `user_${accountId}`;
+    if (!owned.includes(_selfSid) && acc.phone) owned.push(_selfSid);
+    // 【P0修复 20260815】合并该 userId 名下全部 user_ 会话 sessionId：
+    // 历史消息可能散落在其他 sessionId（如 7/29 批量导入存到 user_2，而会话标在 accountId=1/4），
+    // 单账号只映射自身 sessionId 会漏查（accountId=4→user_4 不存在→消息区空白）。
+    // wAConnection 已按 userId 过滤，多租户下不会串号；同一联系人跨号消息合并展示更完整。
+    const allConns = await prisma.wAConnection.findMany({
+      where: { userId: uid, sessionId: { startsWith: 'user_' } },
+      select: { sessionId: true },
+    });
+    const merged = Array.from(new Set([...owned, ...allConns.map(c => c.sessionId)]));
+    if (merged.length) return merged;
+  } catch (e) {}
+  // 【Bug修复 2026-08-23】fallback 与 webhook instanceToSessionId 对齐（evolution-webhook.js）：
+  // jeremy-eric → user_2；其余实例（含 wa_whatsapp2 账号87 等）→ user_1。
+  // 原 fallback 返回 user_{accountId}，而 userId=45 在 wAConnection 无记录时落到 user_87，
+  // 实际消息存于 user_1，导致 /messages 查不到 → 聊天框空白。
+  try {
+    const _acc = await prisma.whatsAppAccount.findUnique({ where: { id: accountId }, select: { instanceName: true } });
+    if (_acc && _acc.instanceName === 'jeremy-eric') return ['user_2'];
+    // 【修复 2026-08-26】fallback 与 webhook instanceToSessionId 对齐: user_{accountId}
+    return [`user_${accountId}`];
+  } catch { return [`user_${accountId}`]; }
+}
+
+// 确保 WAConnection 存在（WAMessage.sessionId 有外键约束），不存在则自动创建
+async function ensureSessionInDb(userId, sessionId, phone = null) {
+  try {
+    if (!sessionId) return;
+    const exist = await prisma.wAConnection.findUnique({ where: { sessionId } });
+    if (!exist) {
+      await prisma.wAConnection.create({
+        data: { userId: userId || 1, sessionId, phone, status: 'connected' },
+      });
+      console.log(`[WASession] auto-created WAConnection session=${sessionId} userId=${userId || 1}`);
+    }
+  } catch (e) {
+    console.warn('[WASession] ensureSessionInDb warn:', e.message);
+  }
 }
 
 
@@ -159,6 +244,7 @@ const DEFAULT_INSTANCE = process.env.EVOLUTION_INSTANCE || "jeremy-eric";
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err.message);
+  logger.error('Server', '[FATAL] Uncaught Exception:', err.message);
   console.error(err.stack);
   if (err.code === 'EADDRINUSE') {
     console.error(`[FATAL] Port ${LISTEN_PORT} is already in use. Exiting.`);
@@ -168,6 +254,7 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason) => {
   console.error('[ERROR] Unhandled Promise Rejection:', reason);
+  logger.error('Server', '[ERROR] Unhandled Promise Rejection:', reason);
 });
 
 app.use(cors({
@@ -263,8 +350,8 @@ function parseMultipartBody(buf, contentType) {
   return { fields, file };
 }
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 
 // ─── API Routes ───
@@ -273,16 +360,45 @@ app.use('/api/accounts', authMiddleware, accountRoutes);
 app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/messages', authMiddleware, messageRoutes);
 app.use('/api/settings', authMiddleware, settingsRoutes);
+app.use('/api/culture-settings', authMiddleware, cultureSettingsRoutes);
+app.use('/api/partners', authMiddleware, partnerRoutes);
+app.use('/api/wecom', authMiddleware, wecomRoutes);
+
+// 微信公众号回调（不需要认证，微信服务器调用）
+app.use('/api/wechat', wechatOfficialRoutes);
+
+// 微信通知推送（需要认证）
+app.use('/api/wechat', authMiddleware, wechatNotifyRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/translation', authMiddleware, translationRoutes);
-app.use('/api/ai', authMiddleware, aiRoutes);
+// AI API 调用专用限流（50次/分钟/IP）
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'AI调用过于频繁，请1分钟后重试' },
+  validate: { keyGeneratorIpFallback: false }
+});
+
+app.use('/api/ai', authMiddleware, aiLimiter, aiRoutes);
+app.use('/api/trade-agent', authMiddleware, tradeAgentRoutes);
+// OpenClaw 微信通道桥接（CRM Agent 包装为 OpenAI 兼容模型，独立 OPENAI_BRIDGE_KEY 鉴权）
+app.use('/api/openai', openaiBridgeRoutes);
+app.use('/api/agent-group', authMiddleware, agentGroupRoutes);
+app.use('/api/agent/tasks', authMiddleware, agentTaskRoutes);
+app.use('/api/customer/channels', authMiddleware, customerChannelRoutes);
+app.use('/api/customer', authMiddleware, customerPanoramaRoutes);
 app.use('/api/customers', authMiddleware, customerRoutes);
 app.use('/api/emails', authMiddleware, emailRoutes);
 app.use('/api/background-check', authMiddleware, bgCheckRoutes);
 app.use('/api/customers', authMiddleware, bantScoreRoutes);
-app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/dashboard", authMiddleware, dashboardRoutes);
+app.use("/api/dashboard", dashboardAnalyticsRoutes);
 app.use("/api/automation", authMiddleware, automationRoutes);
 app.use("/api/assistant", authMiddleware, assistantRoutes);
-app.use("/api/tracking", trackingRoutes);
+app.use("/api/tracking", authMiddleware, trackingRoutes);
+app.use("/api/context", authMiddleware, contextRoutes);
 app.use("/api/product-knowledge", authMiddleware, productKnowledgeRoutes);
 app.use("/api/customers", authMiddleware, conversationManagerRoutes);
 
@@ -290,9 +406,20 @@ app.use("/api/customers", authMiddleware, conversationManagerRoutes);
 app.use('/api/attitude', authMiddleware, attitudeAnalysisRoutes);
 app.use('/api/suggestions', authMiddleware, actionSuggestionsRoutes);
 app.use('/api/speech-library', authMiddleware, speechLibraryRoutes);
+app.use('/api/community-experience', authMiddleware, communityExperienceRoutes);
+app.use('/api/trade-shows', authMiddleware, tradeShowsRoutes);
+app.use('/api/qa-knowledge', authMiddleware, qaKnowledgeRoutes);
 app.use('/api/effectiveness', authMiddleware, effectTrackingRoutes);
+app.use('/api/learning', authMiddleware, learningRoutes);
 app.use("/api/documents", authMiddleware, documentRoutes);
 app.use("/api/company-materials", companyMaterialsRouter);
+app.use("/api/company-categories", companyCategoriesRouter);
+app.use('/api/chat-import', authMiddleware, chatImportRoutes);
+// ===== 充值模块（2026-08-19）=====
+app.use('/api/payment/notify', paymentNotifyRoutes); // 支付回调（无鉴权）
+app.use('/api/payments', authMiddleware, userCreditRoutes); // 用户端充值&积分
+app.use('/api/doc-archive', authMiddleware, docArchiveRoutes); // 单证存档（2026-08-31）
+
 app.use('/', waAvatarRoutes);
 app.use("/api/settings/seller-info", authMiddleware, documentRoutes);
 app.get('/api/followups/pending', authMiddleware, async (req, res) => { try { const data = await getPendingFollowups({ userId: req.userId, sessionId: 'user_1' }); res.json(data); } catch (e) { console.error('[followup] error:', e); res.status(500).json({ error: e.message }); } });
@@ -306,6 +433,12 @@ app.use("/api/evolution/webhook", (req, _res, next) => {
   next();
 });
 app.use("/api/evolution/webhook", evolutionWebhookRoutes);
+app.use("/api/evolution/admin", evolutionAdminRoutes);
+
+// WhatsApp 重连页面
+app.get('/reconnect', (req, res) => {
+  res.sendFile('/opt/whatsapp-crm/backend/src/uploads/qr-reconnect.html');
+});
 // Telegram webhook (no auth - TG servers push directly)
 app.use("/api/telegram", telegramWebhookRoutes);
 app.use("/api/tg-userbot", tgUserbotRoutes);
@@ -456,6 +589,58 @@ app.post("/api/whatsapp/qr", async (req, res) => {
 });
 
 
+// POST /api/whatsapp/pairing-code — 通过手机号获取8位配对码（前端手机号登录页使用）
+app.post("/api/whatsapp/pairing-code", authMiddleware, async (req, res) => {
+  try {
+    const { phone } = req.body || {};
+    if (!phone) return res.status(400).json({ error: "phone number is required" });
+    const account = await prisma.whatsAppAccount.findFirst({
+      where: { userId: req.userId, platform: "whatsapp", instanceName: { not: null } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!account || !account.instanceName) {
+      return res.status(404).json({ error: "No WhatsApp account available, please create one first" });
+    }
+    const instanceName = account.instanceName;
+    // 1. 确保实例存在
+    const instances = await evoFetch("/instance/fetchInstances");
+    let inst = (instances || []).find(i => i.name === instanceName);
+    if (!inst) {
+      await evoFetch("/instance/create", {
+        method: "POST",
+        body: JSON.stringify({ instanceName, integration: "WHATSAPP-BAILEYS", qrcode: true, number: phone }),
+      });
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    // 2. 实例非 close 状态先重置（配对码需在未连接状态生成）
+    const instances2 = await evoFetch("/instance/fetchInstances");
+    inst = (instances2 || []).find(i => i.name === instanceName);
+    if (inst && inst.connectionStatus !== "close") {
+      await evoFetch("/instance/logout/" + encodeURIComponent(instanceName), { method: "DELETE", skipError: true });
+      // 等待实例真正进入 close 状态（logout 异步，直接 connect 可能拿不到配对码）
+      for (let w = 0; w < 6; w++) {
+        await new Promise(r => setTimeout(r, 1000));
+        const st = await evoFetch("/instance/fetchInstances").catch(() => []);
+        const cur = (st || []).find(i => i.name === instanceName);
+        if (!cur || cur.connectionStatus === "close") break;
+      }
+    }
+    // 3. connect 带 number 触发配对码生成（实例状态竞态偶发 pairingCode=null，最多重试3次）
+    let data = null, code = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      data = await evoFetch("/instance/connect/" + encodeURIComponent(instanceName) + "?number=" + encodeURIComponent(phone), { skipError: true });
+      code = data?.pairingCode || null;
+      if (code) break;
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    if (!code) return res.status(502).json({ error: "Failed to get pairing code from Evolution API" });
+    res.json({ code, phone });
+  } catch (err) {
+    console.error("[POST /api/whatsapp/pairing-code] error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── WA 实例管理接口（登录/登出/状态） ───
 const EVO_API = process.env.EVOLUTION_API_URL || "http://127.0.0.1:8081";
 const EVO_KEY = process.env.EVOLUTION_API_KEY || "B7E2A9D4C6F1E8A3B5D7F9C2E4A6B8D1";
@@ -591,7 +776,8 @@ app.post("/api/whatsapp/admin/reset", authMiddleware, async (req, res) => {
       });
     } catch(e){}
 
-    // 设置webhook — 多实例支持
+    // 设置webhook — 多实例支持（仅 ENABLE_WEBHOOK_RESET=true 时执行）
+    if (process.env.ENABLE_WEBHOOK_RESET === 'true') {
     const webhookPort = process.env.DEPLOY_RUN_PORT || 3000;
     const webhookUrl = `http://host.docker.internal:${webhookPort}/api/evolution/webhook`;
     const waInstances = ["jeremy-main", "jeremy-eric"];
@@ -611,6 +797,9 @@ app.post("/api/whatsapp/admin/reset", authMiddleware, async (req, res) => {
         });
         console.log(`[Server] webhook set for ${inst} -> ${webhookUrl}`);
       } catch(e){ console.warn(`[Server] webhook set ${inst} failed:`, e.message); }
+    }
+    } else {
+      console.log('[Server] WA webhook set disabled (ENABLE_WEBHOOK_RESET != true)');
     }
 
     // 如果是QR模式，获取QR
@@ -682,30 +871,70 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     const toPhone = toJid.split("@")[0];
 
     // ─── Multi-instance: resolve correct Evolution connector based on accountId or conversation ───
-    let sendConnector = evoConnector; // default to jeremy-eric
+    // 【P0安全修复】禁止默认使用全局第一个实例(jeremy-eric)，必须按当前登录用户(userId)隔离
+    let sendConnector = null;
     let sendAccountId = body.accountId || null;
-    if (!sendAccountId) {
-      // Try to find which account this conversation belongs to
+    const _sendUid = req.userId || 1;
+    if (sendAccountId) {
+      // 校验该账号归属当前用户，防止跨租户发送
+      try {
+        const waAccount = await prisma.whatsAppAccount.findFirst({
+          where: { id: parseInt(sendAccountId), platform: 'whatsapp', userId: _sendUid, instanceName: { not: null } },
+          select: { instanceName: true, id: true },
+        });
+        if (waAccount && waAccount.instanceName) {
+          sendConnector = getEvolutionConnector(waAccount.instanceName);
+          console.log(`[WA Send] Using instance ${waAccount.instanceName} for accountId=${sendAccountId} userId=${_sendUid}`);
+        } else {
+          return res.status(403).json({ error: "账号不存在或无权使用该账号发送消息" });
+        }
+      } catch (e) {
+        console.warn('[WA Send] resolve account failed:', e.message);
+        return res.status(500).json({ error: "账号解析失败" });
+      }
+    } else {
+      // 未传accountId：先尝试从会话归属解析（需校验归属当前用户）
       try {
         const existingConv = await prisma.conversation.findFirst({
           where: { platform: 'whatsapp', jid: toJid },
           select: { accountId: true },
         });
-        if (existingConv) sendAccountId = existingConv.accountId;
-      } catch (_) {}
-    }
-    if (sendAccountId) {
-      try {
-        const waAccount = await prisma.whatsAppAccount.findFirst({
-          where: { id: sendAccountId, platform: 'whatsapp', instanceName: { not: null } },
-          select: { instanceName: true },
-        });
-        if (waAccount && waAccount.instanceName) {
-          sendConnector = getEvolutionConnector(waAccount.instanceName);
-          console.log(`[WA Send] Using instance ${waAccount.instanceName} for accountId=${sendAccountId}`);
+        if (existingConv) {
+          const _acc = await prisma.whatsAppAccount.findFirst({
+            where: { id: existingConv.accountId, userId: _sendUid, platform: 'whatsapp', instanceName: { not: null } },
+            select: { instanceName: true, id: true },
+          });
+          if (_acc && _acc.instanceName) {
+            sendAccountId = _acc.id;
+            sendConnector = getEvolutionConnector(_acc.instanceName);
+          }
         }
-      } catch (e) {
-        console.warn('[WA Send] resolve account failed:', e.message);
+      } catch (_) {}
+      // 仍未解析到 → 使用当前用户自己的默认WhatsApp账号（connected优先）
+      if (!sendConnector) {
+        try {
+          let myAcc = await prisma.whatsAppAccount.findFirst({
+            where: { userId: _sendUid, platform: 'whatsapp', instanceName: { not: null }, status: 'connected' },
+            select: { id: true, instanceName: true },
+          });
+          if (!myAcc) {
+            myAcc = await prisma.whatsAppAccount.findFirst({
+              where: { userId: _sendUid, platform: 'whatsapp', instanceName: { not: null } },
+              orderBy: { updatedAt: 'desc' },
+              select: { id: true, instanceName: true },
+            });
+          }
+          if (myAcc && myAcc.instanceName) {
+            sendAccountId = myAcc.id;
+            sendConnector = getEvolutionConnector(myAcc.instanceName);
+            console.log(`[WA Send] Using default instance ${myAcc.instanceName} for userId=${_sendUid}`);
+          }
+        } catch (e) {
+          console.warn('[WA Send] resolve default account failed:', e.message);
+        }
+      }
+      if (!sendConnector) {
+        return res.status(400).json({ error: "请先连接WhatsApp账号再发送消息" });
       }
     }
 
@@ -739,7 +968,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
         const tgtLang = tSettings.sendTargetLang || "en";
         if (tSettings.sendEnabled && tgtLang && tgtLang !== "auto") {
           try {
-            const engine = tSettings.sendEngine || "google";
+            const engine = tSettings.sendEngine || "deepl";
             let srcLang = "auto";
             try {
               const det = await _detectLangForSend(originalText, engine);
@@ -818,6 +1047,14 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           conv = await prisma.conversation.create({ data: { accountId: tgAccount.id, platform: "telegram", contactId: contact.id, jid: toJid } });
         }
         const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
+        // 确保 WAConnection 存在（TG 发送落库外键）
+        try {
+          await prisma.wAConnection.upsert({
+            where: { sessionId: tgSessionId },
+            update: { status: 'connected', lastConnectedAt: new Date() },
+            create: { userId: tgAccount.userId, sessionId: tgSessionId, status: 'connected', lastConnectedAt: new Date() },
+          });
+        } catch (wacErr2) { console.warn('[TG-Send] WAConnection upsert error:', wacErr2.message); }
         const tgSentMsgId = sent.message_id || sent.id;
         const tgWaMsgId = `tg_${tgAccount.id}_${tgSentMsgId}_out`;
         let savedWa = await prisma.wAMessage.findFirst({ where: { sessionId: tgSessionId, waMessageId: tgWaMsgId } });
@@ -889,7 +1126,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     const tgtLang = tSettings.sendTargetLang || "en";
     if (tSettings.sendEnabled && tgtLang && tgtLang !== "auto") {
       try {
-        const engine = tSettings.sendEngine || "google";
+        const engine = tSettings.sendEngine || "deepl";
         // 检测源语言
         let srcLang = "auto";
         try {
@@ -971,7 +1208,10 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
     const result = await sendConnector.sendTextMessage(toJid, sendText, { quoted });
 
     // 2. 我自己的JID + resolve sessionId for outbound
-    const outSessionId = sendConnector.instance === "jeremy-eric" ? "user_2" : "user_1";
+    // 【P0安全修复】outSessionId 按当前账号解析，禁止硬编码到 user_2/user_1
+    const outSessionId = sendAccountId ? await resolveSessionIdForAccount(sendAccountId) : DEFAULT_SESSION_ID;
+    // 【P1修复】确保 session 在 WAConnection 存在（外键约束），否则落库失败
+    await ensureSessionInDb(_sendUid, outSessionId, null);
     const info = await sendConnector.getInstanceInfo().catch(() => null);
     const ownerJid = info?.ownerJid || (sendConnector.instance === "jeremy-eric" ? "8618038118960@s.whatsapp.net" : "8613016242602@s.whatsapp.net");
 
@@ -1352,7 +1592,7 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
       try {
         if (isUserBot) {
           const ubConnector = await import('./services/tg-userbot-connector.js');
-          sent = await ubConnector.sendFile(tgChatId, file.buffer, file.fileName || 'file', { caption: caption || undefined });
+          sent = await ubConnector.sendFile(tgChatId, file.buffer, file.fileName || 'file', { caption: caption || undefined, mimeType: file.mimeType || undefined });
         } else {
           const connector = getTelegramConnector(decToken(tgAccount.telegramBotToken));
           const fileObj = { buffer: file.buffer, filename: file.fileName || 'file', contentType: file.mimeType || 'application/octet-stream' };
@@ -1370,6 +1610,14 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
       }
 
       const tgSessionId = 'tg_' + (tgAccount.telegramBotUsername || tgAccount.id);
+      // 确保 WAConnection 存在（TG 媒体发送落库外键）
+      try {
+        await prisma.wAConnection.upsert({
+          where: { sessionId: tgSessionId },
+          update: { status: 'connected', lastConnectedAt: new Date() },
+          create: { userId: tgAccount.userId, sessionId: tgSessionId, status: 'connected', lastConnectedAt: new Date() },
+        });
+      } catch (wacErr3) { console.warn('[TG-Send] WAConnection upsert error:', wacErr3.message); }
       const tgMsgId = sent?.message_id || sent?.result?.message_id || ('tg_media_' + Date.now());
       const tgWaMsgId = 'tg_' + tgAccount.id + '_' + tgMsgId + '_out';
       let saved = await prisma.wAMessage.findFirst({ where: { sessionId: tgSessionId, waMessageId: tgWaMsgId } });
@@ -1384,7 +1632,16 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
           const hashName = crypto.randomBytes(16).toString('hex') + '.' + ext;
           const outDir = pathMod.join(__dirname, 'uploads/outbound');
           if (!fsMod.existsSync(outDir)) fsMod.mkdirSync(outDir, { recursive: true });
-          fsMod.writeFileSync(pathMod.join(outDir, hashName), file.buffer);
+          let saveBuffer = file.buffer;
+          // Compress image before saving (sharp)
+          if (mt.startsWith('image/')) {
+            try {
+              const sharp = (await import('sharp')).default;
+              saveBuffer = await sharp(file.buffer).resize(1280, 1280, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 75, progressive: true }).toBuffer();
+              console.log('[TG ImageCompress] original:' + file.buffer.length + 'B -> compressed:' + saveBuffer.length + 'B');
+            } catch (compErr) { console.warn('[TG ImageCompress] failed, using original:', compErr.message); }
+          }
+          fsMod.writeFileSync(pathMod.join(outDir, hashName), saveBuffer);
           outboundMediaUrl = '/uploads/outbound/' + hashName;
         } catch (fsErr) { console.warn('[TG SendMedia] persist failed:', fsErr.message); }
 
@@ -1412,6 +1669,7 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
         if (io) {
           io.emit('whatsapp:message_sent', {
             id: saved.id, body: caption || file.fileName || '', fromMe: true,
+            text: ['image','video','document'].includes(mediatype) ? '[media]' : (caption || ''),
             timestamp: saved.timestamp, platform: 'telegram', jid: toJid,
             direction: 'outbound', messageType: mediatype, type: mediatype,
             fileName: file.fileName || null, mimeType: file.mimeType || null,
@@ -1425,21 +1683,36 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
     }
 
     // Multi-WA: resolve correct connector based on accountId or conversation
-    let mediaConnector = evoConnector;
+    // 【P0安全修复】禁止默认全局实例，必须按当前用户(userId)隔离
+    let mediaConnector = null;
     let mediaAccountId = reqAccountId || null;
+    const _mUid2 = req.userId || 1;
     if (mediaAccountId) {
-      const waAcc = await prisma.whatsAppAccount.findFirst({ where: { id: mediaAccountId, platform: 'whatsapp' } });
+      const waAcc = await prisma.whatsAppAccount.findFirst({ where: { id: mediaAccountId, platform: 'whatsapp', userId: _mUid2, instanceName: { not: null } } });
       if (waAcc?.instanceName) {
         mediaConnector = getEvolutionConnector(waAcc.instanceName);
         mediaAccountId = waAcc.id;
+      } else {
+        return res.status(403).json({ error: '账号不存在或无权使用该账号发送消息' });
       }
     } else {
       const existingConv = await prisma.conversation.findFirst({ where: { jid: toJid, platform: 'whatsapp' }, select: { accountId: true } });
       if (existingConv) {
-        mediaAccountId = existingConv.accountId;
-        const waAcc = await prisma.whatsAppAccount.findFirst({ where: { id: mediaAccountId, platform: 'whatsapp' } });
-        if (waAcc?.instanceName) mediaConnector = getEvolutionConnector(waAcc.instanceName);
+        const waAcc = await prisma.whatsAppAccount.findFirst({ where: { id: existingConv.accountId, platform: 'whatsapp', userId: _mUid2, instanceName: { not: null } } });
+        if (waAcc?.instanceName) {
+          mediaAccountId = waAcc.id;
+          mediaConnector = getEvolutionConnector(waAcc.instanceName);
+        }
       }
+      if (!mediaConnector) {
+        let myAcc = await prisma.whatsAppAccount.findFirst({ where: { userId: _mUid2, platform: 'whatsapp', instanceName: { not: null }, status: 'connected' }, select: { id: true, instanceName: true } });
+        if (!myAcc) myAcc = await prisma.whatsAppAccount.findFirst({ where: { userId: _mUid2, platform: 'whatsapp', instanceName: { not: null } }, orderBy: { updatedAt: 'desc' }, select: { id: true, instanceName: true } });
+        if (myAcc?.instanceName) {
+          mediaAccountId = myAcc.id;
+          mediaConnector = getEvolutionConnector(myAcc.instanceName);
+        }
+      }
+      if (!mediaConnector) return res.status(400).json({ error: '请先连接WhatsApp账号再发送消息' });
     }
 
     const result = await mediaConnector.sendMediaMessage(toJid, {
@@ -1454,7 +1727,10 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
       return res.status(500).json({ error: result.error || 'send failed', data: result.data });
     }
 
-    const outMediaSessionId = mediaConnector.instance === 'jeremy-eric' ? 'user_2' : 'user_1';
+    // 【P0安全修复】outMediaSessionId 按当前账号解析，禁止硬编码
+    const outMediaSessionId = mediaAccountId ? await resolveSessionIdForAccount(mediaAccountId) : DEFAULT_SESSION_ID;
+    // 【P1修复】确保 session 在 WAConnection 存在（外键约束）
+    await ensureSessionInDb(req.userId || 1, outMediaSessionId, null);
     const info = await mediaConnector.getInstanceInfo().catch(() => null);
     const ownerJid = info?.ownerJid || (mediaConnector.instance === 'jeremy-eric' ? '8618038118960@s.whatsapp.net' : '8613016242602@s.whatsapp.net');
 
@@ -1482,7 +1758,15 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
           const outDir = pathMod.join(__dirname, "uploads/outbound");
           if (!fsMod.existsSync(outDir)) fsMod.mkdirSync(outDir, { recursive: true });
           const outPath = pathMod.join(outDir, hashName);
-          fsMod.writeFileSync(outPath, file.buffer);
+          let waSaveBuffer = file.buffer;
+          if (mt.startsWith('image/')) {
+            try {
+              const sharp = (await import('sharp')).default;
+              waSaveBuffer = await sharp(file.buffer).resize(1280, 1280, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 75, progressive: true }).toBuffer();
+              console.log('[WA ImageCompress] original:' + file.buffer.length + 'B -> compressed:' + waSaveBuffer.length + 'B');
+            } catch (compErr) { console.warn('[WA ImageCompress] failed:', compErr.message); }
+          }
+          fsMod.writeFileSync(outPath, waSaveBuffer);
           outboundMediaUrl = "/uploads/outbound/" + hashName;
         } catch (fsErr) {
           console.warn("[WA SendMedia] failed to persist outbound media:", fsErr.message);
@@ -1656,13 +1940,110 @@ app.post("/api/ai/send-doc-pdf", authMiddleware, async (req, res) => {
 });
 
 // ── 重新翻译消息 POST /api/whatsapp/retranslate ──
+
+// ── 批量重新翻译缺少翻译的消息 POST /api/whatsapp/retranslate-batch ──
+app.post('/api/whatsapp/retranslate-batch', authMiddleware, async (req, res) => {
+  try {
+    const { jid, messageIds = [] } = req.body || {};
+    if (!jid) return res.status(400).json({ error: 'jid is required' });
+    
+    const sessionId = `user_${req.userId}`;
+    let targetJid = jid;
+    if (!targetJid.includes('@')) {
+      targetJid = targetJid.endsWith('@telegram') ? targetJid : `${targetJid.replace(/\D/g, '')}@s.whatsapp.net`;
+    }
+    
+    // Find messages without translations
+    const whereClause = {
+      OR: [
+        { from: targetJid, sessionId: { startsWith: 'user_' } },
+        { to: targetJid, sessionId: { startsWith: 'user_' } }
+      ],
+      type: 'text',
+      translation: null
+    };
+    
+    if (messageIds.length > 0) {
+      whereClause.id = { in: messageIds.map(Number) };
+    }
+    
+    const msgs = await prisma.wAMessage.findMany({
+      where: whereClause,
+      orderBy: { id: 'desc' },
+      take: 20  // Limit to avoid overload
+    });
+    
+    if (msgs.length === 0) {
+      return res.json({ success: true, translated: 0, message: 'No messages need translation' });
+    }
+    
+    const { translateText, detectLanguage } = await import('./services/ai.service.js');
+    const ts = await getTranslationSettings(targetJid, req.userId);
+    const engine = ts.receiveEngine || 'deepl';
+    const targetLang = ts.receiveTargetLang || 'zh';
+    const io = app.get('io');
+    
+    let translated = 0;
+    for (const msg of msgs) {
+      try {
+        const body = (msg.body || '').trim();
+        if (!body || (body.startsWith('[') && body.endsWith(']'))) continue;
+        
+        let sourceLang = ts.receiveSourceLang || 'auto';
+        if (sourceLang === 'auto') {
+          sourceLang = await detectLanguage(body, engine);
+        }
+        if (!sourceLang || sourceLang === 'unknown' || sourceLang === 'zh' || sourceLang.startsWith('zh-')) continue;
+        
+        const result = await translateText(body, sourceLang, targetLang, engine, req.userId);
+        const translatedText = (result && (result.translated || result.text)) || '';
+        if (!translatedText) continue;
+        
+        const translationObj = { original: body, translated: translatedText, sourceLang, targetLang };
+        const transJson = JSON.stringify(translationObj);
+        
+        await prisma.wAMessage.update({
+          where: { id: msg.id },
+          data: { translation: transJson, sourceLang }
+        });
+        
+        // Emit socket event
+        if (io) {
+          const payload = {
+            id: msg.id,
+            waMessageId: msg.waMessageId,
+            jid: msg.direction === 'outbound' ? msg.to : msg.from,
+            translation: translationObj,
+            sourceLang,
+            platform: msg.sessionId?.includes('tg') || targetJid.endsWith('@telegram') ? 'telegram' : 'whatsapp'
+          };
+          io.to(sessionId).emit('whatsapp:translation', payload);
+          io.to(sessionId).emit('telegram:translation', payload);
+        }
+        
+        translated++;
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 200));
+      } catch (e) {
+        console.warn(`[BatchRetranslate] Failed for msg #${msg.id}:`, e.message);
+      }
+    }
+    
+    console.log(`[BatchRetranslate] Processed ${msgs.length} messages, translated ${translated} for ${targetJid}`);
+    return res.json({ success: true, translated, total: msgs.length });
+  } catch (err) {
+    console.error('[BatchRetranslate Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/whatsapp/retranslate', authMiddleware, async (req, res) => {
   try {
     const { messageId } = req.body || {};
     if (messageId == null) return res.status(400).json({ error: 'messageId is required' });
     const sessionId = `user_${req.userId}`;
     const msg = await prisma.wAMessage.findFirst({
-      where: { id: Number(messageId), sessionId },
+      where: { id: Number(messageId) },
     });
     if (!msg) return res.status(404).json({ error: 'message not found' });
     if (msg.type !== 'text') return res.status(400).json({ error: 'only text messages can be re-translated' });
@@ -1678,11 +2059,11 @@ app.post('/api/whatsapp/retranslate', authMiddleware, async (req, res) => {
 
     let targetLang, sourceLang, engine;
     if (msg.direction === 'inbound') {
-      engine = ts.receiveEngine || "google";;
+      engine = ts.receiveEngine || "deepl";;
       sourceLang = ts.receiveSourceLang || 'auto';
       targetLang = ts.receiveTargetLang || 'zh';
     } else {
-      engine = ts.sendEngine || ts.receiveEngine || 'google';
+      engine = ts.sendEngine || ts.receiveEngine || 'deepl';
       sourceLang = ts.sendSourceLang || 'auto';
       targetLang = 'zh';
       // outbound with existing Chinese original in translation.original: emit cached
@@ -1753,7 +2134,8 @@ app.post("/api/whatsapp/send-evo", authMiddleware, async (req, res) => {
 // ── jid-agnostic contact lookup helper ──
 function _ctLookup(ctMap, jid) {
   let ct = ctMap.get(jid);
-  if (!ct && jid) {
+  // @lid 空记录（无名字无头像）时也继续尝试 @s.whatsapp.net 替代格式
+  if ((!ct || (!ct.name && !ct.pushName && !ct.avatarUrl)) && jid) {
     if (jid.endsWith('@lid')) ct = ctMap.get(jid.replace(/@lid$/, '@s.whatsapp.net'));
     else if (jid.endsWith('@s.whatsapp.net')) ct = ctMap.get(jid.replace(/@s\.whatsapp\.net$/, '@lid'));
     if (!ct) {
@@ -1779,7 +2161,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
     // ── Telegram 渠道分支 ──
     if (platform === "telegram") {
       const tgAccounts = await prisma.whatsAppAccount.findMany({
-        where: { userId: req.userId || 1, platform: "telegram", status: "connected" },
+        where: { platform: "telegram", status: "connected" },
       });
       if (!tgAccounts.length) return res.json([]);
       const tgAccountIds = tgAccounts.map(a => a.id);
@@ -1828,6 +2210,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
           jid: cv.jid, platform: "telegram", phone: chatId,
           name: ct?.displayName || ct?.name || chatId,
           avatar: ct?.avatarUrl || null,
+          avatarUrl: ct?.avatarUrl || null,
           lastMessage: lastMsg,
           lastMessageTime: lastMsgTime,
           direction,
@@ -1857,7 +2240,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
       });
     } else {
       const acc = await prisma.whatsAppAccount.findFirst({
-        where: { id: parseInt(accountIdParam), platform: "whatsapp" },
+        where: { id: parseInt(accountIdParam), platform: "whatsapp", userId: req.userId || 1 },
       });
       if (acc) waAccountsList = [acc];
     }
@@ -1868,13 +2251,17 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
 
     for (const waAcc of waAccountsList) {
       const accId = waAcc.id;
-      const accName = waAcc.name || waAcc.instanceName || `WA-${accId}`;
+      const accName = waAcc.instanceName || waAcc.name || `WA-${accId}`;
       const instanceName = waAcc.instanceName;
       if (!instanceName) continue;
 
       // Get the correct Evolution connector for this instance
       let accConnector;
       try { accConnector = getEvolutionConnector(instanceName); } catch(e) { continue; }
+
+      // 按需同步联系人（节流，不阻塞响应）：首次拉列表时若该实例联系人缺名字/头像，
+      // 用 findContacts 回写 Contact.pushName/avatarUrl，保证会话列表显示真实名字头像
+      try { maybeSyncContactsOnDemand(instanceName).catch(() => {}); } catch(_e) {}
 
       // Get ownerJid for this instance
       let ownerJid = (waAcc.phone || "") + "@s.whatsapp.net";
@@ -1883,8 +2270,9 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         if (info?.ownerJid) ownerJid = info.ownerJid;
       } catch(e) {}
 
-      // Resolve sessionId for this WA account
-      const accSessionId = await resolveSessionIdForAccount(accId);
+      // Resolve sessionId set for this WA account（同一号码可能有多个session）
+      const accSessionSet = await resolveSessionIdSetForAccount(accId);
+      const accSessionId = accSessionSet.length === 1 ? accSessionSet[0] : { in: accSessionSet };
 
       // Get jids belonging to this account from conversations table
       const accConvJids = new Set(
@@ -1963,6 +2351,11 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
           if (!jid || jid.includes("@g.us") || jid.includes("@broadcast")) continue;
           const lastEv = chat.lastMessage;
           jid = resolveJid(jid, lastEv);
+          // 兜底解析 @lid -> @s.whatsapp.net（lid-mapping 有映射时），保证能匹配 Contact/Customer 表
+          if (jid.endsWith("@lid")) {
+            const _rj = resolveToPhoneJid(jid);
+            if (_rj && _rj !== jid) jid = _rj;
+          }
           if (jid === ownerJid) continue;
           // @lid JIDs are valid contacts - use them directly
           if (!jid.endsWith("@lid")) {
@@ -1995,6 +2388,13 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
 
     // 3. 查联系人名
     const phones = [...contactMap.keys()].map(j => j.split("@")[0]);
+    // 补充 @lid 解析后的手机号（Customer.phone 存的是手机号，@lid 数字匹配不到）
+    for (const _j of contactMap.keys()) {
+      if (_j.endsWith("@lid")) {
+        const _rp = resolveToPhoneJid(_j).split("@")[0];
+        if (_rp && !phones.includes(_rp)) phones.push(_rp);
+      }
+    }
     const customers = phones.length
       ? await prisma.customer.findMany({
           where: { userId: req.userId || 1, phone: { in: phones } },
@@ -2015,7 +2415,12 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
         jidAccMap.get(accId).push(jid);
       }
       for (const [accId, accJids] of jidAccMap) {
-        const recs = await prisma.contact.findMany({ where: { accountId: accId, platform: 'whatsapp', jid: { in: accJids } } });
+        // 扩充查询 jids：同时查 @lid 与其解析后的 @s.whatsapp.net 版本，避免命中空 @lid 记录
+        const qj = new Set(accJids);
+        for (const _j of accJids) {
+          if (_j.endsWith('@lid')) { const _rj = resolveToPhoneJid(_j); if (_rj !== _j) qj.add(_rj); }
+        }
+        const recs = await prisma.contact.findMany({ where: { accountId: accId, platform: 'whatsapp', jid: { in: [...qj] } } });
         ctRecords.push(...recs);
       }
     } catch (_) {}
@@ -2050,9 +2455,12 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
       const phone = jid.split("@")[0];
       // 过滤无效jid（兜底）
       if (!phone || phone === "0" || phone.length < 5 || !/^[0-9]+$/.test(phone)) continue;
-      const cust = custMap.get(phone);
+      // 用解析后手机号优先查 Customer（@lid -> @s.whatsapp.net 手机号）
+      const rPhone = jid.endsWith("@lid") ? resolveToPhoneJid(jid).split("@")[0] : phone;
+      const cust = custMap.get(rPhone) || custMap.get(phone);
       const ct = _ctLookup(ctMap, jid);
-      const name = cust?.name || ct?.name || ct?.pushName || phone;
+      const _isRealName = (n) => n && !(n.replace(/[+\s\-()]/g, "").length >= 7 && /^\d+$/.test(n.replace(/[+\s\-()]/g, "")));
+      const name = _isRealName(cust?.name) ? cust.name : (_isRealName(ct?.name) ? ct.name : (_isRealName(ct?.pushName) ? ct.pushName : phone));
       const conv = convMap.get(jid) || { pinned: false, starred: false, blocked: false };
 
       if (conv.blocked && !showBlocked) continue;
@@ -2078,7 +2486,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
     if (platform === "") {
       try {
         const tgAccounts = await prisma.whatsAppAccount.findMany({
-          where: { userId: req.userId || 1, platform: "telegram", status: "connected" },
+          where: { platform: "telegram", status: "connected" },
         });
         if (tgAccounts.length) {
           const tgAccountIds = tgAccounts.map(a => a.id);
@@ -2344,10 +2752,17 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
     let targetJid = jid;
     if (!targetJid.includes("@")) targetJid = `${targetJid.replace(/\D/g, "")}@s.whatsapp.net`;
 
+    // 【P1修复】@lid → 解析为手机号JID（DB 统一存手机号JID，@lid 用于 Evolution 查询）
+    let targetPhoneJid = null;
+    if (targetJid.endsWith('@lid')) {
+      const _resolved = resolveToPhoneJid(targetJid);
+      if (_resolved && _resolved !== targetJid && !_resolved.endsWith('@lid')) targetPhoneJid = _resolved;
+    }
+
     // ── Telegram 消息分支 ──
     if (targetJid.endsWith("@telegram")) {
       const tgAccounts = await prisma.whatsAppAccount.findMany({
-        where: { userId: req.userId || 1, platform: "telegram", status: "connected" },
+        where: { platform: "telegram", status: "connected" },
       });
       if (!tgAccounts.length) return res.json([]);
       const sessions = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
@@ -2371,7 +2786,7 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
       })();
       let messages = dbMsgs.map(m => ({
         id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
-        body: m.body || m.content || "", type: m.type || "text",
+        body: (m.type === "image" || m.type === "video" || m.type === "document") ? "[media]" : (m.body || m.content || ""), type: m.type || "text", messageType: m.type || "text",
         direction: m.direction, fromMe: m.direction === "outbound",
         timestamp: m.timestamp,
         translation: (() => {
@@ -2379,10 +2794,15 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
           try {
             const p = typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation;
             const isOutgoing = m.direction === 'outbound';
-            return p;  // return full translation object for frontend getTranslationText to handle
+            return p;
           } catch { return typeof m.translation === 'string' ? m.translation : null; }
         })(),
-        sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "telegram",
+        sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null,
+        mimeType: m.mimeType || null, fileName: m.fileName || null, fileSize: m.fileLength || m.fileSize || null,
+        previewDataUrl: null,
+        read: m.read === true || !!m.readAt, readAt: m.readAt || null, deliveredAt: m.deliveredAt || null,
+        ackError: m.ackError || null,
+        platform: "telegram",
       }));
 
       // Always backfill TG history in background (pull up to 100 messages + download media)
@@ -2441,8 +2861,8 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
                 }
               }
               try {
-                await prisma.wAMessage.create({ data: { sessionId: ubSessionId, from: fromJid, to: toJid, body: (hm.text || '').slice(0, 500), type: hm.mediaType || 'text', direction: hm.fromMe ? 'outbound' : 'inbound', timestamp: new Date(hm.timestamp).toISOString(), read: hm.fromMe, waMessageId: waMsgId, mediaUrl: mediaUrl } });
-                await prisma.message.create({ data: { accountId: ubAccount.id, platform: 'telegram', contactId: contact.id, jid: targetJid, fromMe: hm.fromMe, content: (hm.text || '').slice(0, 500), messageType: hm.mediaType || 'text', timestamp: new Date(hm.timestamp).toISOString().replace("T"," ").substring(0,19), mediaUrl: mediaUrl } });
+                await prisma.wAMessage.create({ data: { sessionId: ubSessionId, from: fromJid, to: toJid, body: (hm.text || '').slice(0, 500), type: normalizeTgMediaType(hm.mediaType, mediaUrl) || 'text', direction: hm.fromMe ? 'outbound' : 'inbound', timestamp: new Date(hm.timestamp).toISOString(), read: hm.fromMe, waMessageId: waMsgId, mediaUrl: mediaUrl } });
+                await prisma.message.create({ data: { accountId: ubAccount.id, platform: 'telegram', contactId: contact.id, jid: targetJid, fromMe: hm.fromMe, content: (hm.text || '').slice(0, 500), messageType: normalizeTgMediaType(hm.mediaType, mediaUrl) || 'text', timestamp: new Date(hm.timestamp).toISOString().replace("T"," ").substring(0,19), mediaUrl: mediaUrl } });
                 newCount++;
               } catch {}
               existingWaIds.add(waMsgId);
@@ -2465,19 +2885,41 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
     }
 
     // 1. 先从DB查 - resolve sessionId based on accountId param
+    // 【P0安全修复】accountId 必须归属当前用户；Evolution 补拉必须用当前用户自己的实例
     const accountIdParam = req.query.accountId;
+    const _mUid = req.userId || 1;
+    const myWaAccounts = await prisma.whatsAppAccount.findMany({
+      where: { userId: _mUid, platform: 'whatsapp', instanceName: { not: null } },
+      select: { id: true, instanceName: true },
+    });
     let querySessionId;
+    let evoPull = null; // { connector, sessionId }
     if (accountIdParam && accountIdParam !== 'all') {
-      querySessionId = await resolveSessionIdForAccount(parseInt(accountIdParam));
+      const accId = parseInt(accountIdParam);
+      const owned = myWaAccounts.find(a => a.id === accId);
+      if (!owned) return res.status(403).json({ error: '无权访问该账号的消息' });
+      const sessSet = await resolveSessionIdSetForAccount(accId);
+      querySessionId = sessSet.length === 1 ? sessSet[0] : { in: sessSet };
+      evoPull = { connector: getEvolutionConnector(owned.instanceName), sessionId: sessSet.length ? sessSet[0] : `user_${accId}` };
     } else {
-      // Query all WA sessions
-      const waConns = await prisma.wAConnection.findMany({
-        where: { userId: req.userId || 1, sessionId: { startsWith: 'user_' } },
-        select: { sessionId: true }
-      });
-      querySessionId = { in: waConns.map(c => c.sessionId) };
+      // Query all WA sessions of current user
+      // 【Bug修复 2026-08-23】不再依赖 wAConnection 表（userId=45 无记录时返回空导致空白）；
+      // 改为按当前用户账号逐一 resolveSessionIdSetForAccount 合并（与 webhook 入库端对齐）
+      let _sessSet = [];
+      for (const _wa of myWaAccounts) {
+        const _ss = await resolveSessionIdSetForAccount(_wa.id);
+        _sessSet.push(..._ss);
+      }
+      _sessSet = Array.from(new Set(_sessSet.filter(Boolean)));
+      querySessionId = _sessSet.length ? { in: _sessSet } : 'user_1';
+      if (myWaAccounts.length > 0) {
+        const _sess = await resolveSessionIdForAccount(myWaAccounts[0].id);
+        evoPull = { connector: getEvolutionConnector(myWaAccounts[0].instanceName), sessionId: _sess };
+      }
     }
-    const where = { sessionId: querySessionId, OR: [{ from: targetJid }, { to: targetJid }] };
+    const _jidOr = [{ from: targetJid }, { to: targetJid }];
+    if (targetPhoneJid) { _jidOr.push({ from: targetPhoneJid }, { to: targetPhoneJid }); }
+    const where = { sessionId: querySessionId, OR: _jidOr };
     if (before) where.id = { lt: parseInt(before) };
     const dbMsgs = await prisma.wAMessage.findMany({
       where, orderBy: { id: "desc" }, take: parseInt(limit),
@@ -2487,10 +2929,11 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
     let messages = [...dbMsgs];
     {
       try {
-        const evoMsgs = await evoConnector.fetchMessages(targetJid, parseInt(limit));
+        if (!evoPull) throw new Error('no owned instance for evolution pull');
+        const evoMsgs = await evoPull.connector.fetchMessages(targetPhoneJid || targetJid, parseInt(limit));
         // 落库那些DB中没有的
         const existingWaIds = new Set(dbMsgs.map(m => m.waMessageId).filter(Boolean));
-        const info = await evoConnector.getInstanceInfo().catch(() => null);
+        const info = await evoPull.connector.getInstanceInfo().catch(() => null);
         const ownerJid = info?.ownerJid || "8613016242602@s.whatsapp.net";
         const bulkInsert = [];
         for (const m of evoMsgs) {
@@ -2501,7 +2944,12 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
           if (key.remoteJidAlt && key.remoteJidAlt.includes('@s.whatsapp.net')) {
             remoteJid = key.remoteJidAlt;
           }
-          if (remoteJid.endsWith('@lid')) continue; // 无法解析的@lid跳过
+          if (remoteJid.endsWith('@lid')) {
+            // 【P1修复】尝试把 @lid 解析为手机号JID；解析不了才跳过
+            const _rp = resolveToPhoneJid(remoteJid);
+            if (!_rp || _rp.endsWith('@lid') || _rp === remoteJid) continue;
+            remoteJid = _rp;
+          }
           const fromMe = !!key.fromMe;
           let body = "";
           let type = "text";
@@ -2515,7 +2963,7 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
           else { body = `[${m.messageType || "unknown"}]`; type = m.messageType || "unknown"; }
           const ts = m.messageTimestamp ? new Date(m.messageTimestamp > 1e12 ? m.messageTimestamp : m.messageTimestamp * 1000) : new Date();
           bulkInsert.push({
-            sessionId: typeof querySessionId === 'string' ? querySessionId : DEFAULT_SESSION_ID,
+            sessionId: evoPull ? evoPull.sessionId : (typeof querySessionId === 'string' ? querySessionId : DEFAULT_SESSION_ID),
             from: fromMe ? ownerJid : remoteJid,
             to: fromMe ? remoteJid : ownerJid,
             body,
@@ -2537,7 +2985,7 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
                 const { getTranslationSettings } = await import('./routes/translation.js');
                 const settings = await getTranslationSettings(targetJid, 1);
                 if (!settings || settings.receiveEnabled === false) return;
-                const engine = settings.receiveEngine || 'google';
+                const engine = settings.receiveEngine || 'deepl';
                 const targetLang = settings.receiveTargetLang || 'zh';
                 for (const msgId of insertedIds) {
                   try {
@@ -2560,9 +3008,9 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
             })();
           }
 
-          // 重新查DB
+          // 重新查DB（【P1修复】OR 需含 targetPhoneJid，否则 @lid 查询被覆盖为空）
           const refreshed = await prisma.wAMessage.findMany({
-            where: { sessionId: querySessionId, OR: [{ from: targetJid }, { to: targetJid }] },
+            where: { sessionId: querySessionId, OR: _jidOr },
             orderBy: { id: "desc" }, take: parseInt(limit),
           });
           messages = refreshed;
@@ -2582,7 +3030,7 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
 
     const mapped = messages.map(m => ({
       id: m.id, waMessageId: m.waMessageId, from: m.from, to: m.to,
-      body: m.body || "", type: m.type || "text",
+      body: m.body || "", type: m.type || "text", messageType: m.type || "text",
       direction: m.direction, fromMe: m.direction === "outbound",
       timestamp: m.timestamp,
       translation: (() => {
@@ -2590,10 +3038,15 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
         try {
           const p = typeof m.translation === 'string' ? JSON.parse(m.translation) : m.translation;
           const isOutgoing = m.direction === "outbound";
-          return p;  // return full translation object for frontend getTranslationText to handle
+          return p;
         } catch { return typeof m.translation === 'string' ? m.translation : null; }
       })(),
-      sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null, platform: "whatsapp",
+      sourceLang: m.sourceLang, mediaUrl: m.mediaUrl || null,
+      mimeType: m.mimeType || null, fileName: m.fileName || null, fileSize: m.fileLength || m.fileSize || null,
+      previewDataUrl: null,
+      read: m.read === true || !!m.readAt, readAt: m.readAt || null, deliveredAt: m.deliveredAt || null,
+      ackError: m.ackError || null,
+      platform: "whatsapp",
     }));
     res.json(mapped.reverse());
   } catch (err) {
@@ -2644,6 +3097,7 @@ app.post('/api/messages/send', authMiddleware, (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
+  logger.debug('Server', 'health check');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -2661,8 +3115,8 @@ if (isProduction) {
   if (hasDist) {
     // Company material uploads (served before SPA fallback)
     app.use("/uploads/company", express.static(path.join(__dirname, "../uploads/company")));
-    app.use("/uploads/outbound", express.static(path.join(__dirname, "../uploads/outbound")));
-    app.use("/uploads/tg-media", express.static(path.join(__dirname, "../uploads/tg-media")));
+    app.use("/uploads/outbound", express.static(path.join(__dirname, "uploads/outbound")));
+    app.use("/uploads/tg-media", express.static(path.join(__dirname, "uploads/tg-media")));
     app.use("/uploads/tg-avatars", express.static(path.join(__dirname, "../uploads/tg-avatars")));
     app.use(express.static(frontendPath));
     app.get('{*path}', (req, res, next) => {
@@ -2709,12 +3163,20 @@ io.on('connection', () => {
 
 
 // Normalize TG GramJS mediaType to standard types
-function normalizeTgMediaType(t) {
+function normalizeTgMediaType(t, mediaUrl) {
   if (!t) return 'text';
   const lower = t.toLowerCase();
   if (lower.includes('photo')) return 'image';
   if (lower.includes('video')) return 'video';
-  if (lower.includes('document') || lower.includes('file')) return 'document';
+  if (lower.includes('document') || lower.includes('file')) {
+    // Telegram sends images as documents - check file extension/mimeType
+    if (mediaUrl) {
+      const ext = (mediaUrl.split('.').pop() || '').toLowerCase();
+      if (['jpg','jpeg','png','gif','webp','bmp','heic'].includes(ext)) return 'image';
+      if (['mp4','mov','avi','mkv','webm'].includes(ext)) return 'video';
+    }
+    return 'document';
+  }
   if (lower.includes('audio') || lower.includes('voice')) return 'audio';
   if (lower.includes('contact')) return 'contact';
   if (lower.includes('geo') || lower.includes('location')) return 'location';
@@ -2764,9 +3226,13 @@ async function startServer() {
     console.warn(`[Server] Could not create sessions dir: ${err.message}`);
   }
 
+  // 启动联系人周期同步（保持 Contact.pushName/avatarUrl 新鲜）
+  try { startContactSyncScheduler(); } catch(e) { console.warn('[Server] startContactSyncScheduler error:', e.message); }
+
   httpServer.listen(LISTEN_PORT, '0.0.0.0', () => {
     console.log(`[${isProduction ? 'Production' : 'Dev'}] Server running on port ${LISTEN_PORT}`);
     console.log(`[Server] Build version: evolution-api-v1 | Mode: Evolution REST API`);
+    logger.info('Server', 'listening on port ' + LISTEN_PORT + ', env=' + (isProduction ? 'production' : 'dev'));
     // TG User Bot 消息去重集合（防止GramJS同一消息触发多次onMessage）
     const _tgProcessedMsgs = new Set();
     // TG User Bot 自动重连（如果有已保存的session）
@@ -2803,6 +3269,14 @@ async function startServer() {
             }
             if (!tgAccount) return;
             const tgSessionId = `tg_${tgAccount.telegramBotUsername || tgAccount.id}`;
+            // 确保 WAConnection 存在（WAMessage.sessionId 外键依赖；否则 TG 实时消息 P2003 落库失败）
+            try {
+              await prisma.wAConnection.upsert({
+                where: { sessionId: tgSessionId },
+                update: { status: 'connected', lastConnectedAt: new Date() },
+                create: { userId: tgAccount.userId, sessionId: tgSessionId, status: 'connected', lastConnectedAt: new Date() },
+              });
+            } catch (wacErr) { console.warn('[TG-UB] WAConnection upsert error:', wacErr.message); }
             const jid = `${msg.chatId}@telegram`;
             // Find or create contact
             let contact = await prisma.contact.findFirst({
@@ -2907,8 +3381,8 @@ async function startServer() {
                     sessionId: tgSessionId,
                     from: isOut ? 'me' : jid,
                     to: isOut ? jid : 'me',
-                    body: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
-                    type: normalizeTgMediaType(msg.mediaType) || 'text',
+                    body: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType, mediaUrl) + ']' : ''),
+                    type: normalizeTgMediaType(msg.mediaType, mediaUrl) || 'text',
                     direction: isOut ? 'outbound' : 'inbound',
                     timestamp: new Date(msg.timestamp).toISOString(),
                     waMessageId: _waMsgId,
@@ -2943,8 +3417,8 @@ async function startServer() {
                   contactId: contact.id,
                   jid,
                   fromMe: isOut,
-                  content: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
-                  messageType: normalizeTgMediaType(msg.mediaType) || 'text',
+                  content: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType, mediaUrl) + ']' : ''),
+                  messageType: normalizeTgMediaType(msg.mediaType, mediaUrl) || 'text',
                   timestamp: _ts,
                   mediaUrl: mediaUrl,
                 },
@@ -2967,11 +3441,13 @@ async function startServer() {
                 contactId: contact.id,
                 jid,
                 message: {
-                  id: waMsg.id,
+                  id: savedMsgId,
+                  savedMsgId: savedMsgId,
+                  waMessageId: waMsg.waMessageId,
                   fromMe: isOut,
-                  content: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
-                  body: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType) + ']' : ''),
-                  messageType: normalizeTgMediaType(msg.mediaType) || 'text',
+                  content: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType, mediaUrl) + ']' : ''),
+                  body: msg.text || (msg.mediaType ? '[' + normalizeTgMediaType(msg.mediaType, mediaUrl) + ']' : ''),
+                  messageType: normalizeTgMediaType(msg.mediaType, mediaUrl) || 'text',
                   timestamp: new Date(msg.timestamp).toISOString(),
                   platform: 'telegram',
                   waMessageId: waMsg.waMessageId,
@@ -2998,7 +3474,7 @@ async function startServer() {
               if (body && body.length >= 1 && body.length <= 2000 && !(body.startsWith('[') && body.endsWith(']'))) {
                 const settings = await getTranslationSettings(jid, tgAccount.userId || 1);
                 if (settings && settings.receiveEnabled) {
-                  const engine = settings.receiveEngine || 'google';
+                  const engine = settings.receiveEngine || 'deepl';
                   let srcLang = settings.receiveSourceLang || 'auto';
                   const tgtLang = settings.receiveTargetLang || 'zh';
                   if (srcLang === 'auto') { try { srcLang = await detectLanguage(body, engine); } catch(_){} }
@@ -3012,6 +3488,7 @@ async function startServer() {
                       await prisma.wAMessage.update({ where: { id: waMsg.id }, data: { translation: transObj, sourceLang: srcLang } }).catch(()=>{});
                       console.log('[TG-UB Translate] ' + srcLang + '->' + tgtLang + ': "' + body.substring(0,50) + '" => "' + translated.substring(0,50) + '"');
                       if (io) {
+                        console.log('[TG-UB] Emitting translation events, io.connected:', io.engine ? io.engine.clientsCount : 'unknown');
                         io.emit('telegram:translation', { id: savedMsgId, waId: waMsg.id, jid, translation: { original: body, translated, sourceLang: srcLang, targetLang: tgtLang }, sourceLang: srcLang });
                         io.emit('whatsapp:translation', { id: waMsg.id, jid, translation: { original: body, translated, sourceLang: srcLang, targetLang: tgtLang }, sourceLang: srcLang, platform: 'telegram' });
                       }
@@ -3034,7 +3511,8 @@ async function startServer() {
     // 初始化Evolution Connector
     evoConnector.init().catch(err => console.warn('[Evolution] init error:', err.message));
 
-    // 启动时重置所有WA实例的webhook（确保指向当前端口）
+    // 启动时重置所有WA实例的webhook（确保指向当前端口）— 仅 ENABLE_WEBHOOK_RESET=true 时执行（beta/staging 不设该变量，避免抢占生产实例 webhook）
+    if (process.env.ENABLE_WEBHOOK_RESET === 'true') {
     (async () => {
       const webhookPort = process.env.DEPLOY_RUN_PORT || LISTEN_PORT;
       const webhookUrl = `http://host.docker.internal:${webhookPort}/api/evolution/webhook`;
@@ -3056,6 +3534,9 @@ async function startServer() {
         } catch(e) { console.warn(`[Startup] webhook ${inst}:`, e.message); }
       }
     })();
+    } else {
+      console.log('[Startup] Webhook reset disabled (ENABLE_WEBHOOK_RESET != true), skip WA instance webhook reset');
+    }
 
     // TG webhook自恢复：重启后自动给已连接的TG bot重设webhook（防止进程crash/重启后webhook失效）
     import('./services/telegram-connector.js').then(async ({ getTelegramConnector }) => {
@@ -3105,11 +3586,16 @@ async function startServer() {
     import("./services/automation-scheduler.js").then(m => {
       if (m.startScheduler) m.startScheduler();
     }).catch(() => {});
+    // 启动日程提醒调度器（如果存在）
+    import("./services/reminder-scheduler.js").then(m => {
+      if (m.startReminderScheduler) m.startReminderScheduler(io);
+    }).catch(e => console.warn("[Reminder Scheduler] load error:", e.message));
   });
 }
 
 startServer().catch(err => {
   console.error('[FATAL] Failed to start server:', err);
+  logger.error('Server', '[FATAL] Failed to start server:', err.message);
   process.exit(1);
 });
 

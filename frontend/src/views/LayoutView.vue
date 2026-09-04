@@ -3,40 +3,51 @@
     <!-- ① 平台导航栏 -->
     <aside class="platform-nav">
       <div class="platform-nav-top">
-        <div class="logo-wrap" @click="router.push('/')">
-          <span class="logo-icon">🤖</span>
+        <div class="platform-logo-row">
+        <div class="logo-wrap" @click="goHome">
+          <img src="/tc-logo.png" class="logo-icon" alt="TradeAgent" />
           <transition name="fade">
             <span v-if="!platformCollapsed" class="logo-text">TradeAgent</span>
           </transition>
         </div>
+        </div>
         <nav class="platform-menu">
-          <div
-            v-for="item in platformItems"
-            :key="item.key"
-            class="platform-item"
-            :class="{ active: isPlatformActive(item.key) }"
-            @click="switchPlatform(item)"
-          >
-            <span class="p-icon" v-html="item.icon"></span>
-            <transition name="fade">
-              <span v-if="!platformCollapsed" class="p-label">{{ item.label }}</span>
+          <template v-for="item in platformItems" :key="item.key">
+            <div class="platform-item-wrap">
+            <div
+              class="platform-item"
+              :class="{ active: isParentActive(item), 'has-children': item.children && !platformCollapsed }"
+              @click="item.children && !isPlatformActive(item.key) ? toggleExpand(item.key) : switchPlatform(item)"
+            >
+              <span class="p-icon" v-html="item.icon"></span>
+              <transition name="fade">
+                <span v-if="!platformCollapsed" class="p-label">{{ item.label }}</span>
+              </transition>
+              <span v-if="item.badge && !platformCollapsed" class="p-badge">{{ item.badge }}</span>
+              <svg v-if="item.children && !platformCollapsed" class="p-arrow" :class="{ open: expandedKeys[item.key] }" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+              <div v-if="platformCollapsed && !(item.children && expandedKeys[item.key])" class="p-tooltip">{{ item.label }}</div>
+            </div>
+            <transition name="slide-down">
+              <div v-if="item.children && expandedKeys[item.key]" class="platform-children">
+                <div
+                  v-for="child in item.children"
+                  :key="child.key"
+                  class="platform-child"
+                  :class="{ active: isChildActive(child) }"
+                  @click.stop="onChildClick(child)"
+                >
+                  <span class="p-child-icon">{{ child.icon }}</span>
+                  <span class="p-child-label">{{ child.label }}</span>
+                </div>
+              </div>
             </transition>
-            <span v-if="item.badge && !platformCollapsed" class="p-badge">{{ item.badge }}</span>
-            <div v-if="platformCollapsed" class="p-tooltip">{{ item.label }}</div>
-          </div>
+            </div>
+          </template>
         </nav>
       </div>
 
       <div class="platform-nav-bottom">
-        <button class="p-theme" @click="toggleTheme" :title="isDark?'日间模式':'夜间模式'">
-          <svg v-if="isDark" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>
-          <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
-          <transition name="fade">
-            <span v-if="!platformCollapsed">{{ isDark ? '日间模式' : '夜间模式' }}</span>
-          </transition>
-          <div v-if="platformCollapsed" class="p-tooltip">{{ isDark ? '日间模式' : '夜间模式' }}</div>
-        </button>
-        <button class="p-setting" @click="showSettings = true">
+        <button class="p-setting" @click="goSettings()">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
             <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94 0 .31.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
           </svg>
@@ -45,22 +56,35 @@
           </transition>
           <div v-if="platformCollapsed" class="p-tooltip">设置</div>
         </button>
-        <button class="p-collapse" @click="togglePlatform">
-          <svg v-if="!platformCollapsed" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-          </svg>
+        <button class="p-setting ta-nav-wx-btn" @click="openWxQr" title="微信直连外贸Agent">
+          <span class="p-icon" style="color:#07c160;font-size:20px;line-height:1;">💬</span>
+          <transition name="fade">
+            <span v-if="!platformCollapsed" style="color:#07c160;font-weight:600;">微信直连</span>
+          </transition>
+          <div v-if="platformCollapsed" class="p-tooltip">微信直连</div>
         </button>
-        <button class="p-logout" @click="handleLogout">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+        <div class="p-feedback-wrap">
+          <button class="p-setting p-feedback-btn" @click="feedbackOpen = !feedbackOpen" :title="feedbackOpen ? '收起反馈' : '反馈建议'">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            <transition name="fade">
+              <span v-if="!platformCollapsed">反馈建议</span>
+            </transition>
+            <svg v-if="!platformCollapsed" class="p-feedback-arrow" :class="{ open: feedbackOpen }" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            <div v-if="platformCollapsed" class="p-tooltip">反馈建议</div>
+          </button>
+          <div v-if="feedbackOpen" class="p-feedback-menu">
+            <a class="p-feedback-item" href="https://bbs.tradecloserai.com/circle/bug-report" target="_blank" rel="noopener"><span class="p-feedback-item-icon">🐛</span>Bug反馈</a>
+            <a class="p-feedback-item" href="https://bbs.tradecloserai.com/circle/feedback" target="_blank" rel="noopener"><span class="p-feedback-item-icon">💡</span>需求建议</a>
+          </div>
+        </div>
+        <button class="p-collapse-bottom" @click="togglePlatform" :title="platformCollapsed ? '展开侧边栏' : '收起侧栏'">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
           </svg>
           <transition name="fade">
-            <span v-if="!platformCollapsed">退出</span>
+            <span v-if="!platformCollapsed">收起侧栏</span>
           </transition>
-          <div v-if="platformCollapsed" class="p-tooltip">退出登录</div>
+          <div v-if="platformCollapsed" class="p-tooltip">展开侧边栏</div>
         </button>
       </div>
     </aside>
@@ -69,7 +93,7 @@
     <div class="mobile-drawer" v-if="isMobile && mobileDrawerOpen" @click.self="mobileDrawerOpen = false">
       <div class="mobile-drawer-panel">
         <div class="mdp-header">
-          <div class="mdp-logo">🤖 TradeAgent</div>
+          <div class="mdp-logo" style="cursor:pointer" @click="goHome()"><img src="/tc-logo.png" class="mdp-logo-img" alt="TradeAgent" /> TradeAgent</div>
           <button class="mdp-close" @click="mobileDrawerOpen = false">✕</button>
         </div>
         <div class="mdp-wa-status" :class="chatStore.connectionStatus">
@@ -77,31 +101,53 @@
           <span>{{ chatStore.connectionStatus === 'connected' ? 'WhatsApp 已连接' : 'WhatsApp 未连接' }}</span>
         </div>
         <nav class="mdp-nav">
-          <button
-            v-for="item in mobileDrawerItems"
-            :key="item.key"
-            class="mdp-item"
-            :class="{ active: isDrawerActive(item.key) }"
-            @click="onDrawerItemClick(item)"
-          >
-            <span class="mdp-icon" v-html="item.icon"></span>
-            <span class="mdp-label">{{ item.label }}</span>
-            <span v-if="item.badge" class="mdp-badge">{{ item.badge }}</span>
-          </button>
+          <template v-for="item in mobileDrawerItems" :key="item.key">
+            <button
+              class="mdp-item"
+              :class="{ active: isDrawerActive(item.key) }"
+              @click="item.key === 'trade-agent' ? goHome() : (item.children ? (expandedKeys[item.key] = expandedKeys[item.key] === false ? true : false) : onDrawerItemClick(item))"
+            >
+              <span class="mdp-icon" v-html="item.icon"></span>
+              <span class="mdp-label">{{ item.label }}</span>
+              <span v-if="item.badge" class="mdp-badge">{{ item.badge }}</span>
+              <svg v-if="item.children" class="mdp-arrow" :class="{ open: expandedKeys[item.key] !== false }" @click.stop="expandedKeys[item.key] = expandedKeys[item.key] === false ? true : false" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="cursor:pointer;padding:4px"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+            </button>
+            <div v-if="item.children && expandedKeys[item.key] !== false" class="mdp-children">
+              <button
+                v-for="child in item.children"
+                :key="child.key"
+                class="mdp-item mdp-child"
+                :class="{ active: isDrawerActive(child.key) }"
+                @click="onDrawerItemClick(child)"
+              >
+                <span class="mdp-icon">{{ child.icon }}</span>
+                <span class="mdp-label">{{ child.label }}</span>
+              </button>
+            </div>
+          </template>
         </nav>
         <div class="mdp-footer">
-          <button class="mdp-item" @click="showSettings = true; mobileDrawerOpen = false">
+          <button class="mdp-item" @click="goSettings(); mobileDrawerOpen = false">
             <span class="mdp-icon">⚙️</span>
             <span class="mdp-label">设置</span>
           </button>
-          <button class="mdp-item" @click="toggleTheme">
-            <span class="mdp-icon">{{ isDark ? '☀️' : '🌙' }}</span>
-            <span class="mdp-label">{{ isDark ? '日间模式' : '夜间模式' }}</span>
+          <button class="mdp-item ta-nav-wx-btn" @click="openWxQr; mobileDrawerOpen = false">
+            <span class="mdp-icon" style="color:#07c160;">💬</span>
+            <span class="mdp-label" style="color:#07c160;font-weight:600;">微信直连</span>
           </button>
-          <button class="mdp-item mdp-logout-btn" @click="handleLogout">
-            <span class="mdp-icon">🚪</span>
-            <span class="mdp-label">退出登录</span>
+          <button class="mdp-item" @click="feedbackOpen = !feedbackOpen">
+            <span class="mdp-icon">💬</span>
+            <span class="mdp-label">反馈建议</span>
+            <svg class="mdp-arrow" :class="{ open: feedbackOpen }" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="cursor:pointer;padding:4px"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
           </button>
+          <div v-if="feedbackOpen" class="mdp-children">
+            <a class="mdp-item mdp-child" href="https://bbs.tradecloserai.com/circle/bug-report" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+              <span class="mdp-icon">🐛</span><span class="mdp-label">Bug反馈</span>
+            </a>
+            <a class="mdp-item mdp-child" href="https://bbs.tradecloserai.com/circle/feedback" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+              <span class="mdp-icon">💡</span><span class="mdp-label">需求建议</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -127,11 +173,14 @@
         <div class="action-sheet-title">切换渠道</div>
         <template v-for="ch in channels" :key="ch.id">
           <template v-if="ch.id==='whatsapp'">
-            <div class="action-sheet-item asi-channel-header">
+            <button class="action-sheet-item asi-channel-header"
+                    :class="{active: activeChannel===ch.id}"
+                    @click="selectChannel(ch.id); channelSheetOpen=false">
               <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
               <span class="asi-label">{{ ch.name }}</span>
               <span v-if="(chatStore.followupCounts?.firstResponse||0) > 0" class="asi-badge asi-badge-red">{{ chatStore.followupCounts.firstResponse }}</span>
-            </div>
+              <span v-if="activeChannel===ch.id" class="asi-check">✓</span>
+            </button>
           </template>
           <template v-else>
             <button class="action-sheet-item"
@@ -161,11 +210,12 @@
             </button>
           </div>
           <div class="as-sub-accounts as-sub-menu" v-else-if="ch.id==='whatsapp'">
-            <div class="as-current-acc">
+            <button class="action-sheet-item as-sub-item as-current-acc"
+                    @click="selectChannel('whatsapp'); channelSheetOpen=false">
               <span class="as-cur-name">{{ chatStore.pushName || chatStore.connectedPhone || 'WhatsApp' }}</span>
               <span class="asi-tag asi-tag-online" v-if="chatStore.isConnected">在线</span>
               <span class="asi-tag" v-else>未连接</span>
-            </div>
+            </button>
           </div>
         </template>
 
@@ -186,7 +236,7 @@
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
       </button>
       <div class="mh-title"
-           :class="{'mh-clickable': (mobileInConv && activeChannel==='whatsapp') || (!mobileInConv && activePlatform==='communication') || (!mobileInConv && activePlatform==='assistant'), 'mh-title-list': !mobileInConv && activePlatform==='communication'}"
+           :class="{'mh-clickable': (mobileInConv && activeChannel==='whatsapp') || (!mobileInConv && activePlatform==='communication') || (!mobileInConv && activePlatform==='assistant') || (activePlatform==='trade-agent'), 'mh-title-list': !mobileInConv && activePlatform==='communication'}"
            @click="!mobileInConv && activePlatform==='assistant' ? (emitAssistantProfile = true) : onMhTitleClick()"
            style="touch-action:manipulation;">
         <!-- 列表视图 + 客户沟通页：显示渠道图标+名称+下拉箭头 -->
@@ -208,11 +258,13 @@
         <!-- 对话视图：头像+名字 -->
         <template v-else>
           <div v-if="activeChannel==='whatsapp' && chatStore.activeConversation" class="mh-avatar" :style="{background: avatarColor(chatStore.activeConversation.name || chatStore.activeConversation.jid)}">
-            <img v-if="chatStore.loadAvatar(chatStore.activeConversation.jid) && !mhAvatarFailed" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="mhAvatarFailed=true" alt=""/>
+            <img v-if="!(chatStore.activeConversation.jid && chatStore.activeConversation.jid.includes('@g.us')) && chatStore.loadAvatar(chatStore.activeConversation.jid) && !mhAvatarFailed" :src="chatStore.loadAvatar(chatStore.activeConversation.jid)" @error="mhAvatarFailed=true" alt=""/>
+            <span v-else-if="chatStore.activeConversation.jid && chatStore.activeConversation.jid.includes('@g.us')" style="font-size:14px;font-weight:700">群</span>
             <span v-else>{{ (chatStore.activeConversation.name || '?')[0] }}</span>
           </div>
-          <div v-else-if="activeChannel==='telegram' && tgActiveJid" class="mh-avatar" style="background:#2AABEE;">
-            <span style="font-size:18px;">✈️</span>
+          <div v-else-if="activeChannel==='telegram' && tgActiveJid" class="mh-avatar" :style="!tgHeaderAvatar ? {background:'#2AABEE'} : {}">
+            <img v-if="tgHeaderAvatar && !tgHeaderAvatarFailed" :src="tgHeaderAvatar" @error="tgHeaderAvatarFailed=true" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+            <span v-else style="font-size:18px;">{{ (tgActiveConv?.name?.[0] || '?') }}</span>
           </div>
           <div v-else-if="activeChannel==='email'" class="mh-avatar" style="background:#EA4335;">
             <span style="font-size:18px;">✉️</span>
@@ -245,6 +297,304 @@
     <!-- 工作区 -->
     <div class="workspace" :class="{ 'has-mheader': isMobile, 'has-tabbar': isMobile, 'full-page': isMobile && activePlatform !== 'communication' }">
       <!-- 沟通模块 -->
+
+    <!-- 外贸Agent模块：三栏聊天界面 -->
+    <div v-if="activePlatform === 'trade-agent'" class="trade-agent-module">
+      <!-- 中间：聊天区 -->
+      <div class="ta-chat-main">
+        <!-- 聊天头部 -->
+        <div class="ta-chat-header">
+          <div class="ta-header-avatar"><span>{{ currentAgentObj?.icon || '🤖' }}</span></div>
+          <div class="ta-header-info">
+            <div class="ta-header-name">{{ currentAgentObj?.label || '外贸销冠' }}</div>
+            <div class="ta-header-status">在线</div>
+          </div>
+          <!-- V1.0 客户绑定（工厂/货代不走客户会话，隐藏） -->
+          <div class="ta-header-cust" v-if="!['doc-agent','freight-agent'].includes(currentTradeAgent)">
+            <template v-if="selectedCustomer">
+              <span class="ta-cust-tag" @click="customerPickerOpen = true" title="切换客户">👤 {{ selectedCustomer.name || selectedCustomer.companyName || selectedCustomer.company || ('客户#'+selectedCustomer.id) }}</span>
+              <span class="ta-cust-clear" @click.stop="clearCustomer()" title="解除绑定，回到通用对话">✕</span>
+            </template>
+            <button v-else class="ta-cust-btn" @click="customerPickerOpen = true" title="绑定客户，对话将带客户上下文">👤 客户</button>
+            <button class="ta-cust-btn ta-wx-link-btn" @click="openWxQr" title="微信直连外贸Agent">💬 微信直连</button>
+          </div>
+        </div>
+
+        <!-- 消息区 -->
+        <div class="ta-chat-messages" ref="chatMessagesEl">
+          <template v-if="agentMessages.length === 0">
+            <div class="ta-welcome">
+              <div class="ta-welcome-icon">{{ currentAgentObj?.icon || '🤖' }}</div>
+              <h2>{{ currentAgentObj?.label || '外贸销冠' }}</h2>
+              <p>{{ currentAgentObj?.desc || 'AI赋能外贸全流程' }}</p>
+              <div v-if="!['doc-agent','freight-agent'].includes(currentTradeAgent)" class="ta-wx-entry" @click="openWxQr">
+                <div class="ta-wx-entry-icon">💬</div>
+                <div class="ta-wx-entry-txt">
+                  <div class="ta-wx-entry-title">加微信好友，随时随地找外贸Agent</div>
+                  <div class="ta-wx-entry-sub">扫码添加「外贸Agent」微信，微信上也能做单证、跟客户</div>
+                </div>
+                <div class="ta-wx-entry-btn">扫码连接</div>
+              </div>
+              <div class="ta-quick-prompts">
+                <button v-for="p in currentQuickPrompts" :key="p" @click="agentInput=p; sendAgentMessage()">{{ p }}</button>
+              </div>
+            </div>
+          </template>
+          <div v-else v-for="(msg, i) in agentMessages" :key="i" class="ta-message" :class="msg.role">
+            <div v-if="msg.role === 'ai' || msg.role === 'assistant'" class="ta-msg-avatar"><span>{{ currentAgentObj?.icon || '🤖' }}</span></div>
+            <div class="ta-msg-bubble" :class="[msg.role, { 'ta-img-only': isImageOnlyMsg(msg) }]" v-html="renderMsgContent(msg)"></div>
+            <div v-if="msg.role === 'user'" class="ta-msg-avatar user-avatar"><span>👤</span></div>
+          </div>
+          <!-- Agent 执行过程可视化：步骤流 + 思考中 -->
+          <div v-if="agentSending" class="ta-loading-block">
+            <div class="ta-loading-row"><span class="ta-loading-dot"></span><span class="ta-loading-dot"></span><span class="ta-loading-dot"></span> <span class="ta-loading-txt">销冠 Agent 处理中…</span></div>
+            <div v-if="agentSteps.length" class="ta-steps">
+              <div v-for="(st, si) in agentSteps" :key="si" class="ta-step-item">
+                <span class="ta-step-ico">{{ st.done ? '✅' : (si < agentSteps.length - 1 ? '✓' : '⏳') }}</span>
+                <span class="ta-step-txt">{{ st.detail }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 胶囊快捷指令（输入框上方常驻） -->
+        <div class="ta-capsule-bar" v-if="quickCapsules.length">
+          <button v-for="(cap, i) in quickCapsules" :key="i" class="ta-capsule-btn" @click="agentInput=cap; sendAgentMessage()" :title="cap">{{ cap }}</button>
+        </div>
+
+        <!-- 底部输入区 -->
+        <div class="ta-input-area">
+          <div class="ta-input-row">
+            <!-- 附件预览条：在输入框内部顶部，元宝风格 -->
+            <div v-if="pendingFiles.length" class="ta-attach-bar">
+              <div v-for="(f, i) in pendingFiles" :key="i" class="ta-attach-chip">
+                <img v-if="f.type === 'image'" :src="f.content" class="ta-attach-thumb" />
+                <span v-else class="ta-attach-fileicon"></span>
+                <span v-if="f.type !== 'image'" class="ta-attach-filename">{{ f.name }}</span>
+                <button class="ta-attach-remove" @click="removePendingFile(i)" title="移除">×</button>
+              </div>
+            </div>
+            <div class="ta-input-inner">
+              <textarea v-model="agentInput" class="ta-input-textarea"
+                        :placeholder="isMobile ? '跟我说说你的需求' : '跟我说说你的需求，我来帮你处理'"
+                        @keydown.enter.exact.prevent="sendAgentMessage"
+                        rows="1" ref="agentTextarea"></textarea>
+              <div class="ta-input-actions">
+              <button class="ta-model-btn" @click.stop="showModelSelector = !showModelSelector">
+                {{ selectedModel }} <span class="ta-chevron">▾</span>
+              </button>
+              <button class="ta-file-btn" @click.stop="toggleFilePanel()" title="文件面板">📁</button>
+              <button class="ta-mic-btn" title="语音输入">🎙️</button>
+              <button class="ta-input-plus" @click.stop="showAttachMenu = !showAttachMenu" title="上传附件">+</button>
+              <button class="ta-send-btn" @click="sendAgentMessage" :disabled="!canSend" title="发送">↑</button>
+              </div>
+            </div>
+          </div>
+          <!-- 附件菜单 -->
+          <div v-if="showAttachMenu" class="ta-attach-menu">
+            <button @click="triggerFileUpload">📄 上传文件</button>
+            <button @click="triggerImageUpload">🖼️ 上传图片</button>
+          </div>
+          <input type="file" ref="fileInput" style="display:none" multiple @change="handleFileUpload" />
+          <!-- 模型选择弹窗 -->
+          <div v-if="showModelSelector" class="ta-model-overlay">
+            <div class="ta-model-backdrop" @click="showModelSelector = false"></div>
+            <div class="ta-model-popup">
+              <!-- 智能选择开关 -->
+              <div class="ta-model-auto-row">
+                <div class="ta-model-auto-info">
+                  <span class="ta-model-auto-icon">⚡</span>
+                  <div>
+                    <div class="ta-model-auto-title">智能选择</div>
+                    <div class="ta-model-auto-desc">不用自己选，系统帮你挑最合适的</div>
+                  </div>
+                </div>
+                <button class="ta-model-toggle" :class="{on: selectedAutoMode}" @click.stop="toggleAutoMode">
+                  <span class="ta-model-toggle-knob"></span>
+                </button>
+              </div>
+
+
+              <div class="ta-model-list">
+                <div v-for="m in filteredModels" :key="m.model || m.name"
+                     class="ta-model-item" :class="{active: selectedModel === m.name}"
+                     @click="selectModel(m.name)">
+                  <span class="ta-model-icon">{{ m.icon }}</span>
+                  <div class="ta-model-item-content">
+                    <div class="ta-model-item-header">
+                      <span class="ta-model-name">{{ m.name }}</span>
+                      <span v-if="m.tag" class="ta-model-tag" :class="m.tagType">{{ m.tag }}</span>
+                      <span v-if="selectedModel === m.name" class="ta-model-check">✓</span>
+                    </div>
+                    <span class="ta-model-desc">{{ m.desc }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右栏：企业微信设置面板 -->
+      <aside class="ta-wecom-panel" :class="{open: wecomPanelOpen}">
+        <div class="ta-wecom-header">
+          <span>🏢 企业微信设置</span>
+          <button class="ta-wecom-close" @click="wecomPanelOpen = false">✕</button>
+        </div>
+        <div class="ta-wecom-body">
+          <template v-if="wecomConfigured">
+            <div class="ta-wecom-status ok">
+              <span class="ta-wecom-status-dot"></span>已接入企业微信
+            </div>
+            <div class="ta-wecom-meta" v-if="wecomConfig">
+              <div class="ta-wecom-meta-row" v-if="wecomConfig.corpId"><span>CorpID</span><span class="mono">{{ wecomConfig.corpId }}</span></div>
+              <div class="ta-wecom-meta-row" v-if="wecomConfig.contactCount"><span>已同步联系人</span><span>{{ wecomConfig.contactCount }}</span></div>
+            </div>
+            <button class="ta-wecom-btn primary" @click="syncWecomContacts" :disabled="syncing">{{ syncing ? '同步中...' : '🔄 同步企微联系人' }}</button>
+          </template>
+          <div class="ta-wecom-form">
+            <p class="ta-wecom-hint">在企业微信管理后台获取：<br>CorpID：我的企业 → 企业信息 → 企业ID<br>CorpSecret：应用管理 → 自建应用 → Secret</p>
+            <a href="https://work.weixin.qq.com" target="_blank" class="ta-wecom-link">打开企业微信管理后台 →</a> <a href="/help/wecom-binding.html" target="_blank" class="ta-wecom-link">查看绑定流程操作说明 →</a>
+            <div class="ta-wecom-field"><label>CorpID (企业ID) *</label><input v-model="wecomForm.corpId" placeholder="企业ID" /></div>
+            <div class="ta-wecom-field"><label>CorpSecret (Secret) *</label><input v-model="wecomForm.corpSecret" type="password" :placeholder="wecomConfig?.corpSecret || '输入新的Secret'" /></div>
+            <div class="ta-wecom-field"><label>AgentID (应用ID，可选)</label><input v-model="wecomForm.agentId" placeholder="应用ID" /></div>
+            <div v-if="testResult" class="ta-wecom-test" :class="testResult.success ? 'ok' : 'err'">{{ testResult.message }}</div>
+            <div class="ta-wecom-actions">
+              <button class="ta-wecom-btn" @click="testWecomConnection" :disabled="testing">{{ testing ? '测试中...' : '测试连接' }}</button>
+              <button class="ta-wecom-btn primary" @click="saveWecomConfig">保存配置</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右栏：文件面板 -->
+      <aside class="ta-file-panel" :class="{open: filePanelOpen}">
+        <div class="ta-file-panel-header">
+          <span>{{ currentAgentObj?.label || '外贸Agent' }}的文件</span>
+          <button class="ta-file-panel-close" @click="filePanelOpen = false">✕</button>
+        </div>
+        <div class="ta-file-panel-tabs">
+          <button :class="{active: filePanelTab === 'files'}" @click="filePanelTab = 'files'">工作文件</button>
+          <button :class="{active: filePanelTab === 'memory'}" @click="filePanelTab = 'memory'">记忆</button>
+        </div>
+        <div class="ta-file-panel-search">
+          <input type="text" placeholder="搜索文件" />
+        </div>
+        <div class="ta-file-panel-content">
+          <div v-if="filePanelTab === 'files'" class="ta-file-tree">
+            <div class="ta-file-empty">
+              <span style="font-size:32px;opacity:0.3"></span>
+              <p>暂无文件</p>
+              <p style="font-size:12px;opacity:0.5">点击底部 + 号上传文件</p>
+            </div>
+          </div>
+          <div v-else class="ta-memory-list">
+            <div class="ta-file-empty">
+              <span style="font-size:32px;opacity:0.3"></span>
+              <p>暂无记忆</p>
+            </div>
+          </div>
+        </div>
+        <div class="ta-file-panel-footer">当前文件已用 0 MB</div>
+      </aside>
+
+      <!-- V1.1 任务指派面板：右侧工作文件下方 -->
+      <aside class="ta-task-panel" :class="{open: taskPanelOpen}">
+        <div class="ta-task-panel-header">
+          <span>📌 任务指派</span>
+          <button class="ta-task-panel-close" @click="taskPanelOpen = false">✕</button>
+        </div>
+        <div class="ta-task-panel-body">
+          <template v-if="currentAssignTask">
+            <div class="ta-task-card">
+              <div class="ta-task-card-name">跟进 {{ currentAssignTask.customer?.name || currentAssignTask.customer?.companyName || ('客户#'+currentAssignTask.customerId) }}</div>
+              <div class="ta-task-card-status"><span class="ta-task-dot"></span>指派任务进行中</div>
+              <div class="ta-task-card-label">指令</div>
+              <div class="ta-task-card-instr">{{ currentAssignTask.instruction || '跟进该客户' }}</div>
+              <button class="ta-task-terminate" @click="terminateTask(currentAssignTask)" title="终止该指派任务">终止任务</button>
+            </div>
+          </template>
+          <template v-else>
+            <div class="ta-task-empty">
+              <span style="font-size:32px;opacity:0.3">📌</span>
+              <p>暂无指派任务</p>
+              <p style="font-size:12px;opacity:0.5">从客户沟通指派客户后在此查看</p>
+            </div>
+          </template>
+        </div>
+      </aside>
+
+      <!-- 右栏图标：工作文件 + 企业微信（互斥面板） -->
+      <aside class="ta-iconbar">
+        <div class="ta-ib-items">
+          <button class="ta-ib-item" :class="{active: filePanelOpen}" @click="toggleFilePanel()" title="工作文件">
+            <span class="ta-ib-icon">📁</span>
+            <span class="ta-ib-label">工作文件</span>
+          </button>
+          <button class="ta-ib-item" :class="{active: taskPanelOpen}" @click="toggleTaskPanel()" title="任务指派">
+            <span class="ta-ib-icon">📌</span>
+            <span class="ta-ib-label">任务指派</span>
+          </button>
+          <button v-if="['doc-agent','freight-agent'].includes(currentTradeAgent)" class="ta-ib-item" :class="{active: wecomPanelOpen}" @click="toggleWecomPanel()" title="企业微信设置">
+            <span class="ta-ib-icon">🏢</span>
+            <span class="ta-ib-label">企业微信</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- V1.0 客户选择面板 -->
+      <div v-if="customerPickerOpen && !['doc-agent','freight-agent'].includes(currentTradeAgent)" class="ta-cust-overlay" @click.self="customerPickerOpen = false">
+        <div class="ta-cust-panel">
+          <div class="ta-cust-panel-header">
+            <span>绑定客户</span>
+            <button class="ta-cust-panel-close" @click="customerPickerOpen = false">✕</button>
+          </div>
+          <div class="ta-cust-search">
+            <input v-model="customerSearch" placeholder="搜索客户名 / 电话 / 邮箱" @input="onCustomerSearch" />
+          </div>
+          <div class="ta-cust-general" :class="{active: !selectedCustomer}" @click="selectGeneralChat()">
+            <span class="ta-cust-general-icon">🗂️</span>
+            <span class="ta-cust-general-label">通用对话</span>
+            <span class="ta-cust-check" v-if="!selectedCustomer">✓</span>
+          </div>
+          <template v-if="agentTasks.length">
+            <div class="ta-cust-group-title" style="color:#f59e0b;">📌 指派任务</div>
+            <div class="ta-cust-list">
+              <div v-for="task in agentTasks" :key="'task-'+task.id"
+                   class="ta-cust-item task-item" :class="{active: selectedCustomer && selectedCustomer.id === task.customerId}"
+                   @click="selectTaskCustomer(task)">
+                <div class="ta-cust-item-avatar" style="background:rgba(245,158,11,.15);color:#f59e0b;">📌</div>
+                <div class="ta-cust-item-info">
+                  <div class="ta-cust-item-name">{{ task.customer?.name || task.customer?.companyName || ('客户#'+task.customerId) }}</div>
+                  <div class="ta-cust-item-meta" style="color:#f59e0b;">{{ task.instruction || '跟进该客户' }}</div>
+                </div>
+                <span v-if="selectedCustomer && selectedCustomer.id === task.customerId" class="ta-cust-check">✓</span>
+              </div>
+            </div>
+          </template>
+          <div class="ta-cust-group-title">👤 客户会话</div>
+          <div class="ta-cust-list">
+            <div v-for="c in filteredCustomers" :key="c.id"
+                 class="ta-cust-item" :class="{active: selectedCustomer && selectedCustomer.id === c.id}"
+                 @click="selectCustomer(c)">
+              <div class="ta-cust-item-avatar">{{ (c.name || c.companyName || c.company || '客')[0] }}</div>
+              <div class="ta-cust-item-info">
+                <div class="ta-cust-item-name">{{ c.name || c.companyName || c.company || ('客户#'+c.id) }}</div>
+                <div class="ta-cust-item-meta">
+                  {{ [c.companyName || c.company, c.country].filter(Boolean).join(' · ') }}
+                  <span v-if="c.customerLevel" class="ta-cust-level">{{ c.customerLevel }}</span>
+                </div>
+              </div>
+              <span v-if="selectedCustomer && selectedCustomer.id === c.id" class="ta-cust-check">✓</span>
+            </div>
+            <div v-if="filteredCustomers.length === 0" class="ta-cust-empty">没有匹配的客户</div>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+
     <div v-if="activePlatform === 'communication'" class="comm-module" :class="{ 'email-active': activeChannel === 'email', 'drawer-open': isMobile && mobileDrawerOpen, 'in-conv': isMobile && (mobileInConv || mobilePanel) }">
         <!-- 渠道图标切换条：v-for遍历channels，后期加渠道只需在channels数组+channelIcons加一项 -->
           <div class="ch-switch" v-if="activePlatform==='communication' && !mobileInConv && !mobilePanel && !isMobile">
@@ -292,48 +642,77 @@
           <template v-if="!accountsCollapsed">
             <!-- 多WA账号列表 -->
             <div class="wa-account-list" v-if="activeChannel === 'whatsapp'">
-              <!-- 无任何账号或未连接任何账号 -->
-              <div v-if="waAccounts.length === 0" class="wa-empty-card" @click="doConnectWA">
-                <div class="wa-empty-avatar">
-                  <svg viewBox="0 0 32 32" width="28" height="28" fill="#8696a0"><path d="M16.003 3C9.385 3 4 8.384 4 15.002c0 2.416.719 4.669 1.956 6.542L4 27l5.567-1.874a11.94 11.94 0 006.436 1.878c6.617 0 12.002-5.384 12.002-12.001C28.005 8.384 22.62 3 16.003 3zm6.953 15.79c-.291-.146-1.724-.849-1.992-.945-.268-.097-.464-.146-.659.147-.194.292-.752.945-.922 1.138-.17.195-.34.22-.632.073-.292-.147-1.233-.455-2.348-1.448-.866-.772-1.452-1.727-1.623-2.018-.17-.292-.018-.45.128-.597.132-.132.293-.342.439-.513.146-.17.195-.293.292-.488.098-.195.049-.366-.024-.513-.073-.147-.658-1.586-.904-2.172-.239-.567-.483-.49-.658-.498-.17-.008-.365-.01-.56-.01-.195 0-.513.073-.782.366-.269.293-1.026 1.002-1.026 2.443 0 1.442 1.05 2.834 1.197 3.03.146.194 2.058 3.14 4.987 4.397.697.301 1.24.48 1.665.614.699.223 1.335.192 1.837.116.56-.085 1.725-.705 1.968-1.387.243-.681.243-1.264.17-1.386-.072-.122-.268-.195-.56-.34z"/></svg>
-                </div>
-                <div class="wa-empty-info">
-                  <div class="wa-empty-name">WhatsApp</div>
-                  <div class="wa-empty-meta"><span class="status-text">点击扫码登录</span></div>
-                </div>
+              <!-- 绿色新建会话按钮（对标竞品） -->
+              <div class="wa-new-session-btn" @click="onAddAccount">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <span>新建会话</span>
               </div>
               <!-- 各WA账号卡片 -->
               <div v-for="acc in waAccounts" :key="acc.id"
                    class="wa-account-item"
                    :class="{active: currentWaAccountId === acc.id}"
-                   @click="switchWaAccount(acc.id); activeChannel='whatsapp'; channelSheetOpen=false">
-                <div class="acc-avatar" :style="!acc.avatar ? {background: acc.color} : {}">
-                  <img v-if="acc.avatar" class="acc-avatar-img" :src="acc.avatar" alt="" />
-                  <span v-else class="acc-avatar-initial">{{ (acc.name||'?')[0] }}</span>
-                  <span v-if="acc.online" class="acc-online-dot"></span>
-                </div>
-                <div class="acc-info">
-                  <div class="acc-name">{{ acc.name }}</div>
-                  <div class="acc-meta" :class="acc.online ? 'online-text' : 'offline-text'">
-                    {{ acc.phone || acc.instanceName }}
-                    <span v-if="acc.proxyIp" class="acc-proxy-tag">🌐 {{ acc.proxyIp }}</span>
-                  </div>
-                </div>
-                <span v-if="currentWaAccountId === acc.id" class="acc-check">✓</span>
-              </div>
-            </div>
-
-            <!-- Telegram账号区 -->
-            <div v-if="activeChannel === 'telegram'" class="wa-account-list">
-              <template v-if="tgAccounts.filter(a=>!a.telegramBotToken).length">
-                <div v-for="tg in tgAccounts.filter(a => !a.telegramBotToken)" :key="tg.id" class="wa-account-item active">
-                  <div class="acc-avatar" style="background:#2AABEE;overflow:hidden;">
-                    <img src="/tg_avatar.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
-                    <span class="acc-online-dot"></span>
+                   @click="onAccountCardClick(acc)">
+                <div class="acc-top-row">
+                  <div class="acc-avatar" :style="!acc.avatar ? {background: acc.color} : {}">
+                    <img v-if="acc.avatar" class="acc-avatar-img" :src="acc.avatar" alt="" />
+                    <span v-else class="acc-avatar-initial">{{ (acc.name||'?')[0] }}</span>
+                    <span v-if="acc.online" class="acc-online-dot"></span>
                   </div>
                   <div class="acc-info">
-                    <div class="acc-name">{{ tg.name || ('@'+tg.telegramBotUsername) }}</div>
-                    <div class="acc-meta online-text">在线</div>
+                    <div class="acc-name">{{ acc.name }}</div>
+                    <div v-if="acc._launching" style="color:#25D366;font-size:11px;margin-top:2px;">正在启动中...</div>
+                    <div v-else class="acc-meta" :class="acc.online ? 'online-text' : 'offline-text'">
+                      <template v-if="!acc.online"><span style="color:#ef4444;font-size:11px;">未连接</span> · </template>{{ acc.phone || acc.instanceName }}
+                      <span v-if="acc.proxyIp" class="acc-proxy-tag"> · {{ acc.proxyIp }}</span>
+                    </div>
+                  </div>
+                  <span v-if="currentWaAccountId === acc.id" class="acc-check">✓</span>
+                </div>
+                <!-- Hover actions：启动/配置/删除 -->
+                <div class="acc-actions">
+                  <button class="acc-action-btn" @click.stop="launchAccount(acc)" title="启动">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  </button>
+                  <button class="acc-action-btn" @click.stop="configureAccount(acc)" title="配置">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+                  </button>
+                  <button class="acc-action-btn acc-action-danger" @click.stop="deleteAccount(acc)" title="删除">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-if="activeChannel === 'telegram'" class="wa-account-list">
+              <!-- TG 新建会话按钮（对齐 WhatsApp）：未添加账号时点击进入登录欢迎页 -->
+              <div class="wa-new-session-btn" @click="tgOpenNewSession">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                <span>新建会话</span>
+              </div>
+              <template v-if="tgAccounts.length">
+                <div v-for="tg in tgAccounts" :key="tg.id" class="wa-account-item active">
+                  <div class="acc-top-row">
+                    <div class="acc-avatar" style="background:#2AABEE;overflow:hidden;">
+                      <img v-if="tg.avatarUrl" :src="tg.avatarUrl" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" @error="$event.target.style.display='none'" />
+                      <img v-if="!tg.avatarUrl" src="/tg_avatar.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                      <span class="acc-online-dot"></span>
+                    </div>
+                    <div class="acc-info">
+                      <div class="acc-name">{{ tg.pushName || tg.name || ('@'+tg.telegramBotUsername) }}</div>
+                      <div v-if="tg._tgLaunching" style="color:#2AABEE;font-size:11px;margin-top:2px;">正在启动...</div>
+                      <div v-else class="acc-meta online-text">在线</div>
+                    </div>
+                  </div>
+                  <!-- Hover actions：启动/配置代理/删除（对齐 WhatsApp） -->
+                  <div class="acc-actions">
+                    <button class="acc-action-btn" @click.stop="tgLaunchAccount(tg)" title="启动">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button class="acc-action-btn" @click.stop="tgConfigureAccount(tg)" title="配置代理">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+                    </button>
+                    <button class="acc-action-btn acc-action-danger" @click.stop="tgDeleteAccount(tg)" title="删除">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
                   </div>
                 </div>
               </template>
@@ -342,13 +721,6 @@
                 <div class="wa-empty-info">
                   <div class="wa-empty-name">Telegram</div>
                   <div class="wa-empty-meta"><span class="status-text connecting">连接中...</span></div>
-                </div>
-              </div>
-              <div v-else class="wa-empty-card" @click="showTgModal = true">
-                <div class="wa-empty-avatar"><span style="font-size:22px;">✈️</span></div>
-                <div class="wa-empty-info">
-                  <div class="wa-empty-name">Telegram</div>
-                  <div class="wa-empty-meta"><span class="status-text">点击连接Bot</span></div>
                 </div>
               </div>
             </div>
@@ -403,8 +775,8 @@
         </aside>
 
         <!-- ④ 聊天列表栏 -->
-        <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid) }">
-          <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
+        <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid), 'wa-hidden': activeChannel === 'whatsapp' && (chatStore.currentWaAccountId === null || !chatStore.isConnected), 'tg-hidden': activeChannel === 'telegram' && tgAccounts.length === 0 && !tgConnecting }">
+          <div class="col-header" v-if="activeChannel === 'telegram' && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
               <span class="wa-col-title">Telegram</span>
@@ -501,7 +873,7 @@
             <span v-if="chatStore.followupCounts.total === 0" class="fu-empty">✅ 今日无待跟进客户</span>
             <span v-if="chatStore.showFollowupsOnly" class="fu-filter-on">· 仅待跟进</span>
           </div>
-          <div class="chatlist-body" v-if="activeChannel === 'whatsapp' || activeChannel === 'telegram'">
+          <div class="chatlist-body" v-if="(activeChannel === 'whatsapp' && chatStore.isConnected) || activeChannel === 'telegram'">
             <template v-if="activeChannel === 'whatsapp' && !chatStore.isConnected">
               <div class="empty-list-hint">
                 <div style="font-size:32px;opacity:0.3"></div>
@@ -545,7 +917,8 @@
               @touchmove.passive="onConvTouchMove"
             >
               <div class="conv-avatar" :style="!convAvatarOk(conv) ? {background: conv.color} : {}">
-                <img v-if="chatStore.loadAvatar(conv.jid) && convAvatarOk(conv)" class="conv-avatar-img" :src="chatStore.loadAvatar(conv.jid)" @error="onConvAvatarError(conv.jid)" alt="" />
+                <img v-if="!(conv.jid && conv.jid.includes('@g.us')) && chatStore.loadAvatar(conv.jid, conv.avatar) && convAvatarOk(conv)" class="conv-avatar-img" :src="chatStore.loadAvatar(conv.jid, conv.avatar)" @error="onConvAvatarError(conv.jid)" alt="" />
+                <span v-else-if="conv.jid && conv.jid.includes('@g.us')" class="conv-avatar-initial" style="font-size:14px;font-weight:700;letter-spacing:-1px">群</span>
                 <span v-else class="conv-avatar-initial">{{ convInitial(conv) }}</span>
                 <span class="conv-status-dot" :class="conv.status || 'offline'"></span>
                 <span v-if="conv.followupStatus" class="conv-followup-dot" :class="'fu-dot-' + conv.followupStatus"></span>
@@ -608,29 +981,125 @@
 
 </aside>
         <main class="col-conversation" :class="{ 'm-in': isMobile && (mobileInConv && (activeConv || tgActiveJid) || activeChannel === 'email'), 'email-conv': activeChannel === 'email' }">
+
+          <!-- ====== L2: Business Confirmation Banner ====== -->
+          <transition name="biz-confirm-slide">
+            <div v-if="bizConfirmPending.length > 0 && activeChannel === 'whatsapp'" class="biz-confirm-banner">
+              <div class="biz-confirm-inner">
+                <div class="biz-confirm-icon">🔍</div>
+                <div class="biz-confirm-text">
+                  <span class="biz-confirm-label"><span class="biz-confirm-name">「{{ bizConfirmPending[currentBizConfirmIdx]?.displayName }}<span class="biz-confirm-phone" v-if="bizConfirmPending[currentBizConfirmIdx]?.phone && bizConfirmPending[currentBizConfirmIdx]?.phone !== bizConfirmPending[currentBizConfirmIdx]?.displayName"> · {{ bizConfirmPending[currentBizConfirmIdx]?.phone }}</span>」</span><span class="biz-confirm-q">是业务客户吗？</span></span>
+                  <span class="biz-confirm-counter" v-if="bizConfirmPending.length > 1">{{ currentBizConfirmIdx + 1 }}/{{ bizConfirmPending.length }}</span>
+                </div>
+                <div class="biz-confirm-actions">
+                  <button class="biz-confirm-btn biz-confirm-view" @click="onViewBizConversation">查看会话</button>
+                  <button class="biz-confirm-btn biz-confirm-yes" @click="onConfirmBusiness(true)">✓ 标记为业务客户</button>
+                  <button class="biz-confirm-btn biz-confirm-no" @click="onConfirmBusiness(false)">忽略</button>
+                </div>
+              </div>
+            </div>
+          </transition>
+
           <!-- 📧 邮箱渠道嵌入式视图 -->
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
-          <!-- TG tab 且未选中会话：直接显示TG空状态 -->
-          <div v-if="activeChannel === 'telegram' && !tgActiveJid" class="conv-placeholder" style="background:var(--chat-bg,#0b141a);">
-            <div class="ph-icon" style="background:#E3F2FD;">✈️</div>
-            <div class="ph-title">Telegram Bot 已连接</div>
-            <div class="ph-desc" style="text-align:center;line-height:1.6;">
-              在 Telegram 中找到你的 Bot<br/>发送 /start 或任意消息即可开始对话
+          <!-- TG tab 且未选中会话：TG 登录欢迎页（扫码/手机号） -->
+          <div v-if="activeChannel === 'telegram' && !tgActiveJid" class="tg-no-session-wrap">
+            <div v-if="tgAccounts.length === 0 && tgLoginView === 'welcome'" class="conv-placeholder tg-welcome-page">
+              <div class="no-account-empty">
+                <div class="no-account-icon-wrap tg-welcome-icon-wrap">
+                  <svg class="no-account-tg-icon" viewBox="0 0 24 24" width="64" height="64" aria-hidden="true"><path fill="#2AABEE" d="M9.04 15.51l-.38 5.33c.54 0 .78-.24 1.06-.52l2.55-2.44 5.28 3.87c.97.53 1.66.25 1.92-.9L22.9 4.32c.31-1.42-.52-1.97-1.46-1.63L2.58 9.47c-1.39.54-1.37 1.32-.24 1.67l4.75 1.48 11.03-6.94c.52-.32 1-.14.61.19L9.04 15.51z"/></svg>
+                </div>
+                <div class="no-account-title">欢迎使用 Telegram</div>
+                <div class="no-account-subtitle">连接 Telegram 账号，与海外客户实时沟通、跟进询盘。点击下方按钮，即可扫码或手机号快速登录。</div>
+                <button class="no-account-cta tg-welcome-cta" @click="tgOpenNewSession">新建会话</button>
+              </div>
             </div>
-            <div v-if="tgAccounts.filter(a=>!a.telegramBotToken).length > 0" style="margin-top:12px;padding:8px 16px;background:#E3F2FD;border-radius:16px;font-size:12px;color:#2AABEE;font-weight:500;">
-              ✅ @{{ (tgAccounts.find(a=>!a.telegramBotToken)||{}).name || "UserBot" }} · 在线
+            <div v-else-if="tgAccounts.length > 0 && tgLoginView === 'welcome'" class="conv-placeholder">
+              <div class="ph-icon">💬</div>
+              <div class="ph-title">从左侧列表选择一个会话开始沟通</div>
+            </div>
+            <div v-else class="conv-placeholder tg-login-welcome">
+            <div class="tg-login-card">
+              <!-- 视图一：扫码登录 -->
+              <div v-if="tgLoginView === 'qr'" class="tg-login-view">
+                <div class="tg-login-logo-row">
+                  <span class="tg-login-logo-mini" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" role="img" aria-label="Telegram 纸飞机图标"><desc>Telegram 纸飞机图标</desc><path d="M9.04 15.51l-.38 5.33c.54 0 .78-.24 1.06-.52l2.55-2.44 5.28 3.87c.97.53 1.66.25 1.92-.9L22.9 4.32c.31-1.42-.52-1.97-1.46-1.63L2.58 9.47c-1.39.54-1.37 1.32-.24 1.67l4.75 1.48 11.03-6.94c.52-.32 1-.14.61.19L9.04 15.51z"/></svg>
+                  </span>
+                  <span class="tg-login-brand">Telegram</span>
+                </div>
+                <h2 class="tg-qr-title">通过扫码登录 Telegram</h2>
+                <p class="tg-qr-sub">使用手机上的 Telegram 扫描二维码，快速安全登录</p>
+                <div class="tg-qr-box">
+                  <svg id="tgLoginQrSvg" viewBox="0 0 232 232" role="img" aria-label="登录二维码"></svg>
+                </div>
+                <ol class="tg-qr-steps">
+                  <li><span class="tg-num">1</span><span>打开手机上的 <b>Telegram</b> 应用</span></li>
+                  <li><span class="tg-num">2</span><span>进入 <b>设置 → 设备 → 扫码登录</b></span></li>
+                  <li><span class="tg-num">3</span><span>对准本屏幕扫描二维码，并在手机上确认登录</span></li>
+                </ol>
+                <button type="button" class="tg-switch-link" @click="tgSwitchLoginView('phone')"><small>没有二维码？</small>使用手机号登录</button>
+              </div>
+              <!-- 视图二：手机号登录 -->
+              <div v-else class="tg-login-view">
+                <div class="tg-phone-wrap">
+                  <span class="tg-logo-big" aria-hidden="true">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" role="img" aria-label="Telegram 图标"><desc>Telegram 纸飞机图标</desc><path d="M9.04 15.51l-.38 5.33c.54 0 .78-.24 1.06-.52l2.55-2.44 5.28 3.87c.97.53 1.66.25 1.92-.9L22.9 4.32c.31-1.42-.52-1.97-1.46-1.63L2.58 9.47c-1.39.54-1.37 1.32-.24 1.67l4.75 1.48 11.03-6.94c.52-.32 1-.14.61.19L9.04 15.51z"/></svg>
+                  </span>
+                  <h2 class="tg-phone-title">Telegram</h2>
+                  <p class="tg-phone-sub">请确认国家区号并输入您的手机号</p>
+                  <div class="tg-country-field" :class="{open: tgCountryOpen}" @click="tgOpenCountry" role="button" tabindex="0" aria-haspopup="listbox" :aria-expanded="tgCountryOpen ? 'true' : 'false'" @keydown.enter.prevent="tgOpenCountry">
+                    <span class="tg-flag">{{ tgCountries[tgCountryIdx].flag }}</span>
+                    <span class="tg-cname">{{ tgCountries[tgCountryIdx].name }}</span>
+                    <span class="tg-ccode">{{ tgCountries[tgCountryIdx].code }}</span>
+                    <span class="tg-chev" aria-hidden="true">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                    </span>
+                  </div>
+                  <div class="tg-country-drop" v-if="tgCountryOpen" role="listbox" aria-label="国家列表">
+                    <div class="tg-drop-search">
+                      <input v-model="tgCountrySearch" type="text" placeholder="搜索国家或区号…" autocomplete="off" />
+                    </div>
+                    <div class="tg-drop-list">
+                      <div v-for="c in tgCountryFiltered" :key="c.name" class="tg-drop-item" :class="{selected: tgCountries.indexOf(c) === tgCountryIdx}" @click="tgSelectCountry(tgCountries.indexOf(c))" role="option" :aria-selected="tgCountries.indexOf(c) === tgCountryIdx">
+                        <span class="tg-flag">{{ c.flag }}</span>
+                        <span class="tg-dname">{{ c.name }}</span>
+                        <span class="tg-dcode">{{ c.code }}</span>
+                      </div>
+                      <div v-if="tgCountryFiltered.length === 0" class="tg-drop-empty">未找到匹配的国家</div>
+                    </div>
+                  </div>
+                  <div class="tg-phone-field">
+                    <span class="tg-prefix">{{ tgCountries[tgCountryIdx].code }}</span>
+                    <input v-model="tgPhoneNum" type="tel" placeholder="请输入手机号" inputmode="numeric" autocomplete="tel-national" aria-label="手机号" />
+                  </div>
+                  <label class="tg-keep-row">
+                    <input type="checkbox" v-model="tgKeepSigned" />
+                    <span class="tg-check" aria-hidden="true">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.5"/></svg>
+                    </span>
+                    <span>保持登录状态</span>
+                  </label>
+                  <button type="button" class="tg-next-btn" @click="tgLoginNext">下一步</button>
+                  <button type="button" class="tg-switch-link" @click="tgSwitchLoginView('qr')"><small>没有手机验证码？</small>使用扫码登录</button>
+                </div>
+              </div>
+            </div>
             </div>
           </div>
-          <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
+                    <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
           <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
             <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:50;touch-action:manipulation;overflow:visible;">
               <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" @touchend.stop.prevent="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
-              <div class="tg-avatar" style="width:40px;height:40px;border-radius:50%;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;">{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</div>
+              <div class="tg-avatar" :style="!tgHeaderAvatar ? {background:'#2AABEE'} : {}" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:18px;overflow:hidden;">
+                <img v-if="tgHeaderAvatar && !tgHeaderAvatarFailed" :src="tgHeaderAvatar" @error="tgHeaderAvatarFailed=true" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+                <span v-else>{{ (tgConversations.find(c=>c.jid===tgActiveJid)?.name || '?')[0] }}</span>
+              </div>
               <div style="flex:1;">
                 <div style="font-weight:600;color:var(--text-primary,#e9edef);font-size:16px;">{{ tgConversations.find(c=>c.jid===tgActiveJid)?.name || tgActiveJid }}</div>
                 <div style="font-size:12px;color:var(--text-secondary,#8696a0);display:flex;align-items:center;gap:4px;justify-content:flex-start;">
-                  <span v-if="tgCultureInfo && tgCultureWorkStatus.localTime" :style="{display:'inline-flex',alignItems:'center',gap:'3px',fontSize:'11px',fontWeight:500,marginRight:'auto',color:'#e9edef',cursor:'pointer'}" @click.stop="switchPanel('worldclock')">
+                  <span v-if="tgCultureInfo && tgCultureWorkStatus.localTime" :style="{display:'inline-flex',alignItems:'center',gap:'3px',fontSize:'11px',fontWeight:500,marginRight:'auto',color:'var(--text-secondary,#8696a0)',cursor:'pointer'}" @click.stop="switchPanel('worldclock')">
                     {{ tgCultureInfo.name }} {{ tgCultureWorkStatus.localTime }}
                   </span>
                   <span v-else-if="tgActiveConv && tgActiveConv.platform === 'telegram' && !tgActiveConv.contactPhone" style="color:#e67e22;font-size:11px;cursor:pointer;" @click.stop="switchPanel('worldclock')">🌐 请设置国家</span>
@@ -654,10 +1123,10 @@
             </div>
             <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;">
               <div v-for="m in tgMessages" :key="m.id" :style="{alignSelf:m.fromMe?'flex-end':'flex-start',maxWidth:'75%'}">
-                <div :style="{background:m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)',color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word'}">
+                <div :style="{background:(m.messageType==='image'||m.messageType==='MessageMediaPhoto'||m.mediaType==='MessageMediaPhoto')&&m.mediaUrl&&isMediaPlaceholderText(m.text)?'transparent':(m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)'),color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:(m.messageType==='image'||m.messageType==='MessageMediaPhoto'||m.mediaType==='MessageMediaPhoto')&&m.mediaUrl&&isMediaPlaceholderText(m.text)?'0':'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word',overflow:'hidden'}">
                   <!-- 媒体消息：显示图片/视频 -->
                   <template v-if="m.mediaUrl && (m.messageType === 'image' || m.messageType === 'MessageMediaPhoto' || m.mediaType === 'MessageMediaPhoto')">
-                    <a :href="m.mediaUrl" target="_blank" rel="noopener"><img :src="m.mediaUrl" style="max-width:100%;border-radius:8px;margin-bottom:4px;cursor:pointer;" @error="$event.target.style.display='none'" /></a>
+                    <a :href="m.mediaUrl" target="_blank" rel="noopener"><img :src="m.mediaUrl" style="width:100%;max-height:320px;object-fit:contain;display:block;cursor:pointer;" @error="$event.target.style.display='none'" /></a>
                   </template>
                   <template v-else-if="m.mediaUrl && (m.messageType === 'video' || m.messageType === 'MessageMediaVideo')">
                     <video :src="m.mediaUrl" controls style="max-width:100%;border-radius:8px;margin-bottom:4px;max-height:240px;"></video>
@@ -667,16 +1136,44 @@
                   </template>
                   <!-- 文本消息 -->
                   <template v-if="m.translationObj">
-                    <div style="color:inherit;">{{ /[\u4e00-\u9fff]/.test(m.text) && m.translationObj.translated && !/[\u4e00-\u9fff]/.test(m.translationObj.translated) ? m.translationObj.translated : m.text }}</div>
-                    <div :style="{fontSize:'12px',color:'rgba(255,255,255,0.85)',marginTop:'4px',fontStyle:'italic',borderTop:'1px solid rgba(255,255,255,0.25)',paddingTop:'4px'}">{{ /[\u4e00-\u9fff]/.test(m.translationObj.translated) ? m.translationObj.translated : m.translationObj.original }}</div>
+                    <div style="color:inherit;">{{ m._sending ? '...' : (isMediaPlaceholderText(m.text) ? '' : (m.fromMe ? (m.translationObj.translated || m.text) : m.text)) }}</div>
+                    <div :style="{fontSize:transForm.translationSize,color:'inherit',marginTop:'0',fontStyle:'italic',paddingTop:'6px',borderTop:'1.5px dashed '+(isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.5)'),width:'100%'}">{{ isMediaPlaceholderText(m.translationObj.original) ? '' : (m.fromMe ? m.translationObj.original : m.translationObj.translated) }}</div>
                   </template>
-                  <template v-else>{{ m.text }}</template>
+                  <template v-else>{{ m._sending ? '...' : (isMediaPlaceholderText(m.text) ? '' : m.text) }}</template>
                 </div>
                 <div :style="{fontSize:'11px',color:'var(--text-secondary,#8696a0)',textAlign:m.fromMe?'right':'left',marginTop:'2px'}">{{ m.time }}<template v-if="m.fromMe && m.read"> ✓✓</template><template v-else-if="m.fromMe"> ✓</template></div>
               </div>
               <div v-if="tgMessages.length === 0" style="text-align:center;color:var(--text-secondary,#8696a0);padding:20px;">暂无消息，在 Telegram 发第一条消息吧</div>
             </div>
+            <!-- TG 附件预览 -->
+            <div v-if="tgPendingFile" class="tg-media-preview" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel-header-bg,#202c33);border-top:1px solid var(--border-color,#222d34);">
+              <div style="position:relative;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border-radius:10px;padding:6px 10px;max-width:80%;">
+                <span style="font-size:20px;">{{ tgPendingFile.type && tgPendingFile.type.startsWith('image/') ? '🖼️' : tgPendingFile.type && tgPendingFile.type.startsWith('video/') ? '🎬' : '📄' }}</span>
+                <span style="color:var(--text-primary,#e9edef);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">{{ tgPendingFile.name }}</span>
+                <span style="color:var(--text-secondary,#8696a0);font-size:11px;">{{ formatTgFileSize(tgPendingFile.size) }}</span>
+                <button @click="tgPendingFile=null" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:#ef4444;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+              </div>
+            </div>
+            <!-- TG 输入区 -->
             <div class="tg-input" style="display:flex;gap:8px;padding:10px 12px;background:var(--panel-header-bg,#202c33);border-top:1px solid var(--border-color,#222d34);">
+              <div class="tg-attach-wrap" style="position:relative;">
+                <button class="tg-attach-btn" @click="tgToggleAttachMenu" style="width:42px;height:42px;border-radius:50%;border:none;background:none;color:var(--text-secondary,#8696a0);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:color 0.15s;">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+                <div v-if="tgAttachMenuOpen" class="tg-attach-menu" style="position:absolute;bottom:calc(100% + 6px);left:0;background:#233138;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.5);padding:6px;z-index:50;min-width:180px;border:1px solid var(--sidebar-active,#374045);">
+                  <div style="position:absolute;bottom:-6px;left:16px;width:10px;height:10px;background:#233138;border-right:1px solid var(--sidebar-active,#374045);border-bottom:1px solid var(--sidebar-active,#374045);transform:rotate(45deg);"></div>
+                  <button class="tg-attach-item" @click="tgPickFile('image')" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;color:var(--text-primary,#e9edef);padding:10px 12px;border-radius:6px;cursor:pointer;font-size:14px;text-align:left;">
+                    <span style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;background:#00a884;flex-shrink:0;color:#fff;">🖼️</span>
+                    <span>图片/视频</span>
+                  </button>
+                  <button class="tg-attach-item" @click="tgPickFile('document')" style="display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;color:var(--text-primary,#e9edef);padding:10px 12px;border-radius:6px;cursor:pointer;font-size:14px;text-align:left;">
+                    <span style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;background:#53bdeb;flex-shrink:0;color:#fff;">📄</span>
+                    <span>文件</span>
+                  </button>
+                </div>
+              </div>
+              <input ref="tgImageInput" type="file" accept="image/*,video/*" style="display:none" @change="tgOnFileSelected($event)" />
+              <input ref="tgDocInput" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv,application/*" style="display:none" @change="tgOnFileSelected($event)" />
               <input v-model="tgInputText" @keydown.enter="sendTgMessage" placeholder="输入消息..." style="flex:1;background:var(--input-bg,#2a3942);border:none;border-radius:20px;padding:10px 16px;color:var(--text-primary,#e9edef);font-size:14px;outline:none;" />
               <button @click="sendTgMessage" :disabled="tgSending" style="width:42px;height:42px;border-radius:50%;border:none;background:#2AABEE;color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">➤</button>
             </div>
@@ -686,7 +1183,19 @@
           <router-view v-slot="{ Component }">
             <component ref="chatViewRef" :is="Component" v-if="Component" @go-back="handleGoBack" @open-translate-panel="onOpenTranslatePanel" />
             <div v-else class="conv-placeholder" :class="{'wa-empty-bg': !chatStore.isConnected}">
-              <template v-if="!chatStore.isConnected">
+              <template v-if="!chatStore.isConnected && waAccounts.length === 0">
+                <div class="no-account-empty">
+                  <div class="no-account-icon-wrap">
+                    <svg class="no-account-wa-icon" viewBox="0 0 48 48" width="64" height="64">
+                      <path d="M24 3C12.42 3 3 12.42 3 24c0 3.78 1.01 7.34 2.77 10.42L3 45l10.89-2.71A20.91 20.91 0 0 0 24 45c11.58 0 21-9.42 21-21S35.58 3 24 3zm0 38.5a17.42 17.42 0 0 1-8.88-2.42l-.64-.38-6.6 1.55 1.58-6.44-.42-.66A17.46 17.46 0 0 1 6.5 24c0-9.65 7.85-17.5 17.5-17.5S41.5 14.35 41.5 24 33.65 41.5 24 41.5zm9.55-13.1c-.53-.27-3.13-1.54-3.62-1.72-.48-.18-.84-.27-1.2.27-.35.54-1.36 1.72-1.67 2.08-.31.35-.62.4-1.14.13-.53-.27-2.22-.82-4.23-2.61-1.56-1.39-2.62-3.1-2.93-3.63-.31-.54-.03-.83.23-1.09.24-.23.53-.6.79-.88.26-.29.35-.49.53-.8.17-.31.09-.58-.04-.85-.14-.27-1.18-2.84-1.62-3.89-.43-1.02-.86-.88-1.18-.89l-1.01-.02c-.35 0-.91.13-1.4.66-.48.53-1.83 1.79-1.83 4.35 0 2.55 1.87 5.01 2.13 5.36.26.35 3.69 5.62 8.93 7.88 1.24.54 2.21.85 2.97 1.09 1.25.39 2.38.34 3.29.2.99-.15 3.1-1.27 3.54-2.49.44-1.22.44-2.27.31-2.49-.14-.22-.48-.35-1.01-.62z" fill="#25D366"/>
+                    </svg>
+                  </div>
+                  <div class="no-account-title">欢迎使用 WhatsApp</div>
+                  <div class="no-account-subtitle">简单、可靠且私密。与亲友和同事私密收发消息、进行通话以及分享文件。</div>
+                  <button class="no-account-cta" @click="onAddAccount">新建会话</button>
+                </div>
+              </template>
+              <template v-else-if="!chatStore.isConnected">
                 <div class="ph-icon wa-green">💚</div>
                 <div class="ph-title">WhatsApp Web</div>
                 <div class="ph-desc">发送私密消息，免费体验简单可靠的通话</div>
@@ -703,7 +1212,7 @@
         </main>
 
         <!-- ⑥ 功能面板（AI助手 / 翻译设置） -->
-        <aside class="col-function-panel" :class="{ collapsed: !isMobile && panelCollapsed, mini: !isMobile && aiMiniMode && activePanel === 'ai', translating: !isMobile && activePanel === 'translate', aitalking: !isMobile && activePanel === 'aitalk', customering: !isMobile && activePanel === 'customer', requirementing: !isMobile && activePanel === 'requirement', documenting: !isMobile && activePanel === 'documents', companying: !isMobile && activePanel === 'company', clocking: !isMobile && activePanel === 'worldclock', forexing: !isMobile && activePanel === 'forex', freighting: !isMobile && activePanel === 'freight', 'm-panel': isMobile, 'm-panel-show': isMobile && mobilePanel, tracking: !isMobile && activePanel === 'tracking' }" :style="!isMobile && !panelCollapsed ? 'width:' + panelWidth + 'px' : ''">
+        <aside class="col-function-panel" :class="{ collapsed: !isMobile && panelCollapsed, mini: !isMobile && aiMiniMode && activePanel === 'ai', translating: !isMobile && activePanel === 'translate', aitalking: !isMobile && activePanel === 'aitalk', customering: !isMobile && activePanel === 'customer', bgchecking: !isMobile && activePanel === 'bgcheck', requirementing: !isMobile && activePanel === 'requirement', documenting: !isMobile && activePanel === 'documents', companying: !isMobile && activePanel === 'company', clocking: !isMobile && activePanel === 'worldclock', forexing: !isMobile && activePanel === 'forex', freighting: !isMobile && activePanel === 'freight', 'm-panel': isMobile, 'm-panel-show': isMobile && mobilePanel, tracking: !isMobile && activePanel === 'tracking', importing: !isMobile && activePanel === 'import' }" :style="!isMobile && !panelCollapsed ? 'width:' + panelWidth + 'px' : ''">
           <div v-if="!isMobile && !panelCollapsed && activePanel" class="ai-resize-handle" @mousedown="startPanelDrag"></div>
           <div class="col-header panel-col-header" :class="{ 'ai-col-header': activePanel === 'ai' }">
             <template v-if="!panelCollapsed">
@@ -715,9 +1224,17 @@
                 <span class="ai-title-icon">🌐</span>
                 <span class="ai-title-text">翻译设置</span>
               </div>
+              <div class="ai-title" v-else-if="activePanel === 'import'">
+                <span class="ai-title-icon">📥</span>
+                <span class="ai-title-text">导入聊天</span>
+              </div>
               <div class="ai-title" v-else-if="activePanel === 'aitalk'">
                 <span class="ai-title-icon">💬</span>
                 <span class="ai-title-text">沟通话术</span>
+              </div>
+              <div class="ai-title" v-else-if="activePanel === 'bgcheck'">
+                <span class="ai-title-icon">🔍</span>
+                <span class="ai-title-text">客户背调</span>
               </div>
               <div class="ai-title" v-else-if="activePanel === 'requirement'">
                 <span class="ai-title-icon">🎯</span>
@@ -727,11 +1244,7 @@
               <span class="ai-title-icon">🏢</span>
               <span>公司资料</span>
               <div class="cm-add-dropdown" style="position:relative;margin-left:auto">
-                <button class="col-toggle" @click.stop="cmAddMenuOpen=!cmAddMenuOpen" title="新增">➕</button>
-                <div v-if="cmAddMenuOpen" class="cm-add-menu" @click.self="cmAddMenuOpen=false">
-                  <button class="cm-add-menu-item" @click.stop="openCompanyDialog('text');cmAddMenuOpen=false">📝 新增文本</button>
-                  <button class="cm-add-menu-item" @click.stop="openCompanyDialog('file');cmAddMenuOpen=false">📎 上传文件</button>
-                </div>
+                <button class="col-toggle" @click.stop="openCompanyDialog()" title="新增资料（文字/文件）">➕</button>
               </div>
             </div>
             <div class="ai-title" v-else-if="activePanel === 'documents'">
@@ -881,6 +1394,9 @@
                       <template v-if="chatStore.aiGenerating"><span class="ai-dots-inline"><span></span><span></span><span></span></span></template>
                       <template v-else>⚡ 生成AI回复</template>
                     </button>
+                    <button v-if="chatStore.aiGenerating" class="aitalk-stop-btn" @click="chatStore.stopAiGenerating()" title="终止本次AI生成">
+                      <span class="aitalk-stop-icon">⏹</span><span>终止</span>
+                    </button>
                     <div v-if="chatStore.aiReplyResults.length" class="ai-reply-list">
                       <!-- Phase 5: Context banner on first card -->
                       <div v-if="chatStore.aiReplyResults.length && chatStore.aiReplyResults[0]?.context" class="ai-context-banner">
@@ -927,6 +1443,9 @@
                       >
                         <template v-if="chatStore.aiGenerating"><span class="ai-dots-inline"><span></span><span></span><span></span></span></template>
                         <template v-else>⚡ 根据最新消息重新生成</template>
+                      </button>
+                      <button v-if="chatStore.aiGenerating" class="aitalk-stop-btn" @click="chatStore.stopAiGenerating()" title="终止本次AI生成">
+                        <span class="aitalk-stop-icon">⏹</span><span>终止</span>
                       </button>
                     </div>
                     <!-- 追问气泡（user消息） -->
@@ -1134,6 +1653,10 @@
                   <el-option label="中文" value="zh" />
                 </el-select>
                 <div class="aitalk-top-actions">
+                  <span class="aitalk-autogen-wrap" :title="aitalkAutoGen ? '自动生成已开启：客户新消息自动生成话术' : '自动生成已关闭：需手动点击生成'">
+                    <span class="aitalk-autogen-text">自动</span>
+                    <el-switch v-model="aitalkAutoGen" size="small" />
+                  </span>
                   <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'quick'}" @click="aitalkMode = 'quick'" title="快捷生成">⚡</button>
                   <button class="aitalk-mode-btn" :class="{active: aitalkMode === 'chat'}" @click="switchToChatMode" title="对话模式">💬</button>
                   <button v-if="aiMessages.length" class="aitalk-clear-btn" @click="clearAiMessages" title="清空">🗑️</button>
@@ -1147,10 +1670,12 @@
                 <span class="profile-tab-ic">💬</span>
                 <span class="profile-tab-lb">回复话术</span>
               </button>
+              <!-- 话术库暂时隐藏（2026-08-23 话术语言不统一，待整理语种后恢复）
               <button class="profile-tab" :class="{active: aitalkTab==='library'}" @click="aitalkTab='library';loadSpeechSamples()">
                 <span class="profile-tab-ic">📚</span>
                 <span class="profile-tab-lb">话术库</span>
               </button>
+              -->
             </div>
 
             <!-- 💬 沟通话术 Tab -->
@@ -1189,7 +1714,12 @@
                 <!-- AI 回复 -->
                 <div v-else class="aitalk-msg aitalk-msg-ai" :data-mid="msg.id">
                   <div v-if="msg.loading" class="aitalk-bubble aitalk-bubble-ai aitalk-typing">
-                    <span class="aitalk-dot"></span><span class="aitalk-dot"></span><span class="aitalk-dot"></span>
+                    <div class="aitalk-progress">
+                      <div class="aitalk-progress-line">
+                        <span class="aitalk-progress-stage">{{ progressStageText(msg._stage || 0) }}</span>
+                        <span class="aitalk-progress-time">已处理 {{ formatElapsed(msg._elapsed || 0) }}</span>
+                      </div>
+                    </div>
                   </div>
                   <div v-else-if="msg.error" class="aitalk-error-block">
                     <div class="aitalk-error-text">❌ {{ msg.content }}</div>
@@ -1203,13 +1733,26 @@
                         <span class="aitalk-reply-sep"> — </span>
                         <span class="aitalk-reply-desc">{{ r.desc }}</span>
                       </div>
-                      <div class="aitalk-reply-foreign" :dir="autoDir(r.foreign)">{{ r.foreign }}</div>
-                      <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
+                      <template v-if="!r._editing">
+                        <div class="aitalk-reply-foreign" :dir="autoDir(r.foreign)">{{ r.foreign }}</div>
+                        <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
+                      </template>
+                      <template v-else>
+                        <textarea class="aitalk-edit-input aitalk-edit-foreign" v-model="r._editForeign" rows="3" placeholder="编辑外文话术（发送版）"></textarea>
+                        <textarea class="aitalk-edit-input aitalk-edit-chinese" v-model="r._editChinese" rows="2" placeholder="编辑中文参考"></textarea>
+                      </template>
                       <div class="aitalk-reply-actions">
-                        <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制外文</button>
-                        <button class="aitalk-mini-btn" @click="copyForeign(r.chinese, $event)">📋 复制中文</button>
+                        <template v-if="!r._editing">
+                          <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制外文</button>
+                          <button class="aitalk-mini-btn" @click="copyForeign(r.chinese, $event)">📋 复制中文</button>
+                          <button class="aitalk-mini-btn aitalk-edit-btn" @click="startEditReply(r)" title="编辑后复制或直接发送">✏️ 编辑</button>
+                        </template>
+                        <template v-else>
+                          <button class="aitalk-mini-btn aitalk-save-btn" @click="saveEditReply(r)">💾 保存</button>
+                          <button class="aitalk-mini-btn" @click="cancelEditReply(r)">↩️ 取消</button>
+                        </template>
                       </div>
-                      <button class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
+                      <button v-if="!r._editing" class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
                         {{ r._applied ? '✓ 已填入输入框' : '✏️ 点这里直接用' }}
                       </button>
                     </div>
@@ -1261,13 +1804,26 @@
                         <span class="aitalk-reply-sep"> — </span>
                         <span class="aitalk-reply-desc">{{ r.desc }}</span>
                       </div>
-                      <div class="aitalk-reply-foreign" :dir="autoDir(r.foreign)">{{ r.foreign }}</div>
-                      <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
+                      <template v-if="!r._editing">
+                        <div class="aitalk-reply-foreign" :dir="autoDir(r.foreign)">{{ r.foreign }}</div>
+                        <div class="aitalk-reply-chinese">{{ r.chinese }}</div>
+                      </template>
+                      <template v-else>
+                        <textarea class="aitalk-edit-input aitalk-edit-foreign" v-model="r._editForeign" rows="3" placeholder="编辑外文话术（发送版）"></textarea>
+                        <textarea class="aitalk-edit-input aitalk-edit-chinese" v-model="r._editChinese" rows="2" placeholder="编辑中文参考"></textarea>
+                      </template>
                       <div class="aitalk-reply-actions">
-                        <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制外文</button>
-                        <button class="aitalk-mini-btn" @click="copyForeign(r.chinese, $event)">📋 复制中文</button>
+                        <template v-if="!r._editing">
+                          <button class="aitalk-mini-btn" @click="copyForeign(r.foreign, $event)">📋 复制外文</button>
+                          <button class="aitalk-mini-btn" @click="copyForeign(r.chinese, $event)">📋 复制中文</button>
+                          <button class="aitalk-mini-btn aitalk-edit-btn" @click="startEditReply(r)" title="编辑后复制或直接发送">✏️ 编辑</button>
+                        </template>
+                        <template v-else>
+                          <button class="aitalk-mini-btn aitalk-save-btn" @click="saveEditReply(r)">💾 保存</button>
+                          <button class="aitalk-mini-btn" @click="cancelEditReply(r)">↩️ 取消</button>
+                        </template>
                       </div>
-                      <button class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
+                      <button v-if="!r._editing" class="aitalk-use-btn" :class="{done: r._applied}" @click="useForeignReply(r, $event)">
                         {{ r._applied ? '✓ 已填入输入框' : '✏️ 点这里直接用' }}
                       </button>
                     </div>
@@ -1340,6 +1896,9 @@
                   <span v-else>✨</span>
                   <span>{{ aitalkLoading ? 'AI思考中...' : (aiMessages.length ? '✨ 重新生成一版' : '✨ 生成AI回复') }}</span>
                 </button>
+                <button v-if="aitalkLoading" class="aitalk-stop-btn" @click="stopAitalkGeneration" title="终止本次AI生成">
+                  <span class="aitalk-stop-icon">⏹</span><span>终止</span>
+                </button>
                 <button class="aitalk-switch-mode-link" @click="switchToChatMode">💬 切换到对话模式</button>
               </template>
               <template v-else>
@@ -1364,6 +1923,9 @@
                     @keydown="onAitalkInputKeydown"
                     @input="autoGrowAitalkInput"
                   ></textarea>
+                  <button v-if="aitalkLoading" class="aitalk-stop-btn aitalk-stop-btn-inline" @click="stopAitalkGeneration" title="终止本次AI生成">
+                    <span class="aitalk-stop-icon">⏹</span><span>终止</span>
+                  </button>
                   <button class="aitalk-send-btn" :disabled="!aitalkInputText.trim() || aitalkLoading || !chatStore.activeJid" @click="sendAitalkChat">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                   </button>
@@ -1379,26 +1941,38 @@
               <div class="speechlib-match-section">
                 <div class="speechlib-match-header">
                   <span class="speechlib-match-title">🎯 智能匹配</span>
-                  <button class="speechlib-match-btn" :disabled="speechLibLoading || !chatStore.activeJid" @click="smartMatchSpeech">
+                  <button class="speechlib-match-btn" :disabled="speechLibLoading || !currentChannelHasContext()" @click="smartMatchSpeech">
                     {{ speechLibLoading ? '匹配中...' : '匹配当前客户' }}
                   </button>
                 </div>
                 <div v-if="speechLibMatched.length" class="speechlib-match-list">
                   <div v-for="(s, si) in speechLibMatched" :key="'m-'+si" class="speechlib-card">
-                    <div class="speechlib-card-q">🗣 {{ s.customerMsg }}</div>
-                    <div class="speechlib-card-a">💡 {{ s.salesReply }}</div>
+                    <span class="speechlib-source-badge" :class="'src-' + (s.source || 'message_sample')">{{ s.sourceLabel || '话术库' }}</span>
+                    <template v-if="s.source === 'community'">
+                      <div class="speechlib-card-q">📌 {{ s.title }}</div>
+                      <div class="speechlib-card-a">💡 {{ s.content }}</div>
+                    </template>
+                    <template v-else-if="s.source === 'qa'">
+                      <div class="speechlib-card-q">❓ {{ s.question }}</div>
+                      <div class="speechlib-card-a">💡 {{ s.answer }}</div>
+                    </template>
+                    <template v-else>
+                      <div class="speechlib-card-q">🗣 {{ s.customerMsg }}</div>
+                      <div class="speechlib-card-a">💡 {{ s.salesReply }}</div>
+                    </template>
                     <div class="speechlib-card-meta">
                       <span v-if="s.scene" class="speechlib-tag">{{ s.scene }}</span>
+                      <span v-if="s.industry" class="speechlib-tag">{{ s.industry }}</span>
                       <span v-if="s.productLine" class="speechlib-tag">{{ s.productLine }}</span>
-                      <span v-if="s.qualityScore" class="speechlib-tag speechlib-tag-score">⭐{{ s.qualityScore }}</span>
+                      <span v-if="s.source === 'message_sample' && s.qualityScore" class="speechlib-tag speechlib-tag-score">⭐{{ s.qualityScore }}</span>
                     </div>
-                    <button class="speechlib-copy-btn" @click="copySpeechReply(s.salesReply)">📋 复制回复</button>
+                    <button class="speechlib-copy-btn" @click="copySpeechReply(s.salesReply || s.content || s.answer)">📋 复制回复</button>
                   </div>
                 </div>
                 <div v-else-if="!speechLibLoading && speechLibSearched" class="speechlib-empty">
                   <p>未找到匹配话术</p>
                 </div>
-                <div v-else-if="!chatStore.activeJid" class="speechlib-empty">
+                <div v-else-if="!currentChannelHasContext()" class="speechlib-empty">
                   <p>请先选择客户会话</p>
                 </div>
               </div>
@@ -1560,30 +2134,35 @@
                     <div class="customer-field-label">📝 需求总结</div>
                     <template v-if="!customerEditMode">
                       <!-- JSON 结构化卡片 -->
-                      <div v-if="profileReqIsJson" class="cp-req-summary">
-                        <div v-for="(sec, si) in profileReqSections" :key="si" class="cp-req-sec">
-                          <div class="cp-req-sec-title">{{ sec.icon || '📋' }} {{ sec.title || '信息' }}</div>
-                          <!-- 表格型：客户基本信息/产品需求/采购规模/商务条件/客户画像 -->
-                          <table v-if="sec.type === 'table' && sec._parsedRows" class="cp-req-table">
-                            <tr v-for="(row, ri) in sec._parsedRows" :key="ri">
-                              <td class="cp-req-tlabel">{{ row.label }}</td>
-                              <td class="cp-req-tval">{{ row.value }}</td>
-                            </tr>
-                          </table>
-                          <!-- 列表型：核心风险/跟进策略/待确认事项 -->
-                          <ul v-else-if="sec.type === 'list' && sec._parsedItems" class="cp-req-list">
-                            <li v-for="(it, ii) in sec._parsedItems" :key="ii">
-                              <span v-if="it.title" class="cp-req-item-title">{{ it.title }}：</span>
-                              <span class="cp-req-item-desc">{{ it.desc }}</span>
-                            </li>
-                          </ul>
-                          <!-- 文本兜底 -->
-                          <div v-else class="cp-req-text">{{ sec.content || '' }}</div>
+                      <div v-if="profileReqIsJson" class="req-cards">
+                        <div v-for="(sec, si) in profileReqSections" :key="si" class="req-card">
+                          <div class="req-card-head">
+                            <span class="req-card-icon">{{ sec.icon || '📋' }}</span>
+                            <span class="req-card-title">{{ sec.title || '信息' }}</span>
+                          </div>
+                          <div class="req-card-body">
+                            <table v-if="sec.type === 'table' && sec._parsedRows" class="req-kv-table">
+                              <tr v-for="(row, ri) in sec._parsedRows" :key="ri">
+                                <td class="kv-label">{{ row.label }}</td>
+                                <td class="kv-value">{{ row.value }}</td>
+                              </tr>
+                            </table>
+                            <ul v-else-if="sec.type === 'list' && sec._parsedItems" class="req-list">
+                              <li v-for="(it, ii) in sec._parsedItems" :key="ii">
+                                <span class="req-list-badge">{{ ii + 1 }}</span>
+                                <span class="req-list-text">
+                                  <strong v-if="it.title" class="req-list-title">{{ it.title }}</strong>
+                                  <span v-if="it.desc">{{ it.title ? '：' : '' }}{{ it.desc }}</span>
+                                </span>
+                              </li>
+                            </ul>
+                            <div v-else class="req-text">{{ sec.content || '' }}</div>
+                          </div>
                         </div>
                       </div>
                       <!-- 空值或纯文本 -->
                       <div v-else class="customer-field-value" :class="{ empty: !customerData.requirementSummary }">
-                        {{ customerData.requirementSummary || '未填写' }}
+                        {{ displayReqSummaryRaw() }}
                       </div>
                     </template>
                     <template v-else>
@@ -1598,7 +2177,7 @@
                 <!-- 📝 跟进记录 Tab -->
                 <div v-if="customerTab==='followups'" class="profile-tab-pane">
                   <div class="profile-section-hint">最近跟进记录（最多5条）</div>
-                  <div v-if="followUpsLoading" class="profile-loading">加载中...</div>
+                  <div v-if="followUpsLoading" class="profile-loading">{{ followUpGenerating ? '🤖 正在自动总结聊天记录，生成跟进...' : '加载中...' }}</div>
                   <div v-else-if="!followUpsList.length" class="profile-empty">
                     <div style="font-size:32px;margin-bottom:6px">📝</div>
                     <div style="color:var(--text-secondary);font-size:13px;margin-bottom:10px">暂无跟进记录</div>
@@ -1618,38 +2197,45 @@
                   </div>
                 </div>
 
-                <!-- 👤 背调报告 Tab -->
-                <div v-if="customerTab==='bgcheck'" class="profile-tab-pane">
-                  <!-- 开始背调按钮 -->
-                  <div class="customer-bg-btn-wrap">
-                    <button class="customer-bg-btn" @click="runBgCheck" :disabled="bgCheckLoading">
-                      {{ bgCheckLoading ? '🔍 背调进行中...' : (customerData.bgReport ? '🔄 重新背调' : '🚀 开始背调') }}
-                    </button>
-                    <div v-if="customerData.bgUpdatedAt" class="bg-check-time">上次背调：{{ formatBgTime(customerData.bgUpdatedAt) }}</div>
-                  </div>
+              </div><!-- /.profile-scroll -->
+            </template>
+          </div>
 
-                  <!-- 背调报告卡片 -->
-                  <div v-if="bgCheckReport || customerData.bgReport" class="bg-report-card">
-                    <div class="bg-report-head">
-                      <span style="color:#00a884;font-weight:700;font-size:14px">📋 客户背调报告</span>
-                    </div>
-                    <div class="bg-report-body">
-                      <p v-for="(para, pi) in (bgCheckReport || customerData.bgReport || '').split('\n')" :key="pi" :class="{'bg-report-empty': !para.trim()}">{{ para }}</p>
-                    </div>
-                    <div v-if="bgMissingInfo.length" class="bg-report-footer">
-                      <div class="bg-missing-tip">ℹ️ 还缺少以下信息：<span class="bg-missing-tags">{{ bgMissingInfo.filter(m => !m.includes('联网搜索')).join('、') }}</span></div>
-                      <button class="customer-bg-btn bg-ask-btn" @click="bgInsertAskReply" :disabled="bgAskInserted">
-                        {{ bgAskInserted ? '✅ 已填入输入框' : '🤖 生成询问客户信息话术' }}
-                      </button>
-                    </div>
+                    <!-- 🔍 客户背调独立面板 -->
+          <div v-if="!panelCollapsed && activePanel === 'bgcheck'" class="customer-panel-body bgcheck-panel-body">
+            <div v-if="!chatStore.activeJid" class="customer-empty">
+              <div style="font-size:48px;margin-bottom:12px">🔍</div>
+              <div style="color:#8696a0;font-size:13px">请先选择一个客户会话</div>
+            </div>
+            <template v-else>
+              <div class="bgcheck-content">
+                <div class="profile-section-hint">背调客户背景、公司资质与风险评级，一键生成背调报告</div>
+                <div class="customer-bg-btn-wrap">
+                  <button class="customer-bg-btn" @click="runBgCheck" :disabled="bgCheckLoading">
+                    {{ bgCheckLoading ? '🔍 背调进行中...' : (customerData.bgReport ? '🔄 重新背调' : '🚀 开始背调') }}
+                  </button>
+                  <div v-if="customerData.bgUpdatedAt" class="bg-check-time">上次背调：{{ formatBgTime(customerData.bgUpdatedAt) }}</div>
+                </div>
+                <div v-if="bgCheckReport || customerData.bgReport" class="bg-report-card">
+                  <div class="bg-report-head">
+                    <span style="color:#00a884;font-weight:700;font-size:14px">📋 客户背调报告</span>
+                    <button v-if="bgCheckReport || customerData.bgReport" class="view-360-btn" @click="$router.push('/background-report?jid=' + encodeURIComponent(activeJid))">📊 查看360°报告</button>
                   </div>
-                  <div v-else-if="!bgCheckLoading" class="profile-empty">
-                    <div style="font-size:32px;margin-bottom:6px">🔍</div>
-                    <div style="color:var(--text-secondary);font-size:13px">点击上方按钮开始客户背调</div>
+                  <div class="bg-report-body">
+                    <p v-for="(para, pi) in (bgCheckReport || customerData.bgReport || '').split('\n')" :key="pi" :class="{'bg-report-empty': !para.trim()}">{{ para }}</p>
+                  </div>
+                  <div v-if="bgMissingInfo.length" class="bg-report-footer">
+                    <div class="bg-missing-tip">ℹ️ 还缺少以下信息：<span class="bg-missing-tags">{{ bgMissingInfo.filter(m => !m.includes('联网搜索')).join('、') }}</span></div>
+                    <button class="customer-bg-btn bg-ask-btn" @click="bgInsertAskReply" :disabled="bgAskInserted">
+                      {{ bgAskInserted ? '✅ 已填入输入框' : '🤖 生成询问客户信息话术' }}
+                    </button>
                   </div>
                 </div>
-
-              </div><!-- /.profile-scroll -->
+                <div v-else-if="!bgCheckLoading" class="profile-empty">
+                  <div style="font-size:32px;margin-bottom:6px">🔍</div>
+                  <div style="color:var(--text-secondary);font-size:13px">点击上方按钮开始客户背调</div>
+                </div>
+              </div>
             </template>
           </div>
 
@@ -2013,15 +2599,15 @@
                   <div class="sub-row">
                     <span class="sub-label">翻译线路</span>
                     <el-select v-model="transForm.receiveEngine" class="sub-select" popper-class="crm-dark-popper" placeholder="选择翻译线路">
-                      <el-option label="谷歌翻译(推荐/免费)" value="google" />
+                      <el-option label="DeepL(推荐)" value="deepl" />
                       <el-option label="DeepSeek" value="deepseek" />
                       <el-option label="豆包AI" value="doubao" />
-                      <el-option label="GPT-4o-mini" value="openai" />
+                      <el-option label="GPT-5.6" value="openai" />
                     </el-select>
                   </div>
                   <div class="sub-row">
                     <span class="sub-label">源语言</span>
-                    <el-select v-model="transForm.receiveSourceLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择源语言">
+                    <el-select v-model="transForm.receiveSourceLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择源语言" filterable>
                       <el-option v-for="lang in LANG_OPTIONS_WITH_AUTO" :key="lang.value" :label="lang.label" :value="lang.value" />
                     </el-select>
                   </div>
@@ -2030,7 +2616,7 @@
                     <el-tooltip content="对方消息将被翻译成该语言显示" placement="top" effect="dark">
                       <el-icon class="sub-help"><QuestionFilled /></el-icon>
                     </el-tooltip>
-                    <el-select v-model="transForm.receiveTargetLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择目标语言">
+                    <el-select v-model="transForm.receiveTargetLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择目标语言" filterable>
                       <el-option v-for="lang in LANG_OPTIONS" :key="lang.value" :label="lang.label" :value="lang.value" />
                     </el-select>
                   </div>
@@ -2046,10 +2632,10 @@
                   <div class="sub-row">
                     <span class="sub-label">翻译线路</span>
                     <el-select v-model="transForm.sendEngine" class="sub-select" popper-class="crm-dark-popper" placeholder="选择翻译线路">
-                      <el-option label="谷歌翻译(推荐/免费)" value="google" />
+                      <el-option label="DeepL(推荐)" value="deepl" />
                       <el-option label="DeepSeek" value="deepseek" />
                       <el-option label="豆包AI" value="doubao" />
-                      <el-option label="GPT-4o-mini" value="openai" />
+                      <el-option label="GPT-5.6" value="openai" />
                     </el-select>
                   </div>
                   <div class="sub-row">
@@ -2057,7 +2643,7 @@
                     <el-tooltip content="你的消息将被翻译成该语言发送" placement="top" effect="dark">
                       <el-icon class="sub-help"><QuestionFilled /></el-icon>
                     </el-tooltip>
-                    <el-select v-model="transForm.sendTargetLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择目标语言">
+                    <el-select v-model="transForm.sendTargetLang" class="sub-select" popper-class="crm-dark-popper" placeholder="选择目标语言" filterable>
                       <el-option v-for="lang in LANG_OPTIONS" :key="lang.value" :label="lang.label" :value="lang.value" />
                     </el-select>
                   </div>
@@ -2089,16 +2675,6 @@
               <!-- 全局配置 -->
               <div class="trans-block">
                 <div class="cfg-row">
-                  <span class="sub-label">文字颜色</span>
-                  <el-tooltip content="设置译文显示的文字颜色" placement="top" effect="dark">
-                    <el-icon class="sub-help cfg-help"><QuestionFilled /></el-icon>
-                  </el-tooltip>
-                  <div class="cfg-color-wrap">
-                    <input class="cfg-color-input" v-model="transForm.translationColor" maxlength="7" />
-                    <el-color-picker v-model="transForm.translationColor" class="cfg-color-picker" />
-                  </div>
-                </div>
-                <div class="cfg-row">
                   <span class="sub-label">文字大小</span>
                   <el-tooltip content="设置译文显示的文字大小" placement="top" effect="dark">
                     <el-icon class="sub-help cfg-help"><QuestionFilled /></el-icon>
@@ -2112,10 +2688,40 @@
             </div>
           </div>
 
+          <!-- 📥 导入聊天面板 -->
+          <div v-if="!panelCollapsed && activePanel === 'import'" class="import-panel-body">
+            <div class="import-panel">
+              <div class="import-desc">
+                <p class="import-main-title">📥 导入WhatsApp历史聊天记录</p>
+                <p class="import-hint">从手机WhatsApp导出聊天文本文件，上传后自动解析并存入当前客户的聊天记录中。</p>
+                <div class="import-steps">
+                  <p class="import-step-title">操作步骤：</p>
+                  <p>1️⃣ 打开手机WhatsApp，进入目标客户的聊天</p>
+                  <p>2️⃣ 点击右上角「更多」→「导出聊天记录」</p>
+                  <p>3️⃣ 选择「无媒体」（仅文字，速度更快）</p>
+                  <p>4️⃣ 将导出的 .txt 文件上传到下方</p>
+                </div>
+              </div>
+              <div class="import-actions">
+                <input type="file" ref="chatImportInput" accept=".txt" style="display:none" @change="handleChatImport" />
+                <button class="import-btn" @click="$refs.chatImportInput.click()">
+                  <el-icon><Upload /></el-icon>
+                  选择 .txt 文件并导入
+                </button>
+                <span v-if="importStatus" class="import-status" :class="importStatus.type">{{ importStatus.text }}</span>
+              </div>
+              <div v-if="!chatStore.activeJid" class="import-no-contact">
+                ⚠️ 请先选择一个客户会话
+              </div>
+            </div>
+          </div>
+
           <!-- 🏢 公司资料面板 -->
           <div v-if="!panelCollapsed && activePanel === 'company'" class="cm-panel-body">
             <div class="cm-chips">
-              <button v-for="c in CM_CATEGORIES" :key="c.value" class="cm-chip" :class="{active: companyCategory===c.value}" @click="companyCategory=c.value; fetchCompanyMaterials()">{{ c.icon }} {{ c.label }}</button>
+              <button class="cm-chip" :class="{active: companyCategory==='all'}" @click="companyCategory='all'; fetchCompanyMaterials()">📚 全部</button>
+              <button v-for="c in companyCategories" :key="c.refValue" class="cm-chip" :class="{active: companyCategory===c.refValue}" @click="companyCategory=c.refValue; fetchCompanyMaterials()">{{ c.icon }} {{ c.name }}</button>
+              <button class="cm-chip cm-chip-manage" @click="showCategoryManager=true; refreshCategoryManager()" title="管理分类">⚙️</button>
             </div>
             <div v-if="cmUploading" class="cm-uploading">⏳ 上传中... {{ cmUploadProgress }}%</div>
             <div v-if="companyLoading" class="cm-empty"><div class="cm-empty-icon">⏳</div>加载中...</div>
@@ -2177,7 +2783,7 @@
             <el-form :model="companyForm" label-position="top" class="cm-form">
               <el-form-item label="分类">
                 <el-select v-model="companyForm.category" popper-class="crm-dark-popper" style="width:100%">
-                  <el-option v-for="c in CM_CATEGORIES.filter(x=>x.value!=='all')" :key="c.value" :label="c.icon+' '+c.label" :value="c.value" />
+                  <el-option v-for="c in companyCategories" :key="c.refValue" :label="c.icon+' '+c.name" :value="c.refValue" />
                 </el-select>
               </el-form-item>
               <el-form-item label="语言">
@@ -2188,21 +2794,37 @@
               <el-form-item label="标题">
                 <el-input v-model="companyForm.title" placeholder="如：公司介绍-简版" />
               </el-form-item>
-              <el-form-item v-if="companyDialogMode==='text' || editingCompanyId" label="内容">
-                <el-input v-model="companyForm.content" type="textarea" :rows="5" placeholder="输入文本内容（支持多行）" />
+              <el-form-item label="内容">
+                <el-input v-model="companyForm.content" type="textarea" :rows="5" placeholder="输入文本内容（支持多行），也可作为附件的说明文字" />
               </el-form-item>
-              <el-form-item v-if="companyDialogMode==='file' && !editingCompanyId" label="描述（可选）">
-                <el-input v-model="companyForm.content" type="textarea" :rows="2" placeholder="文件说明，可选" />
-              </el-form-item>
-              <el-form-item v-if="companyDialogMode==='file' && !editingCompanyId" label="文件">
+              <el-form-item label="附件（可选，内容与附件至少填一项）">
                 <input ref="cmFileInput" type="file" class="cm-file-input" @change="onCmFileChange" accept="image/*,video/*,application/pdf" />
+                <div class="cm-file-hint">支持图片 / PDF ≤ 20MB，视频 ≤ 50MB；超过上限将无法上传</div>
                 <div v-if="companyForm.file" class="cm-file-selected">✅ {{ companyForm.file.name }} ({{ formatFileSize(companyForm.file.size) }})</div>
+                <div v-else-if="editingCompanyId && editingFileInfo" class="cm-file-selected">📎 当前附件：{{ editingFileInfo }}（编辑模式不更换附件）</div>
               </el-form-item>
             </el-form>
             <template #footer>
               <el-button @click="closeCompanyDialog">取消</el-button>
-              <el-button type="primary" @click="saveCompanyMaterial" :loading="cmSaving">{{ companyDialogMode==='file' && !editingCompanyId ? '上传' : '保存' }}</el-button>
+              <el-button type="primary" @click="saveCompanyMaterial" :loading="cmSaving">保存</el-button>
             </template>
+          </el-dialog>
+
+          <!-- ⚙️ 公司资料分类管理弹窗 -->
+          <el-dialog v-model="showCategoryManager" title="管理分类（可新增/改名/删除）" width="460px" class="cm-cat-dialog" :append-to-body="true">
+            <div class="cm-cat-list">
+              <div v-for="c in categoryManagerList" :key="c.id" class="cm-cat-row">
+                <span class="cm-cat-icon">{{ c.icon }}</span>
+                <el-input v-model="c.name" size="small" class="cm-cat-name-input" @keyup.enter="saveCategoryName(c)" />
+                <el-button size="small" @click="saveCategoryName(c)" :loading="c.saving">保存</el-button>
+                <el-button size="small" type="danger" @click="deleteCategory(c)">删除</el-button>
+              </div>
+              <div class="cm-cat-empty" v-if="categoryManagerList.length===0">暂无分类，请新增</div>
+            </div>
+            <div class="cm-cat-add">
+              <el-input v-model="newCategoryName" placeholder="新分类名称" size="small" @keyup.enter="addCategory" />
+              <el-button size="small" type="primary" @click="addCategory" :loading="categorySaving">＋ 新增</el-button>
+            </div>
           </el-dialog>
 
           <!-- 📊 BANT 评分详情弹窗 -->
@@ -2580,9 +3202,21 @@
               <span class="ib-icon">🌐</span>
               <span class="ib-label">翻译设置</span>
             </button>
+            <button class="ib-item" :class="{ active: configPanelOpen }" @click="openConfigPanel" :title="iconbarCollapsed ? '代理设置' : ''">
+              <span class="ib-icon">🔌</span>
+              <span class="ib-label">代理设置</span>
+            </button>
+            <button class="ib-item" :class="{ active: activePanel === 'import' }" @click="switchPanel('import')" :title="iconbarCollapsed ? '导入聊天' : ''">
+              <span class="ib-icon">📥</span>
+              <span class="ib-label">导入聊天</span>
+            </button>
             <button class="ib-item" :class="{ active: activePanel === 'aitalk' }" @click="switchPanel('aitalk')" :title="iconbarCollapsed ? '沟通话术' : ''">
               <span class="ib-icon">💬</span>
               <span class="ib-label">沟通话术</span>
+            </button>
+            <button class="ib-item" :class="{ active: activePanel === 'bgcheck' }" @click="switchPanel('bgcheck')" :title="iconbarCollapsed ? '客户背调' : ''">
+              <span class="ib-icon">🔍</span>
+              <span class="ib-label">客户背调</span>
             </button>
             <button class="ib-item" :class="{ active: activePanel === 'requirement' }" @click="switchPanel('requirement')" :title="iconbarCollapsed ? '需求总结' : ''">
               <span class="ib-icon">🎯</span>
@@ -2625,7 +3259,7 @@
       </div>
 
     <!-- 其他模块占位：由 router-view 填充 -->
-    <div v-else class="module-full">
+    <div v-if="activePlatform !== 'trade-agent' && activePlatform !== 'communication'" class="module-full">
       <router-view />
     </div>
     </div>
@@ -2712,6 +3346,24 @@
             </div>
           </div>
 
+          <!-- 账号设置：我的积分 -->
+          <div v-else-if="activeSettingsTab === 'account'" class="account-settings">
+            <h2>我的积分</h2>
+            <p class="section-desc">AI 助手每次调用消耗积分，充值后即可畅用全部 AI 能力。</p>
+            <div class="credits-balance-card">
+              <div class="credits-balance-num">{{ creditsBalance }}</div>
+              <div class="credits-balance-label">当前积分</div>
+              <div class="credits-balance-actions">
+                <button class="credits-btn-primary" @click="goCredits">去充值</button>
+                <button class="credits-btn-plain" @click="goCreditsTransactions">充值记录</button>
+              </div>
+            </div>
+            <div class="credits-tips">
+              <p>· AI 翻译 / 回复生成 / 背调 / 文档生成等调用，每次消耗 150 积分</p>
+              <p>· 1 元 = 1000 积分，100 元起充</p>
+            </div>
+          </div>
+
           <!-- 其他设置tab占位 -->
           <div v-else class="settings-placeholder">
             <h2>{{ currentSettingsName }}</h2>
@@ -2732,7 +3384,7 @@
           <span v-if="popupSelected && activeChannel===ch.id" class="channel-popup-check">✓</span>
         </button>
       </div>
-      <nav class="mobile-tabbar" v-if="isMobile && $route.path !== '/assistant'">
+      <nav class="mobile-tabbar" v-if="isMobile && $route.path !== '/assistant' && !showModelSelector">
       <button
         v-for="tab in mobileTabs"
         :key="tab.key"
@@ -2825,6 +3477,79 @@
   </div>
 </transition>
 
+<!-- 微信直连外贸Agent 二维码弹窗 -->
+<transition name="fade">
+  <div v-if="showWxQrModal" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;" @click.self="closeWxQr">
+    <div style="background:var(--bg-elevated,#202c33);border-radius:16px;padding:24px;width:420px;max-width:92vw;color:var(--text-primary,#e9edef);text-align:center;">
+      <div style="font-size:18px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span style="font-size:22px;">💬</span> 微信直连外贸Agent
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary,#8696a0);margin-bottom:16px;line-height:1.7;">
+        打开微信「扫一扫」添加外贸Agent为好友<br/>随时随地做单证、问报价、跟进客户
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:12px;width:260px;height:260px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
+        <img :src="'/wechat-agent-qr.png?v=' + wxQrTs" style="width:236px;height:236px;" alt="外贸Agent微信二维码"/>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary,#8696a0);line-height:1.6;">
+        <template v-if="wxConnected">✅ 已成功连接，去微信和外贸Agent打个招呼吧！</template>
+        <template v-else>⏳ 二维码每 5 分钟自动刷新，请用手机微信扫码连接</template>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
+        <button @click="closeWxQr" style="padding:8px 24px;background:rgba(7,193,96,.12);color:#07c160;border:1px solid rgba(7,193,96,.35);border-radius:8px;cursor:pointer;">关闭</button>
+      </div>
+    </div>
+  </div>
+</transition>
+
+<!-- 账号代理配置抽屉 -->
+<transition name="slide-right">
+  <div v-if="configPanelOpen" class="config-panel-overlay" @click.self="configPanelOpen=false">
+    <div class="config-panel-drawer">
+      <div class="config-panel-header">
+        <h3>代理设置</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;color:var(--text-secondary,#8696a0);">{{ configAccountName }}</span>
+          <span class="config-panel-close" @click="configPanelOpen=false">✕</span>
+        </div>
+      </div>
+      <div class="config-panel-body">
+        <div class="cp-section-title">代理配置</div>
+        <div class="cp-field">
+          <label>协议</label>
+          <select v-model="configProxyProtocol" class="cp-select">
+            <option value="HTTP">HTTP</option>
+            <option value="HTTPS">HTTPS</option>
+            <option value="SOCKS4">SOCKS4</option>
+            <option value="SOCKS5">SOCKS5</option>
+          </select>
+        </div>
+        <div class="cp-field">
+          <label>代理主机</label>
+          <input v-model="configProxyHost" class="cp-input" placeholder="请输入代理" />
+        </div>
+        <div class="cp-field">
+          <label>代理端口</label>
+          <input v-model="configProxyPort" class="cp-input" placeholder="请输入端口" type="number" />
+        </div>
+        <div class="cp-field">
+          <label>用户名</label>
+          <input v-model="configProxyUser" class="cp-input" placeholder="请输入账号 (选填)" />
+        </div>
+        <div class="cp-field">
+          <label>密码</label>
+          <div style="display:flex;gap:8px;">
+            <input v-model="configProxyPass" class="cp-input" style="flex:1" placeholder="请输入密码 (选填)" type="password" />
+            <button class="cp-btn cp-btn-sm cp-btn-primary" @click="testProxy" :disabled="configTesting" style="white-space:nowrap;">{{ configTesting ? '测试中...' : '代理检测' }}</button>
+          </div>
+        </div>
+        <div v-if="configTestResult" class="cp-test-result" :style="{color: configTestResult.includes('✅') ? '#00a884' : '#ef4444', borderColor: configTestResult.includes('✅') ? 'rgba(0,168,132,0.3)' : 'rgba(239,68,68,0.3)', background: configTestResult.includes('✅') ? 'rgba(0,168,132,0.1)' : 'rgba(239,68,68,0.1)'}">{{ configTestResult }}</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+          <button class="cp-btn cp-btn-primary" @click="saveProxyConfig">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</transition>
 </template>
 
 <script setup>
@@ -2833,42 +3558,112 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
 import { useChatStore } from '../stores/chat.js';
-import { initSocket } from '../utils/socket.js';
+import { initSocket, useSocket } from '../utils/socket.js';
 import api from '../utils/api.js';
+import QRCode from 'qrcode';
+import { LANG_OPTIONS as _LANG_200, LANG_OPTIONS_WITH_AUTO as _LANG_AUTO_200 } from '../utils/languages.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { QuestionFilled } from '@element-plus/icons-vue';
+import { QuestionFilled, Upload } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const chatStore = useChatStore();
 
+// ====== L2: Business Confirmation ======
+const bizConfirmPending = ref([]);
+const currentBizConfirmIdx = ref(0);
+const bizConfirmDismissed = ref(new Set());
+
+async function loadBizConfirmPending() {
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch('/api/customers/pending-business-check', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    bizConfirmPending.value = (data.pending || []).filter(
+      c => !bizConfirmDismissed.value.has(c.id)
+      && !String(c.jid || '').endsWith('@telegram')
+    );
+    if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
+      currentBizConfirmIdx.value = 0;
+    }
+  } catch (e) {
+    console.warn('[bizConfirm] load error:', e);
+  }
+}
+
+async function onConfirmBusiness(isBusiness) {
+  const current = bizConfirmPending.value[currentBizConfirmIdx.value];
+  if (!current) return;
+  // L2新需求：「标记为业务客户」先弹确认提示，说明按钮含义；「忽略」直接执行
+  if (isBusiness) {
+    try {
+      await ElMessageBox.confirm(
+        `即将为「${current.displayName}」自动建档，建档后将进入客户管理`,
+        '确认业务客户',
+        { confirmButtonText: '确认建档', cancelButtonText: '取消', type: 'warning' }
+      );
+    } catch { return; } // 用户取消，不执行
+  }
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch('/api/customers/pending-business-check/' + current.id, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ isBusiness })
+    });
+    if (resp.ok) {
+      window.dispatchEvent(new CustomEvent('l2-biz-confirmed', { detail: { id: current.id } }));
+      bizConfirmDismissed.value.add(current.id);
+      bizConfirmPending.value.splice(currentBizConfirmIdx.value, 1);
+      if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
+        currentBizConfirmIdx.value = 0;
+      }
+      if (isBusiness) ElMessage.success('已自动建档，可在客户管理中查看');
+    }
+  } catch (e) {
+    console.warn('[bizConfirm] update error:', e);
+  }
+}
+
+function onViewBizConversation() {
+  const current = bizConfirmPending.value[currentBizConfirmIdx.value];
+  if (!current || !current.jid) return;
+  router.push({ path: '/chat', query: { jid: current.jid } });
+}
+
 // ========== 折叠状态 ==========
 const platformCollapsed = ref(localStorage.getItem('platform-collapsed') === 'true');
+const feedbackOpen = ref(false);
+const expandedKeys = ref({});
 const isDark = ref((localStorage.getItem('crm-theme') || 'dark') === 'dark');
 // 初始化时立即同步data-theme属性（防止刷新后闪回默认深色）
 document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light');
-function toggleTheme() {
-  isDark.value = !isDark.value;
-  const t = isDark.value ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', t);
-  localStorage.setItem('crm-theme', t);
-}
 const accountsCollapsed = ref(localStorage.getItem('accounts-collapsed') === 'true');
 const chatlistCollapsed = ref(false);
 // ── 功能面板状态 ──
-const activePanel = ref(null); // 默认收起，点图标再展开
+const activePanel = ref(null); // 默认收起面板（右侧导航列显示图标+文字，点击图标再展开）
 const lastActivePanel = ref('aitalk');
 const panelWidth = ref((() => {
   const v = parseInt(localStorage.getItem('crm-function-panel-width') || localStorage.getItem('panel-width') || '360');
   if (isNaN(v) || v < 280 || v > 600) return 360;
   return v;
 })());
-const iconbarCollapsed = ref(localStorage.getItem('iconbar-collapsed') ? localStorage.getItem('iconbar-collapsed') === '1' : true);
+const iconbarCollapsed = ref(localStorage.getItem('iconbar-collapsed') ? localStorage.getItem('iconbar-collapsed') === '1' : false);
 const aiMiniMode = ref(false);
 const chatViewRef = ref(null);
 // ── AI 话术面板 v2 状态 ──
 const aitalkModel = ref(localStorage.getItem('crm_aitalk_model') || '');
+// 【自动生成开关】默认开启（仅当存值为 '0' 时关闭）；localStorage 持久化，与 crm_aitalk_model 同一 UI 偏好机制
+// 注意：main.js 的构建版本清理机制会在新部署后重置非白名单偏好（本开关与模型选择同），刷新页面不受影响
+const aitalkAutoGen = ref(localStorage.getItem('crm_script_autogen') !== '0');
+watch(aitalkAutoGen, (v) => localStorage.setItem('crm_script_autogen', v ? '1' : '0'));
 const aiModels = ref([]);
 const aitalkLoading = ref(false);
 const aitalkError = ref('');
@@ -2902,11 +3697,11 @@ async function loadAiModels() {
     const list = Array.isArray(data?.models) ? data.models : [];
     aiModels.value = list;
     if (list.length) {
+      // 自动模式：跟随系统默认模型（当前首选 GPT-4o）
+      const def = list.find(m => m.isDefault) || list[0];
       const saved = localStorage.getItem('crm_aitalk_model');
       const exists = list.find(m => m.key === saved);
-      if (!exists) {
-        // 默认：isDefault=true 优先，否则取第一个
-        const def = list.find(m => m.isDefault) || list[0];
+      if (!exists || saved !== def.key) {
         aitalkModel.value = def.key;
         localStorage.setItem('crm_aitalk_model', def.key);
       } else {
@@ -3102,7 +3897,7 @@ function scrollAitalkToMsg(msgId, block = 'start') {
   nextTick(() => {
     const container = aitalkScrollRef.value;
     if (!container) return;
-    const target = container.querySelector();
+    const target = container.querySelector(`[data-mid="${msgId}"]`);
     if (!target) { scrollAitalkToBottom(true); return; }
     const cRect = container.getBoundingClientRect();
     const tRect = target.getBoundingClientRect();
@@ -3202,8 +3997,67 @@ function useForeignReply(r, ev) {
   setTimeout(() => { r._applied = false; }, 1500);
 }
 
+function startEditReply(r) {
+  if (!r) return;
+  r._editForeign = r.foreign;
+  r._editChinese = r.chinese;
+  r._editing = true;
+}
+function saveEditReply(r) {
+  if (!r) return;
+  const f = (typeof r._editForeign === 'string') ? r._editForeign : (r.foreign || '');
+  const c = (typeof r._editChinese === 'string') ? r._editChinese : (r.chinese || '');
+  r.foreign = f.trim();
+  r.chinese = c.trim();
+  r._editing = false;
+  ElMessage.success('已保存修改');
+}
+function cancelEditReply(r) {
+  if (!r) return;
+  r._editing = false;
+  r._editForeign = undefined;
+  r._editChinese = undefined;
+}
+
+const AI_PROGRESS_STAGES = ['正在读取对话消息…', '正在分析客户意图…', '正在生成 3 版话术…', '正在收尾，马上出结果…'];
+// 【终止按钮】当前 aitalk 面板生成请求的 AbortController（_doAnalyze / sendAitalkChat 共用）
+let aitalkAbortCtrl = null;
+function stopAitalkGeneration() {
+  if (aitalkAbortCtrl) {
+    try { aitalkAbortCtrl.abort(); } catch (_) {}
+    aitalkAbortCtrl = null;
+  }
+  aitalkLoading.value = false; // 立即复位 UI；loading 消息由各自 catch 替换为「已终止」提示
+}
+function formatElapsed(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m > 0 ? (m + ' 分 ' + s + ' 秒') : (s + ' 秒');
+}
+function progressStageText(stage) {
+  const i = Math.max(0, Math.min(stage || 0, AI_PROGRESS_STAGES.length - 1));
+  return AI_PROGRESS_STAGES[i];
+}
+function startProgressTimer(lm) {
+  if (lm._timer) return; // 防重复触发叠加多个 interval
+  lm._startTs = lm._startTs || Date.now();
+  lm._elapsed = 0;
+  lm._stage = 0;
+  lm._timer = setInterval(() => {
+    // 【计时器修复】loading 消息是 push 进 ref 数组的原始对象，直接改 lm._elapsed 绕过
+    // Vue 响应式 proxy 的 set（不触发 trigger），秒数只在其他状态变化间接重渲染时跳动、
+    // 随后卡住。改为按 id 定位当前消息并整体替换，保证每秒真实触发一次响应式更新。
+    const idx = aiMessages.value.findIndex(m => m.id === lm.id);
+    if (idx === -1) { clearInterval(lm._timer); lm._timer = null; return; } // 消息被移除时自清，防泄露
+    const cur = aiMessages.value[idx];
+    if (!cur.loading) { clearInterval(lm._timer); lm._timer = null; return; } // 已被 replaceMsg 收敛时自清
+    const elapsed = Math.floor((Date.now() - lm._startTs) / 1000);
+    if (cur._elapsed === elapsed) return;
+    const stage = Math.min(AI_PROGRESS_STAGES.length - 1, Math.floor(elapsed / 4));
+    aiMessages.value[idx] = { ...cur, _elapsed: elapsed, _stage: stage };
+  }, 1000);
+}
 function pushLoadingMsg() {
-  const msg = { id: nextAitalkMsgId(), role: 'assistant', type: 'text', content: '', loading: true, ts: Date.now() };
+  const msg = { id: nextAitalkMsgId(), role: 'assistant', type: 'text', content: '', loading: true, ts: Date.now(), _startTs: Date.now(), _elapsed: 0, _stage: 0, _timer: null };
   aiMessages.value.push(msg);
   scrollAitalkToBottom(true);
   return msg;
@@ -3254,14 +4108,18 @@ async function _doAnalyze({ feedback, onLoadingReplace, loadingMsg } = {}) {
   }
   aitalkLoading.value = true;
   aitalkError.value = '';
+  if (aitalkAbortCtrl) { try { aitalkAbortCtrl.abort(); } catch (_) {} } // 【终止按钮】防并发残留
+  aitalkAbortCtrl = new AbortController();
+  const ac = aitalkAbortCtrl;
   const lm = loadingMsg || pushLoadingMsg();
+  startProgressTimer(lm);
   if (onLoadingReplace) onLoadingReplace(lm);
   const model = aitalkModel.value || null;
   aitalkLastRequest = { type: 'analyze', jid: chatStore.activeJid, model, feedback };
   try {
     const body = { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang() };
     if (feedback) body.feedback = feedback;
-    const { data } = await api.post('/ai/analyze', body);
+    const { data } = await api.post('/ai/analyze', body, { signal: ac.signal, timeout: 180000 }); // 【终止按钮】【超时修复】180s
     if (data?.success && Array.isArray(data.data?.replies) && data.data.replies.length) {
       const payload = {
         replies: data.data.replies,
@@ -3277,9 +4135,15 @@ async function _doAnalyze({ feedback, onLoadingReplace, loadingMsg } = {}) {
       replaceMsg(lm.id, { role: 'assistant', type: 'text', content: data?.error || '未生成回复，请重试', error: true, ts: Date.now() });
     }
   } catch (err) {
-    const msg = err?.response?.data?.error || err?.message || '生成失败，请重试';
-    replaceMsg(lm.id, { role: 'assistant', type: 'text', content: msg, error: true, ts: Date.now() });
+    if (ac.signal.aborted) { // 【终止按钮】
+      replaceMsg(lm.id, { role: 'assistant', type: 'text', content: '⏹ 已终止生成', error: true, ts: Date.now() });
+    } else {
+      const msg = fmtAiGenErr(err, '生成失败，请重试'); // 【超时修复】
+      replaceMsg(lm.id, { role: 'assistant', type: 'text', content: msg, error: true, ts: Date.now() });
+    }
   } finally {
+    if (lm._timer) clearInterval(lm._timer);
+    if (aitalkAbortCtrl === ac) aitalkAbortCtrl = null; // 【终止按钮】
     aitalkLoading.value = false;
     // 滚动已由 replaceMsg 统一处理，这里不再强制滚到底
   }
@@ -3333,12 +4197,16 @@ async function sendAitalkChat() {
   nextTick(() => autoGrowAitalkInput());
   aitalkLoading.value = true;
   aitalkError.value = '';
+  if (aitalkAbortCtrl) { try { aitalkAbortCtrl.abort(); } catch (_) {} } // 【终止按钮】防并发残留
+  aitalkAbortCtrl = new AbortController();
+  const ac = aitalkAbortCtrl;
   const loadingMsg = pushLoadingMsg();
+  startProgressTimer(loadingMsg);
   const history = buildHistoryForApi();
   const model = aitalkModel.value || null;
   aitalkLastRequest = { type: 'chat', jid: chatStore.activeJid, model, text };
   try {
-    const { data } = await api.post('/ai/chat', { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang(), messages: history });
+    const { data } = await api.post('/ai/chat', { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang(), messages: history }, { signal: ac.signal, timeout: 180000 }); // 【终止按钮】【超时修复】180s
     if (data?.success && typeof data.data?.reply === 'string') {
       const reply = data.data.reply;
       const parsed = tryParseRepliesInText(reply);
@@ -3351,26 +4219,56 @@ async function sendAitalkChat() {
       replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: data?.error || 'AI没有返回内容', error: true, ts: Date.now() });
     }
   } catch (err) {
-    const msg = err?.response?.data?.error || err?.message || '请求失败，请重试';
-    replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: msg, error: true, ts: Date.now() });
+    if (ac.signal.aborted) { // 【终止按钮】
+      replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: '⏹ 已终止生成', error: true, ts: Date.now() });
+    } else {
+      const msg = fmtAiGenErr(err, '请求失败，请重试'); // 【超时修复】
+      replaceMsg(loadingMsg.id, { role: 'assistant', type: 'text', content: msg, error: true, ts: Date.now() });
+    }
   } finally {
+    if (loadingMsg._timer) clearInterval(loadingMsg._timer);
+    if (aitalkAbortCtrl === ac) aitalkAbortCtrl = null; // 【终止按钮】
     aitalkLoading.value = false;
     nextTick(() => aitalkInputRef.value?.focus());
   }
 }
 
+function fmtAiGenErr(err, fallback) { // 【超时修复】超时错误文案友好化
+  const m = err?.message || '';
+  if (/timeout of \d+ms exceeded/.test(m)) return '生成超时（已超过180秒），请重试或更换模型';
+  return err?.response?.data?.error || m || fallback;
+}
+
 function tryParseRepliesInText(text) {
   if (!text) return null;
-  // 1) markdown代码块
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  // 【DeepSeek JSON修复】多候选健壮提取：原文 → 各 ```json 围栏块 → 配平括号扫描（字符串/转义感知）
   const candidates = [];
-  if (fence) candidates.push(fence[1].trim());
-  // 2) 所有{...}块（前后可能有多余文字）
-  const f = text.indexOf('{');
-  const l = text.lastIndexOf('}');
-  if (f !== -1 && l !== -1 && l > f) candidates.push(text.slice(f, l + 1));
-  // 3) 逐个尝试
-  for (const cand of candidates) {
+  const t = String(text).trim();
+  if (t) candidates.push(t);
+  const fenceRe = /```(?:json)?\s*([\s\S]*?)\s*```/gi;
+  let fm;
+  while ((fm = fenceRe.exec(text)) !== null) {
+    if (fm[1] && fm[1].trim()) candidates.push(fm[1].trim());
+  }
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === '{') { if (depth === 0) start = i; depth++; }
+    else if (ch === '}') {
+      if (depth > 0) {
+        depth--;
+        if (depth === 0 && start !== -1) { candidates.push(text.slice(start, i + 1)); start = -1; }
+      }
+    }
+  }
+  const tryOne = (cand) => {
     try {
       const obj = JSON.parse(cand);
       if (obj && Array.isArray(obj.replies)) {
@@ -3382,7 +4280,33 @@ function tryParseRepliesInText(text) {
         }));
       }
     } catch (_) {}
-  }
+    return null;
+  };
+  for (const cand of candidates) { const r = tryOne(cand); if (r) return r; }
+  // 【DeepSeek JSON修复】字符串内原始控制字符（字面 \n \t 等）清洗后再试一轮
+  const sanitizeCtrl = (s) => {
+    let out = '', is = false, e2 = false;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (is) {
+        if (e2) { out += ch; e2 = false; continue; }
+        if (ch === '\\') { out += ch; e2 = true; continue; }
+        if (ch === '"') { out += ch; is = false; continue; }
+        const c = ch.charCodeAt(0);
+        if (c === 10) { out += '\\n'; continue; }
+        if (c === 13) { out += '\\r'; continue; }
+        if (c === 9) { out += '\\t'; continue; }
+        if (c < 32) { out += ' '; continue; }
+        out += ch; continue;
+      }
+      if (ch === '"') is = true;
+      out += ch;
+    }
+    return out;
+  };
+  for (const cand of candidates) { const r = tryOne(sanitizeCtrl(cand)); if (r) return r; }
+  // 【DeepSeek JSON修复】提取失败：保留现状兜底（调用方展示原文），仅在疑似JSON时告警
+  if (/"replies"|```|^\s*\{/.test(t)) console.warn('[aitalk] tryParseRepliesInText: JSON extract failed, show raw text');
   return null;
 }
 
@@ -3419,6 +4343,7 @@ watch(() => chatStore.activeJid, () => {
 let copilotLastMsgKey = null;
 let copilotTimer = null;
 function triggerCopilotForMsg() {
+  if (!aitalkAutoGen.value) return; // 【自动生成开关】关闭：不自动弹面板/生成
   if (activePlatform.value !== 'communication') return;
   if (activeChannel.value !== 'whatsapp') return;
   const jid = chatStore.activeJid;
@@ -3436,13 +4361,17 @@ function triggerCopilotForMsg() {
   if (!isMobile.value) {
     const stayPanels = ['customer', 'company', 'documents', 'freight', 'worldclock', 'forex', 'translate', 'requirement'];
     const shouldAutoOpen = activePanel.value === null || activePanel.value === 'aitalk' || activePanel.value === 'ai';
-    if (shouldAutoOpen) {
-      switchPanel('aitalk');
+    if (shouldAutoOpen && activePanel.value !== 'aitalk') {
+      // 直接设置面板为 aitalk（不走 switchPanel：它有 toggle 收起 + 300ms 防抖，会吞掉第二条消息的二次触发）
+      activePanel.value = 'aitalk';
+      aiMiniMode.value = false;
+      aitalkError.value = '';
     }
   }
   // 延迟触发（等消息渲染、翻译完成）
   if (copilotTimer) clearTimeout(copilotTimer);
   copilotTimer = setTimeout(() => {
+    if (!aitalkAutoGen.value) return; // 【自动生成开关】延迟期间被关闭则取消
     if (!isMobile.value && activePanel.value === 'aitalk') {
       aiMessages.value = [];
       aitalkError.value = '';
@@ -3481,6 +4410,7 @@ watch(() => chatStore.activeJid, () => {
 // 手机端：用户打开aitalk面板时，如果有新客户消息未生成，自动生成
 watch(activePanel, (p) => {
   if (isMobile.value && p === 'aitalk') {
+    if (!aitalkAutoGen.value) return; // 【自动生成开关】关闭：手机端也不自动生成
     setTimeout(() => {
       const hasContent = aiMessages.value.some(m => !m.loading && !m.error && (typeof m.content === 'string' ? m.content.trim().length > 0 : (m.content?.replies?.length > 0)));
       if (!hasContent && aitalkLoading.value === false) {
@@ -3513,9 +4443,9 @@ async function loadWaAccounts() {
 const waAccounts = computed(() => {
   return waAccountsRaw.value.map(a => ({
     id: a.id,
-    name: a.name || a.phone || 'WhatsApp',
+    name: a.profileName || a.pushName || a.name || a.phone || a.instanceName || 'WhatsApp',
     phone: a.phone || '',
-    avatar: a.profilePicUrl || null,
+    avatar: a.profilePicUrl || a.avatarUrl || null,
     color: '#' + ((a.id * 2654435761) >>> 0).toString(16).slice(-6).padStart(6, '0'),
     online: a.status === 'connected' || a.connectionStatus === 'open',
     instanceName: a.instanceName,
@@ -3532,8 +4462,11 @@ function accColor(accId) {
   return accColors[(accId - 1) % accColors.length];
 }
 function switchWaAccount(id) {
-  const newId = (currentWaAccountId.value === id) ? null : id;
+  // 修复：点击已选账号时保持选中并强制重新加载，不再 toggle 取消选中置 null（避免列表被隐藏）
+  const newId = id;
   currentWaAccountId.value = newId;
+  // 同步到全局 store，作为 ChatView 登录态/列表栏门控基准
+  chatStore.currentWaAccountId = newId;
   // 切换账号时清空当前会话，避免显示上一个账号的对话
   chatStore.activeJid = null;
   // 清除消息缓存，避免残留旧数据
@@ -3567,6 +4500,11 @@ const mobileChannelBadge = computed(() => {
   return 0;
 });
 function onMhTitleClick() {
+  // TradeAgent/Assistant：无论是否在对话中，都回到欢迎页
+  if (activePlatform.value === 'assistant' || activePlatform.value === 'trade-agent') {
+    goHome();
+    return;
+  }
   if (mobileInConv.value) {
     if (activeChannel.value === 'whatsapp') openMhProfile();
     return;
@@ -3657,39 +4595,85 @@ watch(panelWidth, (v) => localStorage.setItem('crm-function-panel-width', v));
 watch(iconbarCollapsed, (v) => localStorage.setItem('iconbar-collapsed', v ? '1' : '0'));
 
 // ── 翻译设置（原 ChatView 中的配置，已迁到功能面板） ──
-const LANG_OPTIONS = [
-  { label: '中文简体', value: 'zh' },
-  { label: '中文繁体', value: 'zh-TW' },
-  { label: '英语', value: 'en' },
-  { label: '日语', value: 'ja' },
-  { label: '韩语', value: 'ko' },
-  { label: '法语', value: 'fr' },
-  { label: '德语', value: 'de' },
-  { label: '西班牙语', value: 'es' },
-  { label: '葡萄牙语', value: 'pt' },
-  { label: '俄语', value: 'ru' },
-  { label: '阿拉伯语', value: 'ar' },
-  { label: '意大利语', value: 'it' },
-  { label: '荷兰语', value: 'nl' },
-  { label: '泰语', value: 'th' },
-  { label: '越南语', value: 'vi' },
-  { label: '印尼语', value: 'id' },
-  { label: '马来语', value: 'ms' },
-  { label: '印地语', value: 'hi' },
-  { label: '土耳其语', value: 'tr' },
-  { label: '波兰语', value: 'pl' },
-];
-const LANG_OPTIONS_WITH_AUTO = [{ label: '自动检测', value: 'auto' }, ...LANG_OPTIONS];
+// 200+ 语言目录（来自 utils/languages.js，与后端同步）
+const LANG_OPTIONS = _LANG_200;
+const LANG_OPTIONS_WITH_AUTO = _LANG_AUTO_200;
 const SIZE_OPTIONS = ['12px', '13px', '14px', '15px', '16px', '18px', '20px'];
 
 const transSaving = ref(false);
+
+// ===== 聊天记录导入 =====
+const chatImportInput = ref(null);
+const importStatus = ref(null);
+
+async function handleChatImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!chatStore.activeJid) {
+    importStatus.value = { type: 'error', text: '请先选择一个客户会话' };
+    setTimeout(() => { importStatus.value = null; }, 4000);
+    e.target.value = '';
+    return;
+  }
+
+  if (!file.name.endsWith('.txt')) {
+    importStatus.value = { type: 'error', text: '只支持 .txt 文件' };
+    setTimeout(() => { importStatus.value = null; }, 4000);
+    e.target.value = '';
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    importStatus.value = { type: 'error', text: '文件不能超过10MB' };
+    setTimeout(() => { importStatus.value = null; }, 4000);
+    e.target.value = '';
+    return;
+  }
+
+  importStatus.value = { type: 'loading', text: '正在解析导入...' };
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('contactPhone', chatStore.activeJid);
+
+    const res = await api.post('/chat-import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    const data = res.data;
+    if (data.success) {
+      const _total = data.total ?? data.count;
+      if (data.count > 0) {
+        importStatus.value = { type: 'success', text: `导入成功！共解析 ${_total} 条消息，新增 ${data.count} 条` };
+      } else if (data.skipped > 0) {
+        importStatus.value = { type: 'success', text: `消息已存在，${data.skipped} 条重复消息已跳过（共解析 ${_total} 条）` };
+      } else {
+        importStatus.value = { type: 'error', text: data.error || '未解析到有效消息' };
+      }
+      // 刷新当前客户的消息列表
+      if (chatStore.activeJid) {
+        chatStore.fetchMessages(chatStore.activeJid);
+      }
+    } else {
+      importStatus.value = { type: 'error', text: data.error || '导入失败' };
+    }
+  } catch (err) {
+    importStatus.value = { type: 'error', text: '导入失败：' + (err.response?.data?.error || err.message) };
+  }
+
+  e.target.value = '';
+  setTimeout(() => { importStatus.value = null; }, 5000);
+}
+
 const transForm = reactive({
   receiveEnabled: true,
-  receiveEngine: 'google',
+  receiveEngine: 'deepl',
   receiveSourceLang: 'auto',
   receiveTargetLang: 'zh',
   sendEnabled: true,
-  sendEngine: 'google',
+  sendEngine: 'deepl',
   sendSourceLang: 'auto',
   sendTargetLang: 'en',
   groupAutoTranslate: false,
@@ -3703,9 +4687,9 @@ function syncTransFormFromStore() {
   const s = chatStore.translationSettings || {};
   // Resolve canonical field names (backend returns both UI aliases and internal names)
   const recvEnabled = s.receiveEnabled !== undefined ? s.receiveEnabled : (s.translationEnabled !== undefined ? s.translationEnabled : true);
-  const recvEngine = s.receiveEngine || s.translationEngine || 'google';
+  const recvEngine = s.receiveEngine || s.translationEngine || 'deepl';
   const recvTarget = s.receiveTargetLang || s.targetLanguage || 'zh';
-  const sendEng = s.sendEngine || recvEngine || 'google';
+  const sendEng = s.sendEngine || recvEngine || 'deepl';
   const sendTarget = s.sendTargetLang || s.sendTargetLanguage || 'en';
   Object.assign(transForm, {
     receiveEnabled: recvEnabled !== false,
@@ -3722,9 +4706,11 @@ function syncTransFormFromStore() {
     translationColor: s.translationColor || '#8696a0',
     translationSize: s.translationSize || '14px',
   });
+  console.log('[transForm] synced color:', transForm.translationColor, 'size:', transForm.translationSize, 'storeColor:', s.translationColor);
 }
 
 async function saveTransSettings() {
+  console.log('[transForm] saving color:', transForm.translationColor, 'size:', transForm.translationSize);
   transSaving.value = true;
   try {
     const payload = { ...transForm };
@@ -3807,7 +4793,6 @@ const PROFILE_TABS = [
   { key: 'basic',     icon: '📋', label: '基本' },
   { key: 'requirement', icon: '🎯', label: '需求' },
   { key: 'followups', icon: '📝', label: '跟进' },
-  { key: 'bgcheck',   icon: '👤', label: '背调' },
 ];
 const CUSTOMER_FIELD_LABELS = Object.fromEntries(CUSTOMER_FIELDS.map(f => [f.key, f.label]));
 
@@ -3841,6 +4826,7 @@ const customerTab = ref('basic');
 const followUpsList = ref([]);
 const followUpsLoading = ref(false);
 const followUpSaving = ref(false);
+const followUpGenerating = ref(false);
 const newFollowUpContent = ref('');
 
 
@@ -3848,6 +4834,24 @@ const newFollowUpContent = ref('');
 const reqData = ref({ contactName: '', name: '', phone: '', requirementProducts: '', requirementQuantity: '', requirementBudget: '', requirementDelivery: '', requirementSummary: '', requirementSource: '' });
 const reqSections = ref([]);
 const reqEditMode = ref(false);
+
+// 【修复 2026-08-24】需求分析文本清洗：text板块content若是（转义）JSON字符串，提取可读内容，避免裸JSON字符
+function cleanReqTextContent(content) {
+  if (!content) return '';
+  let text = String(content);
+  if (!text.includes('\\"') && !/^[{[]/.test(text.trim())) return text;
+  let unescaped = text.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
+  const lines = [];
+  const pairRe = /"label"\s*:\s*"([^"]*)"\s*,\s*"value"\s*:\s*"([^"]*)"/g;
+  let m; let found = false;
+  while ((m = pairRe.exec(unescaped))) { found = true; lines.push(m[1] + '：' + m[2]); }
+  if (!found) {
+    const titleRe = /"title"\s*:\s*"([^"]*)"/g;
+    while ((m = titleRe.exec(unescaped))) { found = true; lines.push(m[1]); }
+  }
+  if (found) return lines.join('\n');
+  return unescaped.replace(/[{}"[\]]/g, '').replace(/,\s*/g, '\n').replace(/\n{2,}/g, '\n').trim() || text;
+}
 
 // 解析需求总结（JSON结构化优先，纯文本兜底）
 function parseReqSummary(raw) {
@@ -3867,13 +4871,16 @@ function parseReqSummary(raw) {
               return { title: '', desc: it };
             });
           }
+          if (s.type === 'text' && typeof s.content === 'string') {
+            s.content = cleanReqTextContent(s.content);
+          }
         });
         reqSections.value = obj.sections;
         return;
       }
     }
   } catch(e) { console.warn('parse req JSON failed:', e.message); }
-  reqSections.value = [{ icon: '📝', title: '需求总结', type: 'text', content: raw }];
+  reqSections.value = [{ icon: '📝', title: '需求总结', type: 'text', content: cleanReqTextContent(raw) }];
 }
 // 客户画像需求Tab里的需求总结解析（独立于右侧 reqSections，不冲突）
 const profileReqSections = computed(() => {
@@ -3898,6 +4905,9 @@ const profileReqSections = computed(() => {
           if (sec.type === 'table' && Array.isArray(sec.rows)) {
             sec._parsedRows = sec.rows.map(r => ({ label: r.label || '', value: r.value || '' }));
           }
+          if (sec.type === 'text' && typeof sec.content === 'string') {
+            sec.content = cleanReqTextContent(sec.content);
+          }
           return sec;
         });
       }
@@ -3906,6 +4916,12 @@ const profileReqSections = computed(() => {
   return [];
 });
 const profileReqIsJson = computed(() => profileReqSections.value.length > 0);
+// 客户画像需求Tab：纯文本兜底展示（清洗转义JSON字符）
+function displayReqSummaryRaw() {
+  const raw = customerData.value?.requirementSummary;
+  if (!raw) return '未填写';
+  return cleanReqTextContent(raw);
+}
 
 const reqSaving = ref(false);
 const reqAiLoading = ref(false);
@@ -4622,7 +5638,8 @@ async function loadCustomer(jid) {
       if (bgData && bgData.rating) bgRatingMap[jid] = bgData.rating;
     } catch {}
   } catch (e) {
-    console.error('loadCustomer error', e);
+    // L2: by-jid 404（无消息不建档）属正常态 —— 静默清空档案面板，不弹错误提示
+    if (e?.response?.status !== 404) console.error('loadCustomer error', e);
     customerData.value = { ...emptyCustomer(), jid, phone: jid.split('@')[0] };
     bgCheckReport.value = ''; bgMissingInfo.value = []; bgAskReply.value = ''; bgAskInserted.value = false;
     followUpsList.value = [];
@@ -4694,12 +5711,15 @@ function formatFuTime(t) {
   if (sameDay) return pad(d.getHours()) + ':' + pad(d.getMinutes());
   return (d.getMonth()+1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
-async function loadFollowUps() {
+async function loadFollowUps({ autoGenerate = false } = {}) {
   if (!customerData.value?.id) { followUpsList.value = []; return; }
   followUpsLoading.value = true;
   try {
     const { data } = await api.get('/customers/' + customerData.value.id + '/follow-ups');
     followUpsList.value = Array.isArray(data) ? data : [];
+    if (autoGenerate && !followUpsList.value.some(f => f.source === 'ai_summary')) {
+      await generateFollowUpsAuto();
+    }
   } catch (e) {
     console.warn('loadFollowUps err', e);
     followUpsList.value = [];
@@ -4707,6 +5727,23 @@ async function loadFollowUps() {
     followUpsLoading.value = false;
   }
 }
+async function generateFollowUpsAuto() {
+  if (!customerData.value?.id || followUpGenerating.value) return;
+  followUpGenerating.value = true;
+  try {
+    await api.post('/customers/' + customerData.value.id + '/generate-followups');
+    const { data } = await api.get('/customers/' + customerData.value.id + '/follow-ups');
+    followUpsList.value = Array.isArray(data) ? data : [];
+  } catch (e) {
+    // 无聊天记录 / 无 JID 时后端返回 400，静默跳过不弹错
+    console.warn('generateFollowUpsAuto skip', e.response ? e.response.status : e.message);
+  } finally {
+    followUpGenerating.value = false;
+  }
+}
+watch(customerTab, (v) => {
+  if (v === 'followups') loadFollowUps({ autoGenerate: true });
+});
 async function addFollowUp() {
   const content = newFollowUpContent.value.trim();
   if (!content || !customerData.value?.id) return;
@@ -4792,13 +5829,13 @@ function useAskReply(text) {
 
 // 切到 customer 面板或切换会话时加载数据
 watch([() => activePanel.value, () => chatStore.activeJid], ([panel, jid]) => {
-  if (panel === 'customer' && jid) {
+  if ((panel === 'customer' || panel === 'bgcheck') && jid) {
     customerAskReplies.value = [];
     customerExtractResult.value = null;
     customerEditMode.value = false;
     bgCheckReport.value = ''; bgMissingInfo.value = []; bgAskReply.value = ''; bgAskInserted.value = false; bgCheckLoading.value = false;
     loadCustomer(jid);
-  } else if (panel !== 'customer') {
+  } else if (panel !== 'customer' && panel !== 'bgcheck') {
     // 离开面板时清理
     customerEditMode.value = false;
   }
@@ -4863,7 +5900,7 @@ const speechLibSearched = ref(false);
 async function loadSpeechSamples() {
   speechLibLoading.value = true;
   try {
-    const { data } = await api.get('/speech-library', { params: { pageSize: 50 } });
+    const { data } = await api.get('/speech-library', { params: { pageSize: 50, accountId: chatStore.activeConversation?.accountId || 1 } });
     speechLibSamples.value = data.samples || [];
     speechLibTotal.value = data.pagination?.total || 0;
   } catch(e) {
@@ -4874,12 +5911,24 @@ async function loadSpeechSamples() {
 }
 
 async function smartMatchSpeech() {
-  const jid = chatStore.activeJid;
-  if (!jid) return;
+  const payload = {};
+  if (activeChannel.value === 'telegram') {
+    if (!tgActiveJid.value) return;
+    payload.platform = 'telegram';
+    payload.jid = tgActiveJid.value;
+  } else if (activeChannel.value === 'email') {
+    payload.platform = 'email';
+    // email 上下文由后端兜底最近 inbound 邮件
+  } else {
+    if (!chatStore.activeJid) return;
+    payload.platform = 'whatsapp';
+    payload.jid = chatStore.activeJid;
+    payload.accountId = chatStore.activeConversation?.accountId || 1;
+  }
   speechLibLoading.value = true;
   speechLibSearched.value = true;
   try {
-    const { data } = await api.post('/speech-library/match', { jid });
+    const { data } = await api.post('/speech-library/match', payload);
     speechLibMatched.value = data.samples || [];
   } catch(e) {
     console.error('智能匹配失败', e);
@@ -4887,6 +5936,12 @@ async function smartMatchSpeech() {
   } finally {
     speechLibLoading.value = false;
   }
+}
+
+function currentChannelHasContext() {
+  if (activeChannel.value === 'telegram') return !!tgActiveJid.value;
+  if (activeChannel.value === 'email') return true; // email 后端兜底最近邮件
+  return !!chatStore.activeJid;
 }
 
 function copySpeechReply(text) {
@@ -5136,13 +6191,33 @@ onMounted(async () => {
   checkMobile();
   try { initSocket(); } catch(e) { console.warn('initSocket failed', e); }
   
+  const loadCompanyCategories = fetchCompanyCategories().catch(e => console.warn('company categories load failed:', e));
+  
   // 并行加载非关键数据，提升首屏速度
   const loadTranslationSettings = chatStore.fetchTranslationSettings().then(() => {
     syncTransFormFromStore();
   }).catch(e => console.warn('translation settings load failed:', e));
   
+  const loadAccounts = (async () => {
+    try {
+      await loadTgAccounts();
+      await loadWaAccounts();
+      // 自动选中第一个已连接的 WA 账号：进入 /chat 直接展示客户列表栏，无需手动点击账号
+      const connectedAcc = waAccounts.value.find(a => a.online);
+      if (connectedAcc) {
+        switchWaAccount(connectedAcc.id);
+      } else {
+        chatStore.currentWaAccountId = null;
+      }
+    } catch(e) { console.warn('loadAccounts failed', e); }
+  })();
+
+  // 修复刷新后竞态：先等账号加载并自动选中，再拉连接状态（以选中账号为准设置 isConnected），最后加载会话列表。
+  // 原逻辑 loadConnectionAndData 与 loadAccounts 并行，fetchConnectionStatus 可能在账号未选中时回退到首个账号，
+  // 导致 isConnected=false、列表被 wa-hidden 隐藏，需点击两次账号才显示。
   const loadConnectionAndData = (async () => {
     try {
+      await loadAccounts;
       await chatStore.fetchConnectionStatus();
       if (chatStore.isConnected) {
         // 会话列表和待跟进并行
@@ -5153,18 +6228,6 @@ onMounted(async () => {
       }
     } catch(e) { console.warn('fetchStatus failed', e); }
   })();
-  
-  const loadAccounts = (async () => {
-    try {
-      await loadTgAccounts();
-      await loadWaAccounts();
-      if (currentWaAccountId.value === null && waAccounts.value.length > 0) { 
-        const fo = waAccounts.value.find(a => a.online); 
-        if (fo) switchWaAccount(fo.id); 
-      }
-    } catch(e) { console.warn('loadAccounts failed', e); }
-  })();
-  
   // Support jumping to a specific WA conversation from other pages (Customer detail)
   tryOpenPendingJid();
   // 启动首响/待跟进轮询
@@ -5181,6 +6244,9 @@ onMounted(async () => {
 
   // Background check done event
   window.addEventListener('customer:bgcheck:done', onBgCheckDone);
+  window.addEventListener('wa:add-account', onAddAccount);
+  // 指派任务加载 + 指派跳转自动选中（客户-Agent 双向指派 V1.0）
+  loadAgentTasks().then(() => handleAssignQuery());
 
   // TG兜底轮询（仅在TG tab激活时，10秒刷新会话列表；消息靠socket实时推送）
   tgPollTimer = setInterval(() => {
@@ -5237,6 +6303,12 @@ async function openJid(targetJid, source) {
   activeChannel.value = 'whatsapp';
   chatStore.activePlatform = 'whatsapp';
 
+  // 从其他页面跳转打开具体会话：自动选中首个在线账号，恢复会话视图
+  if (currentWaAccountId.value === null) {
+    const fo = waAccounts.value.find(a => a.online);
+    if (fo) switchWaAccount(fo.id);
+  }
+
   if (route.path !== '/chat') {
     router.push({ path: '/chat', query: { jid: targetJid } });
   }
@@ -5273,6 +6345,10 @@ watch(() => route.query?.jid, (jid, oldJid) => {
 onUnmounted(() => {
   document.removeEventListener('click', handleDocClick);
   window.removeEventListener('resize', checkMobile);
+  try {
+    if (layoutStepSocketHandler) useSocket()?.off('assistant:step', layoutStepSocketHandler);
+    if (layoutAutoStepSocketHandler) useSocket()?.off('whatsapp:auto-step', layoutAutoStepSocketHandler);
+  } catch (e) {}
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   if (followupPollTimer) clearInterval(followupPollTimer);
   stopTitleFlash();
@@ -5282,12 +6358,593 @@ onUnmounted(() => {
     window.removeEventListener('tg:translation', onTgTranslationUpdate);
   window.removeEventListener('tg:conv-update', onTgSocketConvUpdate);
   window.removeEventListener('customer:bgcheck:done', onBgCheckDone);
+  window.removeEventListener('wa:add-account', onAddAccount);
   if (tgPollTimer) clearInterval(tgPollTimer);
 });
 
 // ========== 平台导航 ==========
 const activePlatform = ref('assistant');
+// 外贸Agent子模块
+const tradeAgents = [
+  { key: 'sales-champion', label: '外贸销冠', icon: '🏆', desc: 'AI话术、客户分层、报价优化' },
+  { key: 'background-report', label: '客户背调', icon: '🔍', desc: '公司背调、风险评估、竞品分析' },
+  { key: 'customs-agent', label: '外贸单证', icon: '📋', desc: '报关单证、HS编码、信用证审核' },
+  { key: 'doc-agent', label: '工厂对接', icon: '🏭', desc: '工厂评估、排产跟进、验货标准' },
+  { key: 'freight-agent', label: '货代对接', icon: '🚢', desc: '海运方案、空运方案、报关报检' },
+  { key: 'legal-agent', label: '外贸法务', icon: '⚖️', desc: '合同审查、纠纷处理、合规检查' },
+];
+const currentTradeAgent = ref('sales-champion');
+
+// Agent聊天界面状态
+const agentInput = ref('');
+const pendingFiles = ref([]); // [{ name, type, content, size, mimeType }]
+const canSend = computed(() => agentInput.value.trim().length > 0 || pendingFiles.value.length > 0);
+// 从 localStorage 加载聊天记录
+const loadAgentChatHistory = () => {
+  try {
+    const saved = localStorage.getItem('crm_agent_chat_history');
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    return {};
+  }
+};
+const agentChatHistory = ref(loadAgentChatHistory()); // { 'sales-champion': [{role, content}], ... } 按agentKey隔离
+
+// 保存聊天记录到 localStorage
+const saveAgentChatHistory = () => {
+  try {
+    localStorage.setItem('crm_agent_chat_history', JSON.stringify(agentChatHistory.value));
+  } catch (e) {
+    console.warn('Failed to save chat history:', e);
+  }
+};
+const selectedModel = ref('Auto');
+const showModelSelector = ref(false);
+const showAttachMenu = ref(false);
+const filePanelOpen = ref(false);
+const taskPanelOpen = ref(false);
+const filePanelTab = ref('files');
+const wecomPanelOpen = ref(false);
+const wecomConfig = ref(null);
+const wecomConfigured = ref(false);
+const wecomForm = ref({ corpId: '', corpSecret: '', agentId: '' });
+const testing = ref(false);
+const testResult = ref(null);
+const syncing = ref(false);
+// modelTab removed: 语言/多模态分类对外贸销售太技术化，模型平铺即可
+const sidebarExpanded = ref(true);
+const chatMessagesEl = ref(null);
+const agentTextarea = ref(null);
+const fileInput = ref(null);
+const showAddModel = ref(false);
+
+// ===== V1.0 客户-Agent 双向指派：客户选择 + 会话隔离 =====
+const customerPickerOpen = ref(false);
+const customerList = ref([]);
+const customerSearch = ref('');
+const selectedCustomer = ref(null);   // { id, name, company, country, phone, customerLevel, ... }
+const agentSessions = ref([]);
+const activeSessionId = ref(null);    // 客户会话 = {agentType}:cust:{id}；通用对话 = null
+const activeMessages = ref([]);       // 服务端当前会话消息（V1.0 权威数据）
+const providerList = ref([]);
+// V1.0 指派任务列表（仅当前 Agent 未完成）
+const agentTasks = ref([]);
+
+// V1.1 当前选中客户对应的指派任务（用于聊天区顶部横幅展示）
+const currentAssignTask = computed(() => {
+  if (!selectedCustomer.value) return null;
+  return agentTasks.value.find(t => t.customerId === selectedCustomer.value.id && ['CREATED', 'ACTIVE'].includes(t.status)) || null;
+});
+
+const filteredCustomers = computed(() => {
+  const kw = (customerSearch.value || '').trim().toLowerCase();
+  if (!kw) return customerList.value;
+  return customerList.value.filter(c =>
+    [c.name, c.company, c.phone, c.email, c.country, c.companyName, c.contactName]
+      .some(v => v && String(v).toLowerCase().includes(kw))
+  );
+});
+
+// 客户列表（服务端搜索 + 本地过滤双保险）
+async function loadCustomers() {
+  try {
+    const token = localStorage.getItem('token');
+    const params = { page: '1', pageSize: '100' };
+    if (customerSearch.value && customerSearch.value.trim()) params.search = customerSearch.value.trim();
+    const qs = new URLSearchParams(params).toString();
+    const resp = await fetch('/api/customers?' + qs, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (resp.ok) {
+      const data = await resp.json();
+      customerList.value = data.items || [];
+    }
+  } catch (e) { console.warn('loadCustomers failed:', e.message); }
+}
+function onCustomerSearch() { loadCustomers(); }
+
+// 指派任务加载（当前 Agent 未完成任务）
+async function loadAgentTasks() {
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch(`/api/agent/tasks?agentType=${encodeURIComponent(currentTradeAgent.value)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (resp.ok) {
+      const data = await resp.json();
+      agentTasks.value = (data.tasks || []).filter(t => ['CREATED', 'ACTIVE'].includes(t.status));
+    }
+  } catch (e) { console.warn('loadAgentTasks failed:', e.message); }
+}
+// 点击指派任务 → 选中该客户会话
+function selectTaskCustomer(task) {
+  const c = task.customer || { id: task.customerId, name: '客户#' + task.customerId };
+  selectCustomer(c);
+  customerPickerOpen.value = false;
+}
+
+// V1.1 终止指派任务：确认后置 COMPLETED 并刷新列表
+async function terminateTask(task) {
+  try {
+    await ElMessageBox.confirm('确定终止该客户的指派任务吗？终止后任务将标记完成，不再显示。', '终止任务', {
+      confirmButtonText: '终止',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+  } catch (e) { return; }
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch(`/api/agent/tasks/${task.id}/complete`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    ElMessage.success('任务已终止');
+    await loadAgentTasks();
+    if (selectedCustomer.value && selectedCustomer.value.id === task.customerId) {
+      // 任务终止后若当前选中客户无其他任务，解除客户绑定回到通用对话
+      const still = agentTasks.value.find(t => t.customerId === task.customerId && ['CREATED', 'ACTIVE'].includes(t.status));
+      if (!still) { selectGeneralChat(); taskPanelOpen.value = false; }
+    }
+  } catch (e) {
+    console.warn('terminateTask failed:', e.message);
+    ElMessage.error('终止失败，请重试');
+  }
+}
+
+// 模型→provider 映射（assistant/chat 用 providerId）
+async function loadProviders() {
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch('/api/assistant/providers', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (resp.ok) providerList.value = await resp.json();
+  } catch (e) {}
+}
+function matchProviderId(modelName) {
+  if (!modelName || modelName === 'Auto') return '';
+  const key = String(modelName).toLowerCase().replace(/[\s-]/g, '');
+  const p = providerList.value.find(x => (x.model || '').toLowerCase().replace(/[\s-]/g, '').includes(key))
+         || providerList.value.find(x => (x.name || '').toLowerCase().replace(/[\s-]/g, '').includes(key));
+  return p ? p.id : '';
+}
+
+// 当前 Agent 的会话列表（通用+客户）
+async function loadAgentSessions() {
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch(`/api/assistant/sessions?agentType=${encodeURIComponent(currentTradeAgent.value)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (resp.ok) {
+      const data = await resp.json();
+      agentSessions.value = data.sessions || [];
+    }
+  } catch (e) { console.warn('loadAgentSessions failed:', e.message); }
+}
+
+// 当前会话消息（服务端权威）
+async function loadAgentMessages() {
+  try {
+    const token = localStorage.getItem('token');
+    const params = new URLSearchParams({ agentType: currentTradeAgent.value, limit: '200' });
+    if (activeSessionId.value) params.set('sessionId', activeSessionId.value);
+    else params.set('scope', 'general');
+    const resp = await fetch('/api/assistant/conversations?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
+    if (resp.ok) {
+      activeMessages.value = await resp.json() || [];
+    } else {
+      activeMessages.value = [];
+    }
+  } catch (e) {
+    console.warn('loadAgentMessages failed:', e.message);
+    activeMessages.value = [];
+  }
+  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; });
+}
+
+// 选中客户 → 绑定客户会话
+function handleAssignQuery() {
+  const q = route.query;
+  if (q.assign === '1' && q.cid) {
+    const cid = parseInt(q.cid, 10);
+    const task = agentTasks.value.find(t => t.customerId === cid);
+    if (task) { selectTaskCustomer(task); taskPanelOpen.value = true; return; }
+    const c = customerList.value.find(x => x.id === cid);
+    if (c) { selectCustomer(c); return; }
+    customerPickerOpen.value = true;
+    router.replace({ query: {} });
+  }
+}
+function selectCustomer(c) {
+  selectedCustomer.value = c;
+  customerPickerOpen.value = false;
+  activeSessionId.value = `${currentTradeAgent.value}:cust:${c.id}`;
+  loadAgentMessages();
+}
+// 通用对话（解除客户绑定）
+function selectGeneralChat() {
+  selectedCustomer.value = null;
+  customerPickerOpen.value = false;
+  activeSessionId.value = null;
+  loadAgentMessages();
+}
+function clearCustomer() { selectGeneralChat(); }
+
+// 打开客户选择面板时：加载客户列表 + 模型列表
+// 模型选择器打开时：同步智能选择状态
+watch(showModelSelector, (v) => { if (v) loadProviders(); });
+watch(customerPickerOpen, (v) => { if (v) { loadCustomers(); loadProviders(); } });
+
+const selectedAutoMode = ref(true);
+// 模型业务说明：告诉销售每个模型擅长干什么活（数据以后端 /assistant/providers 为准）
+const MODEL_META = [
+  { match: 'gpt-5.6-terra', icon: '🧠', tag: '最专业', tagType: 'new-tag', desc: '查客户背景、公司背调、写专业报告，能力最强' },
+  { match: 'deepseek-v4-pro', icon: '🔷', tag: '', tagType: '', desc: '分析难搞的客户、琢磨谈判策略，复杂问题拿手' },
+  { match: 'deepseek-v4-flash', icon: '⚡', tag: '省积分', tagType: 'special-tag', desc: '日常聊客户、回询盘，回复快又省积分' },
+  { match: 'doubao-seed-evolving', icon: '🫘', tag: 'NEW', tagType: 'new-tag', desc: '豆包最新版，看图读截图、写文案都行' },
+  { match: 'doubao-seed-2-1-turbo', icon: '🚀', tag: '', tagType: '', desc: '简单翻译、快速问答，秒回不用等' },
+  { match: 'doubao-seed-2-0-pro', icon: '🖼️', tag: '', tagType: '', desc: '看懂产品图、聊天截图，图文任务拿手' },
+  { match: 'sensenova', icon: '🔆', tag: '', tagType: '', desc: '轻量快速，简单小任务够用' },
+];
+function modelMetaOf(p) {
+  const key = String(p.model || p.name || '').toLowerCase().replace(/[\s-]/g, '');
+  const hit = MODEL_META.find(m => key.includes(m.match.toLowerCase().replace(/[\s-]/g, '')));
+  return hit || { icon: '🤖', tag: '', tagType: '', desc: '智能助手，帮你处理各类工作' };
+}
+
+// 恢复智能选择状态
+const savedAutoMode = localStorage.getItem('crm_auto_model');
+if (savedAutoMode === '0') {
+  selectedAutoMode.value = false;
+  const savedModel = localStorage.getItem('crm_aitalk_model');
+  if (savedModel && savedModel !== 'Auto') selectedModel.value = savedModel;
+}
+// 计算当前Agent对象
+const currentAgentObj = computed(() => {
+  return tradeAgents.find(a => a.key === currentTradeAgent.value);
+});
+
+// 计算当前Agent的消息（按agentKey隔离读取）
+const agentMessages = computed(() => {
+  if (activeMessages.value && activeMessages.value.length) return activeMessages.value;
+  return agentChatHistory.value[currentTradeAgent.value] || [];
+});
+
+// 计算当前快捷提示
+const quickPromptsMap = {
+  'sales-champion': ['帮我分析这个客户', '优化我的报价话术', '客户分层建议'],
+  'background-report': ['帮我查一下这家公司', '风险评估报告', '竞品分析'],
+  'customs-agent': ['HS编码查询', '报关单证模板', '信用证审核'],
+  'doc-agent': ['工厂评估报告', '排产计划跟进', '验货标准制定'],
+  'freight-agent': ['海运方案对比', '空运报价查询', '报关报检流程'],
+  'legal-agent': ['合同条款审查', '纠纷处理建议', '合规检查'],
+};
+const currentQuickPrompts = computed(() => quickPromptsMap[currentTradeAgent.value] || []);
+// 执行过程可视化：胶囊快捷指令 + 步骤流
+const agentSending = ref(false);
+const agentSteps = ref([]);
+let layoutStepSocketHandler = null;
+let layoutAutoStepSocketHandler = null;
+const quickCapsules = computed(() => {
+  if (currentTradeAgent.value === 'sales-champion') {
+    return ['🤖 开启自动接待', '⏸️ 关闭自动接待', '⏱️ 3分钟没回就自动接待', '🌙 设定接待时段', '📋 查客户资料', '✉️ 写跟进邮件', '📊 查销售漏斗'];
+  }
+  return (quickPromptsMap[currentTradeAgent.value] || []).slice(0, 6);
+});
+
+// 模型过滤
+const filteredModels = computed(() => {
+  return (providerList.value || [])
+    .filter(p => p.active !== false)
+    .map(p => {
+      const meta = modelMetaOf(p);
+      return { name: p.name || p.model, model: p.model, icon: meta.icon, tag: meta.tag, tagType: meta.tagType, desc: meta.desc };
+    });
+});
+
+function toggleAutoMode() {
+  selectedAutoMode.value = !selectedAutoMode.value;
+  if (selectedAutoMode.value) {
+    selectedModel.value = 'Auto';
+  }
+  localStorage.setItem('crm_auto_model', selectedAutoMode.value ? '1' : '0');
+}
+function selectModel(name) {
+  selectedAutoMode.value = false;
+  selectedModel.value = name;
+  showModelSelector.value = false;
+  localStorage.setItem('crm_auto_model', '0');
+}
+
+function isImageOnlyMsg(msg) {
+  if (!msg || !msg.attachments || !msg.attachments.length) return false;
+  const hasNonImage = msg.attachments.some(a => a.type !== 'image');
+  if (hasNonImage) return false;
+  const textWithoutImageTags = (msg.content || '').replace(/\[图片:.*?\]/g, '').trim();
+  return textWithoutImageTags.length === 0;
+}
+function renderMsgContent(msg) {
+  if (!msg.content) return '';
+  let html = escapeHtml(msg.content);
+  // Render [图片: xxx] as <img> if msg has attachments with dataURLs
+  if (msg.attachments && msg.attachments.length) {
+    for (const att of msg.attachments) {
+      if (att.type === 'image' && att.dataUrl) {
+        const tag = `[图片: ${escapeHtml(att.name)}]`;
+        const imgTag = `<img src="${att.dataUrl}" class="ta-msg-img" style="max-width:200px;border-radius:8px;cursor:pointer" onclick="window.open(this.src)"/>`;
+        html = html.replace(tag, imgTag);
+      }
+    }
+  }
+  return html;
+}
+async function sendAgentMessage() {
+  const text = agentInput.value.trim();
+  const files = pendingFiles.value.slice();
+  if (!text && !files.length) return;
+  agentSteps.value = [];
+  agentSending.value = true;
+  // 确保当前Agent的历史数组存在
+  if (!agentChatHistory.value[currentTradeAgent.value]) {
+    agentChatHistory.value[currentTradeAgent.value] = [];
+  }
+  // 追加用户消息到对应Agent的历史
+  // Build message with optional attachments
+  let fullMessage = text;
+  const attachParts = [];
+  for (const file of files) {
+    if (file.type === 'image') {
+      attachParts.push(`[图片: ${file.name}]`);
+    } else {
+      const textContent = typeof file.content === 'string' ? file.content.substring(0, 3000) : '';
+      if (textContent) {
+        attachParts.push(`📎 [文件: ${file.name}]\n\`\`\`\n${textContent}\n\`\`\``);
+      } else {
+        attachParts.push(`📎 [文件: ${file.name} (${(file.size/1024).toFixed(1)}KB)]`);
+      }
+    }
+  }
+  if (attachParts.length) {
+    fullMessage = text ? `${text}\n\n` + attachParts.join('\n\n') : attachParts.join('\n\n');
+  }
+  // 构建附件数据（图片 dataURL 用于前端渲染）
+  const msgAttachments = [];
+  for (const file of files) {
+    if (file.type === 'image' && file.content) {
+      msgAttachments.push({ type: 'image', name: file.name, dataUrl: file.content });
+    }
+  }
+  pendingFiles.value = [];
+  const userMsg = { role: 'user', content: fullMessage };
+  if (msgAttachments.length) userMsg.attachments = msgAttachments;
+  activeMessages.value.push(userMsg);
+  agentChatHistory.value[currentTradeAgent.value].push(userMsg);
+  agentInput.value = '';
+  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; });
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      agentChatHistory.value[currentTradeAgent.value].push({ role: 'ai', content: '⚠️ 登录已过期，请重新登录后再试。' });
+      saveAgentChatHistory();
+      agentSending.value = false;
+      return;
+    }
+    // V1.0：接入 assistant 体系（customerId/全景注入/会话隔离）
+    const pid = matchProviderId(selectedModel.value);
+    let resp;
+    if (files.length > 0) {
+      // 有附件：用 FormData 真实上传文件，后端 vision 链路才能拿到图片
+      const fd = new FormData();
+      fd.append('message', text || '');
+      fd.append('agentType', currentTradeAgent.value);
+      if (activeSessionId.value) fd.append('sessionId', activeSessionId.value);
+      if (selectedCustomer.value) fd.append('customerId', String(selectedCustomer.value.id));
+      if (pid) fd.append('providerId', pid);
+      for (const f of files) { if (f.raw) fd.append('files', f.raw); }
+      resp = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
+      });
+    } else {
+      const payload = {
+        message: fullMessage,
+        agentType: currentTradeAgent.value,
+        sessionId: activeSessionId.value,
+        customerId: selectedCustomer.value ? selectedCustomer.value.id : null
+      };
+      if (pid) payload.providerId = pid;
+      resp = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(payload)
+      });
+    }
+    const pushAi = (content) => {
+      const m = { role: 'ai', content };
+      activeMessages.value.push(m);
+      agentChatHistory.value[currentTradeAgent.value].push(m);
+      saveAgentChatHistory();
+    };
+    if (resp.status === 401) {
+      pushAi('⚠️ 登录已过期，请重新登录后再试。');
+      agentSending.value = false;
+      return;
+    }
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error('[Agent API Error]', resp.status, errText);
+      pushAi(`服务暂时不可用(${resp.status})，请稍后再试。`);
+      agentSending.value = false;
+      return;
+    }
+    const data = await resp.json();
+    if (data.reply) {
+      pushAi(data.reply);
+    } else if (data.error) {
+      pushAi('❌ ' + data.error);
+    } else {
+      pushAi('抱歉，暂时无法回复，请稍后再试。');
+    }
+  } catch (e) {
+    console.error('[Agent Fetch Error]', e);
+    agentChatHistory.value[currentTradeAgent.value].push({ role: 'ai', content: '网络连接失败，请检查网络后重试。' });
+    saveAgentChatHistory();
+  }
+  agentSending.value = false;
+  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; });
+}
+
+function triggerFileUpload() { showAttachMenu.value = false; fileInput.value?.click(); }
+function triggerImageUpload() { showAttachMenu.value = false; fileInput.value?.click(); }
+function handleFileUpload(e) {
+  showAttachMenu.value = false;
+  const fileList = Array.from(e.target.files || []);
+  if (!fileList.length) return;
+  for (const file of fileList) {
+    const isImage = file.type.startsWith('image/');
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target.result;
+      // 纯 base64（不含 data:xxx;base64, 前缀）——后端 vision 链路需要
+      let pureBase64 = null;
+      if (isImage && typeof result === 'string' && result.startsWith('data:')) {
+        const comma = result.indexOf(',');
+        pureBase64 = comma >= 0 ? result.substring(comma + 1) : result;
+      }
+      pendingFiles.value.push({
+        name: file.name,
+        type: isImage ? 'image' : 'file',
+        mimeType: file.type,
+        size: file.size,
+        content: result,
+        pureBase64: pureBase64,
+        raw: file
+      });
+    };
+    if (isImage) {
+      reader.readAsDataURL(file);
+    } else {
+      reader.readAsText(file);
+    }
+  }
+  e.target.value = '';
+}
+
+function removePendingFile(idx) {
+  if (typeof idx === 'number') {
+    pendingFiles.value.splice(idx, 1);
+  } else {
+    pendingFiles.value = [];
+  }
+}
+
+
+async function loadWecomConfig() {
+  try {
+    const resp = await api.get('/wecom/config');
+    const config = resp?.data ?? resp;
+    wecomConfig.value = config;
+    wecomConfigured.value = !!(config && config.configured);
+    if (config && config.configured) {
+      wecomForm.value = { corpId: config.corpId || '', corpSecret: '', agentId: config.agentId || '' };
+    }
+    // 新租户引导：进入工厂/货代且未配置企微时，自动弹出设置面板
+    if (!wecomConfigured.value && ['doc-agent','freight-agent'].includes(currentTradeAgent.value)) {
+      wecomPanelOpen.value = true;
+    }
+  } catch(e) { console.warn('loadWecomConfig failed', e); }
+}
+async function saveWecomConfig() {
+  try {
+    await api.put('/wecom/config', wecomForm.value);
+    ElMessage.success('企微配置已保存');
+    await loadWecomConfig();
+  } catch(e) { ElMessage.error('保存失败: ' + (e.message || e)); }
+}
+async function testWecomConnection() {
+  testing.value = true; testResult.value = null;
+  try {
+    const resp = await api.get('/wecom/test');
+    const result = resp?.data ?? resp;
+    testResult.value = result || { success: false, message: '无响应' };
+  } catch(e) { testResult.value = { success: false, message: e.message }; }
+  testing.value = false;
+}
+async function syncWecomContacts() {
+  syncing.value = true;
+  try {
+    const resp = await api.post('/wecom/sync-contacts');
+    const result = resp?.data ?? resp;
+    if (result && result.success) { ElMessage.success(result.message || '同步成功'); }
+    else { ElMessage.error('同步失败: ' + (result?.error || '')); }
+    await loadWecomConfig();
+  } catch(e) { ElMessage.error('同步失败: ' + e.message); }
+  syncing.value = false;
+}
+function toggleTaskPanel() {
+  taskPanelOpen.value = !taskPanelOpen.value;
+  if (taskPanelOpen.value) { filePanelOpen.value = false; wecomPanelOpen.value = false; }
+}
+function toggleFilePanel() {
+  filePanelOpen.value = !filePanelOpen.value;
+  if (filePanelOpen.value) wecomPanelOpen.value = false;
+}
+function toggleWecomPanel() {
+  wecomPanelOpen.value = !wecomPanelOpen.value;
+  if (wecomPanelOpen.value) filePanelOpen.value = false;
+}
+
+function selectTradeAgent(agentKey) {
+  currentTradeAgent.value = agentKey;
+  activePlatform.value = 'trade-agent';
+  loadAgentTasks();
+  if (['doc-agent','freight-agent'].includes(agentKey)) {
+    // 工厂/货代通过企业微信接管沟通，不带客户上下文
+    if (selectedCustomer.value) {
+      selectedCustomer.value = null;
+      customerPickerOpen.value = false;
+    }
+    loadWecomConfig();
+  } else {
+    // 非工厂/货代 Agent：关闭企业微信设置面板
+    wecomPanelOpen.value = false;
+  }
+  // V1.0：切换 Agent 时按客户绑定重载会话
+  if (selectedCustomer.value) {
+    activeSessionId.value = `${agentKey}:cust:${selectedCustomer.value.id}`;
+  } else {
+    activeSessionId.value = null;
+  }
+  loadAgentSessions();
+  loadAgentMessages();
+}
+
 const showSettings = ref(false);
+function goSettings() { router.push('/settings'); }
+const creditsBalance = ref('--');
+async function loadCreditsBalance() {
+  try {
+    const { data } = await api.get('/payments/balance');
+    creditsBalance.value = data.balance ?? 0;
+  } catch (e) { creditsBalance.value = '--'; }
+}
+function goCredits() { showSettings.value = false; router.push('/credits'); }
+function goCreditsTransactions() { showSettings.value = false; router.push('/credits/transactions'); }
 const activeSettingsTab = ref('account');
 
 // Unattended settings
@@ -5326,15 +6983,25 @@ async function saveUnattended() {
 
 // 当设置弹窗打开时，加载无人值守配置
 watch(showSettings, (v) => {
-  if (v) loadUnattended();
+  if (v) { loadUnattended(); loadCreditsBalance(); }
 });
 
-const platformItems = [  { key: 'assistant', label: '外贸Agent', icon: '🤖' },
+const platformItems = [  { key: 'trade-agent', label: '外贸Agent', icon: '🤖', children: [
+    { key: 'sales-champion', label: '外贸销冠', icon: '🏆' },
+    { key: 'background-report', label: '客户背调', icon: '🔍' },
+    { key: 'customs-agent', label: '外贸单证', icon: '📋' },
+    { key: 'doc-agent', label: '工厂对接', icon: '🏭' },
+    { key: 'freight-agent', label: '货代对接', icon: '🚢' },
+    { key: 'legal-agent', label: '外贸法务', icon: '⚖️' },
+  ] },
+  { key: 'work-group', label: '工作群组', icon: '👥' },
   { key: 'communication', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
   { key: 'customers', label: '客户管理', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
   { key: 'pipeline', label: '销售看板', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-4h2v12H7V9zm4-4h2v16h-2V5zm4 6h2v10h-2V11zm4-4h2v14h-2V7z"/></svg>' },
   { key: 'product-knowledge', label: '产品知识', icon: '📦' },
   { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
+  { key: 'my-stats', label: '我的业绩', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>' },
+  { key: 'trade-shows', label: '全球展会', icon: '🗓️' },
   { key: 'skills', label: '技能商店', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>' },
 ];
 
@@ -5349,8 +7016,9 @@ const settingsTabs = [
 ];
 
 const mobileTabs = [
-  { key: 'assistant', label: '外贸Agent', icon: '🤖' },
+  { key: 'trade-agent', label: '外贸Agent', icon: '🤖' },
   { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
+  { key: 'my-stats', label: '我的业绩', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>' },
   { key: 'chatlist', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
   { key: 'settings', label: '我的', icon: '⚙️' },
 ];
@@ -5380,7 +7048,9 @@ const MH_GROUPS = [
   { key:'ai', icon:'🤖', items:[
     {key:'translate', icon:'🌐', label:'翻译设置'},
     {key:'aitalk', icon:'💬', label:'沟通话术'},
+    {key:'bgcheck', icon:'🔍', label:'客户背调'},
     {key:'requirement', icon:'🎯', label:'需求总结'},
+    {key:'assign-agent', icon:'🤖', label:'发给Agent'},
   ]},
   { key:'customer', icon:'👤', items:[
     {key:'tracking', icon:'📈', label:'效果追踪'},
@@ -5400,18 +7070,27 @@ function toggleMhMenu(key) {
 
 // 移动端栏目抽屉菜单
 const mobileDrawerItems = [
-  { key: 'assistant', label: '外贸Agent', icon: '🤖' },
+  { key: 'trade-agent', label: '外贸Agent', icon: '🤖', children: [
+    { key: 'sales-champion', label: '外贸销冠', icon: '🏆' },
+    { key: 'background-report', label: '客户背调', icon: '🔍' },
+    { key: 'customs-agent', label: '外贸单证', icon: '📋' },
+    { key: 'doc-agent', label: '工厂对接', icon: '🏭' },
+    { key: 'freight-agent', label: '货代对接', icon: '🚢' },
+    { key: 'legal-agent', label: '外贸法务', icon: '⚖️' },
+  ] },
   { key: 'chatlist', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
   { key: 'customers', label: '客户管理', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
   { key: 'pipeline', label: '销售看板', icon: '📊' },
   { key: 'product-knowledge', label: '产品知识', icon: '📦' },
   { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
+  { key: 'trade-shows', label: '全球展会', icon: '🗓️' },
   { key: 'skills', label: '技能商店', icon: '🧩' },
 ];
 const mobileHeaderTitle = computed(() => {
   if (mobileInConv.value && activeChannel.value === 'telegram' && tgActiveJid.value) { const c = tgConversations.value.find(x => x.jid === tgActiveJid.value); return c?.name || 'Telegram'; }
   if (mobileInConv.value && activeChannel.value === 'email') return '邮箱';
   if (mobileInConv.value && chatStore.activeConversation?.name) return chatStore.activeConversation.name;
+  if (activePlatform.value === 'work-group') return '工作群组';
   if (activePlatform.value === 'dashboard') return '数据概览';
   if (activePlatform.value === 'assistant') return '外贸Agent';
   if (activePlatform.value === 'communication' && activeChannel.value === 'whatsapp' && currentWaAccountId.value) { const acc = waAccounts.value.find(a => a.id === currentWaAccountId.value); return acc?.name || 'WhatsApp'; }
@@ -5419,13 +7098,17 @@ const mobileHeaderTitle = computed(() => {
   if (activePlatform.value === 'customers') return '客户管理';
   if (activePlatform.value === 'pipeline') return '销售看板';
   if (activePlatform.value === 'product-knowledge') return '产品知识';
+  if (activePlatform.value === 'trade-shows') return '全球展会';
   if (activePlatform.value === 'speech-library') return '话术库';
   if (activePlatform.value === 'skills') return '技能商店';
+  if (activePlatform.value === 'credits') return '积分充值';
   return 'TradeAgent';
 });
 function isDrawerActive(key) {
   if (key === 'chatlist') return activePlatform.value === 'communication' && !mobileInConv.value;
   if (key === 'translate_set') return false;
+  if (['sales-champion','background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(key)) return activePlatform.value === 'trade-agent' && currentTradeAgent.value === key;
+  if (key === 'trade-agent') return false;
   return activePlatform.value === key;
 }
 function closeAllMobileOverlays() {
@@ -5443,14 +7126,17 @@ function onDrawerItemClick(item) {
     return;
   }
   if (item.key === 'translate_set') {
-    showSettings.value = true;
-    activeSettingsTab.value = 'channels';
-    // 翻译设置在聊天内作为面板，不跳转
+    router.push('/settings?tab=translation');
     return;
   }
   if (item.key === 'emails') {
     activePlatform.value = 'emails';
     if (route.path !== '/emails') router.push('/emails');
+    return;
+  }
+  // Trade agent sub-items → stay in chat interface
+  if (['sales-champion','background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(item.key)) {
+    selectTradeAgent(item.key);
     return;
   }
   switchPlatform({ key: item.key });
@@ -5477,14 +7163,55 @@ function checkMobile() {
 }
 
 function isPlatformActive(key) { return activePlatform.value === key; }
+function isChildActive(child) {
+  if (['sales-champion','background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(child.key)) return activePlatform.value === 'trade-agent' && currentTradeAgent.value === child.key;
+  return activePlatform.value === child.key;
+}
+function isParentActive(item) {
+  if (item.key === 'trade-agent') return false;
+  return activePlatform.value === item.key;
+}
+
+function toggleExpand(key) { expandedKeys.value[key] = !expandedKeys.value[key]; }
+function onChildClick(child) {
+  // Trade agent sub-items → stay in chat interface, just switch agent
+  if (['sales-champion','background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(child.key)) {
+    selectTradeAgent(child.key);
+    return;
+  }
+  switchPlatform(child);
+}
+
+function goHome() {
+  // 回到欢迎页：等同于点击 trade-agent
+  activePlatform.value = 'assistant';
+  currentTradeAgent.value = 'sales-champion';
+  activeSessionId.value = null;
+  activeMessages.value = [];
+  if (agentChatHistory.value['sales-champion']) agentChatHistory.value['sales-champion'] = [];
+  closeAllMobileOverlays();
+  router.push('/assistant?welcome=1');
+}
 
 function switchPlatform(item) {
   if (item.key === 'settings') { showSettings.value = true; return; }
+  if (item.key === 'trade-agent') {
+    // 重置到欢迎页：显示 AssistantView (router-view)
+    activePlatform.value = 'assistant';
+    currentTradeAgent.value = 'sales-champion';
+    activeSessionId.value = null;
+    activeMessages.value = [];
+    if (agentChatHistory.value['sales-champion']) agentChatHistory.value['sales-champion'] = [];
+    closeAllMobileOverlays();
+    router.push('/assistant?welcome=1');
+    return;
+  }
   activePlatform.value = item.key;
   closeAllMobileOverlays();
   const routeMap = {
     dashboard: '/dashboard',
     assistant: '/assistant',
+    'trade-agent': '/assistant',
     communication: '/chat',
     customers: '/customers',
     pipeline: '/pipeline',
@@ -5492,8 +7219,18 @@ function switchPlatform(item) {
     emails: '/emails',
     data: '/dashboard',
     'product-knowledge': '/product-knowledge',
+    'trade-shows': '/trade-shows',
     'speech-library': '/speech-library',
+    'my-stats': '/my-stats',
     skills: '/skill-store',
+    credits: '/credits',
+    'sales-champion': '/sales-champion',
+    'background-report': '/background-report',
+    'customs-agent': '/customs-agent',
+    'doc-agent': '/doc-agent',
+    'freight-agent': '/freight-agent',
+    'legal-agent': '/legal-agent',
+    'work-group': '/work-group',
   };
   const target = routeMap[item.key] || '/';
   if (route.path !== target) router.push(target);
@@ -5501,9 +7238,11 @@ function switchPlatform(item) {
 
 function openMobilePanel(key) {
       mhMenuOpen.value = null;
+      // 手机端：指派Agent → 调起 ChatView 指派弹窗
+      if (key === 'assign-agent') { chatViewRef.value?.openAssignDialog?.(); return; }
       // 点击已激活的顶部快捷按钮 → 关闭
       if (mobilePanel.value === key) { mobilePanel.value = null; activePanel.value = null; return; }
-      if (!chatStore.activeJid && (key === 'aitalk' || key === 'customer' || key === 'translate' || key === 'worldclock' || key === 'tracking' || key === 'speechlib')) {
+      if (!chatStore.activeJid && (key === 'aitalk' || key === 'bgcheck' || key === 'customer' || key === 'translate' || key === 'worldclock' || key === 'tracking' || key === 'speechlib')) {
         ElMessage.warning('请先选择一个会话'); return;
       }
       activePanel.value = key;
@@ -5515,14 +7254,14 @@ function openMobilePanel(key) {
     function closeMobilePanel() { mobilePanel.value = null; activePanel.value = null; mhMenuOpen.value = null; }
     function onMobileAIFab() { openMobilePanel('aitalk'); }
 function isTabActive(tab) {
-  if (tab.key === 'settings') return !!showSettings.value;
+  if (tab.key === 'settings') return route.path === '/settings';
   if (tab.key === 'chatlist') return activePlatform.value === 'communication';
   return activePlatform.value === tab.key;
 }
 function handleMobileTab(tab) {
   mobileDrawerOpen.value = false;
   if (tab.key === 'settings') {
-    showSettings.value = true; return;
+    router.push('/settings'); return;
   }
   showSettings.value = false;
   mobilePanel.value = null;
@@ -5565,16 +7304,21 @@ function handleMobileTab(tab) {
 
 watch(() => route.path, (p) => {
   if (p === '/' || p === '/dashboard') activePlatform.value = 'dashboard';
-  else if (p.startsWith('/assistant')) activePlatform.value = 'assistant';
+  else if (p.startsWith('/assistant') && !route.query._t) activePlatform.value = 'assistant';
   else if (p.startsWith('/chat')) activePlatform.value = 'communication';
   else if (p.startsWith('/emails')) activePlatform.value = 'emails';
   else if (p.startsWith('/customers')) activePlatform.value = 'customers';
   else if (p.startsWith('/pipeline')) activePlatform.value = 'pipeline';
   else if (p.startsWith('/automation')) activePlatform.value = 'automation';
   else if (p.startsWith('/product-knowledge')) activePlatform.value = 'product-knowledge';
+  else if (p.startsWith('/trade-shows')) activePlatform.value = 'trade-shows';
   else if (p.startsWith('/speech-library')) activePlatform.value = 'speech-library';
   else if (p.startsWith('/skill-store')) activePlatform.value = 'skills';
-  else if (p.startsWith('/settings')) { activePlatform.value = 'dashboard'; showSettings.value = true; }
+  else if (p.startsWith('/credits')) activePlatform.value = 'credits';
+  else if (p === '/sales-champion') { activePlatform.value = 'trade-agent'; currentTradeAgent.value = 'sales-champion'; wecomPanelOpen.value = false; loadAgentSessions(); loadAgentMessages(); loadAgentTasks().then(handleAssignQuery); }
+  else if (['background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(p.replace('/',''))) { const k = p.replace('/',''); activePlatform.value = 'trade-agent'; currentTradeAgent.value = k; if (['doc-agent','freight-agent'].includes(k)) loadWecomConfig(); else wecomPanelOpen.value = false; loadAgentSessions(); loadAgentMessages(); loadAgentTasks().then(handleAssignQuery); }
+  else if (p.startsWith('/work-group')) activePlatform.value = 'work-group';
+  else if (p.startsWith('/settings')) { activePlatform.value = 'dashboard'; }
 }, { immediate: true });
 
 // ========== 沟通模块状态 ==========
@@ -5618,7 +7362,7 @@ const totalUnread = computed(() => {
   for (const c of chatStore.sortedConversations) n += (c.unreadCount || 0);
   return n > 0 ? n : '';
 });
-platformItems[1].badge = totalUnread;
+watch(totalUnread, (v) => { platformItems[1].badge = v; }, { immediate: true });
 // Persist activeChannel to localStorage
 watch(activeChannel, (val) => { try { localStorage.setItem('active_channel', val || 'whatsapp'); } catch(e) {} });
 
@@ -5693,13 +7437,98 @@ const selfAvatarBg = computed(() => {
 watch(() => chatStore.selfAvatarUrl, (v) => { if (v) selfAvatarOk.value = true; });
 
 const tgActiveJid = ref(null);
+const tgHeaderAvatarFailed = ref(false);
+const tgHeaderAvatar = computed(() => {
+  if (!tgActiveJid.value) return '';
+  const conv = tgConversations.value.find(c => c.jid === tgActiveJid.value);
+  if (!conv) return '';
+  return chatStore.loadAvatar(tgActiveJid.value, conv.avatarUrl);
+});
+watch(tgActiveJid, () => { tgHeaderAvatarFailed.value = false; });
 const tgMessages = ref([]);
+function isMediaPlaceholderText(t) {
+  if (!t) return true;
+  const s = String(t).trim();
+  if (!s) return true;
+  if (s.startsWith('[MessageMedia') && s.endsWith(']')) return true;
+  if (s === '[media]' || s === '[Media]') return true;
+  return false;
+}
 const tgInputText = ref('');
 const tgSending = ref(false);
+const tgPendingFile = ref(null);
+const tgAttachMenuOpen = ref(false);
+const tgImageInput = ref(null);
+const tgDocInput = ref(null);
+let tgAttachCloseHandler = null;
+
+function tgToggleAttachMenu() {
+  tgAttachMenuOpen.value = !tgAttachMenuOpen.value;
+}
+function tgPickFile(type) {
+  tgAttachMenuOpen.value = false;
+  if (type === 'image' && tgImageInput.value) tgImageInput.value.click();
+  else if (type === 'document' && tgDocInput.value) tgDocInput.value.click();
+}
+function tgOnFileSelected(e) {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+  sendTgMediaDirect(file);
+}
+async function sendTgMediaDirect(file) {
+  if (tgSending.value || !tgActiveJid.value) return;
+  tgSending.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('jid', tgActiveJid.value);
+    fd.append('file', file);
+    fd.append('mediatype', file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'document');
+    const { data } = await api.post('/whatsapp/send-media', fd, { timeout: 120000 });
+    await loadTgMessages(tgActiveJid.value);
+    loadTgConversations();
+  } catch(e) {
+    ElMessage.error('媒体发送失败：' + (e.response?.data?.error || e.message));
+  } finally { tgSending.value = false; }
+}
+function formatTgFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// 点击外部关闭TG附件菜单
+function tgCloseAttachMenu(e) {
+  if (tgAttachMenuOpen.value && !e.target.closest('.tg-attach-wrap')) {
+    tgAttachMenuOpen.value = false;
+  }
+}
+onMounted(() => { document.addEventListener('click', tgCloseAttachMenu); });
+onUnmounted(() => { document.removeEventListener('click', tgCloseAttachMenu); });
 
 async function loadTgMessages(jid) {
   try {
-    const { data } = await api.get('/whatsapp/messages', { params: { jid } });
+    let data = null;
+    if (jid && jid.endsWith('@telegram')) {
+      // TG 历史消息：从 TG API 实时拉取（数据库未入库）
+      const peerId = jid.replace('@telegram', '');
+      const hist = await api.get('/tg-userbot/history', { params: { peerId, limit: 50 } });
+      const msgs = (hist.data && hist.data.messages) || [];
+      data = msgs.map(m => ({
+        id: 'tg' + (m.id || Math.random().toString(36).slice(2)),
+        body: m.text || '',
+        content: m.text || '',
+        fromMe: !!m.fromMe,
+        timestamp: m.timestamp || Date.now(),
+        messageType: m.mediaType ? 'media' : 'text',
+        mediaType: m.mediaType || null,
+        platform: 'telegram',
+      }));
+    } else {
+      const resp = await api.get('/whatsapp/messages', { params: { jid } });
+      data = resp.data || [];
+    }
     tgMessages.value = (data || []).slice().reverse().map(m => {
       let transObj = null;
       if (m.translation) {
@@ -5728,14 +7557,46 @@ async function loadTgMessages(jid) {
       const box = document.querySelector('.tg-msgs');
       if (box) box.scrollTop = box.scrollHeight;
     });
+    // Trigger batch retranslation for messages missing translations
+    const msgsNeedingTranslation = tgMessages.value.filter(m => 
+      (m.messageType === 'text' || m.type === 'text') && 
+      !m.translationObj && 
+      m.text && 
+      !m.text.startsWith('[') &&
+      !m.fromMe  // Only incoming messages need auto-translation
+    );
+    if (msgsNeedingTranslation.length > 0) {
+      console.log('[TG] Found', msgsNeedingTranslation.length, 'messages needing translation, triggering batch retranslate');
+      setTimeout(() => chatStore.retranslateBatchMissing(jid), 1000);
+    }
   } catch(e) { console.warn('loadTgMsg err', e); }
 }
 
 async function sendTgMessage() {
   const text = tgInputText.value.trim();
-  if (!text || tgSending.value || !tgActiveJid.value) return;
+  const file = tgPendingFile.value;
+  if ((!text && !file) || tgSending.value || !tgActiveJid.value) return;
   tgSending.value = true;
   tgInputText.value = '';
+
+  // 如果有附件，走媒体发送
+  if (file) {
+    tgPendingFile.value = null;
+    tgAttachMenuOpen.value = false;
+    try {
+      const fd = new FormData();
+      fd.append('jid', tgActiveJid.value);
+      fd.append('file', file);
+      fd.append('mediatype', file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'document');
+      if (text) fd.append('caption', text);
+      const { data } = await api.post('/whatsapp/send-media', fd, { timeout: 120000 });
+      await loadTgMessages(tgActiveJid.value);
+      loadTgConversations();
+    } catch(e) {
+      ElMessage.error('媒体发送失败：' + (e.response?.data?.error || e.message));
+    } finally { tgSending.value = false; }
+    return;
+  }
   // 乐观消息：立即显示，不等API返回
   const tempId = 'tmp-tg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   tgMessages.value.push({
@@ -5750,6 +7611,7 @@ async function sendTgMessage() {
     waMessageId: '',
     translationObj: null,
     _tempId: tempId,
+    _sending: true,
   });
   nextTick(() => {
     const box = document.querySelector('.tg-msgs');
@@ -5772,8 +7634,11 @@ async function sendTgMessage() {
         ...tgMessages.value[idx],
         id: data?.savedId || tgMessages.value[idx].id,
         waMessageId: data?.waMessageId || '',
+        text: localTrans?.translated || tgMessages.value[idx].text,
+        body: localTrans?.translated || tgMessages.value[idx].body,
         translationObj: localTrans,
         _tempId: tempId,
+        _sending: false,
       };
     }
     loadTgConversations();
@@ -5813,6 +7678,8 @@ function selectConv(conv) {
     return;
   }
   chatStore.setActiveConversation(conv.jid);
+  // 【TC-020修复】WhatsApp会话打开时同步加载客户档案(country等)，供时间文化面板与头部文化徽标使用
+  loadCustomerByJid(conv.jid);
   if (isMobile.value) {
     mobileInConv.value = true;
     mobileAccountsOpen.value = false;
@@ -6012,6 +7879,154 @@ function doConnectWA() {
   // Dispatch event for ChatView to open its QR dialog
   setTimeout(() => window.dispatchEvent(new CustomEvent('wa:open-qr')), 300);
 }
+// ========== WA 账号体验（对标竞品：新建会话/启动/配置/删除） ==========
+const configPanelOpen = ref(false);
+const configTargetPlatform = ref('whatsapp'); // whatsapp | telegram
+const configAccountId = ref(null);
+const configAccountName = ref('');
+const configProxyProtocol = ref('socks5');
+const configProxyHost = ref('');
+const configProxyPort = ref('');
+const configProxyUser = ref('');
+const configProxyPass = ref('');
+const configTestResult = ref('');
+const configTesting = ref(false);
+
+function configureAccount(acc) {
+  configPanelOpen.value = true;
+  configAccountId.value = acc.id;
+  configAccountName.value = acc.name;
+  configProxyProtocol.value = 'socks5';
+  configProxyHost.value = '';
+  configProxyPort.value = '';
+  configProxyUser.value = '';
+  configProxyPass.value = '';
+  configTestResult.value = '';
+  loadProxyConfig(acc.id);
+}
+
+function openConfigPanel() {
+  // 右侧栏「代理设置」入口：优先当前选中 WA 账号，否则取第一个；无账号时提示
+  const acc = currentWaAccountId.value ? waAccounts.value.find(a => a.id === currentWaAccountId.value) : (waAccounts.value.length > 0 ? waAccounts.value[0] : null);
+  if (acc) { configureAccount(acc); return; }
+  ElMessage.warning('请先添加 WhatsApp 账号再配置代理');
+}
+
+function onOpenProxyPanel() { openConfigPanel(); }
+
+async function loadProxyConfig(id) {
+  try {
+    const { data } = await api.get(`/accounts/wa/${id}/proxy`);
+    if (data?.proxy && data.proxy.enabled !== false) {
+      configProxyHost.value = data.proxy.host || '';
+      configProxyPort.value = String(data.proxy.port || '');
+      configProxyProtocol.value = data.proxy.protocol || 'socks5';
+      configProxyUser.value = data.proxy.username || '';
+      configProxyPass.value = data.proxy.password || '';
+    }
+  } catch(e) { /* ignore */ }
+}
+
+async function saveProxyConfig() {
+  if (!configProxyHost.value.trim()) { alert('请输入代理地址'); return; }
+  try {
+    const body = { enabled: true, host: configProxyHost.value.trim(), port: Number(configProxyPort.value), protocol: configProxyProtocol.value, username: configProxyUser.value.trim() || undefined, password: configProxyPass.value.trim() || undefined };
+    if (configTargetPlatform.value === 'telegram') {
+      await api.post(`/accounts/telegram/${configAccountId.value}/proxy`, body);
+      alert('代理设置已保存');
+      await loadTgAccounts();
+    } else {
+      await api.post(`/accounts/wa/${configAccountId.value}/proxy`, body);
+      alert('代理设置已保存');
+      await loadWaAccounts();
+    }
+  } catch(e) { alert('保存失败: ' + (e.response?.data?.error || e.message)); }
+}
+
+async function testProxy() {
+  configTesting.value = true; configTestResult.value = '';
+  try {
+    const { data } = await api.post(`${configTargetPlatform.value === 'telegram' ? '/accounts/telegram' : '/accounts/wa'}/${configAccountId.value}/proxy/test`);
+    configTestResult.value = data?.success ? '✅ 代理连接正常' : ('❌ ' + (data?.error || '连接失败'));
+  } catch(e) { configTestResult.value = '❌ 测试失败: ' + (e.response?.data?.error || e.message); }
+  finally { configTesting.value = false; }
+}
+
+async function deleteAccount(acc) {
+  if (!confirm(`确定要删除账号 "${acc.name}" 吗？`)) return;
+  try {
+    await api.delete(`/accounts/${acc.id}`);
+    await loadWaAccounts();
+    if (currentWaAccountId.value === acc.id) {
+      currentWaAccountId.value = null;
+      chatStore.currentWaAccountId = null;
+    }
+  } catch(e) {
+    alert('删除失败: ' + (e.response?.data?.error || e.message));
+  }
+}
+
+function onAccountCardClick(acc) {
+  activeChannel.value = 'whatsapp';
+  channelSheetOpen.value = false;
+  if (!acc.online) {
+    // 断开账号：先选中它进入其登录态，再引导登录
+    if (currentWaAccountId.value !== acc.id) switchWaAccount(acc.id);
+    if (typeof router !== 'undefined' && router.currentRoute.value.path !== '/chat') {
+      router.push('/chat');
+    }
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('wa:show-intro', { detail: { accountId: acc.id } }));
+    }, 50);
+    return;
+  }
+  switchWaAccount(acc.id);
+}
+
+function launchAccount(acc) {
+  if (!acc.online) {
+    // 先选中该账号（已选中则保持），再直接进入扫码登录页
+    if (currentWaAccountId.value !== acc.id) switchWaAccount(acc.id);
+    acc._launching = true;
+    if (typeof router !== 'undefined' && router.currentRoute.value.path !== '/chat') {
+      router.push('/chat');
+    }
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('wa:open-qr', { detail: { accountId: acc.id } }));
+      setTimeout(() => { if (acc._launching) acc._launching = false; }, 3000);
+    }, 50);
+  } else {
+    switchWaAccount(acc.id);
+  }
+}
+
+async function onAddAccount() {
+  try {
+    const existingCount = waAccounts.value.length;
+    const newName = 'WhatsApp' + (existingCount + 1);
+    const instName = 'wa_' + newName.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now().toString(36);
+    const { data: resData } = await api.post('/accounts/wa/connect', { instanceName: instName, name: newName });
+    const newAccount = resData.account;
+    await loadWaAccounts();
+    currentWaAccountId.value = newAccount.id;
+    chatStore.currentWaAccountId = newAccount.id;
+    chatStore.connectionStatus = 'disconnected';
+    if (route.path !== '/chat') {
+      await router.push('/chat');
+    }
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('wa:show-intro'));
+    }, 50);
+  } catch (e) {
+    console.error('[Layout] Create account failed:', e);
+    const errMsg = e.response?.data?.message || e.response?.data?.error || e.message;
+    if (e.response?.data?.error === 'wa_limit') {
+      alert(errMsg);
+    } else {
+      alert('Create failed: ' + errMsg);
+    }
+  }
+}
 
 const channels = [
   { id: 'whatsapp', name: 'WhatsApp', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>', status: 'online', unread: 8 },
@@ -6097,12 +8112,71 @@ const currentChannelAccounts = computed(() => {
 
 
 // Conversations from chatStore - mapped via computed
+// ─── TG 登录欢迎页 ───
+const tgLoginView = ref('welcome'); // welcome | qr | phone
+const tgCountryOpen = ref(false);
+const tgCountrySearch = ref('');
+const tgCountryIdx = ref(0);
+const tgPhoneNum = ref('');
+const tgKeepSigned = ref(true);
+const tgCountries = [
+  {name:'中国',flag:'🇨🇳',code:'+86'},{name:'中国香港',flag:'🇭🇰',code:'+852'},{name:'中国澳门',flag:'🇲🇴',code:'+853'},
+  {name:'美国',flag:'🇺🇸',code:'+1'},{name:'新加坡',flag:'🇸🇬',code:'+65'},{name:'马来西亚',flag:'🇲🇾',code:'+60'},
+  {name:'印度尼西亚',flag:'🇮🇩',code:'+62'},{name:'泰国',flag:'🇹🇭',code:'+66'},{name:'越南',flag:'🇻🇳',code:'+84'},
+  {name:'菲律宾',flag:'🇵🇭',code:'+63'},{name:'缅甸',flag:'🇲🇲',code:'+95'},{name:'柬埔寨',flag:'🇰🇭',code:'+855'},
+  {name:'老挝',flag:'🇱🇦',code:'+856'},{name:'印度',flag:'🇮🇳',code:'+91'},{name:'巴基斯坦',flag:'🇵🇰',code:'+92'},
+  {name:'孟加拉国',flag:'🇧🇩',code:'+880'},{name:'尼泊尔',flag:'🇳🇵',code:'+977'},{name:'斯里兰卡',flag:'🇱🇰',code:'+94'},
+  {name:'哈萨克斯坦',flag:'🇰🇿',code:'+7'},{name:'乌兹别克斯坦',flag:'🇺🇿',code:'+998'},{name:'蒙古',flag:'🇲🇳',code:'+976'},
+  {name:'日本',flag:'🇯🇵',code:'+81'},{name:'韩国',flag:'🇰🇷',code:'+82'},{name:'英国',flag:'🇬🇧',code:'+44'},
+  {name:'德国',flag:'🇩🇪',code:'+49'},{name:'法国',flag:'🇫🇷',code:'+33'},{name:'意大利',flag:'🇮🇹',code:'+39'},
+  {name:'西班牙',flag:'🇪🇸',code:'+34'},{name:'葡萄牙',flag:'🇵🇹',code:'+351'},{name:'荷兰',flag:'🇳🇱',code:'+31'},
+  {name:'比利时',flag:'🇧🇪',code:'+32'},{name:'瑞士',flag:'🇨🇭',code:'+41'},{name:'瑞典',flag:'🇸🇪',code:'+46'},
+  {name:'挪威',flag:'🇳🇴',code:'+47'},{name:'丹麦',flag:'🇩🇰',code:'+45'},{name:'芬兰',flag:'🇫🇮',code:'+358'},
+  {name:'波兰',flag:'🇵🇱',code:'+48'},{name:'乌克兰',flag:'🇺🇦',code:'+380'},{name:'俄罗斯',flag:'🇷🇺',code:'+7'},
+  {name:'土耳其',flag:'🇹🇷',code:'+90'},{name:'阿联酋',flag:'🇦🇪',code:'+971'},{name:'沙特阿拉伯',flag:'🇸🇦',code:'+966'},
+  {name:'卡塔尔',flag:'🇶🇦',code:'+974'},{name:'科威特',flag:'🇰🇼',code:'+965'},{name:'以色列',flag:'🇮🇱',code:'+972'},
+  {name:'埃及',flag:'🇪🇬',code:'+20'},{name:'摩洛哥',flag:'🇲🇦',code:'+212'},{name:'尼日利亚',flag:'🇳🇬',code:'+234'},
+  {name:'肯尼亚',flag:'🇰🇪',code:'+254'},{name:'南非',flag:'🇿🇦',code:'+27'},{name:'澳大利亚',flag:'🇦🇺',code:'+61'},
+  {name:'加拿大',flag:'🇨🇦',code:'+1'},{name:'巴西',flag:'🇧🇷',code:'+55'},{name:'墨西哥',flag:'🇲🇽',code:'+52'},
+  {name:'阿根廷',flag:'🇦🇷',code:'+54'}
+];
+const tgCountryFiltered = computed(() => {
+  const kw = (tgCountrySearch.value || '').trim().toLowerCase();
+  if (!kw) return tgCountries;
+  return tgCountries.filter(c => c.name.toLowerCase().indexOf(kw) > -1 || c.code.indexOf(kw) > -1);
+});
 // ─── Telegram Bot 连接 ───
 const tgAccounts = ref([]);
 const tgConnecting = ref(false);
 const showTgModal = ref(false);
 const tgTokenInput = ref('');
 const tgBotName = ref('');
+// ─── 微信直连外贸Agent（二维码弹窗） ───
+const showWxQrModal = ref(false);
+const wxQrTs = ref(Date.now());
+const wxConnected = ref(false);
+let wxQrTimer = null;
+function openWxQr() {
+  showWxQrModal.value = true;
+  wxQrTs.value = Date.now();
+  wxConnected.value = false;
+  clearInterval(wxQrTimer);
+  wxQrTimer = setInterval(async () => {
+    wxQrTs.value = Date.now(); // 刷新二维码图片（防缓存）
+    try {
+      const r = await fetch('/wechat-agent-qr-state.json?v=' + Date.now());
+      if (r.ok) {
+        const st = await r.json();
+        wxConnected.value = !!st.connected;
+      }
+    } catch(e) {}
+  }, 15000);
+}
+function closeWxQr() {
+  showWxQrModal.value = false;
+  clearInterval(wxQrTimer);
+  wxQrTimer = null;
+}
 async function loadTgAccounts() {
   try {
     const { data } = await api.get('/accounts');
@@ -6128,6 +8202,8 @@ function onTgSocketMessage(e) {
     const body = m.body || m.content || m.text || '';
     const fromMe = !!m.fromMe;
     const waId = m.waMessageId || String(m.id || Date.now());
+    // Normalize media placeholder text for socket events
+    const normalizedText = ['image','video','document'].includes(m.messageType || m.type) ? '[media]' : (m.text || body);
     // 出站消息去重：匹配waMessageId/id，同时检查_tempId（乐观消息）
     const exists = tgMessages.value.some(x => {
       if (x.waMessageId && x.waMessageId === waId) return true;
@@ -6149,7 +8225,7 @@ function onTgSocketMessage(e) {
         id: m.id || Date.now(),
         from: fromMe ? 'me' : jid.split('@')[0],
         body,
-        text: body,
+        text: normalizedText,
         time: formatMsgTime(m.timestamp || new Date()),
         timestamp: m.timestamp || Date.now(),
         direction: fromMe ? 'outbound' : 'inbound',
@@ -6184,6 +8260,7 @@ function onTgSocketMessage(e) {
           translationObj: tgTransObj2 || tgMessages.value[existIdx].translationObj,
           mediaUrl: m.mediaUrl || tgMessages.value[existIdx].mediaUrl || null,
           messageType: m.messageType || tgMessages.value[existIdx].messageType || 'text',
+          text: ['image','video','document'].includes(m.messageType || m.type) ? '[media]' : (m.text || body),
         };
       }
       nextTick(() => {
@@ -6222,23 +8299,12 @@ async function loadTgConversations() {
   const wasLoading = tgConversationsLoading.value;
   try {
     const { data } = await api.get('/whatsapp/conversations', { params: { platform: 'telegram' } });
-    // 获取 UserBot 自身信息，用于过滤自己给自己的会话
-    const selfJids = new Set();
-    if (tgAccounts.value.length) {
-      for (const acc of tgAccounts.value) {
-        if (!acc.telegramBotUsername && acc.phone) {
-          // UserBot 账号：phone 是手机号，但 self-chat 的 JID 是 TG user ID
-          // 通过名称匹配过滤（self-chat 的 name 通常等于账号名）
-          if (acc.pushName) selfJids.add(acc.pushName);
-          if (acc.name) selfJids.add(acc.name);
-        }
-      }
-    }
+    // 自聊天过滤由后端按真实 JID 完成（getMe().id），前端不再按 name 误伤同名真实客户
     tgConversations.value = (data || [])
-      .filter(c => !selfJids.has(c.name)) // 过滤掉自己给自己的会话
       .map(c => ({
       ...c,
       id: c.jid,
+      avatar: c.avatarUrl || c.avatar || '',
       color: avatarColor(c.name || c.phone || c.jid),
       platform: 'telegram',
       preview: c.lastMessage || '',
@@ -6248,6 +8314,212 @@ async function loadTgConversations() {
     if (wasLoading) tgConversationsLoading.value = false;
   } catch(e) { console.warn('loadTgConv err', e); if (wasLoading) tgConversationsLoading.value = false; }
 }
+function tgSwitchLoginView(v){ tgLoginView.value = v; tgCountryOpen.value = false; }
+  function tgOpenCountry(){ tgCountryOpen.value = !tgCountryOpen.value; }
+  function tgSelectCountry(i){ tgCountryIdx.value = i; tgCountryOpen.value = false; tgCountrySearch.value = ''; }
+  function tgLoginNext(){
+    const num = (tgPhoneNum.value || '').replace(/[\s\-()]/g, '');
+    if (!num) { ElMessage.warning('请输入手机号'); return; }
+    ElMessage.info('登录接口接入中：将向 ' + tgCountries[tgCountryIdx.value].code + ' ' + num + ' 发送验证码');
+  }
+  // ── TG 真实扫码登录（QR token + 轮询） ──
+  const tgQrToken = ref('');
+  const tgQrTimer = ref(null);
+  const tgQrPasswordNeeded = ref(false);
+  function tgStopQrPoll() {
+    if (tgQrTimer.value) { clearInterval(tgQrTimer.value); tgQrTimer.value = null; }
+  }
+  async function tgRenderQr(svg, token) {
+    if (!svg || !token) return;
+    try {
+      const url = 'tg://login?token=' + token;
+      const dataUrl = await QRCode.toDataURL(url, { width: 232, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1a1a1a', light: '#ffffff' } });
+      svg.replaceChildren();
+      const ns = 'http://www.w3.org/2000/svg';
+      const img = document.createElementNS(ns, 'image');
+      img.setAttribute('href', dataUrl);
+      img.setAttribute('x', '0'); img.setAttribute('y', '0');
+      img.setAttribute('width', '232'); img.setAttribute('height', '232');
+      svg.appendChild(img);
+    } catch (e) { console.warn('tgRenderQr err', e); }
+  }
+  async function tgPollQrLogin() {
+    if (!tgQrToken.value) return;
+    try {
+      const { data } = await api.post('/tg-userbot/qr/poll', { qrToken: tgQrToken.value });
+      if (!data) return;
+      if (data.status === 'connected') {
+        tgStopQrPoll();
+        if (tgLoginView.value !== 'welcome') {
+          ElMessage.success('Telegram 登录成功');
+        }
+        tgLoginView.value = 'welcome';
+        await loadTgAccounts();
+        // 同步会话（联系人+对话），刷新客户列表
+        try { await api.post('/tg-userbot/sync-dialogs', { limit: 200 }); } catch(e) { console.warn('tg sync-dialogs err', e); }
+        await loadTgConversations();
+        // 头像同步（后台触发，不阻塞登录流程）
+        try { api.post('/tg-userbot/sync-avatars'); } catch(e) { console.warn('tg sync-avatars err', e); }
+        return;
+      }
+      if (data.status === 'password_needed') {
+        tgStopQrPoll();
+        if (tgQrPasswordNeeded.value) return; // 已在输入中
+        tgQrPasswordNeeded.value = true;
+        try {
+          const { value } = await ElMessageBox.prompt('该账号已开启两步验证，请输入验证密码：', '两步验证', {
+            confirmButtonText: '确认', cancelButtonText: '取消', inputType: 'password',
+            inputValidator: (v) => (v && v.trim() ? true : '密码不能为空'),
+          });
+          const res = await api.post('/tg-userbot/qr/password', { password: value });
+          if (res.data && res.data.status === 'connected') {
+            ElMessage.success('Telegram 登录成功');
+            tgLoginView.value = 'welcome';
+            await loadTgAccounts();
+          } else if (res.data && res.data.status === 'pending') {
+            ElMessage.success('密码验证通过，正在完成登录…');
+            tgQrPasswordNeeded.value = false;
+            tgQrTimer.value = setInterval(tgPollQrLogin, 3000);
+          } else {
+            ElMessage.error((res.data && res.data.error) || '登录失败');
+            tgQrPasswordNeeded.value = false;
+            const svg = document.getElementById('tgLoginQrSvg');
+            if (svg) await tgBuildQrSvg();
+          }
+        } catch (e) {
+          tgQrPasswordNeeded.value = false;
+          const svg = document.getElementById('tgLoginQrSvg');
+          if (svg) await tgBuildQrSvg();
+        }
+        return;
+      }
+      if (data.status === 'expired' || data.status === 'invalid') {
+        tgStopQrPoll();
+        ElMessage.warning('二维码已过期，正在刷新…');
+        await tgBuildQrSvg();
+        return;
+      }
+      if (data.status === 'error') {
+        tgStopQrPoll();
+        ElMessage.error('登录失败：' + (data.error || '未知错误'));
+        return;
+      }
+      // pending：token 变化则重绘
+      if (data.token && data.token !== tgQrToken.value) {
+        tgQrToken.value = data.token;
+        const svg = document.getElementById('tgLoginQrSvg');
+        if (svg) await tgRenderQr(svg, data.token);
+      }
+    } catch (e) { console.warn('tgPollQrLogin err', e); }
+  }
+  async function tgBuildQrSvg() {
+    tgStopQrPoll();
+    const svg = document.getElementById('tgLoginQrSvg');
+    if (!svg) return;
+    svg.replaceChildren();
+    try {
+      const { data } = await api.get('/tg-userbot/qr');
+      // 后端已连接：直接进入成功流程（真实扫码后并发请求可能拿到 already_connected）
+      if (data && data.status === 'already_connected') {
+        // 防重复弹窗：已在欢迎页则不重复提示
+        if (tgLoginView.value !== 'welcome') {
+          ElMessage.success('Telegram 登录成功');
+        }
+        tgLoginView.value = 'welcome';
+        await loadTgAccounts();
+        try { await api.post('/tg-userbot/sync-dialogs', { limit: 200 }); } catch(e) { console.warn('tg sync-dialogs err', e); }
+        await loadTgConversations();
+        // 头像同步（后台触发，不阻塞登录流程）
+        try { api.post('/tg-userbot/sync-avatars'); } catch(e) { console.warn('tg sync-avatars err', e); }
+        return;
+      }
+      if (!data || data.status !== 'pending' || !data.token) {
+        if (data && data.status === 'error') ElMessage.error('二维码获取失败：' + (data.error || '未知错误'));
+        else ElMessage.error('二维码获取失败，请重试');
+        return;
+      }
+      tgQrToken.value = data.token;
+      await tgRenderQr(svg, data.token);
+      tgQrTimer.value = setInterval(tgPollQrLogin, 3000);
+    } catch (e) {
+      console.warn('tgBuildQrSvg err', e);
+      ElMessage.error('二维码获取失败，请重试');
+    }
+  }
+  watch(tgLoginView, () => { nextTick(() => { tgBuildQrSvg(); }); });
+  watch([activeChannel, tgActiveJid], () => {
+    nextTick(() => {
+      if (activeChannel.value === 'telegram' && !tgActiveJid.value) tgBuildQrSvg();
+    });
+  });
+  onMounted(() => { nextTick(() => { tgBuildQrSvg(); }); });
+// ─── TG 账号操作（对齐 WhatsApp：新建会话/启动/配置代理/删除） ───
+function tgOpenNewSession() {
+  activeChannel.value = 'telegram';
+  tgActiveJid.value = null;
+  activeConv.value = null;
+  chatStore.activeConversation = null;
+  tgLoginView.value = 'qr';
+  tgCountryOpen.value = false;
+  if (typeof router !== 'undefined' && router.currentRoute.value.path !== '/chat') router.push('/chat');
+  nextTick(() => { tgBuildQrSvg(); });
+}
+
+async function tgLaunchAccount(tg) {
+  try {
+    tg._tgLaunching = true;
+    const { data } = await api.post(`/accounts/telegram/${tg.id}/launch`);
+    ElMessage.success('Telegram 账号已启动');
+    await loadTgAccounts();
+  } catch (e) {
+    ElMessage.error('启动失败: ' + (e.response?.data?.error || e.message));
+  } finally {
+    tg._tgLaunching = false;
+  }
+}
+
+function tgConfigureAccount(tg) {
+  // 复用代理配置抽屉，按 TG 接口读取/保存
+  configPanelOpen.value = true;
+  configAccountId.value = tg.id;
+  configAccountName.value = tg.name || ('@' + tg.telegramBotUsername) || 'Telegram';
+  configProxyProtocol.value = 'socks5';
+  configProxyHost.value = '';
+  configProxyPort.value = '';
+  configProxyUser.value = '';
+  configProxyPass.value = '';
+  configTestResult.value = '';
+  configTargetPlatform.value = 'telegram';
+  loadTgProxyConfig(tg.id);
+}
+
+async function loadTgProxyConfig(id) {
+  try {
+    const { data } = await api.get(`/accounts/telegram/${id}/proxy`);
+    if (data?.proxy && data.proxy.enabled !== false) {
+      configProxyHost.value = data.proxy.host || '';
+      configProxyPort.value = String(data.proxy.port || '');
+      configProxyProtocol.value = data.proxy.protocol || 'socks5';
+      configProxyUser.value = data.proxy.username || '';
+      configProxyPass.value = data.proxy.password || '';
+    }
+  } catch(e) { /* ignore */ }
+}
+
+async function tgDeleteAccount(tg) {
+  const name = tg.name || ('@' + tg.telegramBotUsername) || 'Telegram';
+  if (!confirm(`确定要删除 TG 账号 "${name}" 吗？此操作不可恢复。`)) return;
+  try {
+    await api.delete(`/accounts/telegram/${tg.id}`);
+    ElMessage.success('TG 账号已删除');
+    await loadTgAccounts();
+    if (tgActiveJid.value) tgActiveJid.value = null;
+    if (tgAccounts.value.length === 0) tgLoginView.value = 'welcome';
+  } catch(e) {
+    alert('删除失败: ' + (e.response?.data?.error || e.message));
+  }
+}
+
 async function tgConnect() {
   const token = tgTokenInput.value.trim();
   if (!token) return;
@@ -6350,7 +8622,7 @@ const ncCountries = [
   { code: "+86", name: "中国", name_en: "China", flag: "🇨🇳" },
   { code: "+852", name: "中国香港", name_en: "Hong Kong", flag: "🇭🇰" },
   { code: "+853", name: "中国澳门", name_en: "Macau", flag: "🇲🇴" },
-  { code: "+886", name: "中国台湾", name_en: "Taiwan", flag: "🇹🇼" },
+  { code: "+886", name: "中国台湾", name_en: "Taiwan", flag: "🇨🇳" },
   { code: "+1", name: "美国/加拿大", name_en: "USA/Canada", flag: "🇺🇸" },
   { code: "+1", name: "加拿大", name_en: "Canada", flag: "🇨🇦" },
   { code: "+44", name: "英国", name_en: "United Kingdom", flag: "🇬🇧" },
@@ -6935,16 +9207,64 @@ const currentSettingsName = computed(() => {
 });
 
 // ── 🏢 公司资料面板状态 ──
-const CM_CATEGORIES = [
-  { value: 'all', label: '全部', icon: '📚' },
-  { value: 'company', label: '公司介绍', icon: '🏢' },
-  { value: 'payment', label: '付款方式', icon: '💳' },
-  { value: 'certification', label: '认证证书', icon: '🏅' },
-  { value: 'logistics', label: '物流交付', icon: '🚚' },
-  { value: 'warranty', label: '质保售后', icon: '🛡' },
-  { value: 'product', label: '产品介绍', icon: '📦' },
-  { value: 'other', label: '其他', icon: '📁' },
-];
+// 公司资料分类（动态加载，租户可增删改；默认含3个通用样本）
+const companyCategories = ref([]); // [{id,name,icon,refValue,isDefault}]
+const showCategoryManager = ref(false);
+const categoryManagerList = ref([]);
+const newCategoryName = ref('');
+const categorySaving = ref(false);
+async function fetchCompanyCategories() {
+  try {
+    const resp = await api.get('/company-categories');
+    const d = resp.data || {};
+    companyCategories.value = Array.isArray(d.data) ? d.data : [];
+  } catch (e) {
+    console.error('[company] fetch categories error', e);
+    companyCategories.value = [];
+  }
+}
+function refreshCategoryManager() {
+  categoryManagerList.value = companyCategories.value.map(c => ({ ...c, _origName: c.name, saving: false }));
+}
+async function addCategory() {
+  const name = newCategoryName.value.trim();
+  if (!name) { ElMessage.warning('请输入分类名称'); return; }
+  categorySaving.value = true;
+  try {
+    await api.post('/company-categories', { name });
+    ElMessage.success('分类已添加');
+    newCategoryName.value = '';
+    await fetchCompanyCategories();
+    refreshCategoryManager();
+  } catch (e) { ElMessage.error(e.response?.data?.error || '添加失败'); }
+  finally { categorySaving.value = false; }
+}
+async function saveCategoryName(c) {
+  const nm = String(c.name || '').trim();
+  if (!nm) { ElMessage.warning('分类名称不能为空'); return; }
+  if (nm === c._origName) return;
+  c.saving = true;
+  try {
+    await api.put('/company-categories/' + c.id, { name: nm });
+    ElMessage.success('已重命名');
+    await fetchCompanyCategories();
+    refreshCategoryManager();
+  } catch (e) { ElMessage.error(e.response?.data?.error || '保存失败'); }
+  finally { c.saving = false; }
+}
+async function deleteCategory(c) {
+  try {
+    await ElMessageBox.confirm('确定删除分类「' + c.name + '」？\n该分类下的资料将一并删除（如需保留请先删除或移走资料）。', '删除分类', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' });
+  } catch { return; }
+  try {
+    await api.delete('/company-categories/' + c.id + '?force=1');
+    ElMessage.success('已删除');
+    await fetchCompanyCategories();
+    refreshCategoryManager();
+    if (companyCategory.value === c.refValue) { companyCategory.value = 'all'; }
+    await fetchCompanyMaterials();
+  } catch (e) { ElMessage.error(e.response?.data?.error || '删除失败'); }
+}
 const CM_LANGS = [
   { value: 'en', label: 'English (EN)' },
   { value: 'zh', label: '中文 (ZH)' },
@@ -6956,7 +9276,7 @@ const companyLoading = ref(false);
 const cmExpanded = reactive({});
 const cmAddMenuOpen = ref(false);
 const showCompanyDialog = ref(false);
-const companyDialogMode = ref('text'); // 'text' | 'file'
+const editingFileInfo = ref(''); // 编辑时当前附件名
 const editingCompanyId = ref(null);
 const cmSaving = ref(false);
 const cmUploading = ref(false);
@@ -7008,17 +9328,18 @@ function resetCompanyForm() {
   companyForm.sortOrder = 0;
   companyForm.file = null;
   editingCompanyId.value = null;
+  editingFileInfo.value = '';
 }
-function openCompanyDialog(mode, material) {
-  companyDialogMode.value = mode;
+function openCompanyDialog(material) {
   resetCompanyForm();
   if (material) {
     editingCompanyId.value = material.id;
-    companyForm.category = material.category || 'company';
+    companyForm.category = material.category || (companyCategories.value[0]?.refValue || 'company');
     companyForm.title = material.title || '';
     companyForm.content = material.content || '';
     companyForm.lang = material.lang || 'en';
     companyForm.sortOrder = material.sortOrder || 0;
+    editingFileInfo.value = material.type !== 'text' ? (material.fileName || material.title || '') : '';
   }
   showCompanyDialog.value = true;
   cmAddMenuOpen.value = false;
@@ -7031,38 +9352,13 @@ function closeCompanyDialog() {
 async function saveCompanyMaterial() {
   if (!companyForm.title.trim()) { ElMessage.warning('请输入标题'); return; }
   if (!companyForm.category) { ElMessage.warning('请选择分类'); return; }
-  if (companyDialogMode.value === 'text') {
-    if (!companyForm.content.trim()) { ElMessage.warning('请输入内容'); return; }
-    cmSaving.value = true;
-    try {
-      if (editingCompanyId.value) {
-        await api.put('/company-materials/' + editingCompanyId.value, {
-          category: companyForm.category, title: companyForm.title.trim(), content: companyForm.content,
-          lang: companyForm.lang, sortOrder: companyForm.sortOrder
-        });
-        ElMessage.success('已更新');
-      } else {
-        await api.post('/company-materials', {
-          category: companyForm.category, title: companyForm.title.trim(), content: companyForm.content,
-          lang: companyForm.lang, sortOrder: companyForm.sortOrder
-        });
-        ElMessage.success('已添加');
-      }
-      closeCompanyDialog();
-      await fetchCompanyMaterials();
-    } catch (e) {
-      console.error(e);
-      ElMessage.error(e.response?.data?.error || '保存失败');
-    } finally {
-      cmSaving.value = false;
-    }
-  } else {
-    // file mode — require a file
-    if (!companyForm.file) { ElMessage.warning('请选择文件'); return; }
-    cmSaving.value = true;
-    cmUploading.value = true;
-    cmUploadProgress.value = 0;
-    try {
+  if (!companyForm.content.trim() && !companyForm.file) { ElMessage.warning('请填写内容或上传附件（至少一项）'); return; }
+  cmSaving.value = true;
+  cmUploading.value = !!companyForm.file;
+  cmUploadProgress.value = 0;
+  try {
+    if (companyForm.file) {
+      // 上传模式：文件 + 文字描述可同时提交
       const fd = new FormData();
       fd.append('file', companyForm.file);
       fd.append('category', companyForm.category);
@@ -7076,26 +9372,55 @@ async function saveCompanyMaterial() {
           if (evt.total) cmUploadProgress.value = Math.round((evt.loaded/evt.total)*100);
         }
       });
-      ElMessage.success('上传成功');
-      closeCompanyDialog();
-      await fetchCompanyMaterials();
-    } catch (e) {
-      console.error(e);
-      ElMessage.error(e.response?.data?.error || '上传失败');
-    } finally {
-      cmSaving.value = false;
-      cmUploading.value = false;
-      cmUploadProgress.value = 0;
+      ElMessage.success('已保存');
+    } else {
+      if (editingCompanyId.value) {
+        await api.put('/company-materials/' + editingCompanyId.value, {
+          category: companyForm.category, title: companyForm.title.trim(), content: companyForm.content,
+          lang: companyForm.lang, sortOrder: companyForm.sortOrder
+        });
+        ElMessage.success('已更新');
+      } else {
+        await api.post('/company-materials', {
+          category: companyForm.category, title: companyForm.title.trim(), content: companyForm.content,
+          lang: companyForm.lang, sortOrder: companyForm.sortOrder
+        });
+        ElMessage.success('已添加');
+      }
     }
+    closeCompanyDialog();
+    await fetchCompanyMaterials();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e.response?.data?.error || '保存失败');
+  } finally {
+    cmSaving.value = false;
+    cmUploading.value = false;
+    cmUploadProgress.value = 0;
   }
 }
 
 function onCmFileChange(e) {
   const f = e.target.files && e.target.files[0];
-  if (f) {
-    companyForm.file = f;
-    if (!companyForm.title.trim()) companyForm.title = f.name;
+  if (!f) return;
+  const isImage = f.type.startsWith('image/');
+  const isVideo = f.type.startsWith('video/');
+  const isPdf = f.type === 'application/pdf';
+  if (!isImage && !isVideo && !isPdf) {
+    ElMessage.error('不支持的文件类型：仅支持图片、视频、PDF');
+    e.target.value = '';
+    return;
   }
+  const limit = isVideo ? 50 * 1024 * 1024 : 20 * 1024 * 1024;
+  const mb = isVideo ? 50 : 20;
+  if (f.size > limit) {
+    ElMessage.error('文件超过 ' + mb + 'MB 上限（PDF/图片 20MB、视频 50MB），无法上传');
+    e.target.value = '';
+    companyForm.file = null;
+    return;
+  }
+  companyForm.file = f;
+  if (!companyForm.title.trim()) companyForm.title = f.name;
 }
 
 async function deleteCompanyMaterial(m) {
@@ -7180,8 +9505,7 @@ watch(mobilePanel, (v) => {
 
 
 const dialogTitle = computed(() => {
-  if (editingCompanyId.value) return '编辑资料';
-  return companyDialogMode.value === 'file' ? '上传文件资料' : '新增文本资料';
+  return editingCompanyId.value ? '编辑资料' : '新增资料';
 });
 
 // ========== 🕰️ 客户时间与文化系统 ==========
@@ -7749,6 +10073,37 @@ const CULTURE_DATA = {
     ],
     holidays:'圣诞(12/25-26)、新年、Easter、Bank Holidays',
     dress:'深色商务正装，保守得体',
+    gifts:'一般不送礼；圣诞可送小礼物、酒',
+  },
+  IE: {
+    flag:'🇮🇪', name:'爱尔兰', nameEn:'Ireland', tz:'Europe/Dublin',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:17},
+    currency:'EUR（欧元）', language:'英语', englishLevel:'母语',
+    timePerception:'守时，商务迟到5分钟内可接受',
+    greeting:'握手+"How are you"或"Pleased to meet you"，称呼Mr./Ms.+姓',
+    etiquette:[
+      '友好热情、健谈，寒暄家常（天气、家庭、体育）',
+      '称呼可较快过渡到直呼名（爱尔兰人较随意）',
+      '酒馆(Pub)是常见社交和商务场所',
+      '尊重对方观点，直接反驳被视为不礼貌',
+      'Small talk很重要：天气、GAA体育、橄榄球是热门话题',
+    ],
+    negotiationTips:[
+      '关系导向，建立信任后谈判更顺畅',
+      '风格直接但友好，避免咄咄逼人',
+      '重合同、守信用，口头承诺也需书面确认',
+      '决策中速，尊重层级但关系重要',
+      '幽默（自嘲式）加分',
+      '圣诞节前后及8月度假季效率低',
+    ],
+    taboos:[
+      '避免讨论北爱尔兰/英国政治敏感话题',
+      '不要过于直接或施压',
+      '避免询问隐私（收入、年龄、婚姻）',
+      '不要将爱尔兰与英国混淆',
+    ],
+    holidays:'圣诞(12/25-26)、新年、St. Patrick\'s Day(3/17)、Easter、Bank Holidays',
+    dress:'商务正装，较保守得体',
     gifts:'一般不送礼；圣诞可送小礼物、酒',
   },
   PL: {
@@ -8688,27 +11043,62 @@ const cultureAllCountries = computed(() => {
 
 // 从localStorage读取手动修正
 function cultureLoadManual() {
+  // 优先使用TG jid，否则使用WA jid
+  const jid = tgActiveJid.value || chatStore.activeJid;
+  if (!jid) { cultureManualNationality.value = ''; cultureManualResidence.value = ''; return; }
+  // 先从localStorage快速加载
   try {
-    const jid = chatStore.activeJid;
-    if (!jid) { cultureManualNationality.value = ''; cultureManualResidence.value = ''; return; }
     const raw = localStorage.getItem('culture_manual_map');
     const map = raw ? JSON.parse(raw) : {};
     const entry = map[jid] || {};
     cultureManualNationality.value = entry.nationality || '';
     cultureManualResidence.value = entry.residence || '';
     cultureUseResidence.value = entry.useResidence === true;
-  } catch(e) { cultureManualNationality.value=''; cultureManualResidence.value=''; }
+  } catch(e) {}
+  // 从后端API加载最新值（覆盖localStorage缓存）
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  fetch('/api/culture-settings/' + encodeURIComponent(jid), {
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(r => r.ok ? r.json() : null).then(data => {
+    if (data && (data.nationality || data.residence)) {
+      cultureManualNationality.value = data.nationality || '';
+      cultureManualResidence.value = data.residence || '';
+      cultureUseResidence.value = data.useResidence === true;
+      // 同步到localStorage缓存
+      try {
+        const raw = localStorage.getItem('culture_manual_map');
+        const map = raw ? JSON.parse(raw) : {};
+        map[jid] = { nationality: data.nationality, residence: data.residence, useResidence: data.useResidence };
+        localStorage.setItem('culture_manual_map', JSON.stringify(map));
+      } catch(e) {}
+    }
+  }).catch(() => {});
 }
 
 function cultureSaveManual() {
+  // 优先使用TG jid，否则使用WA jid
+  const jid = tgActiveJid.value || chatStore.activeJid;
+  if (!jid) return;
+  // 保存到localStorage缓存
   try {
-    const jid = chatStore.activeJid;
-    if (!jid) return;
     const raw = localStorage.getItem('culture_manual_map');
     const map = raw ? JSON.parse(raw) : {};
     map[jid] = { nationality: cultureManualNationality.value, residence: cultureManualResidence.value, useResidence: cultureUseResidence.value };
     localStorage.setItem('culture_manual_map', JSON.stringify(map));
   } catch(e) {}
+  // 保存到后端API（永久存储）
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  fetch('/api/culture-settings/' + encodeURIComponent(jid), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({
+      nationality: cultureManualNationality.value || null,
+      residence: cultureManualResidence.value || null,
+      useResidence: cultureUseResidence.value,
+    })
+  }).catch(() => {});
 }
 
 // Auto-save whenever manual values change (more reliable than @change on mobile)
@@ -8722,7 +11112,21 @@ function cultureGetAutoIso(jid, conv) {
   if (!jid) return null;
   // 1. 手动设置优先
   if (cultureManualNationality.value) return cultureManualNationality.value;
-  // 2. 从jid推断国家码（WA格式 86xxx@s.whatsapp.net 直接匹配）
+  // 1.5 【TC-020修复】客户档案 country 优先（号码为中国号不应覆盖客户公司所在地）
+  // 2026-08-24 国家自动同步后 country 存中文名，需映射回 ISO 供文化库查询
+  const _custCountry = customerData.value?.country;
+  if (_custCountry) {
+    const _cn = String(_custCountry).trim();
+    const _iso = countryNameMap[_cn] || (/^[A-Za-z]{2}$/.test(_cn) ? _cn.toUpperCase() : null);
+    if (_iso) return _iso;
+  }
+  // 1.6 【TC-020修复】从客户公司名/联系人名推断国家（公司所在地优先于号码归属地）
+  const _nameCand = customerData.value?.companyName || conv?.name || customerData.value?.contactName || customerData.value?.name || '';
+  if (_nameCand) {
+    const _nameIso = detectCountryFromName(_nameCand);
+    if (_nameIso) return _nameIso;
+  }
+  // 2. 从jid推断国家码（号码归属地仅作兜底）
   let iso = detectCountryFromJid(jid);
   if (iso) return iso;
   // 2.5 TG JID: 从jid中提取电话号码（格式：123456789@telegram）
@@ -8753,7 +11157,11 @@ function cultureGetAutoIso(jid, conv) {
   }
   // 5. 客户档案country字段
   const country = customerData.value?.country;
-  if (country) return country.toUpperCase();
+  if (country) {
+    const _cn = String(country).trim();
+    const _iso = countryNameMap[_cn] || (/^[A-Za-z]{2}$/.test(_cn) ? _cn.toUpperCase() : null);
+    if (_iso) return _iso;
+  }
   return null;
 }
 
@@ -8867,8 +11275,13 @@ const cultureTzDiff = computed(() => {
   return info ? cultureTzDiffFromNow(info.tz) : '';
 });
 
-// 切换会话时重新加载手动修正
+// 切换会话时重新加载手动修正（WA + TG）
 watch(() => chatStore.activeJid, (newJid, oldJid) => {
+  if (newJid && newJid !== oldJid) {
+    cultureLoadManual();
+  }
+});
+watch(tgActiveJid, (newJid, oldJid) => {
   if (newJid && newJid !== oldJid) {
     cultureLoadManual();
   }
@@ -8918,7 +11331,7 @@ const WC_PRESET_CITIES = [
   { flag: '🇳🇬', name: '拉各斯', tz: 'Africa/Lagos', tz_label: 'UTC+1' },
   { flag: '🇵🇰', name: '卡拉奇', tz: 'Asia/Karachi', tz_label: 'UTC+5' },
   { flag: '🇧🇩', name: '达卡', tz: 'Asia/Dhaka', tz_label: 'UTC+6' },
-  { flag: '🇹🇼', name: '台北', tz: 'Asia/Taipei', tz_label: 'UTC+8' },
+  { flag: '🇨🇳', name: '台北', tz: 'Asia/Taipei', tz_label: 'UTC+8' },
 ];
 
 const wcClocks = ref([]);
@@ -9057,11 +11470,13 @@ onMounted(() => {
   cultureLoadManual();
   exRefreshRates();
   window.addEventListener('open-culture-panel', () => { switchPanel('worldclock'); });
+  window.addEventListener('open-proxy-panel', onOpenProxyPanel);
 });
 onUnmounted(() => {
   if (wcTimer) clearInterval(wcTimer);
   if (cultureTimer) clearInterval(cultureTimer);
   window.removeEventListener('open-culture-panel', () => { switchPanel('worldclock'); });
+  window.removeEventListener('open-proxy-panel', onOpenProxyPanel);
 });
 
 
@@ -9984,6 +12399,33 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 
 // 首次进入时拉取（挂在onMounted里已有worldclock的，追加即可）
 
+
+// L2: Poll for pending business confirmations every 30 seconds
+function onBizConfirmedElsewhere(e) {
+  const cid = e.detail && e.detail.id;
+  if (cid == null) return;
+  const idx = bizConfirmPending.value.findIndex(c => c.id === cid);
+  if (idx !== -1) {
+    bizConfirmDismissed.value.add(cid);
+    bizConfirmPending.value.splice(idx, 1);
+    if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
+      currentBizConfirmIdx.value = 0;
+    }
+  }
+}
+
+onMounted(() => {
+  loadBizConfirmPending();
+  const bizConfirmTimer = setInterval(loadBizConfirmPending, 30000);
+  window.__bizConfirmTimer = bizConfirmTimer;
+  window.addEventListener('l2-biz-confirmed', onBizConfirmedElsewhere);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('l2-biz-confirmed', onBizConfirmedElsewhere);
+  if (window.__bizConfirmTimer) clearInterval(window.__bizConfirmTimer);
+});
+
 </script>
 
 <style scoped>
@@ -10008,20 +12450,30 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
   flex-shrink: 0;
   border-right: 1px solid var(--border-color);
   transition: width 0.2s ease;
+  position: relative;
   z-index: 50;
 }
 .platform-collapsed .platform-nav { width: 56px; }
-.platform-nav-top { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.platform-nav-top { flex: 1; display: flex; flex-direction: column; overflow: visible; }
 
-.logo-wrap {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 12px 10px;
-  cursor: pointer; height: 56px;
+.platform-logo-row {
+  display: flex; align-items: center; justify-content: flex-start;
+  padding: 6px 6px 2px 10px; flex-shrink: 0; min-width: 0;
+  position: relative;
 }
-.logo-icon { font-size: 22px; }
+.logo-wrap {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0; cursor: pointer; height: 40px; min-width: 0;
+}
+.logo-icon {
+  width: 26px; height: 26px; object-fit: contain;
+  border-radius: 6px; flex-shrink: 0; display: block;
+  background: #fff; padding: 2px;
+}
 .logo-text { font-size: 15px; font-weight: 700; white-space: nowrap; color: var(--accent); }
 
 .platform-menu { flex: 1; padding: 4px 8px; overflow-y: auto; }
+.platform-item-wrap { position: relative; }
 .platform-item {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 8px; margin: 2px 0;
@@ -10031,17 +12483,21 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 }
 .platform-item:hover { background: var(--panel-header-bg); color: var(--text-primary); }
 .platform-item.active { background: #00a88420; color: var(--accent); }
-.platform-collapsed .platform-item { justify-content: center; padding: 10px 0; }
-.platform-collapsed .logo-wrap { justify-content: center; padding: 14px 0; gap: 0; }
+.platform-collapsed .platform-item { justify-content: center; padding: 0; width: 40px; height: 40px; box-sizing: border-box; margin: 2px auto; }
+.platform-collapsed .platform-logo-row { justify-content: center; padding: 8px 0 2px; gap: 0; }
+.platform-collapsed .logo-wrap { justify-content: center; padding: 0; height: 30px; gap: 0; }
+.platform-collapsed .logo-icon { width: 22px; height: 22px; padding: 1px; }
 .platform-collapsed .logo-text { display: none; }
-.platform-collapsed .platform-nav-bottom { padding: 8px 4px; align-items: center; }
+.platform-collapsed .platform-nav-bottom { padding: 8px; align-items: center; }
 .platform-collapsed .p-setting,
 .platform-collapsed .p-logout,
 .platform-collapsed .p-collapse { justify-content: center; padding: 10px 0; gap: 0; }
-.platform-collapsed .p-setting span,
-.platform-collapsed .p-logout span { display: none; }
-.p-icon { display: flex; flex-shrink: 0; }
-.p-label { font-size: 13px; font-weight: 500; }
+.platform-collapsed .p-setting span:not(.p-icon),
+.platform-collapsed .p-logout span:not(.p-icon) { display: none; }
+.p-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 0; width: 22px; height: 22px; }
+.p-icon svg { display: block; }
+.p-icon:empty { width: 22px; height: 22px; flex-shrink: 0; }
+.p-label { font-size: 13px; font-weight: 500; line-height: 1.3; display: flex; align-items: center; }
 .p-badge {
   margin-left: auto; background: var(--accent); color: #fff;
   font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600;
@@ -10067,12 +12523,49 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
   display: flex; align-items: center; gap: 12px;
   width: 100%; padding: 9px 10px;
   background: none; border: none; color: var(--text-secondary);
-  cursor: pointer; border-radius: 6px; font-size: 13px; transition: all 0.15s;
+  cursor: pointer; border-radius: 6px; font-size: 13px; line-height: 1; transition: all 0.15s;
 }
 .p-theme:hover, .p-setting:hover, .p-collapse:hover { background: var(--panel-header-bg); color: var(--text-primary); }
 .p-logout:hover { background: #ea433520; color: var(--danger); }
 .platform-collapsed .p-theme, .platform-collapsed .p-setting, .platform-collapsed .p-collapse, .platform-collapsed .p-logout {
-  justify-content: center; padding: 9px 0;
+  justify-content: center; padding: 0; width: 40px; height: 40px; box-sizing: border-box; border-radius: 8px; margin: 0 auto;
+}
+.p-collapse-bottom {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 9px 10px;
+  background: none; border: none; color: var(--text-secondary);
+  cursor: pointer; border-radius: 6px; font-size: 13px; line-height: 1;
+  transition: all 0.15s;
+}
+.p-collapse-bottom:hover { background: var(--panel-header-bg); color: var(--text-primary); }
+.p-collapse-bottom svg { flex-shrink: 0; display: block; }
+.platform-collapsed .p-collapse-bottom {
+  justify-content: center; padding: 0; width: 40px; height: 40px; box-sizing: border-box; border-radius: 8px; margin: 0 auto;
+}
+.platform-collapsed .p-collapse-bottom span { display: none; }
+
+/* 反馈建议入口 */
+.p-feedback-wrap { position: relative; }
+.p-feedback-btn { position: relative; }
+.p-feedback-arrow { margin-left: auto; transition: transform .2s; opacity: .55; flex-shrink: 0; }
+.p-feedback-arrow.open { transform: rotate(180deg); }
+.p-feedback-menu {
+  position: absolute; bottom: calc(100% + 6px); left: 8px; right: 8px;
+  background: var(--panel-bg); border: 1px solid var(--border-color);
+  border-radius: 8px; padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  z-index: 1100;
+}
+.p-feedback-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 6px; font-size: 13px;
+  color: var(--text-secondary); text-decoration: none; cursor: pointer;
+  transition: all 0.15s;
+}
+.p-feedback-item:hover { background: var(--panel-header-bg); color: var(--text-primary); }
+.p-feedback-item-icon { flex-shrink: 0; font-size: 15px; line-height: 1; }
+.platform-collapsed .p-feedback-menu {
+  left: auto; right: 0; bottom: calc(100% + 6px);
+  width: 160px;
 }
 
 /* tooltip */
@@ -10432,14 +12925,14 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 }
 .search-box svg { color: var(--text-secondary); flex-shrink: 0; }
 .chat-filters {
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--panel-bg);
   flex-shrink: 0;
 }
 .filter-tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -10943,6 +13436,12 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .col-function-panel.customering .panel-col-header .col-toggle { color: var(--text-secondary); }
 .col-function-panel.customering .panel-col-header .col-toggle:hover { background: var(--sidebar-active); color: var(--text-primary); }
 .col-function-panel.customering .panel-col-header .col-toggle:disabled { opacity:.5; cursor:not-allowed; }
+.col-function-panel.bgchecking { background: var(--panel-bg); border-left: 1px solid var(--border-color); }
+.col-function-panel.bgchecking .panel-col-header { background: var(--panel-header-bg); color: var(--text-primary); border-bottom: 1px solid var(--border-color); }
+.col-function-panel.bgchecking .ai-title { color: var(--text-primary); }
+.col-function-panel.bgchecking .panel-col-header .col-toggle { color: var(--text-secondary); }
+.col-function-panel.bgchecking .panel-col-header .col-toggle:hover { background: var(--sidebar-active); color: var(--text-primary); }
+.col-function-panel.bgchecking .panel-col-header .col-toggle:disabled { opacity:.5; cursor:not-allowed; }
 .col-function-panel.aitalking .ai-title { color: var(--text-primary); }
 .col-function-panel.translating .panel-col-header { background: var(--panel-header-bg); color: var(--text-primary); border-bottom: 1px solid var(--border-color); }
 .col-function-panel.translating .panel-col-header .col-toggle { color: var(--text-secondary); }
@@ -11042,6 +13541,95 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .trans-panel-body .el-color-picker__trigger {
   background: var(--sidebar-active) !important;
   border-color: var(--text-muted) !important;
+}
+/* ========== 导入聊天面板 ========== */
+.import-panel-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+.import-panel {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-radius: 12px;
+  padding: 20px;
+}
+.import-main-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #e9edef);
+  margin: 0 0 10px 0;
+}
+.import-hint {
+  font-size: 13px;
+  color: var(--text-secondary, #8696a0);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+.import-steps {
+  background: rgba(0,168,132,0.06);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.import-step-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #e9edef);
+  margin: 0 0 8px 0;
+}
+.import-steps p {
+  font-size: 12px;
+  color: var(--text-secondary, #8696a0);
+  margin: 4px 0;
+  line-height: 1.6;
+}
+.import-actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #00a884;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.import-btn:hover {
+  background: #008f6f;
+}
+.import-status {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.import-status.success {
+  color: #00a884;
+  background: rgba(0, 168, 132, 0.1);
+}
+.import-status.error {
+  color: #f15c6d;
+  background: rgba(241, 92, 109, 0.1);
+}
+.import-status.loading {
+  color: #53bdeb;
+  background: rgba(83, 189, 235, 0.1);
+}
+.import-no-contact {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(241, 92, 109, 0.08);
+  border-radius: 8px;
+  color: #f15c6d;
+  font-size: 13px;
+  text-align: center;
 }
 /* ========== 设置全屏弹窗 ========== */
 .settings-modal {
@@ -11896,6 +14484,10 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .aitalk-msg-time { font-size: 10px; color: var(--text-secondary); margin-top: 3px; padding: 0 4px; }
 
 .aitalk-typing { display: inline-flex; align-items: center; gap: 4px; padding: 12px 16px; }
+.aitalk-progress { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+.aitalk-progress-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.aitalk-progress-stage { font-size: 13px; color: var(--crm-text-primary, #e6e6e6); white-space: nowrap; }
+.aitalk-progress-time { font-size: 12px; color: var(--crm-text-secondary, #9aa0aa); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .aitalk-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary);
   animation: aitalk-bounce 1.2s infinite ease-in-out; display: inline-block;
@@ -11956,6 +14548,17 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 }
 .aitalk-use-btn:hover { background: #008c6e; }
 .aitalk-use-btn.done { background: #006e56; }
+.aitalk-edit-btn { border: 1px solid var(--accent); color: var(--accent); background: transparent; }
+.aitalk-edit-btn:hover { background: var(--accent); color: #fff; }
+.aitalk-save-btn { border: 1px solid var(--accent); color: var(--accent); background: transparent; }
+.aitalk-save-btn:hover { background: var(--accent); color: #fff; }
+.aitalk-edit-input {
+  width: 100%; box-sizing: border-box; background: var(--panel-bg); color: var(--text-primary);
+  border: 1px solid var(--text-muted); border-left: 3px solid var(--accent); border-radius: 6px;
+  padding: 8px 10px; font-size: 13px; line-height: 1.5; font-family: inherit; resize: vertical;
+  margin: 4px 0; white-space: pre-wrap; word-break: break-word;
+}
+.aitalk-edit-input:focus { outline: none; border-color: var(--accent); }
 /* ── 场景分析 ── */
 .aitalk-scene-card {
   display: flex; gap: 10px; background: #1a262d; border: 1px solid #233138;
@@ -12074,6 +14677,22 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .aitalk-gen-btn:hover:not(:disabled) { background: #6d28d9; }
 .aitalk-gen-btn:active:not(:disabled) { transform: scale(.98); }
 .aitalk-gen-btn:disabled { opacity: .6; cursor: not-allowed; }
+/* 【终止按钮】生成中显示的中断按钮：红色警示系 */
+.aitalk-stop-btn {
+  width: 100%; height: 40px; margin-top: 8px; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff;
+  font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center; gap: 6px;
+  transition: all .15s ease; box-shadow: 0 2px 8px rgba(239, 68, 68, .35);
+  font-family: inherit;
+}
+.aitalk-stop-btn:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, .45); }
+.aitalk-stop-btn:active { transform: scale(.98); }
+.aitalk-stop-icon { font-size: 13px; }
+.aitalk-stop-btn-inline { width: auto; height: 34px; margin-top: 0; padding: 0 14px; font-size: 13px; flex-shrink: 0; }
+/* 【自动生成开关】面板顶部小开关 */
+.aitalk-autogen-wrap { display: inline-flex; align-items: center; gap: 4px; margin-right: 2px; flex-shrink: 0; }
+.aitalk-autogen-text { font-size: 12px; color: var(--text-secondary); user-select: none; line-height: 1; }
 .aitalk-spinner { display: inline-block; animation: aitalk-spin 1s linear infinite; }
 @keyframes aitalk-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
 .aitalk-switch-mode-link {
@@ -12257,6 +14876,26 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 .customer-bg-btn:hover { background: #008c6e; }
 .customer-bg-btn:disabled { opacity: 0.7; cursor: wait; }
 .bg-check-time { font-size: 11px; color: var(--text-secondary); text-align: center; padding: 0 12px; margin-top: -4px; }
+
+/* ── 🔍 背调独立面板（卡片化） ── */
+.col-function-panel .bgcheck-panel-body { padding: 14px 16px 16px; }
+.col-function-panel .bgcheck-panel-body .bgcheck-content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.col-function-panel .bgcheck-panel-body .profile-section-hint { padding: 0; }
+.col-function-panel .bgcheck-panel-body .customer-bg-btn-wrap { padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.col-function-panel .bgcheck-panel-body .customer-bg-btn { width: 100%; height: 40px; border-radius: 8px; }
+.col-function-panel .bgcheck-panel-body .bg-check-time { margin-top: 0; padding: 0; text-align: center; font-size: 12px; }
+.col-function-panel .bgcheck-panel-body .bg-report-card {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px;
+  margin: 0; padding: 12px 14px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.col-function-panel .bgcheck-panel-body .bg-report-head { padding: 0 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+.col-function-panel .bgcheck-panel-body .bg-report-body { flex: 1; min-height: 0; overflow-y: auto; max-height: none; padding-right: 6px; }
+.col-function-panel .bgcheck-panel-body .bg-report-body::-webkit-scrollbar { width: 5px; }
+.col-function-panel .bgcheck-panel-body .bg-report-body::-webkit-scrollbar-thumb { background: var(--sidebar-active); border-radius: 4px; }
+.col-function-panel .bgcheck-panel-body .bg-report-footer { padding: 10px 0 0; margin-top: 8px; border-top: 1px solid var(--border-color); }
+.col-function-panel.m-panel .bgcheck-panel-body { padding: 12px; }
 
 /* Background check rating badges */
 .conv-bg-rating {
@@ -12663,7 +15302,8 @@ body.dark .mh-dd-item:active { background:#2a3942; }
     transition: color .15s;
     -webkit-tap-highlight-color: transparent;
   }
-  .m-tab span:first-child { font-size: 22px; line-height: 1; }
+  .m-tab span:first-child { font-size: 22px; line-height: 1; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .m-tab span:first-child svg { display: block; width: 22px; height: 22px; }
   .m-tab.active { color: var(--accent); }
 
   /* AI悬浮按钮：手机端隐藏，底部tabbar已有AI话术入口 */
@@ -13138,7 +15778,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   .asi-check { color: var(--accent, #00a884); font-weight: bold; font-size: 16px; margin-left: auto; }
   .action-sheet-item.active { color: var(--accent, #00a884); }
   .asi-offline { opacity: 0.6; }
-  .asi-channel-header { cursor: default; font-weight: 600; background: transparent !important; }
+  .asi-channel-header { cursor: pointer; font-weight: 600; }
   .asi-label { flex: 1; text-align: left; }
 
   /* 多账号子区 */
@@ -13218,6 +15858,71 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 
 .mh-ch-arrow { opacity: 0.6; margin-left: 2px; flex-shrink: 0; }
+
+.tg-attach-btn:hover { color: var(--text-primary, #e9edef) !important; }
+.tg-attach-item:hover { background: var(--sidebar-active, #374045) !important; }
+
+/* File preview chips */
+/* 附件预览条：输入框上方横排缩略图 */
+.ta-attach-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 4px 6px;
+  margin-bottom: 0;
+}
+.ta-attach-chip {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.28);
+  border-radius: 10px;
+  padding: 4px 8px 4px 4px;
+}
+.ta-attach-thumb {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+.ta-attach-fileicon { font-size: 22px; }
+.ta-attach-filename {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-primary, #e9edef);
+}
+.ta-attach-remove {
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+}
+.ta-attach-remove:hover { background: #ef4444; }
+@media (max-width: 768px) {
+  .ta-attach-thumb { width: 64px; height: 64px; }
+  .ta-attach-remove { width: 24px; height: 24px; font-size: 16px; }
+}
 </style>
 
 <style>
@@ -13452,7 +16157,11 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   border-bottom: 1px solid var(--border-color);
   background: var(--chat-bg);
 }
-.mdp-logo { color: var(--text-primary); font-size: 18px; font-weight: 600; }
+.mdp-logo {
+  color: var(--text-primary); font-size: 18px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.mdp-logo-img { width: 24px; height: 24px; object-fit: contain; border-radius: 5px; background: #fff; padding: 1px; flex-shrink: 0; }
 .mdp-close {
   background: none; border: none; color: var(--text-secondary);
   font-size: 20px; width: 36px; height: 36px;
@@ -13484,6 +16193,10 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   -webkit-tap-highlight-color: transparent;
 }
 .mdp-item:active { background: var(--panel-header-bg); }
+.mdp-arrow { margin-left: auto; transition: transform .2s; opacity: .55; flex-shrink: 0; }
+.mdp-arrow.open { transform: rotate(180deg); }
+.mdp-children { padding-left: 16px; background: rgba(0,0,0,0.18); }
+.mdp-item.mdp-child { font-size: 14px; padding: 12px 18px; }
 .mdp-item.active { color: var(--accent); background: #00a88415; }
 .mdp-icon {
   width: 28px; font-size: 20px; display: flex;
@@ -13988,6 +16701,14 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 .cm-chip:hover { background:var(--sidebar-active, #2a3942); color:var(--text-primary, #e9edef); }
 .cm-chip.active { background:var(--accent, #00a884); color:#fff; border-color:var(--accent, #00a884); }
+.cm-chip-manage { padding:5px 8px; font-size:13px; opacity:.85; }
+.cm-chip-manage:hover { opacity:1; }
+.cm-cat-list { max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.cm-cat-row { display:flex; align-items:center; gap:8px; }
+.cm-cat-icon { font-size:16px; width:24px; text-align:center; flex-shrink:0; }
+.cm-cat-name-input { flex:1; }
+.cm-cat-empty { text-align:center; color:var(--text-muted, #667781); padding:16px; font-size:13px; }
+.cm-cat-add { display:flex; gap:8px; align-items:center; border-top:1px solid var(--border-color, #2a3942); padding-top:12px; }
 .cm-uploading { padding:8px 12px; color:var(--accent, #00a884); font-size:13px; text-align:center; }
 .cm-empty { text-align:center; padding:40px 20px; color:var(--text-muted, #667781); }
 .cm-empty-icon { font-size:48px; margin-bottom:12px; opacity:0.5; }
@@ -14052,6 +16773,148 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   background:var(--panel-bg, #111b21);
 }
 .cm-form .el-select__popper, .cm-form .el-popper { --el-bg-color: var(--panel-header-bg, #202c33); }
+/* 夜间模式：弹窗(append-to-body)内 el 控件统一暗色，避免纯黑块 */
+.cm-dialog .el-input__wrapper,
+.cm-dialog .el-textarea__inner,
+.cm-dialog .el-select__wrapper,
+.cm-cat-dialog .el-input__wrapper,
+.cm-cat-dialog .el-textarea__inner,
+.cm-cat-dialog .el-select__wrapper {
+  background-color: var(--sidebar-active, #2a3942) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--text-muted, #667781) !important;
+  border-radius: 6px !important;
+  padding: 0 10px !important;
+  min-height: 36px;
+}
+.cm-dialog .el-input__wrapper:hover,
+.cm-dialog .el-textarea__inner:hover,
+.cm-dialog .el-select__wrapper:hover,
+.cm-cat-dialog .el-input__wrapper:hover,
+.cm-cat-dialog .el-textarea__inner:hover,
+.cm-cat-dialog .el-select__wrapper:hover {
+  border-color: var(--text-secondary, #8696a0) !important;
+}
+.cm-dialog .el-input__wrapper.is-focus,
+.cm-dialog .el-select__wrapper.is-focused,
+.cm-cat-dialog .el-input__wrapper.is-focus,
+.cm-cat-dialog .el-select__wrapper.is-focused {
+  border-color: var(--accent, #00a884) !important;
+}
+.cm-dialog .el-input__inner,
+.cm-dialog .el-textarea__inner,
+.cm-dialog .el-select__placeholder,
+.cm-dialog .el-select__selected-item,
+.cm-dialog .el-select__suffix,
+.cm-cat-dialog .el-input__inner,
+.cm-cat-dialog .el-textarea__inner,
+.cm-cat-dialog .el-select__placeholder,
+.cm-cat-dialog .el-select__selected-item,
+.cm-cat-dialog .el-select__suffix {
+  color: var(--text-primary, #e9edef) !important;
+  -webkit-text-fill-color: var(--text-primary, #e9edef) !important;
+}
+.cm-dialog .el-input__inner::placeholder,
+.cm-dialog .el-textarea__inner::placeholder,
+.cm-cat-dialog .el-input__inner::placeholder,
+.cm-cat-dialog .el-textarea__inner::placeholder {
+  color: var(--text-secondary, #8696a0) !important;
+  -webkit-text-fill-color: var(--text-secondary, #8696a0) !important;
+  opacity: 1;
+}
+.cm-dialog .el-form-item__label,
+.cm-cat-dialog .el-form-item__label {
+  color: var(--text-secondary, #8696a0) !important;
+}
+
+/* 夜间模式：弹窗主体强制深色背景（append-to-body 后需同时覆盖 EP 变量与类） */
+.cm-dialog,
+.cm-cat-dialog {
+  --el-dialog-bg-color: var(--panel-header-bg, #202c33);
+  --el-bg-color: var(--panel-header-bg, #202c33);
+  --el-bg-color-overlay: var(--panel-header-bg, #202c33);
+}
+.cm-dialog .el-dialog,
+.cm-cat-dialog .el-dialog {
+  background: var(--panel-header-bg, #202c33) !important;
+}
+.cm-dialog .el-dialog__title,
+.cm-cat-dialog .el-dialog__title {
+  color: var(--text-primary, #e9edef) !important;
+}
+.cm-dialog .el-dialog__header,
+.cm-cat-dialog .el-dialog__header {
+  border-bottom: 1px solid var(--border-color, #2a3942) !important;
+  background: transparent !important;
+}
+.cm-dialog .el-dialog__body,
+.cm-cat-dialog .el-dialog__body {
+  background: var(--panel-header-bg, #202c33) !important;
+}
+.cm-dialog .el-dialog__footer,
+.cm-cat-dialog .el-dialog__footer {
+  background: var(--panel-header-bg, #202c33) !important;
+}
+.cm-dialog .el-dialog__headerbtn .el-dialog__close,
+.cm-cat-dialog .el-dialog__headerbtn .el-dialog__close {
+  color: var(--text-secondary, #8696a0) !important;
+}
+
+/* 夜间模式：弹窗深色背景 + 输入控件白色底（参考图风格） */
+.cm-dialog .el-input__wrapper,
+.cm-dialog .el-textarea__inner,
+.cm-dialog .el-select__wrapper,
+.cm-cat-dialog .el-input__wrapper,
+.cm-cat-dialog .el-textarea__inner,
+.cm-cat-dialog .el-select__wrapper {
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  border: 1px solid #d0d3d6 !important;
+  border-radius: 6px !important;
+  padding: 0 10px !important;
+  min-height: 36px;
+}
+.cm-dialog .el-input__wrapper:hover,
+.cm-dialog .el-textarea__inner:hover,
+.cm-dialog .el-select__wrapper:hover,
+.cm-cat-dialog .el-input__wrapper:hover,
+.cm-cat-dialog .el-textarea__inner:hover,
+.cm-cat-dialog .el-select__wrapper:hover {
+  border-color: #a8abb2 !important;
+}
+.cm-dialog .el-input__wrapper.is-focus,
+.cm-dialog .el-select__wrapper.is-focused,
+.cm-cat-dialog .el-input__wrapper.is-focus,
+.cm-cat-dialog .el-select__wrapper.is-focused {
+  border-color: var(--accent, #00a884) !important;
+}
+.cm-dialog .el-input__inner,
+.cm-dialog .el-textarea__inner,
+.cm-dialog .el-select__placeholder,
+.cm-dialog .el-select__selected-item,
+.cm-cat-dialog .el-input__inner,
+.cm-cat-dialog .el-textarea__inner,
+.cm-cat-dialog .el-select__placeholder,
+.cm-cat-dialog .el-select__selected-item {
+  color: #303133 !important;
+  -webkit-text-fill-color: #303133 !important;
+}
+.cm-dialog .el-input__inner::placeholder,
+.cm-dialog .el-textarea__inner::placeholder,
+.cm-cat-dialog .el-input__inner::placeholder,
+.cm-cat-dialog .el-textarea__inner::placeholder {
+  color: #a8abb2 !important;
+  -webkit-text-fill-color: #a8abb2 !important;
+  opacity: 1;
+}
+.cm-dialog .el-select__suffix,
+.cm-cat-dialog .el-select__suffix {
+  color: #303133 !important;
+}
+.cm-dialog .el-textarea__inner {
+  padding: 8px 10px !important;
+}
+
 
 /* 面板 header 颜色 */
 
@@ -14061,6 +16924,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   border-radius:6px; cursor:pointer; margin-right:10px; font-family:inherit;
 }
 .cm-file-selected { margin-top:6px; font-size:12px; color:var(--accent, #00a884); }
+.cm-file-hint { margin-top:4px; font-size:12px; color:var(--text-secondary, #8696a0); }
 .cm-file-input::file-selector-button:hover { background:#08c29a; }
 .col-function-panel.companying .panel-col-header { background:var(--panel-header-bg); color:var(--text-primary); border-bottom:1px solid var(--border-color); }
 
@@ -14345,7 +17209,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .wc-flag { font-size: 20px; }
 .wc-city-name { font-weight: 600; font-size: 15px; color: var(--text-primary); }
 .wc-tz-diff { font-size: 11px; color: var(--text-secondary); background: var(--tag-bg, rgba(0,168,132,.1)); padding: 2px 6px; border-radius: 4px; color: var(--accent-color, #00a884); }
-.wc-del-btn { background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.wc-del-btn { background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .wc-del-btn:hover { background: rgba(231,76,60,.15); color: #e74c3c; }
 
 /* ─── 🕰️ 时间与文化面板 ─── */
@@ -14957,6 +17821,9 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .speechlib-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.08); color: var(--text-secondary, #8696a0); }
 .speechlib-tag-score { background: rgba(255,165,0,0.15); color: #f5a623; }
 .speechlib-tag-fav { background: rgba(255,215,0,0.12); color: #f5c518; }
+.speechlib-source-badge { display:inline-block; font-size:10px; padding:2px 7px; border-radius:10px; margin-bottom:6px; background: rgba(0,168,132,0.15); color: #00a884; font-weight:600; }
+.speechlib-source-badge.src-community { background: rgba(255,152,0,0.15); color: #ff9800; }
+.speechlib-source-badge.src-qa { background: rgba(42,171,238,0.15); color: #2aabee; }
 .speechlib-copy-btn { background: transparent; border: 1px solid var(--accent, #00a884); color: var(--accent, #00a884); border-radius: 6px; padding: 3px 10px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
 .speechlib-copy-btn:hover { background: var(--accent, #00a884); color: #fff; }
 .speechlib-list-section { flex: 1; padding: 12px; overflow-y: auto; }
@@ -15088,5 +17955,1180 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .att-urg-high { background: rgba(234,76,97,.15); color: #ea4c61; }
 .att-urg-medium { background: rgba(245,158,11,.15); color: #f59e0b; }
 .att-urg-low { background: rgba(134,150,160,.15); color: #8696a0; }
+
+
+/* === Two-level navigation === */
+.platform-item.has-children {
+  cursor: pointer;
+}
+.p-arrow {
+  margin-left: -10px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.p-arrow.open {
+  transform: rotate(180deg);
+}
+.platform-children {
+  overflow: hidden;
+  background: rgba(255,255,255,0.03);
+}
+.platform-collapsed .platform-children {
+  position: absolute; left: calc(100% + 8px); top: 0;
+  min-width: 170px; background: var(--panel-bg);
+  border: 1px solid var(--border-color); border-radius: 8px;
+  padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+  z-index: 1000; overflow: visible;
+}
+.platform-collapsed .platform-child { padding: 8px 14px; }
+.platform-collapsed .platform-child .p-child-label { white-space: nowrap; }
+.platform-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 10px 40px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary, #8696a0);
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+}
+.platform-child:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary, #e9edef);
+}
+.platform-child.active {
+  color: var(--accent, #00a884);
+  background: rgba(0,168,132,0.08);
+  border-left-color: var(--accent, #00a884);
+  font-weight: 600;
+}
+.p-child-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.p-child-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.2s ease;
+  max-height: 200px;
+  opacity: 1;
+}
+.slide-down-enter-from, .slide-down-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+
+.view-360-btn {
+  background: linear-gradient(135deg, #00a884, #008069);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+.view-360-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,168,132,0.3);
+}
+.bg-report-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ========== 外贸Agent模块 ========== */
+.trade-agent-module {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+  height: 100%;
+}
+.agent-hub-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  background: var(--mgmt-bg);
+  overflow-y: auto;
+}
+.agent-hub-header {
+  margin-bottom: 32px;
+}
+.agent-hub-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+.agent-hub-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.agent-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+}
+.agent-hub-card {
+  background: var(--mgmt-card-bg);
+  border: 1px solid var(--mgmt-divider);
+  border-radius: 16px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-hub-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(0,168,132,0.12);
+  transform: translateY(-3px);
+}
+.ah-card-icon {
+  font-size: 36px;
+  margin-bottom: 4px;
+}
+.ah-card-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ah-card-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 1;
+}
+.ah-card-arrow {
+  font-size: 16px;
+  color: var(--accent);
+  align-self: flex-end;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.agent-hub-card:hover .ah-card-arrow {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .agent-hub-page { padding: 16px; }
+  .agent-hub-grid { grid-template-columns: 1fr; gap: 12px; }
+  .agent-hub-card { padding: 20px 16px; }
+}
+
+/* ========== Trade Agent 聊天界面 ========== */
+.trade-agent-module {
+  display: flex;
+  height: 100%;
+  background: var(--chat-bg, #0b141a);
+  overflow: hidden;
+}
+/* 左栏：Agent列表 */
+.ta-agent-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--mgmt-card-bg, #1e252b);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ta-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary, #8696a0);
+}
+.ta-add-agent {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: var(--text-secondary, #8696a0);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.ta-add-agent:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.ta-agent-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+.ta-agent-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  transition: background 0.2s; margin-bottom: 2px;
+}
+.ta-agent-item:hover { background: rgba(255,255,255,0.06); }
+.ta-agent-item.active { background: rgba(59,130,246,0.15); }
+.ta-agent-avatar { font-size: 22px; width: 32px; text-align: center; }
+.ta-agent-name { flex: 1; font-size: 14px; color: var(--text-primary, #e9edef); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ta-agent-time { font-size: 12px; color: var(--text-secondary, #8696a0); white-space: nowrap; }
+.ta-expand-btn {
+  padding: 12px 16px; font-size: 13px;
+  color: var(--text-secondary, #8696a0); cursor: pointer;
+  border-top: 1px solid rgba(255,255,255,0.06); transition: color 0.2s;
+}
+.ta-expand-btn:hover { color: var(--text-primary, #e9edef); }
+/* 中间：聊天区 */
+.ta-chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--chat-bg, #0b141a); border-right: 1px solid rgba(255,255,255,0.06); }
+.ta-chat-header {
+  display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--mgmt-card-bg, #1e252b);
+}
+.ta-header-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.ta-header-info { display: flex; flex-direction: column; }
+.ta-header-name { font-size: 15px; font-weight: 600; color: var(--text-primary, #e9edef); }
+.ta-header-status { font-size: 12px; color: #25d366; }
+/* 消息区 */
+.ta-chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+/* 欢迎区 */
+.ta-welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; flex: 1; }
+.ta-welcome-icon { font-size: 48px; margin-bottom: 16px; }
+.ta-welcome h2 { font-size: 22px; color: var(--text-primary, #e9edef); margin: 0 0 8px; }
+.ta-welcome p { font-size: 14px; color: var(--text-secondary, #8696a0); margin: 0 0 24px; }
+.ta-quick-prompts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 500px; }
+.ta-quick-prompts button {
+  padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(59,130,246,0.3);
+  background: rgba(59,130,246,0.08); color: #60a5fa; font-size: 13px; cursor: pointer; transition: all 0.2s;
+}
+.ta-quick-prompts button:hover { background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.5); }
+/* 消息气泡 */
+.ta-message { display: flex; gap: 10px; max-width: 80%; }
+.ta-message.ai { align-self: flex-start; }
+.ta-message.user { align-self: flex-end; flex-direction: row-reverse; }
+.ta-msg-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.ta-msg-avatar.user-avatar { background: rgba(37,211,102,0.15); }
+.ta-msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; white-space: pre-wrap; }
+.ta-msg-bubble.ai { background: var(--mgmt-card-bg, #1e252b); color: var(--text-primary, #e9edef); }
+.ta-msg-bubble.user { background: #25d366; color: #fff; }
+.ta-msg-bubble.user.ta-img-only { background: transparent !important; padding: 2px !important; }
+.ta-msg-bubble.ta-img-only .ta-msg-img { border-radius: 8px; display: block; }
+/* 胶囊快捷指令（输入框上方常驻） */
+.ta-capsule-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px 2px;
+  background: var(--chat-bg, #0b141a);
+}
+.ta-capsule-btn {
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--mgmt-card-bg, #1e252b);
+  color: var(--text-secondary, #8696a0);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.ta-capsule-btn:hover { border-color: rgba(59,130,246,0.5); color: #60a5fa; background: rgba(59,130,246,0.1); }
+
+/* 执行过程可视化：loading + 步骤流 */
+.ta-loading-block {
+  align-self: flex-start;
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--mgmt-card-bg, #1e252b);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.ta-loading-row { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary, #8696a0); }
+.ta-loading-dot { width: 6px; height: 6px; border-radius: 50%; background: #60a5fa; animation: taBlink 1.2s infinite; }
+.ta-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.ta-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes taBlink { 0%,60%,100% { opacity: 0.3; } 30% { opacity: 1; } }
+.ta-loading-txt { margin-left: 4px; }
+.ta-steps { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; }
+.ta-step-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary, #8696a0); }
+.ta-step-ico { font-size: 12px; flex-shrink: 0; }
+.ta-step-txt { line-height: 1.5; }
+
+/* 底部输入区 */
+.ta-input-area { padding: 12px 16px 16px; position: relative; background: var(--chat-bg, #0b141a); }
+.ta-input-row {
+  display: flex; flex-direction: column;
+  background: var(--mgmt-card-bg, #1e252b); border-radius: 16px; padding: 6px 12px 6px;
+  border: 1px solid rgba(255,255,255,0.08); transition: border-color 0.2s;
+}
+.ta-input-inner {
+  display: flex; align-items: flex-end; gap: 8px;
+}
+.ta-input-row:focus-within { border-color: rgba(59,130,246,0.4); }
+.ta-input-plus {
+  width: 34px; height: 34px; min-width: 34px; min-height: 34px; border-radius: 50%; border: none;
+  background: rgba(59,130,246,0.12); color: #60a5fa; font-size: 22px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
+  padding: 0; -webkit-appearance: none; appearance: none; box-sizing: border-box;
+}
+.ta-input-plus:hover { background: rgba(59,130,246,0.25); }
+.ta-input-textarea {
+  flex: 1; border: none; background: transparent; color: var(--text-primary, #e9edef);
+  font-size: 14px; resize: none; outline: none; max-height: 120px; line-height: 1.5;
+  padding: 6px 0; font-family: inherit;
+}
+.ta-input-textarea::placeholder { color: var(--text-secondary, #8696a0); }
+.ta-input-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ta-model-btn {
+  padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12);
+  background: transparent; color: var(--text-primary, #e9edef); font-size: 13px; cursor: pointer;
+  display: flex; align-items: center; gap: 4px; transition: all 0.2s;
+}
+.ta-model-btn:hover { background: rgba(255,255,255,0.06); }
+.ta-chevron { font-size: 10px; }
+.ta-file-btn, .ta-mic-btn {
+  width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent;
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+}
+.ta-file-btn:hover, .ta-mic-btn:hover { background: rgba(255,255,255,0.06); }
+.ta-send-btn {
+  width: 34px; height: 34px; border-radius: 50%; border: none; background: #25d366; color: #fff;
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.ta-send-btn:hover { background: #20bd5a; transform: scale(1.05); }
+.ta-send-btn:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; transform: none; }
+
+/* 移动端输入区精简：隐藏死按钮、防挤压溢出 */
+@media (max-width: 900px) {
+  .ta-input-row { gap: 6px; padding: 6px 10px; }
+  .ta-input-textarea { min-width: 0; }
+  .ta-file-btn, .ta-mic-btn { display: none; }
+  .ta-model-btn { padding: 5px 8px; font-size: 12px; flex-shrink: 0; }
+}
+/* 附件菜单 */
+.ta-attach-menu {
+  position: absolute; bottom: 100%; right: 24px;
+  background: var(--mgmt-card-bg, #1e252b); border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1); padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 10;
+}
+.ta-attach-menu button {
+  padding: 8px 14px; border: none; background: transparent;
+  color: var(--text-primary, #e9edef); font-size: 13px; cursor: pointer;
+  border-radius: 8px; text-align: left; transition: background 0.2s;
+}
+.ta-attach-menu button:hover { background: rgba(255,255,255,0.08); }
+/* 右栏：文件面板 */
+.ta-file-panel {
+  width: 0; min-width: 0; background: var(--mgmt-card-bg, #1e252b);
+  border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.3s ease, min-width 0.3s ease;
+}
+.ta-file-panel.open { width: 280px; min-width: 280px; }
+.ta-iconbar {
+  width: 64px; background: var(--panel-header-bg, #1e252b);
+  display: flex; flex-direction: column; flex-shrink: 0;
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+.ta-ib-items { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 8px; }
+.ta-ib-item { background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 8px; color: var(--text-secondary, #8696a0); width: 100%; font-family: inherit; transition: background .15s, color .15s; }
+.ta-ib-item:hover { background: rgba(255,255,255,0.06); }
+.ta-ib-item.active { color: var(--accent, #4a9eff); }
+.ta-ib-icon { font-size: 22px; line-height: 1; }
+.ta-ib-label { font-size: 11px; white-space: nowrap; line-height: 1; }
+.ta-wecom-panel {
+  width: 0; min-width: 0; background: var(--mgmt-card-bg, #1e252b);
+  border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.3s ease, min-width 0.3s ease;
+}
+.ta-wecom-panel.open { width: 300px; min-width: 300px; }
+.ta-wecom-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; font-size: 14px; font-weight: 600; color: var(--text-primary, #e9edef); border-bottom: 1px solid rgba(255,255,255,0.06); }
+.ta-wecom-close { width: 24px; height: 24px; border-radius: 50%; border: none; background: rgba(255,255,255,0.06); color: var(--text-secondary, #8696a0); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.ta-wecom-close:hover { background: rgba(255,255,255,0.12); }
+.ta-wecom-body { flex: 1; overflow-y: auto; padding: 16px; }
+.ta-wecom-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; background: rgba(37,211,102,0.1); color: #25d366; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.ta-wecom-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #25d366; }
+.ta-wecom-meta { margin-bottom: 12px; }
+.ta-wecom-meta-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; font-size: 13px; color: var(--text-secondary, #8696a0); border-bottom: 1px solid rgba(255,255,255,0.05); }
+.ta-wecom-meta-row .mono { font-family: ui-monospace, monospace; color: var(--text-primary, #e9edef); word-break: break-all; text-align: right; }
+.ta-wecom-hint { font-size: 12px; color: var(--text-secondary, #8696a0); line-height: 1.7; margin: 0 0 8px; }
+.ta-wecom-link { color: #4a9eff; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 12px; }
+.ta-wecom-field { margin-bottom: 12px; }
+.ta-wecom-field label { display: block; font-size: 12px; color: var(--text-secondary, #8696a0); margin-bottom: 6px; }
+.ta-wecom-field input { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); color: var(--text-primary, #e9edef); font-size: 13px; outline: none; box-sizing: border-box; }
+.ta-wecom-test { padding: 8px 12px; border-radius: 8px; font-size: 13px; margin: 4px 0 12px; }
+.ta-wecom-test.ok { background: rgba(37,211,102,0.1); color: #25d366; }
+.ta-wecom-test.err { background: rgba(244,67,54,0.1); color: #f44336; }
+.ta-wecom-actions { display: flex; gap: 8px; margin-top: 4px; }
+.ta-wecom-btn { flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: var(--text-primary, #e9edef); font-size: 13px; cursor: pointer; font-family: inherit; }
+.ta-wecom-btn:hover { background: rgba(255,255,255,0.12); }
+.ta-wecom-btn.primary { background: var(--accent, #4a9eff); border-color: transparent; color: #fff; }
+.ta-wecom-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.ta-file-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; font-size: 14px; font-weight: 600;
+  color: var(--text-primary, #e9edef); border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ta-file-panel-close {
+  width: 24px; height: 24px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.06); color: var(--text-secondary, #8696a0);
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.ta-file-panel-close:hover { background: rgba(255,255,255,0.12); }
+.ta-file-panel-tabs { display: flex; gap: 0; padding: 10px 16px 0; }
+.ta-file-panel-tabs button {
+  flex: 1; padding: 8px; border: none; background: transparent;
+  color: var(--text-secondary, #8696a0); font-size: 13px; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+.ta-file-panel-tabs button.active { color: #60a5fa; border-bottom-color: #3b82f6; }
+.ta-file-panel-search { padding: 10px 16px; }
+.ta-file-panel-search input {
+  width: 100%; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2);
+  color: var(--text-primary, #e9edef); font-size: 13px; outline: none; box-sizing: border-box;
+}
+.ta-file-panel-search input::placeholder { color: var(--text-secondary, #8696a0); }
+.ta-file-panel-content { flex: 1; overflow-y: auto; padding: 8px 16px; }
+.ta-file-empty { display: flex; flex-direction: column; align-items: center; padding: 40px 0; color: var(--text-secondary, #8696a0); }
+.ta-file-empty p { margin: 4px 0; }
+.ta-file-panel-footer { padding: 10px 16px; font-size: 12px; color: var(--text-secondary, #8696a0); border-top: 1px solid rgba(255,255,255,0.06); }
+/* 模型选择弹窗 */
+.ta-model-overlay {
+  position: absolute; bottom: 100%; left: 0; right: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+.ta-model-backdrop {
+  position: fixed; inset: 0; z-index: 2000;
+  background: transparent; pointer-events: auto;
+}
+.ta-model-overlay .ta-model-popup {
+  pointer-events: auto;
+}
+.ta-model-popup {
+  background: var(--mgmt-card-bg, #1e252b); border-radius: 0;
+  border: none; border-top: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
+  width: 100%; max-height: 420px; overflow: hidden; display: flex; flex-direction: column;
+}
+/* 智能选择行 */
+.ta-model-auto-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; margin: 6px 10px 2px; border-radius: 10px;
+  background: rgba(37,211,102,0.08); border: 1px solid rgba(37,211,102,0.18);
+}
+.ta-model-auto-info { display: flex; align-items: center; gap: 10px; }
+.ta-model-auto-icon { font-size: 22px; }
+.ta-model-auto-title { font-size: 14px; font-weight: 600; color: var(--text-primary, #e9edef); }
+.ta-model-auto-desc { font-size: 11px; color: var(--text-secondary, #8696a0); margin-top: 1px; }
+/* Toggle开关 */
+.ta-model-toggle {
+  width: 38px; height: 18px; min-width: 38px; border-radius: 999px; border: none; cursor: pointer;
+  background: #3a3f45; position: relative; transition: background 0.25s ease; flex-shrink: 0;
+  padding: 0; outline: none; -webkit-appearance: none; appearance: none;
+  box-sizing: border-box;
+  display: block;
+}
+.ta-model-toggle.on { background: #25D366; }
+.ta-model-toggle-knob {
+  width: 12px; height: 12px; border-radius: 50%; background: #fff;
+  position: absolute; top: 0; bottom: 0; left: 3px; margin: auto 0; transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.25); box-sizing: border-box;
+}
+.ta-model-toggle.on .ta-model-toggle-knob { transform: translateX(20px); }
+/* 模型描述 */
+.ta-model-item-content { flex: 1; min-width: 0; }
+.ta-model-item-header { display: flex; align-items: center; gap: 6px; }
+.ta-model-desc { font-size: 11px; color: var(--text-secondary, #8696a0); margin-top: 2px; line-height: 1.3; }
+.ta-model-tabs { display: none; }
+.ta-model-group-title { padding: 12px 16px 4px; font-size: 12px; color: var(--text-secondary, #8696a0); }
+.ta-model-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 4px; }
+.ta-model-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 10px; cursor: pointer; transition: background 0.15s;
+}
+.ta-model-item:hover { background: rgba(255,255,255,0.06); }
+.ta-model-item.active { background: rgba(59,130,246,0.1); }
+.ta-model-icon { font-size: 20px; }
+.ta-model-name { flex: 1; font-size: 14px; color: var(--text-primary, #e9edef); }
+.ta-model-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+.ta-model-tag.new-tag { background: rgba(37,211,102,0.15); color: #25d366; }
+.ta-model-tag.special-tag { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.ta-model-check { color: #25d366; font-size: 16px; font-weight: bold; }
+.ta-model-add {
+  padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08);
+  text-align: center; color: #60a5fa; font-size: 13px; cursor: pointer; transition: background 0.2s;
+}
+.ta-model-add:hover { background: rgba(59,130,246,0.08); }
+
+/* ===== 移动端：模型弹窗底部抽屉化 ===== */
+@media (max-width: 768px) {
+  .ta-model-popup {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    width: 100%; max-width: 100%; max-height: 72vh;
+    border-radius: 16px 16px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 2001;
+    animation: taModelSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .ta-model-auto-row { margin: 10px 12px 6px; padding: 12px 14px; }
+  .ta-model-auto-title { font-size: 14px; }
+  .ta-model-auto-desc { font-size: 12px; }
+  .ta-model-name { font-size: 15px; }
+  .ta-model-desc { font-size: 12px; }
+  .ta-model-item { padding: 12px 14px; }
+  .ta-model-list { padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .ta-model-toggle { width: 50px; height: 30px; min-width: 50px; padding: 3px; }
+  .ta-model-toggle-knob { width: 24px; height: 24px; }
+  .ta-model-toggle.on .ta-model-toggle-knob { transform: translateX(22px); }
+}
+@keyframes taModelSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+
+
+/* ===== V1.0 客户选择面板 ===== */
+.ta-header-cust { display: flex; align-items: center; gap: 6px; margin-left: auto; padding-right: 12px; }
+.ta-cust-btn { background: rgba(37,211,102,0.12); color: #25d366; border: 1px solid rgba(37,211,102,0.35); border-radius: 14px; padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: background .2s; }
+.ta-cust-btn:hover { background: rgba(37,211,102,0.22); }
+.ta-wx-link-btn { background: #07c160 !important; color: #fff !important; border-color: #07c160 !important; font-weight: 600; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 8px rgba(7,193,96,.4); animation: taWxPulse 2s infinite; }
+.ta-wx-link-btn:hover { background: #06ad56 !important; }
+@keyframes taWxPulse { 0%,100% { box-shadow: 0 2px 8px rgba(7,193,96,.4); } 50% { box-shadow: 0 2px 16px rgba(7,193,96,.75); } }
+.ta-nav-wx-btn { background: rgba(7,193,96,.10) !important; }
+.ta-nav-wx-btn:hover { background: rgba(7,193,96,.20) !important; }
+.ta-nav-wx-btn .p-icon, .ta-nav-wx-btn span { color: #07c160 !important; }
+.ta-nav-wx-btn:hover .p-icon, .ta-nav-wx-btn:hover span { color: #06ad56 !important; }
+.platform-collapsed .ta-nav-wx-btn { position: relative; }
+.platform-collapsed .ta-nav-wx-btn::after { content:''; position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#07c160; animation: taWxPulse 2s infinite; }
+.mdp-item.ta-nav-wx-btn { background: rgba(7,193,96,.10); border-radius: 8px; margin: 2px 8px; width: auto; }
+.ta-wx-entry { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 480px; margin: 0 0 28px; padding: 16px 18px; background: linear-gradient(135deg, rgba(7,193,96,.18), rgba(7,193,96,.06)); border: 1px solid rgba(7,193,96,.45); border-radius: 14px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.ta-wx-entry:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(7,193,96,.25); }
+.ta-wx-entry-icon { font-size: 34px; flex-shrink: 0; }
+.ta-wx-entry-txt { text-align: left; flex: 1; }
+.ta-wx-entry-title { font-size: 15px; font-weight: 600; color: var(--text-primary, #e9edef); margin-bottom: 4px; }
+.ta-wx-entry-sub { font-size: 12px; color: var(--text-secondary, #8696a0); line-height: 1.5; }
+.ta-wx-entry-btn { flex-shrink: 0; background: #07c160; color: #fff; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 20px; white-space: nowrap; }
+.ta-cust-tag { background: rgba(37,211,102,0.15); color: #25d366; border: 1px solid rgba(37,211,102,0.4); border-radius: 14px; padding: 4px 10px; font-size: 12px; cursor: pointer; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-cust-clear { color: #f87171; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 50%; }
+.ta-cust-clear:hover { background: rgba(248,113,113,0.18); }
+.ta-cust-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; justify-content: flex-end; }
+.ta-cust-panel { width: 320px; max-width: 90vw; height: 100%; background: #1a2733; border-left: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; animation: taSlideInRight .2s ease; }
+@keyframes taSlideInRight { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.ta-cust-panel-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 600; color: #e5e7eb; }
+.ta-cust-panel-close { background: none; border: none; color: #9ca3af; font-size: 16px; cursor: pointer; }
+.ta-cust-panel-close:hover { color: #fff; }
+.ta-cust-search { padding: 12px 16px; }
+.ta-cust-search input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: #e5e7eb; font-size: 13px; outline: none; }
+.ta-cust-search input:focus { border-color: #25d366; }
+.ta-cust-general { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; color: #d1d5db; }
+.ta-cust-general:hover { background: rgba(255,255,255,0.05); }
+.ta-cust-general.active { color: #25d366; }
+.ta-cust-general-icon { font-size: 16px; }
+.ta-cust-check { margin-left: auto; color: #25d366; font-weight: bold; }
+.ta-cust-group-title { padding: 10px 16px 6px; font-size: 12px; color: #6b7280; }
+.ta-cust-list { flex: 1; overflow-y: auto; }
+.ta-cust-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.ta-cust-item:hover { background: rgba(255,255,255,0.05); }
+.ta-cust-item.active { background: rgba(37,211,102,0.1); }
+.ta-cust-item-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#2563eb,#7c3aed); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.ta-cust-item-info { flex: 1; min-width: 0; }
+.ta-cust-item-name { font-size: 13px; color: #e5e7eb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-cust-item-meta { font-size: 11px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-cust-level { display: inline-block; margin-left: 4px; padding: 0 4px; border-radius: 4px; background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 10px; }
+.ta-cust-empty { padding: 30px 16px; text-align: center; color: #6b7280; font-size: 13px; }
+
+/* ===== 设置-我的积分 ===== */
+.account-settings { padding: 4px 2px; }
+.account-settings h2 { font-size: 18px; margin: 0 0 6px; color: var(--text-primary, #e5e7eb); }
+.account-settings .section-desc { color: var(--text-secondary, #8696a0); font-size: 13px; margin: 0 0 20px; }
+.credits-balance-card { background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 14px; padding: 24px; color: #fff; text-align: center; margin-bottom: 18px; }
+.credits-balance-num { font-size: 40px; font-weight: 700; line-height: 1.1; }
+.credits-balance-label { font-size: 13px; opacity: .85; margin-top: 4px; }
+.credits-balance-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+.credits-btn-primary { padding: 9px 22px; border: none; border-radius: 8px; background: #fff; color: #4f46e5; font-size: 14px; font-weight: 600; cursor: pointer; }
+.credits-btn-plain { padding: 9px 22px; border: 1px solid rgba(255,255,255,.6); border-radius: 8px; background: transparent; color: #fff; font-size: 14px; cursor: pointer; }
+.credits-tips { font-size: 12px; color: var(--text-secondary, #8696a0); line-height: 1.9; }
+
+/* ===== WA 账号体验（对标竞品） ===== */
+.wa-account-list .wa-account-item {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  position: relative; margin-bottom: 4px; min-height: 76px;
+  border: 1px solid var(--sidebar-border, #2a3942);
+  background: var(--panel-bg, #111b21);
+}
+.wa-new-session-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 12px; margin-bottom: 8px;
+  background: #25D366; color: #fff; font-size: 14px; font-weight: 600;
+  border-radius: 12px; cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(37,211,102,0.3);
+}
+.wa-new-session-btn:hover {
+  background: #20bd5a; transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37,211,102,0.4);
+}
+.wa-new-session-btn:active { transform: translateY(0); }
+.acc-top-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+}
+.acc-actions {
+  display: flex; justify-content: center; gap: 8px;
+  opacity: 0; transition: opacity 0.2s;
+  margin-top: auto; padding-top: 2px;
+}
+.wa-account-item:hover .acc-actions { opacity: 1; }
+.acc-action-btn {
+  width: 32px; height: 32px;
+  border: 1px solid #d1d5db; border-radius: 50%;
+  background: #fff; color: #4b5563; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.acc-action-btn:hover { background: #f3f4f6; color: #1f2937; border-color: #9ca3af; }
+.acc-action-btn.acc-action-danger:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+[data-theme="dark"] .acc-action-btn { background: #2a3942; color: #d1d7db; border-color: #3b4a54; }
+[data-theme="dark"] .acc-action-btn:hover { background: #36454f; color: #fff; }
+[data-theme="dark"] .acc-action-btn.acc-action-danger:hover { background: rgba(239,68,68,0.2); color: #f87171; border-color: rgba(239,68,68,0.5); }
+
+/* 账号代理配置抽屉 */
+.config-panel-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.3); z-index: 9999;
+  display: flex; justify-content: flex-end;
+}
+.config-panel-drawer {
+  width: 420px; max-width: 90vw; height: 100vh;
+  background: var(--panel-bg, #202c33);
+  border-left: 1px solid var(--sidebar-border, #313d45);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.3);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.config-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid var(--sidebar-border, #313d45);
+}
+.config-panel-header h3 { font-size: 15px; font-weight: 600; color: var(--text-primary, #e9edef); margin: 0; }
+.config-panel-close { font-size: 18px; color: var(--text-secondary, #8696a0); cursor: pointer; padding: 2px 8px; border-radius: 6px; transition: background 0.2s; }
+.config-panel-close:hover { background: rgba(255,255,255,0.05); }
+.config-panel-body { flex: 1; overflow-y: auto; padding: 20px; }
+.cp-section-title { font-size: 14px; font-weight: 600; color: var(--text-primary, #e9edef); margin-bottom: 16px; }
+.cp-field { margin-bottom: 16px; }
+.cp-field label { display: block; font-size: 13px; color: var(--text-primary, #e9edef); margin-bottom: 6px; }
+.cp-input, .cp-select, .cp-textarea {
+  width: 100%; padding: 9px 12px;
+  background: var(--bg-input, #2a3942);
+  border: 1px solid var(--sidebar-border, #313d45);
+  border-radius: 6px; color: var(--text-primary, #e9edef);
+  font-size: 13px; outline: none; box-sizing: border-box;
+}
+[data-theme="light"] .config-panel-drawer .cp-input,
+[data-theme="light"] .config-panel-drawer .cp-select,
+[data-theme="light"] .config-panel-drawer .cp-textarea {
+  background: #ffffff;
+  border-color: #d5dbe0;
+  color: #111b21;
+}
+[data-theme="light"] .config-panel-drawer .cp-input::placeholder,
+[data-theme="light"] .config-panel-drawer .cp-select::placeholder {
+  color: #8696a0;
+}
+[data-theme="light"] .config-panel-drawer .cp-input:focus,
+[data-theme="light"] .config-panel-drawer .cp-select:focus,
+[data-theme="light"] .config-panel-drawer .cp-textarea:focus {
+  border-color: #00a884;
+}
+.cp-input:focus, .cp-select:focus, .cp-textarea:focus { border-color: #00a884; }
+.cp-test-result { padding: 10px 12px; border: 1px solid; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+.cp-btn { padding: 9px 18px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+.cp-btn-sm { padding: 6px 14px; font-size: 12px; }
+.cp-btn-primary { background: #00a884; color: #fff; }
+.cp-btn-primary:hover { background: #06cf9c; }
+.cp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.slide-right-enter-active, .slide-right-leave-active { transition: transform 0.3s ease, opacity 0.3s ease; }
+.slide-right-enter-from { transform: translateX(100%); opacity: 0; }
+.slide-right-leave-to { transform: translateX(100%); opacity: 0; }
+
+/* 无账号欢迎页 */
+.no-account-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 32px; max-width: 480px; text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.no-account-icon-wrap {
+  width: 110px; height: 110px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(37,211,102,0.08) 0%, rgba(37,211,102,0.15) 100%);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 28px;
+}
+.no-account-wa-icon { filter: drop-shadow(0 2px 4px rgba(37,211,102,0.15)); }
+.no-account-title {
+  font-size: 24px; font-weight: 600; color: var(--text-primary, #111b21);
+  margin-bottom: 12px; letter-spacing: -0.3px;
+}
+.no-account-subtitle {
+  font-size: 14px; color: var(--text-secondary, #667781);
+  margin-bottom: 32px; line-height: 1.7; max-width: 380px;
+  word-break: keep-all; white-space: normal; text-align: center;
+}
+.no-account-cta {
+  background: #25D366; color: #fff; border: none; border-radius: 24px;
+  padding: 12px 32px; font-size: 15px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(37,211,102,0.25);
+}
+.no-account-cta:hover { background: #1fb855; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,211,102,0.3); }
+.no-account-cta:active { transform: translateY(0); }
+
+/* ===== TG 欢迎页（无账号时） ===== */
+.tg-welcome-icon-wrap { background: linear-gradient(135deg, rgba(42,171,238,0.08) 0%, rgba(42,171,238,0.15) 100%); }
+.no-account-tg-icon { filter: drop-shadow(0 2px 4px rgba(42,171,238,0.2)); }
+.tg-welcome-cta { background: #2AABEE; box-shadow: 0 4px 12px rgba(42,171,238,0.25); }
+.tg-welcome-cta:hover { background: #2296d3; box-shadow: 0 6px 20px rgba(42,171,238,0.3); }
+html[data-theme="dark"] .tg-welcome-icon-wrap { background: linear-gradient(135deg, rgba(42,171,238,0.12) 0%, rgba(42,171,238,0.2) 100%); }
+
+/* ===== 登录/欢迎态隐藏客户列表栏（Bug4/Bug5） ===== */
+.col-chatlist.wa-hidden { display: none; }
+
+
+/* ====== L2: Business Confirmation Banner ====== */
+.biz-confirm-banner {
+  position: relative;
+  z-index: 100;
+  background: linear-gradient(135deg, #1a2332 0%, #0d1b2a 100%);
+  border-bottom: 1px solid rgba(37, 211, 102, 0.3);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  animation: bizConfirmSlideDown 0.3s ease-out;
+  flex-shrink: 0;
+}
+
+@keyframes bizConfirmSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.biz-confirm-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  max-width: 100%;
+}
+
+.biz-confirm-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 211, 102, 0.15);
+  border-radius: 50%;
+}
+
+.biz-confirm-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.biz-confirm-label {
+  font-size: 13px;
+  color: #e9edef;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.biz-confirm-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.biz-confirm-q {
+  flex-shrink: 0;
+}
+
+.biz-confirm-counter {
+  font-size: 11px;
+  color: #8696a0;
+  background: rgba(255,255,255,0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.biz-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.biz-confirm-btn {
+  padding: 6px 14px;
+  border-radius: 18px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.biz-confirm-phone {
+  font-size: 12px;
+  color: #9fb3c8;
+  font-weight: 400;
+}
+
+.biz-confirm-view {
+  background: rgba(255,255,255,0.08);
+  color: #e9edef;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.biz-confirm-view:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.biz-confirm-yes {
+  background: #25D366;
+  color: #0b141a;
+}
+
+.biz-confirm-yes:hover {
+  background: #1fa855;
+  transform: scale(1.02);
+}
+
+.biz-confirm-no {
+  background: rgba(255,255,255,0.08);
+  color: #8696a0;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.biz-confirm-no:hover {
+  background: rgba(255,255,255,0.12);
+  color: #e9edef;
+}
+
+.biz-confirm-slide-enter-active {
+  animation: bizConfirmSlideDown 0.3s ease-out;
+}
+.biz-confirm-slide-leave-active {
+  animation: bizConfirmSlideDown 0.3s ease-out reverse;
+}
+
+@media (max-width: 768px) {
+  .biz-confirm-inner {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .biz-confirm-text {
+    flex-basis: calc(100% - 48px);
+  }
+  .biz-confirm-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .biz-confirm-btn {
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+}
+
+
+.ta-task-panel {
+  width: 0; min-width: 0; background: var(--mgmt-card-bg, #1e252b);
+  border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.3s ease, min-width 0.3s ease;
+}
+.ta-task-panel.open { width: 280px; min-width: 280px; }
+.ta-task-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; font-size: 14px; font-weight: 600;
+  color: var(--text-primary, #e9edef); border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ta-task-panel-close {
+  width: 24px; height: 24px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.06); color: var(--text-secondary, #8696a0);
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.ta-task-panel-close:hover { background: rgba(255,255,255,0.12); }
+.ta-task-panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+.ta-task-card {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 14px;
+}
+.ta-task-card-name { font-size: 15px; font-weight: 600; color: var(--text-primary, #e9edef); margin-bottom: 10px; }
+.ta-task-card-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #4ade80; background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.25); padding: 3px 10px; border-radius: 999px;
+  margin-bottom: 12px;
+}
+.ta-task-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+.ta-task-card-label { font-size: 11px; color: var(--text-secondary, #8696a0); margin-bottom: 4px; }
+.ta-task-card-instr {
+  font-size: 13px; color: var(--text-primary, #e9edef); line-height: 1.6;
+  background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 12px; word-break: break-all;
+}
+.ta-task-empty { display: flex; flex-direction: column; align-items: center; padding: 40px 0; color: var(--text-secondary, #8696a0); }
+.ta-task-empty p { margin: 4px 0; }
+.ta-task-terminate {
+  display: block; width: 100%; margin-top: 14px; padding: 9px 12px;
+  border-radius: 8px; border: 1px solid rgba(244,63,94,0.35);
+  background: rgba(244,63,94,0.12); color: #f87171;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.ta-task-terminate:hover { background: rgba(244,63,94,0.22); color: #fca5a5; }
+
+/* TG 无会话包装：撑满聊天区，内部欢迎页/登录卡垂直居中 */
+.tg-no-session-wrap {
+  flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+}
+
+/* ── TG 登录欢迎页 ── */
+.col-chatlist.tg-hidden { display: none; }
+.tg-login-welcome {
+  background: var(--chat-bg, #0b141a);
+  padding: 24px;
+}
+.tg-login-card {
+  width: 100%; max-width: 420px;
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.22);
+  padding: 30px 28px 24px;
+  color: #1a1a1a;
+  text-align: center;
+}
+.tg-login-logo-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+.tg-login-logo-mini {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #3390ec; display: inline-flex; align-items: center; justify-content: center;
+}
+.tg-login-brand { font-size: 17px; font-weight: 700; color: #1a1a1a; }
+.tg-qr-title { font-size: 19px; font-weight: 700; margin: 0 0 6px; color: #1a1a1a; line-height: 1.35; }
+.tg-qr-sub { font-size: 13.5px; color: #707579; margin: 0 0 20px; line-height: 1.55; }
+.tg-qr-box {
+  width: 224px; height: 224px; margin: 0 auto 22px;
+  padding: 10px; background: #fff; border: 1px solid #e4e7ea; border-radius: 14px;
+  position: relative; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.tg-qr-box svg { width: 100%; height: 100%; display: block; }
+.tg-qr-badge {
+  position: absolute; bottom: -11px; left: 50%; transform: translateX(-50%);
+  background: #fff; border: 1px solid #e4e7ea; border-radius: 999px;
+  padding: 3px 11px; font-size: 10.5px; color: #707579; white-space: nowrap;
+}
+.tg-qr-steps { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 9px; text-align: left; }
+.tg-qr-steps li { display: flex; gap: 11px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: #1a1a1a; }
+.tg-qr-steps .tg-num {
+  flex: none; width: 21px; height: 21px; border-radius: 50%;
+  background: #e8f3fe; color: #3390ec; font-size: 11.5px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+.tg-switch-link {
+  background: none; border: none; cursor: pointer;
+  color: #3390ec; font-size: 12.5px; font-weight: 600;
+  letter-spacing: .3px; text-transform: uppercase; padding: 6px 10px; border-radius: 8px;
+  font-family: inherit; transition: background .15s ease;
+}
+.tg-switch-link:hover { background: #e8f3fe; }
+.tg-switch-link small { font-size: 11px; color: #a2a9b0; font-weight: 500; text-transform: none; letter-spacing: 0; margin-right: 6px; }
+.tg-logo-big {
+  width: 70px; height: 70px; border-radius: 18px;
+  background: #3390ec; display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 14px; box-shadow: 0 8px 20px rgba(51,144,236,.28);
+}
+.tg-phone-title { font-size: 21px; font-weight: 700; margin: 0 0 4px; color: #1a1a1a; }
+.tg-phone-sub { font-size: 13px; color: #707579; margin: 0 0 20px; line-height: 1.5; }
+.tg-phone-wrap { display: flex; flex-direction: column; align-items: center; }
+.tg-country-field {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  background: #fff; border: 1.5px solid #cfd3d8; border-radius: 10px;
+  padding: 11px 13px; cursor: pointer; margin-bottom: 10px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.tg-country-field:hover { border-color: #3390ec; }
+.tg-country-field.open { border-color: #3390ec; box-shadow: 0 0 0 3px rgba(51,144,236,.12); }
+.tg-flag { font-size: 19px; line-height: 1; flex: none; }
+.tg-cname { flex: 1; font-size: 14.5px; font-weight: 500; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1a1a1a; }
+.tg-ccode { color: #707579; font-size: 13.5px; font-weight: 500; }
+.tg-chev { color: #a2a9b0; display: inline-flex; transition: transform .18s ease; }
+.tg-country-field.open .tg-chev { transform: rotate(180deg); }
+.tg-country-drop {
+  width: 100%; background: #fff; border: 1px solid #e4e7ea; border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.12); max-height: 250px;
+  display: flex; flex-direction: column; overflow: hidden; margin-bottom: 10px;
+  animation: tgDropIn .18s ease both;
+}
+@keyframes tgDropIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.tg-drop-search { padding: 9px 11px; border-bottom: 1px solid #e4e7ea; flex: none; }
+.tg-drop-search input {
+  width: 100%; border: 1px solid #cfd3d8; border-radius: 8px;
+  padding: 8px 11px; font-size: 13.5px; outline: none; box-sizing: border-box; font-family: inherit;
+}
+.tg-drop-search input:focus { border-color: #3390ec; }
+.tg-drop-list { overflow-y: auto; flex: 1; }
+.tg-drop-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 13px; cursor: pointer; font-size: 14px;
+  transition: background .12s ease;
+}
+.tg-drop-item:hover { background: #f1f4f7; }
+.tg-drop-item.selected { background: #e8f3fe; color: #3390ec; font-weight: 600; }
+.tg-drop-item .tg-flag { font-size: 18px; }
+.tg-dname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.tg-dcode { color: #707579; font-size: 13px; }
+.tg-drop-empty { padding: 18px; text-align: center; color: #707579; font-size: 13.5px; }
+.tg-phone-field {
+  width: 100%; display: flex; align-items: center;
+  background: #fff; border: 1.5px solid #cfd3d8; border-radius: 10px;
+  padding: 0 13px; height: 48px; margin-bottom: 15px;
+  transition: border-color .15s ease, box-shadow .15s ease; box-sizing: border-box;
+}
+.tg-phone-field:focus-within { border-color: #3390ec; box-shadow: 0 0 0 3px rgba(51,144,236,.12); }
+.tg-prefix { font-size: 14.5px; font-weight: 600; color: #1a1a1a; padding-right: 10px; border-right: 1px solid #e4e7ea; }
+.tg-phone-field input {
+  flex: 1; border: none; outline: none; font-size: 14.5px; padding: 0 12px; min-width: 0;
+  background: transparent; color: #1a1a1a; font-family: inherit;
+}
+.tg-phone-field input::placeholder { color: #a2a9b0; }
+.tg-keep-row {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  margin-bottom: 18px; user-select: none; font-size: 13.5px; color: #1a1a1a;
+  align-self: flex-start; width: fit-content;
+}
+.tg-keep-row input { position: absolute; opacity: 0; pointer-events: none; }
+.tg-check {
+  width: 19px; height: 19px; border-radius: 6px; border: 1.5px solid #cfd3d8;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  transition: all .15s ease; background: #fff;
+}
+.tg-check svg { opacity: 0; transform: scale(.4); transition: all .15s ease; }
+.tg-keep-row input:checked + .tg-check { background: #3390ec; border-color: #3390ec; }
+.tg-keep-row input:checked + .tg-check svg { opacity: 1; transform: scale(1); }
+.tg-next-btn {
+  width: 100%; border: none; cursor: pointer;
+  background: #3390ec; color: #fff;
+  font-size: 14.5px; font-weight: 600; letter-spacing: .2px;
+  border-radius: 10px; height: 48px; margin-bottom: 12px; font-family: inherit;
+  transition: background .15s ease, transform .08s ease;
+}
+.tg-next-btn:hover { background: #2f86db; }
+.tg-next-btn:active { transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) { .tg-country-drop { animation: none; } }
+@media (max-width: 480px) {
+  .tg-login-card { padding: 24px 18px 20px; }
+  .tg-qr-box { width: 200px; height: 200px; }
+}
+
+/* ─── TG 登录欢迎页 · 夜间模式（对齐官方 TG） ─── */
+html[data-theme="dark"] .tg-login-welcome {
+  background: #0b141a;
+}
+html[data-theme="dark"] .tg-login-card {
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+html[data-theme="dark"] .tg-login-brand { color: #fff; }
+html[data-theme="dark"] .tg-qr-title { color: #f5f7f8; }
+html[data-theme="dark"] .tg-qr-sub { color: #9aa6ad; }
+html[data-theme="dark"] .tg-qr-box {
+  background: #fff;
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 4px 18px rgba(0,0,0,.45);
+}
+html[data-theme="dark"] .tg-qr-steps li { color: #dfe6ea; }
+html[data-theme="dark"] .tg-qr-steps .tg-num {
+  background: rgba(131,122,224,.22);
+  color: #a79ff0;
+}
+html[data-theme="dark"] .tg-switch-link { color: #a79ff0; }
+html[data-theme="dark"] .tg-switch-link:hover { background: rgba(131,122,224,.12); }
+html[data-theme="dark"] .tg-switch-link small { color: #7a8690; }
+html[data-theme="dark"] .tg-phone-title { color: #f5f7f8; }
+html[data-theme="dark"] .tg-phone-sub { color: #9aa6ad; }
+html[data-theme="dark"] .tg-country-field {
+  background: #17212b;
+  border-color: #2b3a45;
+}
+html[data-theme="dark"] .tg-country-field:hover { border-color: #a79ff0; }
+html[data-theme="dark"] .tg-country-field.open { border-color: #a79ff0; box-shadow: 0 0 0 3px rgba(131,122,224,.18); }
+html[data-theme="dark"] .tg-cname { color: #fff; }
+html[data-theme="dark"] .tg-ccode { color: #9aa6ad; }
+html[data-theme="dark"] .tg-chev { color: #7a8690; }
+html[data-theme="dark"] .tg-country-drop {
+  background: #17212b;
+  border-color: #2b3a45;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+}
+html[data-theme="dark"] .tg-drop-search { border-bottom-color: #2b3a45; }
+html[data-theme="dark"] .tg-drop-search input {
+  background: #0b141a;
+  border-color: #2b3a45;
+  color: #fff;
+}
+html[data-theme="dark"] .tg-drop-search input:focus { border-color: #a79ff0; }
+html[data-theme="dark"] .tg-drop-item { color: #e9edef; }
+html[data-theme="dark"] .tg-drop-item:hover { background: #202c33; }
+html[data-theme="dark"] .tg-drop-item.selected { background: rgba(131,122,224,.16); color: #a79ff0; }
+html[data-theme="dark"] .tg-dcode { color: #9aa6ad; }
+html[data-theme="dark"] .tg-drop-empty { color: #7a8690; }
+html[data-theme="dark"] .tg-phone-field {
+  background: #17212b;
+  border-color: #2b3a45;
+}
+html[data-theme="dark"] .tg-phone-field:focus-within { border-color: #a79ff0; box-shadow: 0 0 0 3px rgba(131,122,224,.18); }
+html[data-theme="dark"] .tg-prefix { color: #fff; border-right-color: #2b3a45; }
+html[data-theme="dark"] .tg-phone-field input { color: #fff; }
+html[data-theme="dark"] .tg-phone-field input::placeholder { color: #7a8690; }
+html[data-theme="dark"] .tg-keep-row { color: #dfe6ea; }
+html[data-theme="dark"] .tg-check {
+  background: #17212b;
+  border-color: #2b3a45;
+}
+html[data-theme="dark"] .tg-keep-row input:checked + .tg-check {
+  background: #8774e1;
+  border-color: #8774e1;
+}
+html[data-theme="dark"] .tg-next-btn {
+  background: #3390ec;
+}
+html[data-theme="dark"] .tg-next-btn:hover { background: #2f86db; }
 
 </style>

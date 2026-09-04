@@ -1,1763 +1,613 @@
 <template>
   <div class="assistant-view">
-
-
-    <!-- 对话区域 -->
-    <div class="chat-area" ref="chatArea">
-      <div v-if="messages.length === 0" class="welcome">
+    <div class="welcome-container">
+      <!-- Header Section -->
+      <div class="welcome-header">
         <div class="welcome-icon">🤖</div>
-        <h3>外贸Agent</h3>
-        <p class="welcome-intro">我是你的24小时外贸销售，随叫随到。</p>
-        <ul class="welcome-highlights">
-          <li>💬 谈客户、跟进提醒</li>
-          <li>🔍 背调客户、分析市场</li>
-          <li>✍️ 写开发信、翻译、优化话术</li>
-          <li>💰 报价、做单证、查汇率运费</li>
-        </ul>
-        <div class="quick-groups">
-          <div class="quick-group">
-            <div class="quick-group-title">🚀 快速上手</div>
-            <div class="quick-actions">
-              <button @click="sendQuick('查一下所有客户')">查一下所有客户</button>
-              <button @click="sendQuick('给最新客户发个打招呼消息')">给最新客户打个招呼</button>
-              <button @click="sendQuick('帮我总结今天待办')">总结今天待办</button>
+        <h1>TradeCloser AI</h1>
+        <p class="welcome-subtitle">你的24小时AI外贸销冠团队</p>
+
+      </div>
+
+
+      <!-- Agent Cards -->
+      <div class="agents-section">
+        <h2>🤝 选择你的AI助手</h2>
+        <div class="agent-cards">
+          <div 
+            v-for="agent in agents" 
+            :key="agent.key" 
+            class="agent-card"
+            @click="goToAgent(agent.key)"
+          >
+            <div class="agent-card-header">
+              <div class="agent-icon">{{ agent.icon }}</div>
+              <div class="agent-title">
+                <h3>{{ agent.name }}</h3>
+                <p class="agent-subtitle">{{ agent.subtitle }}</p>
+              </div>
             </div>
-          </div>
-          <div class="quick-group">
-            <div class="quick-group-title">🔍 客户洞察</div>
-            <div class="quick-actions">
-              <button @click="sendQuick('帮我背调一下这个公司')">背调客户公司</button>
-              <button @click="sendQuick('分析一下客户画像')">分析客户画像</button>
-              <button @click="sendQuick('查看客户时区和当地节假日')">查时区和节假日</button>
+            <p class="agent-description">{{ agent.description }}</p>
+            <div class="agent-tags">
+              <span v-for="tag in agent.tags" :key="tag" class="tag">{{ tag }}</span>
             </div>
-          </div>
-          <div class="quick-group">
-            <div class="quick-group-title">✍️ 沟通写作</div>
-            <div class="quick-actions">
-              <button @click="sendQuick('帮我写一封英文开发信')">写英文开发信</button>
-              <button @click="sendQuick('翻译这段话成西班牙语')">翻译成西班牙语</button>
-              <button @click="sendQuick('帮我优化这段回复话术')">优化回复话术</button>
-            </div>
-          </div>
-          <div class="quick-group">
-            <div class="quick-group-title">💰 报价单证</div>
-            <div class="quick-actions">
-              <button @click="sendQuick('帮我做一份报价单')">做一份报价单</button>
-              <button @click="sendQuick('生成PI形式发票')">生成PI形式发票</button>
-              <button @click="sendQuick('查一下今天美元汇率')">查今天美元汇率</button>
-            </div>
-          </div>
-          <div class="quick-group">
-            <div class="quick-group-title">🚢 物流供应链</div>
-            <div class="quick-actions">
-              <button @click="sendQuick('查一下到洛杉矶的海运费')">查到洛杉矶海运费</button>
-              <button @click="sendQuick('帮我做一份装箱单')">做一份装箱单</button>
-              <button @click="sendQuick('查下HS编码')">查HS编码</button>
-            </div>
-          </div>
-          <div class="quick-group">
-            <div class="quick-group-title">🎯 营销策略</div>
-            <div class="quick-actions">
-              <button @click="sendQuick('分析一下美国玻璃市场')">分析美国玻璃市场</button>
-              <button @click="sendQuick('帮我找玻璃制品采购商')">找玻璃制品采购商</button>
-              <button @click="sendQuick('做一下客户分层分析')">客户分层分析</button>
+            <div class="agent-action">
+              <span>开始使用</span>
+              <span class="arrow">→</span>
             </div>
           </div>
         </div>
-        <p class="welcome-hint">试试上面的快捷操作，或直接告诉我你需要什么 👇</p>
       </div>
-      
-      <div v-for="(msg, idx) in messages" :key="idx" class="message" :class="msg.role">
-        <div class="message-avatar"><img v-if="msg.role === 'assistant'" src="/avatar_assistant.jpg" alt="AI" class="avatar-img" /><span v-else>👤</span></div>
-        <div class="message-content">
-          <div class="message-text" v-html="formatMessage(msg.content)"></div>
-          <div v-if="msg.attachments && msg.attachments.length" class="message-attachments">
-            <a v-for="(file, i) in msg.attachments" :key="i" :href="file.url" target="_blank" rel="noopener" class="msg-file-card">
-              <div class="msg-file-icon">📄</div>
-              <div class="msg-file-info">
-                <div class="msg-file-name">{{ file.name }}</div>
-              </div>
-              <div class="msg-file-thumb">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </div>
-            </a>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions-section">
+        <h2>⚡ 常用功能</h2>
+        <div class="quick-actions-grid">
+          <div class="quick-action-item" @click="goToAgent('chat')">
+            <span class="qa-icon">💬</span>
+            <span class="qa-text">客户沟通</span>
           </div>
-          
-          <!-- 任务确认卡片 -->
-          <div v-if="msg.tasks && msg.tasks.length > 0" class="task-card">
-            <div v-for="task in msg.tasks" :key="task.id" class="task-item">
-              <div class="task-info">
-                <span class="task-label">{{ task.label || task.type }}</span>
-                <span class="task-status" :class="task.status">{{ statusText(task.status) }}</span>
-              </div>
-              <div class="task-params" v-if="task.status === 'pending'">
-                <pre>{{ JSON.stringify(task.params, null, 2) }}</pre>
-              </div>
-              <div class="task-actions" v-if="task.status === 'pending'">
-                <button class="btn-confirm" @click="confirmTask(task)">✅ 确认执行</button>
-                <button class="btn-cancel" @click="cancelTask(task)">❌ 取消</button>
-              </div>
-            </div>
+          <div class="quick-action-item" @click="goToAgent('customers')">
+            <span class="qa-icon">👥</span>
+            <span class="qa-text">客户管理</span>
           </div>
-          
-          <div class="message-time">{{ formatTime(msg.createdAt) }}</div>
+          <div class="quick-action-item" @click="goToAgent('pipeline')">
+            <span class="qa-icon">📊</span>
+            <span class="qa-text">销售看板</span>
+          </div>
+          <div class="quick-action-item" @click="goToAgent('dashboard')">
+            <span class="qa-icon">📈</span>
+            <span class="qa-text">数据概览</span>
+          </div>
+          <div class="quick-action-item" @click="goToAgent('product-knowledge')">
+            <span class="qa-icon">📦</span>
+            <span class="qa-text">产品知识</span>
+          </div>
+          <div class="quick-action-item" @click="goToAgent('my-stats')">
+            <span class="qa-icon">🏆</span>
+            <span class="qa-text">我的业绩</span>
+          </div>
         </div>
       </div>
-      
-      <div v-if="loading" class="message assistant">
-        <div class="message-avatar"><img src="/avatar_assistant.jpg" alt="AI" class="avatar-img" /></div>
-        <div class="message-content">
-          <div class="typing-indicator">
-            <span></span><span></span><span></span>
-          </div>
+
+      <!-- Tips Section -->
+      <div class="tips-section">
+        <div class="tip-card">
+          <h3>💡 使用提示</h3>
+          <ul>
+            <li>每个Agent都有专属技能，会根据你的需求智能响应</li>
+            <li>Agent生成的文件会自动保存到对应的文件工作区，随时可以下载</li>
+            <li>支持多轮对话，可以持续优化结果</li>
+            <li>遇到问题可以随时切换Agent获取不同角度的建议</li>
+          </ul>
         </div>
       </div>
     </div>
-
-    <!-- 输入区域 (Coze风格) -->
-    <div class="input-area">
-      <!-- 附件预览 -->
-      <div v-if="attachments.length > 0" class="attachments-preview">
-        <div v-for="(file, idx) in attachments" :key="idx" class="attach-item">
-          <span>{{ file.type?.startsWith('image') ? '🖼️' : '📄' }}</span>
-          <span class="attach-name">{{ file.name }}</span>
-          <button class="attach-remove" @click="removeAttachment(idx)">×</button>
-        </div>
-      </div>
-
-      <!-- 执行状态提示条 -->
-      <div v-if="loading" class="status-bar">
-        <span class="status-dot"></span>
-        <span class="status-text">{{ loadingStatus }}</span>
-      </div>
-
-      <!-- 主输入条（Coze风格卡片） -->
-      <div class="input-card">
-        <!-- 文本输入区 -->
-        <textarea
-          v-if="!isVoiceMode"
-          v-model="inputMessage"
-          @keydown.enter.exact=""
-          placeholder="发送消息开始任务"
-          rows="1"
-          ref="inputRef"
-        ></textarea>
-        <div v-else class="voice-bar">
-          <button class="voice-main-btn" @click="isRecording ? stopVoice() : startVoice()">
-            <svg v-if="isRecording" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-            <svg v-else class="voice-mic-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-            <span v-if="isRecording" class="voice-wave">
-              <span></span><span></span><span></span><span></span>
-            </span>
-            <span v-else class="voice-label">按下说话</span>
-          </button>
-          <button class="voice-kb-btn" @click="toggleVoiceMode" title="切换键盘">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-          </button>
-          <div v-if="voiceError" class="voice-error">{{ voiceError }}</div>
-        </div>
-        <!-- 下半：工具栏 -->
-        <div class="toolbar-row">
-          <div class="toolbar-left">
-            <button class="tb-btn" @click="showAttachRow = !showAttachRow" title="添加">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-            <button v-if="!isVoiceMode" class="tb-btn model-btn" @click.stop="showModelSheet = true" title="模型">
-              <span class="model-label">{{ currentModelName }}</span>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="opacity:0.5"><path d="M7 10l5 5 5-5z"/></svg>
-            </button>
-          </div>
-          <div class="toolbar-right">
-            <button v-if="false" class="tb-btn mic-btn" @click="toggleVoiceMode" title="语音输入">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-            </button>
-            <button v-if="!isVoiceMode" class="send-btn" @click="sendMessage" :disabled="loading || (!inputMessage.trim() && attachments.length === 0)">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-            </button>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- 附件工具行（点击+展开） -->
-      <div v-if="showAttachRow" class="attach-row">
-        <button class="attach-btn" @click="triggerFileUpload">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-          <span>图片</span>
-        </button>
-        <button class="attach-btn" @click="triggerFileUpload">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-          <span>文件</span>
-        </button>
-        <button class="attach-btn" @click="showSkillPage = true; showAttachRow = false">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2l-5.5 9h11zm0 3.84L13.93 9h-3.87L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z"/></svg>
-          <span>技能</span>
-        </button>
-      </div>
-
-      <!-- 隐藏文件输入 -->
-      <input type="file" ref="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xlsx" style="display:none" @change="handleFileSelect" />
-
-
-
-      <!-- 模型切换底部弹窗 -->
-      <transition name="slide-up">
-        <div v-if="showModelSheet" class="sheet-overlay" @click.self="showModelSheet = false">
-          <div class="bottom-sheet">
-            <div class="sheet-handle" @click="showModelSheet = false"></div>
-            <div class="sheet-title">切换模型</div>
-            <div class="sheet-list">
-              <!-- Auto智能选择 -->
-              <div class="sheet-item" :class="{ active: showAutoModel }" @click="showAutoModel = true; showModelSheet = false">
-                <span class="sheet-item-icon">🧠</span>
-                <span class="sheet-item-name">Auto 智能选择</span>
-                <span class="sheet-item-desc">简单任务用性价比高的模型</span>
-                <span v-if="showAutoModel" class="sheet-item-check">✓</span>
-              </div>
-              <div class="sheet-divider">指定模型</div>
-              <div v-for="p in providers" :key="p.id" class="sheet-item" :class="{ active: !showAutoModel && selectedProviderId === p.id }" @click="showAutoModel = false; selectedProviderId = p.id; showModelSheet = false">
-                <span class="sheet-item-name">{{ p.name }}</span>
-                <span v-if="p.isDefault" class="sheet-item-badge">默认</span>
-                <span v-if="!showAutoModel && selectedProviderId === p.id" class="sheet-item-check">✓</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </transition>
-
-      <!-- 全屏技能页面 -->
-      <transition name="fade">
-        <div v-if="showSkillPage" class="fullpage-overlay" @click.self="showSkillPage = false">
-          <div class="fullpage-panel">
-            <div class="fullpage-header">
-              <button class="fullpage-back" @click="showSkillPage = false">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-              </button>
-              <span class="fullpage-title">技能</span>
-            </div>
-            <div class="fullpage-body">
-              <div v-for="skill in availableSkills" :key="skill.key" class="skill-card">
-                <div class="skill-card-icon">{{ skill.icon }}</div>
-                <div class="skill-card-body">
-                  <div class="skill-card-name">{{ skill.label }}</div>
-                  <div class="skill-card-desc">{{ skill.desc || skill.label }}</div>
-                </div>
-                <div class="skill-toggle" role="switch" :class="{ on: activeSkills.includes(skill.key) }" @click="toggleSkill(skill.key)">
-                  <span class="skill-toggle-dot"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </transition>
-    </div>
-
-    <!-- Agent详情页（侧滑面板） -->
-    <transition name="slide-right">
-      <div v-if="showProfile" class="profile-overlay" @click.self="showProfile = false">
-        <div class="profile-panel">
-          <div class="profile-close" @click="showProfile = false">✕</div>
-
-          <!-- 头像+基本信息 -->
-          <div class="profile-header">
-            <div class="profile-avatar-wrap">
-              <span class="profile-avatar"><img src="/avatar_assistant.jpg" alt="AI" class="avatar-img" /></span>
-              <span class="profile-avatar-badge">✏️</span>
-            </div>
-            <div class="profile-name">外贸Agent</div>
-            <div class="profile-status">
-              <span class="status-dot online"></span>
-              <span>在线</span>
-            </div>
-          </div>
-
-          <!-- 名称 -->
-          <div class="profile-section">
-            <div class="profile-field-label">名称</div>
-            <div class="profile-field-value">销售智能体负责人</div>
-          </div>
-
-          <!-- 介绍 -->
-          <div class="profile-section">
-            <div class="profile-field-label">介绍</div>
-            <div class="profile-field-value profile-desc">
-              你的全能外贸助理，既能操作CRM（查客户、发消息、更新状态），也能自由聊天、翻译、分析数据、写文案。
-            </div>
-          </div>
-
-          <!-- 能力与资源 -->
-          <div class="profile-section">
-            <div class="profile-section-title">能力与资源</div>
-
-            <!-- 技能 -->
-            <div class="profile-item">
-              <div class="profile-item-icon">🧩</div>
-              <div class="profile-item-body">
-                <div class="profile-item-title">技能</div>
-                <div class="profile-item-list">
-                  <span class="profile-chip" v-for="s in availableSkills" :key="s.key">{{ s.icon }} {{ s.label }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 渠道 -->
-            <div class="profile-item">
-              <div class="profile-item-icon">📡</div>
-              <div class="profile-item-body">
-                <div class="profile-item-title">渠道</div>
-                <div class="profile-item-list">
-                  <span class="profile-chip">💬 WhatsApp</span>
-                  <span class="profile-chip">📧 Email</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 模型设置 -->
-            <div class="profile-item">
-              <div class="profile-item-icon">🧠</div>
-              <div class="profile-item-body">
-                <div class="profile-item-title">模型设置</div>
-                <div class="profile-item-list">
-                  <span class="profile-chip" v-for="p in providers" :key="p.id">
-                    {{ p.name }}{{ p.isDefault ? ' ✓' : '' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 创建者 -->
-          <div class="profile-footer">
-            由 Jeremy 创建
-          </div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, onActivated, nextTick, watch } from 'vue';
-import api from '../utils/api.js';
+<script>
+import { useRouter } from 'vue-router'
 
-const messages = ref([]);
-const inputMessage = ref('');
-const loading = ref(false);
-const loadingStatus = ref('');
-const providers = ref([]);
-const selectedProviderId = ref('');
-const defaultProviderId = ref('');
-const attachments = ref([]);
-const inputFocused = ref(false);
-const showAttachRow = ref(false);
-const showEmojiPicker = ref(false);
-const showModelSheet = ref(false);
-const isVoiceMode = ref(false);
-const isRecording = ref(false);
-const voiceError = ref('');
-let recognition = null;
-const showSkillPage = ref(false);
-const showAutoModel = ref(true); // 'Auto' = smart routing
-const currentModelName = computed(() => {
-  if (showAutoModel.value) return 'Auto';
-  const p = providers.value.find(p => p.id === selectedProviderId.value);
-  return p ? p.name.split(' ')[0] : '模型';
-});
-const selectedDataset = ref('');
-const activeSkills = ref([]);
-const fileInput = ref(null);
-const showProfile = ref(false)
-// Listen for profile open event from LayoutView nav bar
-if (typeof window !== 'undefined') {
-  window.addEventListener('open-assistant-profile', () => {
-    showProfile.value = true
-  })
-}
-;
+export default {
+  name: 'AssistantView',
+  setup() {
+    const router = useRouter()
 
-const availableSkills = [
-  // 营销获客
-  { key: 'smart_acquisition', label: '智能获客', icon: '🎯', desc: '全球采购商数据库挖掘高意向线索' },
-  { key: 'market_analysis', label: '市场分析', icon: '📊', desc: '目标市场规模、竞争格局分析' },
-  // 沟通触达
-  { key: 'email_automation', label: '邮件自动化', icon: '📧', desc: 'AI撰写多语种开发信，自动跟进' },
-  { key: 'multi_channel', label: '多渠道沟通', icon: '💬', desc: 'WA/TG/邮箱统一收件箱' },
-  { key: 'sales_script', label: '销售话术库', icon: '🎭', desc: '场景话术模板，AI推荐策略' },
-  { key: 'translate', label: '多语种翻译', icon: '🌐', desc: '英/西/法/阿/俄/葡专业翻译' },
-  { key: 'ai_copilot', label: 'AI实时话术Copilot', icon: '🤖', desc: '三种风格回复建议，一键发送' },
-  { key: 'inquiry_classify', label: '询盘智能分类', icon: '🏷️', desc: '7类询盘自动识别+针对性回复' },
-  // 单证合规
-  { key: 'doc_generator', label: '单证生成', icon: '📋', desc: '报价单/发票/合同/报关单' },
-  { key: 'quotation', label: '外贸报价单', icon: '💰', desc: '多币种+Incoterms报价' },
-  { key: 'pi_ci', label: 'PI/CI', icon: '📄', desc: '形式发票和商业发票生成' },
-  { key: 'contract', label: '销售合同', icon: '📝', desc: '外贸合同自动生成' },
-  { key: 'customs_decl', label: '报关单', icon: '🏛️', desc: 'HS编码智能匹配' },
-  { key: 'packing_list', label: '装箱单', icon: '📦', desc: '多箱多品规格装箱单' },
-  // 客户管理
-  { key: 'customer_research', label: '客户背调', icon: '🔍', desc: '全球企业深度背调' },
-  { key: 'customer_followup', label: '客户跟进', icon: '⏰', desc: '智能跟进提醒与记录管理' },
-  { key: 'customer_tier', label: '客户分层', icon: '⭐', desc: 'RFM模型分析，差异化策略' },
-  { key: 'world_clock', label: '世界时钟与文化', icon: '🌍', desc: '当地时间/节假日/文化禁忌' },
-  { key: 'customer_profile', label: '客户画像', icon: '👤', desc: '360°画像报告' },
-  // 物流运输
-  { key: 'freight_forwarder', label: '货代背调', icon: '🚛', desc: '货代资质审核与评估' },
-  { key: 'freight_query', label: '海运费查询', icon: '🚢', desc: '实时报价与航线推荐' },
-  { key: 'exchange_rate', label: '汇率计算', icon: '💱', desc: '实时汇率与利润测算' },
-  // 供应链
-  { key: 'production_track', label: '生产进度跟进', icon: '🏭', desc: '实时跟踪与异常预警' },
-  { key: 'fulfillment', label: '履约跟踪', icon: '📦', desc: '物流状态与进度监控' },
-];
-
-const datasets = [
-  { key: 'customers', label: '客户数据', icon: '👥' },
-  { key: 'orders', label: '订单数据', icon: '📦' },
-  { key: 'products', label: '产品资料', icon: '📄' },
-];
-const chatArea = ref(null);
-const inputRef = ref(null);
-
-// 加载对话历史
-async function loadHistory() {
-  try {
-    const res = await api.get('/assistant/conversations');
-    messages.value = res.data || [];
-  } catch (e) {
-    console.warn('load history failed:', e.message);
-  }
-}
-
-// 发送消息
-async function sendMessage() {
-  const msg = inputMessage.value.trim();
-  if ((!msg && attachments.value.length === 0) || loading.value) return;
-  
-  inputMessage.value = '';
-  loading.value = true;
-  const sendStartTime = Date.now();
-  loadingStatus.value = '外贸Agent正在思考...';
-  
-  // 收集附件信息（在清空前）
-  const msgAttachments = attachments.value.map(file => ({
-    name: file.name,
-    type: file.type,
-    url: URL.createObjectURL(file)
-  }));
-
-  // 添加用户消息到列表
-  messages.value.push({
-    role: 'user',
-    content: msg,
-    attachments: msgAttachments.length ? msgAttachments : undefined,
-    createdAt: new Date().toISOString()
-  });
-  
-  scrollToBottom();
-
-  // 清空附件
-  attachments.value = [];
-  
-  try {
-    // 上传附件
-    const formData = new FormData();
-    formData.append('message', msg || '附件');
-    if (!showAutoModel.value && selectedProviderId.value) formData.append('providerId', selectedProviderId.value);
-    if (selectedDataset.value) formData.append('dataset', selectedDataset.value);
-    if (activeSkills.value.length) formData.append('skills', JSON.stringify(activeSkills.value));
-    for (const file of attachments.value) {
-      formData.append('files', file);
-    }
-    loadingStatus.value = '正在执行任务...';
-    const res = await api.post('/assistant/chat', formData);
-    const data = res.data;
-    
-    // 收集附件信息
-    const replyAttachments = [];
-    if (data.attachments && data.attachments.length) {
-      replyAttachments.push(...data.attachments);
-    }
-    // 从回复文本中提取文件URL（兜底）
-    const replyText = data.reply || '好的';
-    const urlMatch = replyText.match(/(https?:\/\/[^\s]+\.(?:pdf|docx|xlsx|pptx|zip))/i);
-    if (urlMatch && replyAttachments.length === 0) {
-      const fname = urlMatch[1].split('/').pop();
-      replyAttachments.push({ name: decodeURIComponent(fname), url: urlMatch[1], type: 'application/pdf' });
-    }
-    
-    // 添加助理回复
-    messages.value.push({
-      role: 'assistant',
-      content: data.reply || '好的',
-      tasks: data.tasks || [],
-      attachments: replyAttachments.length ? replyAttachments : undefined,
-      createdAt: new Date().toISOString()
-    });
-  } catch (e) {
-    messages.value.push({
-      role: 'assistant',
-      content: `❌ 出错了：${e.response?.data?.error || e.message}`,
-      createdAt: new Date().toISOString()
-    });
-  } finally {
-    // 确保状态提示至少显示1.5秒
-    const minDisplay = 1500;
-    const elapsed = Date.now() - sendStartTime;
-    const remaining = minDisplay - elapsed;
-    if (remaining > 0) {
-      await new Promise(r => setTimeout(r, remaining));
-    }
-    loading.value = false;
-    scrollToBottom();
-  }
-}
-
-
-// 文件上传
-function triggerFileUpload() {
-  fileInput.value?.click();
-}
-
-function handleFileSelect(e) {
-  const files = Array.from(e.target.files || []);
-  for (const file of files) {
-    if (attachments.value.length >= 5) break;
-    attachments.value.push(file);
-  }
-  e.target.value = '';
-}
-
-function removeAttachment(idx) {
-  attachments.value.splice(idx, 1);
-}
-
-const toggleSkill = (key) => {
-  const idx = activeSkills.value.indexOf(key);
-  if (idx >= 0) activeSkills.value.splice(idx, 1);
-  else activeSkills.value.push(key);
-}
-
-
-
-// 快捷指令
-function sendQuick(msg) {
-  inputMessage.value = msg;
-  sendMessage();
-}
-
-// 确认任务
-async function confirmTask(task) {
-  try {
-    const res = await api.post(`/assistant/tasks/${task.id}/confirm`);
-    // 更新任务状态
-    task.status = 'executed';
-    // 添加执行结果
-    messages.value.push({
-      role: 'assistant',
-      content: res.data.reply || '✅ 任务已执行',
-      createdAt: new Date().toISOString()
-    });
-    scrollToBottom();
-  } catch (e) {
-    alert('执行失败：' + (e.response?.data?.error || e.message));
-  }
-}
-
-// 取消任务
-async function cancelTask(task) {
-  try {
-    await api.post(`/assistant/tasks/${task.id}/cancel`);
-    task.status = 'cancelled';
-  } catch (e) {
-    alert('取消失败：' + (e.response?.data?.error || e.message));
-  }
-}
-
-// 清空对话
-async function clearChat() {
-  if (!confirm('确定清空所有对话记录？')) return;
-  messages.value = [];
-  // TODO: API to clear conversations
-}
-
-// 格式化消息内容
-function formatMessage(content) {
-  if (!content) return '';
-  let s = content;
-  // 清除Markdown符号
-  s = s.replace(/\*\*(.+?)\*\*/g, '$1');
-  s = s.replace(/\*(.+?)\*/g, '$1');
-  s = s.replace(/__(.+?)__/g, '$1');
-  s = s.replace(/_(.+?)_/g, '$1');
-  s = s.replace(/^### (.+)$/gm, '$1');
-  s = s.replace(/^## (.+)$/gm, '$1');
-  s = s.replace(/^# (.+)$/gm, '$1');
-  s = s.replace(/^---+$/gm, '');
-  s = s.replace(/^\* (.+)$/gm, '$1');
-  s = s.replace(/^- (.+)$/gm, '$1');
-  s = s.replace(/^\d+\. (.+)$/gm, '$1');
-  s = s.replace(/`([^`]+)`/g, '$1');
-  s = s.replace(/\n{3,}/g, '\n\n');
-  s = s.trim();
-  // 移除下载地址行（已渲染为卡片）
-  s = s.replace(/📄\s*下载地址：https?:\/\/[^\s]+/g, '');
-  s = s.replace(/https?:\/\/[^\s]+\.(?:pdf|docx|xlsx|pptx|zip)/gi, '');
-  return s
-    .replace(/\n/g, '<br>')
-    .replace(/✅/g, '<span style="color:#34a853">✅</span>')
-    .replace(/❌/g, '<span style="color:#ea4335">❌</span>')
-    .replace(/⏳/g, '<span style="color:#fbbc04">⏳</span>');
-}
-
-// 状态文本
-function statusText(status) {
-  const map = {
-    pending: '待确认',
-    confirmed: '已确认',
-    executed: '已执行',
-    cancelled: '已取消',
-    failed: '失败'
-  };
-  return map[status] || status;
-}
-
-// 格式化时间
-function formatTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-}
-
-// 滚动到底部
-function scrollToBottom() {
-  nextTick(() => {
-    if (chatArea.value) {
-      chatArea.value.scrollTop = chatArea.value.scrollHeight;
-    }
-  });
-}
-
-// 语音输入功能
-function toggleVoiceMode() {
-  isVoiceMode.value = !isVoiceMode.value;
-  if (isVoiceMode.value) {
-    inputFocused.value = false;
-    initRecognition();
-  } else {
-    if (isRecording.value) stopVoice();
-  }
-}
-
-function initRecognition() {
-  if (recognition) return;
-  // HTTPS检查
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-    voiceError.value = '语音识别需要HTTPS';
-    return;
-  }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    voiceError.value = '浏览器不支持语音识别';
-    return;
-  }
-  voiceError.value = '';
-  recognition = new SR();
-  recognition.lang = 'zh-CN';
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  let finalTranscript = '';
-  recognition.onresult = (event) => {
-    let interim = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
-      } else {
-        interim += event.results[i][0].transcript;
+    const agents = [
+      {
+        key: 'sales-champion',
+        icon: '🏆',
+        name: '外贸销冠',
+        subtitle: 'Sales Champion',
+        description: '智能跟单助手，帮你管理客户关系、优化报价话术、提升成交转化率',
+        tags: ['AI话术', '客户分层', '报价优化', '跟进提醒']
+      },
+      {
+        key: 'background-report',
+        icon: '🔍',
+        name: '客户背调',
+        subtitle: 'Background Check',
+        description: '深度客户背景调查，评估信用风险，分析竞争对手，知己知彼',
+        tags: ['公司背调', '风险评估', '竞品分析', '海关数据']
+      },
+      {
+        key: 'customs-agent',
+        icon: '📋',
+        name: '外贸单证',
+        subtitle: 'Customs & Documents',
+        description: '专业单证处理，报关单证、HS编码查询、信用证审核一站式服务',
+        tags: ['报关单证', 'HS编码', '信用证审核', '合规检查']
+      },
+      {
+        key: 'doc-agent',
+        icon: '🏭',
+        name: '工厂对接',
+        subtitle: 'Factory Management',
+        description: '供应链管理专家，验厂评估、生产跟进、品质管控、成本优化',
+        tags: ['验厂评估', '生产跟进', '品质管控', '成本核算']
+      },
+      {
+        key: 'freight-agent',
+        icon: '🚢',
+        name: '货代对接',
+        subtitle: 'Freight & Logistics',
+        description: '国际物流专家，海运空运报价、报关报检、物流方案优化',
+        tags: ['海运方案', '空运方案', '报关报检', '运费优化']
+      },
+      {
+        key: 'legal-agent',
+        icon: '⚖️',
+        name: '外贸法务',
+        subtitle: 'Legal & Compliance',
+        description: '法律保障顾问，合同审查、纠纷处理、合规风控、知识产权保护',
+        tags: ['合同审查', '纠纷处理', '合规风控', '付款保障']
       }
+    ]
+
+    const goToAgent = (agentKey) => {
+      router.push('/' + agentKey)
     }
-    if (finalTranscript) {
-      inputMessage.value += finalTranscript;
-      finalTranscript = '';
+
+    return {
+      agents,
+      goToAgent
     }
-  };
-  recognition.onend = () => {
-    if (isRecording.value) {
-      try { recognition.start(); } catch(e) {}
-    }
-  };
-  recognition.onerror = (e) => {
-    console.warn('语音识别错误:', e.error);
-    if (e.error === 'not-allowed') {
-      voiceError.value = '请允许麦克风权限';
-      isRecording.value = false;
-    } else if (e.error === 'network') {
-      voiceError.value = '网络连接失败';
-      isRecording.value = false;
-    } else if (e.error === 'no-speech') {
-      // 自动重试，不显示错误
-    } else {
-      voiceError.value = '语音识别异常: ' + e.error;
-      isRecording.value = false;
-    }
-  };
-}
-
-function startVoice() {
-  if (!recognition) initRecognition();
-  if (!recognition) return;
-  try {
-    recognition.start();
-    isRecording.value = true;
-  } catch(e) {}
-}
-
-function stopVoice() {
-  isRecording.value = false;
-  if (recognition) {
-    recognition.stop();
-  }
-}
-
-onMounted(() => {
-  loadHistory();
-  loadProviders();
-  inputRef.value?.focus();
-});
-
-onActivated(async () => {
-  await loadHistory();
-  nextTick(() => scrollToBottom());
-});
-
-watch(messages, () => {
-  nextTick(() => scrollToBottom());
-}, { deep: true });
-
-async function loadProviders() {
-  try {
-    const res = await api.get('/assistant/providers');
-    providers.value = res.data || [];
-    const def = providers.value.find(p => p.isDefault);
-    selectedProviderId.value = def ? def.id : (providers.value[0]?.id || '');
-    defaultProviderId.value = selectedProviderId.value;
-  } catch (e) {
-    console.warn('load providers failed:', e.message);
   }
 }
 </script>
 
 <style scoped>
 .assistant-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--input-bg);
-}
-
-.assistant-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border, #e5e7eb);
-  background: var(--msg-incoming);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-icon {
-  font-size: 24px;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.clear-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  opacity: 0.6;
-}
-
-.clear-btn:hover {
-  opacity: 1;
-  background: var(--msg-incoming);
-}
-
-.chat-area {
-  flex: 1;
+  min-height: 100vh;
+  background: var(--mgmt-bg, #151a1f);
+  padding: 40px 20px;
   overflow-y: auto;
-  padding: 16px;
-  background: var(--chat-bg);
 }
 
-.welcome {
-  text-align: center;
-  padding: 32px 16px 20px;
-  color: var(--text-secondary);
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-}
-.welcome-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 12px;
-  overflow: hidden;
-}
-
-.welcome h3 {
-  margin: 0 0 6px;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.welcome-intro {
-  margin: 0 0 12px;
-  font-size: 15px;
-  color: var(--text-secondary);
-}
-
-.welcome-highlights {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 20px;
-  text-align: left;
-  max-width: 280px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.welcome-highlights li {
-  padding: 4px 0;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.quick-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: left;
-  max-width: 360px;
+.welcome-container {
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-.quick-group-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
+/* Header Section */
+.welcome-header {
+  text-align: center;
+  margin-bottom: 48px;
+  color: white;
 }
 
-.quick-actions {
+.welcome-icon {
+  font-size: 80px;
+  margin-bottom: 16px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.welcome-header h1 {
+  font-size: 42px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-subtitle {
+  font-size: 20px;
+  margin: 0 0 32px 0;
+  opacity: 0.95;
+  font-weight: 300;
+}
+
+.feature-badges {
   display: flex;
+  justify-content: center;
+  gap: 16px;
   flex-wrap: wrap;
-  gap: 8px;
 }
 
-.quick-actions button {
-  padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  background: var(--input-bg);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-secondary);
-  transition: all 0.2s;
-}
-
-.quick-actions button:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--msg-outgoing);
-}
-
-.welcome-hint {
-  margin: 20px 0 0;
-  font-size: 13px;
-  color: var(--text-tertiary, #999);
-}
-
-.message {
+.feature-badge {
+  background: var(--mgmt-card-bg, #1e252b);
+  backdrop-filter: blur(10px);
+  padding: 12px 20px;
+  border-radius: 24px;
   display: flex;
+  align-items: center;
   gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.badge-icon {
+  font-size: 20px;
+}
+
+/* Quick Start Section */
+.quick-start-section {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.quick-start-section h2 {
+  font-size: 24px;
+  margin: 0 0 24px 0;
+  color: var(--text-primary, #e9edef);
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 200px;
+  background: var(--mgmt-bg, #151a1f);
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.step-number {
+  width: 48px;
+  height: 48px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: var(--text-primary, #e9edef);
+}
+
+.step-content p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary, #8696a0);
+}
+
+.step-arrow {
+  font-size: 24px;
+  color: var(--text-secondary, #8696a0);
+  flex-shrink: 0;
+}
+
+/* Agents Section */
+.agents-section {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.agents-section h2 {
+  font-size: 24px;
+  margin: 0 0 24px 0;
+  color: var(--text-primary, #e9edef);
+}
+
+.agent-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.agent-card {
+  background: var(--mgmt-bg, #151a1f);
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.agent-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #6366f1 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.agent-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border-color: #60a5fa;
+}
+
+.agent-card:hover::before {
+  transform: scaleX(1);
+}
+
+.agent-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 16px;
 }
 
-.message.user {
-  flex-direction: row-reverse;
-}
-
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+.agent-icon {
+  font-size: 48px;
   flex-shrink: 0;
-  background: var(--msg-incoming);
 }
 
-.message-content {
-  max-width: 70%;
-  min-width: 60px;
-}
-
-.message-text {
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
-.message.user .message-text {
-  background: var(--msg-outgoing);
-  color: var(--text-primary);
-  border-top-right-radius: 4px;
-}
-
-.message.assistant .message-text {
-  background: var(--msg-incoming);
-  color: var(--text-primary);
-  border-top-left-radius: 4px;
-}
-
-.message-time {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  padding: 0 4px;
-}
-
-.message.user .message-time {
-  text-align: right;
-}
-
-/* 任务确认卡片 */
-.task-card {
-  margin-top: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--msg-incoming);
-}
-
-.task-item {
-  padding: 10px 12px;
-}
-
-.task-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.task-label {
+.agent-title h3 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
   font-weight: 600;
-  font-size: 13px;
-}
-
-.task-status {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.task-status.pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.task-status.executed {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.task-status.cancelled {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.task-params {
-  margin: 6px 0;
-  padding: 8px;
-  background: var(--input-bg);
-  border-radius: 4px;
-  font-size: 12px;
-  overflow-x: auto;
-}
-
-.task-params pre {
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.task-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.btn-confirm, .btn-cancel {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.btn-confirm {
-  background: var(--accent, #3b82f6);
-  color: #fff;
-}
-
-.btn-cancel {
-  background: var(--bg-tertiary, #e5e7eb);
-  color: var(--text-primary);
-}
-
-/* ===== Coze风格输入区域 ===== */
-.input-area {
-  position: relative;
-  padding: 8px 12px 12px;
-  border-top: 1px solid var(--border-color);
-  background: var(--panel-bg);
-}
-
-/* 主输入条：Coze风格卡片 */
-.input-card {
-  background: var(--input-bg);
-  border-radius: 16px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-.input-card textarea {
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 15px;
-  padding: 10px 14px 4px;
-  resize: none;
-  height: 40px;
-  max-height: 80px;
-  line-height: 1.3;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-.input-card textarea::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-
-
-
-
-/* 发送按钮 */
-.send-btn {
-  width: 38px !important;
-  height: 38px !important;
-  min-width: 38px !important;
-  padding: 0 !important;
-  background: var(--accent, #00a884) !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 50% !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.2s;
-}
-.send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.send-btn:hover:not(:disabled) { background: #00c49a !important; }
-
-/* 附件工具行 */
-.attach-row {
-  display: flex;
-  gap: 8px;
-  padding: 10px 4px 4px;
-}
-.attach-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 16px;
-  background: var(--sidebar-active);
-  color: var(--text-primary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.attach-btn:hover { background: #3b4a54; }
-.attach-btn svg { color: var(--text-secondary); }
-
-/* 工具栏行 */
-.toolbar-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px 8px;
-  gap: 4px;
-}
-.toolbar-left, .toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.toolbar-right {
-  gap: 4px;
-}
-.tb-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  transition: background 0.15s, color 0.15s;
-}
-.tb-btn:hover { background: var(--sidebar-active); color: var(--text-primary); }
-.model-btn {
-  width: auto;
-  border-radius: 18px;
-  padding: 6px 12px;
-  background: var(--sidebar-active);
-  gap: 2px;
-}
-.model-btn:hover { background: var(--sidebar-active); opacity: 0.8; }
-.model-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-/* 语音模式 - Coze风格 */
-.voice-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  min-height: 52px;
-}
-.voice-main-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 44px;
-  border: none;
-  border-radius: 22px;
-  background: var(--sidebar-active, #2a3441);
   color: var(--text-primary, #e9edef);
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-  -webkit-user-select: none;
 }
-.voice-main-btn:active {
-  background: var(--accent, #00a884);
-  color: #fff;
-}
-.voice-mic-icon { flex-shrink: 0; }
-.voice-label { letter-spacing: 1px; }
-.voice-kb-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
+
+.agent-subtitle {
+  margin: 0;
+  font-size: 12px;
   color: var(--text-secondary, #8696a0);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: color 0.2s;
-}
-.voice-kb-btn:hover { color: var(--text-primary); }
-.voice-error {
-  font-size: 12px;
-  color: #e53935;
-  white-space: nowrap;
-}
-
-/* 语音波形动画 */
-.voice-wave {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 20px;
-}
-.voice-wave span {
-  display: block;
-  width: 3px;
-  height: 10px;
-  background: #fff;
-  border-radius: 2px;
-  animation: wave 0.8s ease-in-out infinite;
-}
-.voice-wave span:nth-child(2) { animation-delay: 0.15s; }
-.voice-wave span:nth-child(3) { animation-delay: 0.3s; }
-.voice-wave span:nth-child(4) { animation-delay: 0.45s; }
-@keyframes wave {
-  0%, 100% { height: 5px; opacity: 0.6; }
-  50% { height: 18px; opacity: 1; }
-}
-
-/* 模型切换底部弹窗 */
-.sheet-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 200;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-.bottom-sheet {
-  width: 100%;
-  max-width: 420px;
-  max-height: 60vh;
-  background: var(--panel-bg);
-  border-radius: 16px 16px 0 0;
-  overflow: hidden;
-}
-.sheet-item-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-.sheet-item-desc {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-left: 4px;
-}
-.sheet-divider {
-  padding: 8px 20px 4px;
-  font-size: 11px;
-  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.sheet-handle {
-  width: 36px;
-  height: 4px;
-  background: var(--text-muted);
-  border-radius: 2px;
-  margin: 10px auto;
-  opacity: 0.5;
-  cursor: pointer;
-}
-.sheet-title {
-  text-align: center;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  padding: 4px 0 12px;
-}
-.sheet-list {
-  max-height: 50vh;
-  overflow-y: auto;
-}
-.sheet-item {
-  display: flex;
-  align-items: center;
-  padding: 14px 20px;
-  cursor: pointer;
-  transition: background 0.15s;
-  gap: 8px;
-}
-.sheet-item:hover { background: var(--sidebar-active); }
-.sheet-item.active { background: var(--sidebar-active); }
-.sheet-item-name {
-  flex: 1;
-  font-size: 15px;
-  color: var(--text-primary);
-}
-.sheet-item-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 8px;
-  background: var(--accent-info);
-  color: #fff;
-}
-.sheet-item-check {
-  font-size: 18px;
-  color: var(--accent);
-  font-weight: 700;
+.agent-description {
+  font-size: 14px;
+  color: var(--text-primary, #e9edef);
+  line-height: 1.6;
+  margin: 0 0 16px 0;
 }
 
-/* 全屏技能页 */
-.fullpage-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--panel-bg);
-  z-index: 300;
+.agent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
 }
-.fullpage-panel {
-  width: 100%;
-  height: 100%;
+
+.tag {
+  font-size: 11px;
+  color: #60a5fa;
+  background: var(--mgmt-card-bg, #1e252b);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.agent-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.arrow {
+  transition: transform 0.3s ease;
+}
+
+.agent-card:hover .arrow {
+  transform: translateX(4px);
+}
+
+/* Quick Actions Section */
+.quick-actions-section {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.quick-actions-section h2 {
+  font-size: 24px;
+  margin: 0 0 24px 0;
+  color: var(--text-primary, #e9edef);
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.quick-action-item {
+  background: var(--mgmt-bg, #151a1f);
+  padding: 20px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-}
-.fullpage-header {
-  display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-.fullpage-back {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
-  padding: 0 !important;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255,255,255,0.06);
 }
-.fullpage-back:hover { background: var(--sidebar-active); }
-.fullpage-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
+
+.quick-action-item:hover {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-color: #60a5fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.15);
 }
-.fullpage-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px 16px;
+
+.qa-icon {
+  font-size: 32px;
 }
-.skill-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 12px;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  background: var(--input-bg);
-  transition: background 0.15s;
-}
-.skill-card:hover { background: var(--sidebar-active); }
-.skill-card-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-}
-.skill-card-body {
-  flex: 1;
-  min-width: 0;
-}
-.skill-card-name {
+
+.qa-text {
   font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.skill-card-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.skill-toggle {
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: #343a40;
-  cursor: pointer;
-  position: relative;
-  flex-shrink: 0;
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-  outline: none;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
-  transition: background 0.25s;
-  display: inline-flex;
-  align-items: center;
-}
-.skill-toggle.on {
-  background: #34c759;
-}
-.skill-toggle-dot {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-}
-.skill-toggle.on .skill-toggle-dot {
-  transform: translateX(20px);
-}
-
-/* 附件预览 */
-.message-attachments {
-  margin-top: 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.msg-attach-item {
-  border-radius: 8px;
-  overflow: hidden;
-}
-.msg-image {
-  max-width: 180px;
-  max-height: 140px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: block;
-}
-.attachments-preview {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 0 0 6px 4px;
-}
-.attach-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background: var(--sidebar-active);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.attach-remove {
-  background: none !important;
-  border: none !important;
-  color: var(--text-secondary) !important;
-  cursor: pointer;
-  font-size: 14px;
-  padding: 0 2px !important;
-  width: auto !important;
-  min-width: 0 !important;
-  height: auto !important;
-}
-
-/* 过渡动画 */
-.slide-up-enter-active { animation: slideUp 0.25s ease-out; }
-.slide-up-leave-active { animation: slideUp 0.2s ease-in reverse; }
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.fade-enter-active { animation: fadeIn 0.2s; }
-.fade-leave-active { animation: fadeIn 0.2s reverse; }
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* 打字指示器 */
-.typing-indicator {
-  display: flex;
-  gap: 4px;
-  padding: 8px 0;
-}
-
-.typing-indicator span {
-  width: 8px;
-  height: 8px;
-  background: var(--text-secondary, #999);
-  border-radius: 50%;
-  animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(1) { animation-delay: 0s; }
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes typing {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
-
-/* 手机端适配 */
-@media (max-width: 768px) {
-  .message-content {
-    max-width: 85%;
-  }
-  .quick-groups {
-    gap: 12px;
-  }
-  .quick-actions button {
-    font-size: 13px;
-    padding: 6px 10px;
-  }
-}
-
-
-/* Agent Profile Panel */
-.profile-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-}
-.profile-panel {
-  width: 100%;
-  max-width: 380px;
-  height: 100%;
-  background: var(--panel-bg);
-  overflow-y: auto;
-  box-shadow: -4px 0 20px rgba(0,0,0,0.3);
-  animation: slideIn 0.25s ease-out;
-}
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-.slide-right-enter-active { animation: slideIn 0.25s ease-out; }
-.slide-right-leave-active { animation: slideIn 0.25s ease-out reverse; }
-.profile-close {
-  position: sticky;
-  top: 0;
-  text-align: right;
-  padding: 12px 16px 0;
-  font-size: 20px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  z-index: 1;
-}
-.profile-close:hover { color: var(--text-primary); }
-.profile-header {
-  text-align: center;
-  padding: 16px 20px 24px;
-}
-.profile-avatar-wrap {
-  position: relative;
-  display: inline-block;
-}
-.profile-avatar {
-  font-size: 56px;
-  line-height: 1;
-}
-.profile-avatar-badge {
-  position: absolute;
-  bottom: 0; right: -4px;
-  font-size: 16px;
-  background: var(--accent, #00a884);
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-}
-.profile-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-top: 10px;
-}
-.profile-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.status-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #666;
-}
-.status-dot.online { background: #25d366; }
-.profile-section {
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-color);
-}
-.profile-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-}
-.profile-field-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-.profile-field-value {
-  font-size: 14px;
-  color: var(--text-primary);
-}
-.profile-desc {
-  line-height: 1.4;
-  margin-top: 4px;
-  font-size: 13px;
-}
-.profile-item {
-  display: flex;
-  gap: 12px;
-  padding: 10px 0;
-}
-.profile-item + .profile-item {
-  border-top: 1px solid var(--border-color);
-}
-.profile-item-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-  width: 28px;
-  text-align: center;
-}
-.profile-item-body { flex: 1; min-width: 0; }
-.profile-item-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-.profile-item-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.profile-chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: var(--sidebar-active);
-  font-size: 11px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-.profile-footer {
-  padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-/* 执行状态提示条 */
-.status-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: transparent;
-}
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--text-secondary, #6b7280);
-  animation: statusPulse 1.5s ease-in-out infinite;
-}
-@keyframes statusPulse {
-  0%, 100% { opacity: 0.3; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1); }
-}
-.status-text {
-  font-size: 13px;
-  color: var(--text-secondary, #6b7280);
-  letter-spacing: 0.5px;
-}
-.msg-file-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--msg-incoming, #202c33);
-  border: 1px solid var(--border-color, #2a3942);
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin-top: 6px;
-  max-width: 260px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: box-shadow 0.2s;
-}
-.msg-file-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-.msg-file-icon {
-  font-size: 22px;
-  flex-shrink: 0;
-  width: 28px;
-  text-align: center;
-}
-.msg-file-info {
-  flex: 1;
-  min-width: 0;
-}
-.msg-file-name {
-  font-size: 13px;
   color: var(--text-primary, #e9edef);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-weight: 500;
+  text-align: center;
 }
-.msg-file-thumb {
-  flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 6px;
-  background: var(--panel-header-bg, #2a3942);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+
+/* Tips Section */
+.tips-section {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
-.msg-file-thumb svg {
-  width: 20px;
-  height: 20px;
-  stroke: var(--text-secondary, #8696a0);
+
+.tip-card {
+  background: rgba(59,130,246,0.08);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.tip-card h3 {
+  font-size: 20px;
+  margin: 0 0 16px 0;
+  color: var(--text-primary, #e9edef);
+}
+
+.tip-card ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.tip-card li {
+  font-size: 14px;
+  color: var(--text-primary, #e9edef);
+  line-height: 1.8;
+  position: relative;
+  padding-left: 24px;
+}
+
+.tip-card li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .assistant-view {
+    padding: 24px 16px;
+  }
+
+  .welcome-header h1 {
+    font-size: 32px;
+  }
+
+  .welcome-subtitle {
+    font-size: 16px;
+  }
+
+  .feature-badges {
+    gap: 8px;
+  }
+
+  .feature-badge {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .quick-start-section,
+  .agents-section,
+  .quick-actions-section,
+  .tips-section {
+    padding: 20px;
+  }
+
+  .steps {
+    flex-direction: column;
+  }
+
+  .step-arrow {
+    transform: rotate(90deg);
+  }
+
+  .agent-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* ===== 主题适配 ===== */
+[data-theme='light'] .assistant-view {
+  background: var(--mgmt-bg, #f5f7fa);
+}
+[data-theme='light'] .welcome-header {
+  color: var(--text-primary, #1a1a2e);
+}
+[data-theme='light'] .welcome-header h1 {
+  color: var(--text-primary, #1a1a2e);
+  text-shadow: none;
+}
+[data-theme='light'] .feature-badge {
+  background: var(--mgmt-card-bg, #ffffff);
+  border-color: rgba(0,0,0,0.1);
+  color: var(--text-primary, #333);
+}
+[data-theme='light'] .quick-start-section,
+[data-theme='light'] .agents-section,
+[data-theme='light'] .agent-card {
+  background: var(--mgmt-card-bg, #ffffff);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+[data-theme='light'] .agent-card h3,
+[data-theme='light'] .step-content h4 {
+  color: var(--text-primary, #1a1a2e);
+}
+[data-theme='light'] .agent-card p,
+[data-theme='light'] .step-content p {
+  color: #666;
+}
+[data-theme='light'] .step-number {
+  background: #3b82f6;
+  color: #fff;
+}
+[data-theme='light'] .quick-action-item {
+  background: var(--mgmt-bg, #f5f7fa);
+  border-color: rgba(0,0,0,0.08);
+  color: var(--text-primary, #333);
+}
+[data-theme='light'] .quick-action-item:hover {
+  background: var(--mgmt-card-bg, #ffffff);
+  border-color: #60a5fa;
+}
+
+/* Dark theme overrides (explicit) */
+html:not([data-theme='light']) .assistant-view {
+  background: var(--mgmt-bg, #151a1f);
+}
+html:not([data-theme='light']) .welcome-header {
+  color: var(--text-primary, #e9edef);
+}
+html:not([data-theme='light']) .feature-badge {
+  background: var(--mgmt-card-bg, #1e252b);
+  border-color: rgba(255,255,255,0.08);
+  color: var(--text-primary, #e9edef);
 }
 </style>

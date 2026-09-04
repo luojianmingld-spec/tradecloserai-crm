@@ -10,7 +10,13 @@ import { simpleParser } from 'mailparser';
 const prisma = new PrismaClient();
 
 // Encryption key (derived from a fixed secret)
-const ENCRYPTION_KEY = crypto.scryptSync('whatsapp-crm-email-secret-2024', 'salt', 32);
+// Email encryption key from environment
+const EMAIL_ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+if (!EMAIL_ENCRYPTION_KEY) {
+  console.error('[FATAL] ENCRYPTION_KEY environment variable must be set for email encryption');
+  process.exit(1);
+}
+const ENCRYPTION_KEY = crypto.scryptSync(EMAIL_ENCRYPTION_KEY, 'email-salt', 32);
 const IV_LENGTH = 16;
 
 /**

@@ -30,34 +30,13 @@
       <input v-model="searchQuery" type="text" placeholder="搜索技能..." class="search-input" />
     </div>
 
-    <!-- Category Filters -->
-    <div class="filter-row category-filters">
-      <button
-        v-for="cat in categories"
-        :key="cat"
-        class="filter-btn"
-        :class="{ active: selectedCategory === cat }"
-        @click="selectedCategory = cat"
-      >{{ cat }}</button>
-    </div>
-
-    <!-- Phase Filters -->
-    <div class="filter-row phase-filters">
-      <button
-        v-for="phase in phases"
-        :key="phase"
-        class="phase-btn"
-        :class="{ active: selectedPhase === phase }"
-        @click="selectedPhase = phase"
-      >{{ phase }}</button>
-    </div>
-
     <!-- Skills Grid -->
     <div class="skills-grid">
       <div
         v-for="skill in filteredSkills"
         :key="skill.name"
-        class="skill-card"
+        class="skill-card card-clickable"
+        @click="showDetail(skill)"
       >
         <div class="card-header">
           <div class="skill-icon-wrapper">
@@ -83,8 +62,54 @@
           class="action-btn"
           :class="skill.status === '已上线' ? 'btn-installed' : 'btn-coming'"
         >
-          {{ skill.status === '已上线' ? '已安装' : '敬请期待' }}
+          {{ skill.status === '已上线' ? '查看详情' : '敬请期待' }}
         </button>
+      </div>
+    </div>
+
+    <!-- 技能详情弹窗 -->
+    <div v-if="activeSkill" class="detail-overlay" @click.self="closeDetail">
+      <div class="detail-modal">
+        <div class="modal-header">
+          <div class="modal-icon">
+            <span class="modal-emoji">{{ activeSkill.emoji || '🧩' }}</span>
+          </div>
+          <div class="modal-title-area">
+            <div class="modal-name-row">
+              <span class="modal-name">{{ activeSkill.name }}</span>
+              <span class="status-badge" :class="activeSkill.status === '已上线' ? 'badge-online' : 'badge-coming'">{{ activeSkill.status }}</span>
+            </div>
+            <div class="modal-sub">{{ activeSkill.desc }}</div>
+          </div>
+          <button class="modal-close" @click="closeDetail">✕</button>
+        </div>
+
+        <div class="modal-tags-row">
+          <span class="modal-tag">官方技能</span>
+          <span class="modal-tag">免费</span>
+          <span class="modal-tag">{{ activeSkill.phase }}</span>
+          <span class="modal-tag">v1.0</span>
+        </div>
+
+        <div class="modal-section">
+          <h3 class="modal-section-title">详细介绍</h3>
+          <div class="modal-detail-list">
+            <p v-for="(line, i) in detailLines" :key="i" class="modal-detail-line">{{ line }}</p>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h3 class="modal-section-title">能力标签</h3>
+          <div class="skill-tags">
+            <span v-for="tag in activeSkill.tags" :key="tag" class="tag">{{ tag }}</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="modal-action-btn" :class="activeSkill.status === '已上线' ? 'btn-installed' : 'btn-coming'" @click="closeDetail">
+            {{ activeSkill.status === '已上线' ? '已安装' : '敬请期待' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -94,51 +119,42 @@
 import { ref, computed } from 'vue';
 
 const searchQuery = ref('');
-const selectedCategory = ref('全部');
-const selectedPhase = ref('全部阶段');
-
-const categories = ['全部', '营销获客', '客户沟通', '沟通触达', '单证合规', '客户管理', '物流运输', '供应链', '数据分析', '品牌展会'];
-const phases = ['全部阶段', '第一期', '第二期', '第三期'];
+const activeSkill = ref(null);
 
 const skills = ref([
-  { name:'智能获客', category:'营销获客', desc:'从全球采购商数据库挖掘高意向线索，AI评分筛选', tags:['全球企业库搜索','AI意向评分','批量导出','CRM同步'], status:'已上线', phase:'第一期', emoji:'🎯' },
-  { name:'市场分析', category:'营销获客', desc:'分析目标市场规模、竞争格局、采购趋势，生成市场报告', tags:['市场规模分析','竞争格局','趋势预测','报告生成'], status:'已上线', phase:'第一期', emoji:'📊' },
+  { name:'智能获客', category:'营销获客', desc:'从全球采购商数据库挖掘高意向线索，AI评分筛选', tags:['全球企业库搜索','AI意向评分','批量导出','CRM同步'], status:'已上线', phase:'第一期', emoji:'🎯' , detail:'对接全球采购商数据库，按产品关键词、行业、地区等多维条件筛选目标客户；\nAI 意向评分模型对线索自动打分排序，优先跟进高意向客户；\n支持批量导出与 CRM 一键同步，线索直接进入跟进流程。' },
+  { name:'市场分析', category:'营销获客', desc:'分析目标市场规模、竞争格局、采购趋势，生成市场报告', tags:['市场规模分析','竞争格局','趋势预测','报告生成'], status:'已上线', phase:'第一期', emoji:'📊' , detail:'输入目标市场或行业，自动生成市场规模、增速与需求趋势分析；\n竞品格局与主要玩家画像拆解，识别差异化切入机会；\n输出结构化市场报告，支撑选品与进入策略决策。' },
   { name:'社媒营销', category:'营销获客', desc:'LinkedIn、Facebook等社媒平台自动获客和内容营销', tags:['自动添加好友','内容发布','互动管理','数据分析'], status:'即将上线', phase:'第三期', emoji:'📱' },
   { name:'谷歌SEO优化', category:'营销获客', desc:'关键词研究、网站结构优化、内容SEO建议，提升Google排名', tags:['关键词研究','网站诊断','内容优化','排名追踪'], status:'即将上线', phase:'第三期', emoji:'🔍' },
   { name:'内容营销', category:'营销获客', desc:'博客文章、产品描述、Landing Page文案自动生成', tags:['博客文章','产品描述','Landing Page','SEO优化'], status:'即将上线', phase:'第三期', emoji:'✍️' },
   { name:'Google Ads投放', category:'营销获客', desc:'广告文案生成、关键词出价建议、投放策略优化', tags:['广告文案','关键词建议','出价策略','ROI分析'], status:'即将上线', phase:'第三期', emoji:'📢' },
-  { name:'邮件自动化', category:'沟通触达', desc:'AI撰写多语种开发信，智能匹配模板，自动发送和跟进', tags:['个性化邮件生成','多语种支持','智能跟进','打开率追踪'], status:'已上线', phase:'第一期', emoji:'' },
-  { name:'多渠道实时沟通', category:'客户沟通', desc:'WhatsApp/Telegram/邮箱三渠道统一收件箱，实时对话+AI翻译+话术生成', tags:['WhatsApp','Telegram','邮箱','AI翻译','话术生成'], status:'已上线', phase:'第一期', emoji:'💬' },
+  { name:'邮件自动化', category:'沟通触达', desc:'AI撰写多语种开发信，智能匹配模板，自动发送和跟进', tags:['个性化邮件生成','多语种支持','智能跟进','打开率追踪'], status:'已上线', phase:'第一期', emoji:'' , detail:'AI 根据客户背景自动撰写多语种开发信，贴近当地商务习惯；\n内置邮件模板库并智能匹配，一键套用后个性化填充；\n自动发送与跟进节奏管理，打开率、回复率数据持续追踪。' },
+  { name:'多渠道实时沟通', category:'客户沟通', desc:'WhatsApp/Telegram/邮箱三渠道统一收件箱，实时对话+AI翻译+话术生成', tags:['WhatsApp','Telegram','邮箱','AI翻译','话术生成'], status:'已上线', phase:'第一期', emoji:'💬' , detail:'WhatsApp、Telegram、邮箱三渠道统一收件箱，消息实时汇聚；\nAI 自动翻译与话术生成，跨语言沟通无障碍；\n历史会话、客户信息同屏展示，沟通上下文不丢失。' },
   { name:'视频会议', category:'沟通触达', desc:'集成Zoom/Teams，AI自动生成会议纪要和跟进任务', tags:['一键发起','AI纪要','任务提取','多语言翻译'], status:'即将上线', phase:'第三期', emoji:'' },
-  { name:'销售话术库', category:'沟通触达', desc:'不同销售场景的话术模板，AI智能推荐最佳沟通策略', tags:['场景话术','AI推荐','多语种','效果追踪'], status:'已上线', phase:'第一期', emoji:'🎭' },
-  { name:'多语种翻译', category:'沟通触达', desc:'英/西/法/阿/俄/葡等外贸常用语种专业翻译', tags:['专业术语','本地化润色','邮件翻译','合同翻译'], status:'已上线', phase:'第一期', emoji:'🌐' },
+  { name:'销售话术库', category:'沟通触达', desc:'不同销售场景的话术模板，AI智能推荐最佳沟通策略', tags:['场景话术','AI推荐','多语种','效果追踪'], status:'已上线', phase:'第一期', emoji:'🎭' , detail:'覆盖开发信、报价、谈判、催款等典型销售场景话术模板；\nAI 根据当前对话情境智能推荐最合适的沟通话术；\n多语种版本可选，效果数据追踪持续优化。' },
+  { name:'多语种翻译', category:'沟通触达', desc:'英/西/法/阿/俄/葡等外贸常用语种专业翻译', tags:['专业术语','本地化润色','邮件翻译','合同翻译'], status:'已上线', phase:'第一期', emoji:'🌐' , detail:'覆盖英、西、法、阿、俄、葡等外贸常用语种；\n内置专业术语库保证行业表达准确，本地化润色更自然；\n支持邮件、合同等正式文书的翻译与校对。' },
   { name:'谈判策略', category:'沟通触达', desc:'基于客户画像的谈判技巧、让步策略、僵局破解方案', tags:['客户分析','策略推荐','话术生成','模拟演练'], status:'即将上线', phase:'第二期', emoji:'' },
   { name:'异议处理', category:'沟通触达', desc:'常见客户异议（价格、质量、交期）的智能应对方案', tags:['异议识别','应对方案','话术生成','案例参考'], status:'即将上线', phase:'第二期', emoji:'️' },
-  { name:'单证生成', category:'单证合规', desc:'自动生成报价单、商业发票、合同、报关单等外贸单证', tags:['多模板选择','自动填充','格式规范','PDF导出'], status:'已上线', phase:'第一期', emoji:'📋' },
-  { name:'外贸报价单', category:'单证合规', desc:'智能生成专业外贸报价单，支持多种货币和贸易术语', tags:['多币种','Incoterms','利润计算','模板库'], status:'已上线', phase:'第一期', emoji:'💰' },
-  { name:'PI/CI', category:'单证合规', desc:'形式发票(PI)和商业发票(CI)自动生成，符合国际规范', tags:['PI生成','CI生成','格式规范','自动编号'], status:'已上线', phase:'第一期', emoji:'📄' },
-  { name:'销售合同', category:'单证合规', desc:'外贸销售合同自动生成，支持多种合同条款模板', tags:['合同模板','条款生成','风险提示','版本管理'], status:'已上线', phase:'第一期', emoji:'📝' },
-  { name:'报关单', category:'单证合规', desc:'报关单据自动生成，HS编码智能匹配', tags:['HS编码匹配','单据生成','合规检查','模板库'], status:'已上线', phase:'第一期', emoji:'🏛️' },
-  { name:'装箱单', category:'单证合规', desc:'装箱单自动生成，支持多箱多品规格', tags:['自动计算','多品规','格式规范','PDF导出'], status:'已上线', phase:'第一期', emoji:'📦' },
+  { name:'单证生成', category:'单证合规', desc:'自动生成报价单、商业发票、合同、报关单等外贸单证', tags:['多模板选择','自动填充','格式规范','PDF导出'], status:'已上线', phase:'第一期', emoji:'📋' , detail:'自动生成报价单、商业发票、合同、报关单等外贸单证；\n多模板选择加自动填充，减少重复录入；\n格式规范、支持 PDF 一键导出，直接用于业务流转。' },
   { name:'信用证审核', category:'单证合规', desc:'L/C条款逐条解读、风险点标注、不符点预警', tags:['条款解读','风险标注','不符点预警','修改建议'], status:'即将上线', phase:'第二期', emoji:'🏦' },
   { name:'出口管制', category:'单证合规', desc:'制裁名单筛查、出口许可证检查、合规风险预警', tags:['制裁筛查','许可证检查','风险预警','合规报告'], status:'即将上线', phase:'第二期', emoji:'🔒' },
   { name:'退税计算', category:'单证合规', desc:'出口退税率查询、退税金额自动计算', tags:['税率查询','金额计算','政策更新','报表生成'], status:'即将上线', phase:'第二期', emoji:'' },
-  { name:'客户背调', category:'客户管理', desc:'深度背调全球企业，分析公司规模、采购记录和信用评分', tags:['企业工商信息','采购记录分析','信用评分','风险预警'], status:'已上线', phase:'第一期', emoji:'' },
-  { name:'客户跟进', category:'客户管理', desc:'智能跟进提醒、跟进记录管理、客户状态追踪', tags:['跟进提醒','记录管理','状态追踪','转化分析'], status:'已上线', phase:'第一期', emoji:'' },
-  { name:'客户分层', category:'客户管理', desc:'RFM模型分析，识别高价值客户，制定差异化跟进策略', tags:['RFM分析','客户分层','策略推荐','价值评估'], status:'已上线', phase:'第一期', emoji:'️' },
-  { name:'AI实时话术Copilot', category:'沟通触达', desc:'客户消息实时生成三种风格回复建议（正式/友好/简洁），一键发送', tags:['实时推荐','三种风格','一键发送','场景话术'], status:'已上线', phase:'第一期', emoji:'🤖' },
-  { name:'询盘智能分类', category:'沟通触达', desc:'AI自动识别客户询盘7大类型（信息/价格/样品/资质/合作/拒绝/转介绍），给出应对要点和针对性回复', tags:['7类询盘识别','应对要点','针对性话术'], status:'已上线', phase:'第一期', emoji:'🏷️' },
-  { name:'世界时钟与文化面板', category:'客户管理', desc:'客户当地时间/星期/节假日/文化禁忌/商务礼仪一键查看，跨时区沟通不踩雷', tags:['当地时间','节假日','文化禁忌','商务礼仪','时区换算'], status:'已上线', phase:'第一期', emoji:'🌍' },
-  { name:'客户画像', category:'客户管理', desc:'基于CRM数据生成客户360°画像报告，含采购偏好/沟通风格/文化背景/跟进建议', tags:['数据整合','行为分析','文化背景','画像报告','跟进建议'], status:'已上线', phase:'第一期', emoji:'👤' },
+  { name:'客户背调', category:'客户管理', desc:'深度背调全球企业，分析公司规模、采购记录和信用评分', tags:['企业工商信息','采购记录分析','信用评分','风险预警'], status:'已上线', phase:'第一期', emoji:'' , detail:'深度背调全球企业，汇总工商信息与经营状况；\n采购记录与供应链线索分析，判断客户真实价值；\n信用评分与风险预警，降低坏账与合作风险。' },
+  { name:'客户跟进', category:'客户管理', desc:'智能跟进提醒、跟进记录管理、客户状态追踪', tags:['跟进提醒','记录管理','状态追踪','转化分析'], status:'已上线', phase:'第一期', emoji:'' , detail:'智能跟进提醒，按客户状态自动编排跟进计划；\n跟进记录结构化沉淀，团队协作透明；\n转化漏斗分析，识别需要重点突破的客户。' },
+  { name:'客户分层', category:'客户管理', desc:'RFM模型分析，识别高价值客户，制定差异化跟进策略', tags:['RFM分析','客户分层','策略推荐','价值评估'], status:'已上线', phase:'第一期', emoji:'️' , detail:'RFM 模型对客户自动分层，快速识别高价值客户；\n差异化跟进策略推荐，不同层级匹配不同力度；\n客户价值动态评估，资源向高价值客户倾斜。' },
+  { name:'AI实时话术Copilot', category:'沟通触达', desc:'客户消息实时生成三种风格回复建议（正式/友好/简洁），一键发送', tags:['实时推荐','三种风格','一键发送','场景话术'], status:'已上线', phase:'第一期', emoji:'🤖' , detail:'客户消息到达时实时生成正式、友好、简洁三种回复风格；\n结合对话上下文与客户画像，回复更贴合真实场景；\n一键发送，不打断沟通节奏。' },
+  { name:'询盘智能分类', category:'沟通触达', desc:'AI自动识别客户询盘7大类型（信息/价格/样品/资质/合作/拒绝/转介绍），给出应对要点和针对性回复', tags:['7类询盘识别','应对要点','针对性话术'], status:'已上线', phase:'第一期', emoji:'🏷️' , detail:'AI 自动识别询盘七大类型：信息、价格、样品、资质、合作、拒绝、转介绍；\n每种类型给出应对要点与针对性回复建议；\n自动标记优先级，重要询盘不遗漏。' },
+  { name:'世界时钟与文化面板', category:'客户管理', desc:'客户当地时间/星期/节假日/文化禁忌/商务礼仪一键查看，跨时区沟通不踩雷', tags:['当地时间','节假日','文化禁忌','商务礼仪','时区换算'], status:'已上线', phase:'第一期', emoji:'🌍' , detail:'一键查看客户当地日期、时间与星期，避免时区打扰；\n节假日、文化禁忌、商务礼仪提示，跨文化沟通不踩雷；\n内置时区换算工具，预约会议更从容。' },
+  { name:'客户画像', category:'客户管理', desc:'基于CRM数据生成客户360°画像报告，含采购偏好/沟通风格/文化背景/跟进建议', tags:['数据整合','行为分析','文化背景','画像报告','跟进建议'], status:'已上线', phase:'第一期', emoji:'👤' , detail:'基于 CRM 数据生成客户 360° 画像报告；\n采购偏好、沟通风格、文化背景等多维刻画；\n附具体跟进建议，把画像洞察转化为行动。' },
   { name:'客户维护', category:'客户管理', desc:'客户关系维护、节日问候、定期回访智能提醒', tags:['关系维护','节日问候','回访提醒','满意度调查'], status:'即将上线', phase:'第二期', emoji:'💝' },
   { name:'名片识别', category:'客户管理', desc:'拍照识别名片信息，自动录入CRM系统', tags:['拍照识别','自动录入','信息提取','去重检查'], status:'即将上线', phase:'第三期', emoji:'🪪' },
-  { name:'货代背调', category:'物流运输', desc:'货代公司资质审核、服务质量评估、价格对比', tags:['资质审核','服务评估','价格对比','口碑查询'], status:'已上线', phase:'第一期', emoji:'🚛' },
-  { name:'海运费查询', category:'物流运输', desc:'实时海运费查询、航线推荐、船期跟踪', tags:['实时报价','航线推荐','船期查询','对比分析'], status:'已上线', phase:'第一期', emoji:'' },
-  { name:'汇率计算', category:'物流运输', desc:'实时汇率转换、锁汇建议、利润测算', tags:['实时汇率','多币种转换','锁汇建议','利润测算'], status:'已上线', phase:'第一期', emoji:'💱' },
+  { name:'货代背调', category:'物流运输', desc:'货代公司资质审核、服务质量评估、价格对比', tags:['资质审核','服务评估','价格对比','口碑查询'], status:'已上线', phase:'第一期', emoji:'🚛' , detail:'货代公司资质核验与经营状态查询；\n服务质量与口碑评估，筛掉低质货代；\n多货代价格对比，有效控制物流成本。' },
+  { name:'海运费查询', category:'物流运输', desc:'海运费参考价查询、航线推荐、船期跟踪', tags:['参考运价','航线推荐','船期查询','对比分析'], status:'已上线', phase:'第一期', emoji:'' , detail:'主要航线海运费参考价查询，快速比价；\n航线推荐与船期跟踪，发货节奏更可控；\n运价趋势对比，把握订舱时机。' },
+  { name:'汇率计算', category:'物流运输', desc:'实时汇率转换、锁汇建议、利润测算', tags:['实时汇率','多币种转换','锁汇建议','利润测算'], status:'已上线', phase:'第一期', emoji:'💱' , detail:'实时汇率转换，多币种自由换算；\n锁汇建议与利润测算，报价更稳；\n汇率波动提示，降低汇损风险。' },
   { name:'关税查询', category:'物流运输', desc:'各国HS编码对应的关税率、FTA优惠查询', tags:['关税率表','FTA优惠','税率对比','政策更新'], status:'即将上线', phase:'第二期', emoji:'🏛️' },
   { name:'收汇风险', category:'物流运输', desc:'付款方式风险评估（T/T、L/C、D/P、O/A）', tags:['风险评估','方式对比','建议生成','案例参考'], status:'即将上线', phase:'第二期', emoji:'⚠️' },
-  { name:'生产进度跟进', category:'供应链', desc:'实时跟踪生产进度，异常预警，进度报告自动生成', tags:['进度跟踪','异常预警','报告生成','节点管理'], status:'已上线', phase:'第一期', emoji:'🏭' },
-  { name:'履约跟踪', category:'供应链', desc:'跟踪生产进度和物流状态，异常预警和报告生成', tags:['物流跟踪','进度监控','异常预警','报告生成'], status:'已上线', phase:'第一期', emoji:'📦' },
+  { name:'生产进度跟进', category:'供应链', desc:'实时跟踪生产进度，异常预警，进度报告自动生成', tags:['进度跟踪','异常预警','报告生成','节点管理'], status:'已上线', phase:'第一期', emoji:'🏭' , detail:'实时跟踪订单生产进度，关键节点可视化；\n异常自动预警，及时介入避免延误；\n进度报告自动生成，同步客户更省心。' },
+  { name:'履约跟踪', category:'供应链', desc:'跟踪生产进度和物流状态，异常预警和报告生成', tags:['物流跟踪','进度监控','异常预警','报告生成'], status:'已上线', phase:'第一期', emoji:'📦' , detail:'生产进度与物流状态一站式跟踪；\n异常预警与处理建议，交付全程可控；\n履约报告自动生成，提升客户信任。' },
   { name:'供应商管理', category:'供应链', desc:'供应商评估、比价、质量评分、交期跟踪', tags:['供应商评估','比价分析','质量评分','交期跟踪'], status:'即将上线', phase:'第二期', emoji:'🏗️' },
   { name:'质量检验', category:'供应链', desc:'QC报告生成、验货标准制定、不合格品处理', tags:['QC报告','验货标准','不合格处理','质量分析'], status:'即将上线', phase:'第二期', emoji:'✅' },
   { name:'成本核算', category:'供应链', desc:'产品成本BOM、利润率分析、报价支撑', tags:['BOM管理','成本分析','利润测算','报价支撑'], status:'即将上线', phase:'第二期', emoji:'🧮' },
@@ -172,15 +188,34 @@ const sortedSkills = computed(() => {
 
 const filteredSkills = computed(() => {
   return sortedSkills.value.filter(s => {
-    const matchCat = selectedCategory.value === '全部' || s.category === selectedCategory.value;
-    const matchPhase = selectedPhase.value === '全部阶段' || s.phase === selectedPhase.value;
     const matchSearch = !searchQuery.value ||
       s.name.includes(searchQuery.value) ||
       s.desc.includes(searchQuery.value) ||
       s.tags.some(t => t.includes(searchQuery.value));
-    return matchCat && matchPhase && matchSearch;
+    return matchSearch;
   });
 });
+
+function showDetail(skill) {
+  activeSkill.value = skill;
+}
+
+function closeDetail() {
+  activeSkill.value = null;
+}
+
+const detailLines = computed(() => {
+  if (!activeSkill.value) return [];
+  if (activeSkill.value.detail) {
+    return activeSkill.value.detail.split('\n').filter(l => l.trim());
+  }
+  return [
+    `「${activeSkill.value.name}」属于${activeSkill.value.category}方向，为${activeSkill.value.phase}规划能力。`,
+    `正式上线后将支持：${activeSkill.value.tags.join('、')}。`,
+    '该技能还在开发打磨中，敬请期待。'
+  ];
+});
+
 </script>
 
 <style scoped>
@@ -348,6 +383,11 @@ const filteredSkills = computed(() => {
   border-color: #3b82f6;
 }
 
+.card-clickable {
+  cursor: pointer;
+}
+
+
 .card-header {
   display: flex;
   align-items: flex-start;
@@ -505,6 +545,191 @@ const filteredSkills = computed(() => {
 
   .page-title {
     font-size: 22px;
+  }
+}
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.detail-modal {
+  width: 580px;
+  max-width: 100%;
+  max-height: 84vh;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.modal-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--search-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-emoji {
+  font-size: 30px;
+}
+
+.modal-title-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modal-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.modal-tag {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--search-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.modal-section {
+  margin-top: 20px;
+}
+
+.modal-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.modal-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-detail-line {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding-left: 14px;
+  position: relative;
+  margin: 0;
+}
+
+.modal-detail-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+
+.modal-footer {
+  margin-top: 22px;
+}
+
+.modal-action-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.modal-action-btn.btn-installed {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.modal-action-btn.btn-installed:hover {
+  background: #2563eb;
+}
+
+.modal-action-btn.btn-coming {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+  .detail-modal {
+    padding: 18px;
+  }
+
+  .modal-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .modal-emoji {
+    font-size: 24px;
+  }
+
+  .modal-name {
+    font-size: 17px;
   }
 }
 </style>

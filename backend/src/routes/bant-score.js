@@ -93,7 +93,7 @@ async function findContactByJid(jid) {
 
 /** Resolve AI provider for BANT scoring */
 async function resolveBANTProvider() {
-  const gptProvider = await getProviderById('p1784629520517');
+  const gptProvider = await getProviderById('p1786604068598');
   return {
     provider: gptProvider || null,
     modelId: gptProvider ? gptProvider.model : 'gpt-4o-mini'

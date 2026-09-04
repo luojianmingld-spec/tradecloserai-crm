@@ -63,7 +63,7 @@ function extractDomain(str) {
 
 /** Resolve AI provider for background check */
 async function resolveBGProvider() {
-  const gptProvider = await getProviderById('p1784629520517');
+  const gptProvider = await getProviderById('p1786604068598');
   return {
     provider: gptProvider || null,
     modelId: gptProvider ? gptProvider.model : 'gpt-4o-mini'
@@ -441,30 +441,70 @@ async function step9_rating(query, dimensions) {
     }).join('\n\n');
 
     const aiResult = await chatComplete(modelId,
-      `你是一位资深外贸客户背调评分师。根据以下9个维度的背调结果，给出A/B/C/D评级和综合分析。
+      `你是一位资深外贸客户背调分析师。根据以下9个维度的背调数据，生成一份11章节的360度结构化客户评估报告。
 
-评分标准：
-- A: 官网真实、域名≥3年、LinkedIn有员工、海关有数据、无信用风险 → 优质客户
-- B: 官网存在但信息一般、域名1-3年、部分数据可查 → 值得跟进
-- C: 官网不存在或信息极少、域名<1年、无海关数据 → 需谨慎
-- D: 有诉讼/欺诈记录、网站虚假、新域名高风险 → 建议回避
+报告必须严格包含以下11个章节（按顺序）：
+1. 基础身份核验 - 公司是否存在、注册信息是否可查
+2. 公司真实性 - 官网是否真实运营、产品/团队/联系方式是否完整
+3. 业务能力评估 - 主营产品、行业定位、产能规模
+4. 商业模式分析 - 盈利模式、客户类型、市场覆盖
+5. 合作机构背调 - 已知供应商、合作伙伴、代理商情况
+6. 制裁与合规筛查 - 是否涉及制裁名单、出口管制、合规风险
+7. 国家风险评估 - 客户所在国的政治/经济/贸易风险
+8. 法院与诉讼记录 - 是否有法律诉讼、破产记录
+9. 供应链分析 - 采购历史、供应商稳定性、进口频次
+10. 关键风险点 - 汇总所有风险因素
+11. 综合评分与建议 - 总体评价和跟进策略
+
+每个章节必须包含：
+- title: 章节标题（中文）
+- status: "pass"（通过）/ "warning"（需关注）/ "fail"（不通过）
+- findings: 具体发现内容（2-4句话）
+- riskLevel: "low" / "medium" / "high"
+
+同时给出：
+- score: 0-100的综合评分
+- executiveSummary: 2-3句总体评价
+- recommendation: 跟进策略建议
 
 严格返回JSON（不要markdown代码块）：
-{"rating":"A/B/C/D","reasons":["原因1","原因2","..."],"recommendation":"跟进策略建议2-3句"}`,
+{"score":75,"executiveSummary":"总体评价...","recommendation":"跟进建议...","chapters":[{"title":"基础身份核验","status":"pass","findings":"...","riskLevel":"low"},...]}
+注意：chapters数组必须恰好包含11个元素，按上述顺序排列。`,
       `客户: ${query}\n\n${dimSummary}`,
-      { temperature: 0.3, maxTokens: 800, provider: provider || undefined }
+      { temperature: 0.3, maxTokens: 2000, provider: provider || undefined }
     );
 
     const parsed = safeParseLLMJson(aiResult);
-    if (parsed) {
+    if (parsed && parsed.chapters) {
+      const defaultChapters = [
+        '基础身份核验','公司真实性','业务能力评估','商业模式分析','合作机构背调',
+        '制裁与合规筛查','国家风险评估','法院与诉讼记录','供应链分析','关键风险点','综合评分与建议'
+      ];
+      const chapters = defaultChapters.map((title, i) => {
+        const c = parsed.chapters[i] || {};
+        return {
+          id: i + 1,
+          title: c.title || title,
+          status: ['pass','warning','fail'].includes(c.status) ? c.status : 'warning',
+          findings: c.findings || '暂无数据',
+          riskLevel: ['low','medium','high'].includes(c.riskLevel) ? c.riskLevel : 'medium'
+        };
+      });
+
+      const score = typeof parsed.score === 'number' ? parsed.score : 50;
+      const rating = score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 50 ? 'C' : 'D';
+
       return {
         step: 9,
-        name: '客户评分',
+        name: '360°结构化背调报告',
         status: 'done',
         data: {
-          rating: ['A','B','C','D'].includes(parsed.rating) ? parsed.rating : 'C',
-          reasons: Array.isArray(parsed.reasons) ? parsed.reasons : [],
-          recommendation: parsed.recommendation || ''
+          score,
+          rating,
+          chapters,
+          executiveSummary: parsed.executiveSummary || '',
+          recommendation: parsed.recommendation || '',
+          reasons: chapters.filter(c => c.status === 'fail' || c.status === 'warning').map(c => c.findings),
         }
       };
     }
@@ -474,9 +514,23 @@ async function step9_rating(query, dimensions) {
 
   return {
     step: 9,
-    name: '客户评分',
+    name: '360°结构化背调报告',
     status: 'done',
-    data: { rating: 'C', reasons: ['AI评分失败，默认C级'], recommendation: '建议人工复核' }
+    data: {
+      score: 50,
+      rating: 'C',
+      chapters: [
+        '基础身份核验','公司真实性','业务能力评估','商业模式分析','合作机构背调',
+        '制裁与合规筛查','国家风险评估','法院与诉讼记录','供应链分析','关键风险点','综合评分与建议'
+      ].map((title, i) => ({
+        id: i + 1, title, status: 'warning',
+        findings: 'AI评分失败，建议人工复核',
+        riskLevel: 'medium'
+      })),
+      executiveSummary: 'AI评分失败，默认C级，建议人工复核',
+      recommendation: '建议人工复核',
+      reasons: ['AI评分失败，默认C级'],
+    }
   };
 }
 
@@ -556,16 +610,25 @@ export async function runFullBackgroundCheck(query, { email, context } = {}) {
   }
 
   const rating = step9Result.data?.rating || 'C';
-  const summary = `评级: ${rating}\n` +
-    (step9Result.data?.reasons?.length ? `原因: ${step9Result.data.reasons.join('; ')}\n` : '') +
-    (step9Result.data?.recommendation ? `建议: ${step9Result.data.recommendation}` : '');
+  const score = step9Result.data?.score || 50;
+  const chapters = step9Result.data?.chapters || [];
+  const executiveSummary = step9Result.data?.executiveSummary || '';
+  const recommendation = step9Result.data?.recommendation || '';
+  const summary = `评级: ${rating} (${score}分)\n` +
+    (executiveSummary ? `${executiveSummary}\n` : '') +
+    (step9Result.data?.reasons?.length ? `关键发现: ${step9Result.data.reasons.slice(0,3).join('; ')}\n` : '') +
+    (recommendation ? `建议: ${recommendation}` : '');
 
-  console.log(`[BG-Check] Completed. Rating: ${rating}`);
+  console.log(`[BG-Check] Completed. Rating: ${rating}, Score: ${score}`);
 
   return {
     query,
     dimensions,
     rating,
+    score,
+    chapters,
+    executiveSummary,
+    recommendation,
     summary,
     sources: sources.slice(0, 20),
     completedAt: new Date().toISOString()

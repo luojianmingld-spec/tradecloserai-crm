@@ -56,7 +56,7 @@ export async function updateSettings(userId, settings) {
 /**
  * Detect language of text using LLM
  */
-export async function detectLanguage(text, engine = "google") {
+export async function detectLanguage(text, engine = "deepl") {
   if (!text || text.trim().length === 0) return "unknown";
 
   // Simple heuristic for common languages
@@ -112,7 +112,7 @@ function quickDetect(text) {
 /**
  * Translate text using LLM
  */
-export async function translateText(text, sourceLang, targetLang, engine = "google", userId = null) {
+export async function translateText(text, sourceLang, targetLang, engine = "deepl", userId = null) {
   if (!text || text.trim().length === 0)
     return { translated: "", sourceLang: sourceLang || "unknown", targetLang };
 
@@ -148,30 +148,6 @@ export async function translateText(text, sourceLang, targetLang, engine = "goog
     }
   } catch (err) {
     // Cache lookup failed, continue with translation
-  }
-
-  // Use Google Translate if engine is "google"
-  if (engine === "google") {
-    try {
-      const { googleTranslate } = await import("./google-translate.js");
-      const gtLang = targetLang === "zh" ? "zh-CN" : targetLang;
-      const result = await googleTranslate(text, sourceLang === "auto" ? "auto" : sourceLang, gtLang);
-      const translated = (result && result.translated) || "";
-      if (translated) {
-        // Save to cache
-        memoryCache.set(cacheKey, translated);
-        try {
-          await prisma.translationCache.upsert({
-            where: { sourceText_sourceLang_targetLang_engine: { sourceText: text, sourceLang, targetLang, engine } },
-            create: { sourceText: text, sourceLang, targetLang, engine, translated },
-            update: { translated },
-          });
-        } catch (cacheErr) {}
-        return { translated, sourceLang, targetLang, cached: false };
-      }
-    } catch (gtErr) {
-      console.warn("[Translation] Google Translate failed, falling back to LLM:", gtErr.message);
-    }
   }
 
   // Use LLM for translation

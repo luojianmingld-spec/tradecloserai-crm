@@ -4,6 +4,9 @@
     <div class="cust-header">
       <h2 class="page-title">👥 客户管理</h2>
       <div class="spacer"></div>
+      <button class="hdr-btn assign-btn" @click="openAssignDialog">
+        <span style="margin-right:4px">🤖</span><span class="btn-text">指派 Agent{{ selectedIds.size ? ' (' + selectedIds.size + ')' : '' }}</span>
+      </button>
       <button class="hdr-btn add-btn" @click="showAddDialog = true">
         <span style="margin-right:4px">➕</span><span class="btn-text">添加客户</span>
       </button>
@@ -91,8 +94,9 @@
                 </td>
                 <td class="col-name">
                   <div class="name-cell">
-                    <div class="tbl-avatar" :style="!avatarOk(c) ? {background: (c.jid && c.jid.includes('@telegram')) ? '#2AABEE' : avatarColor(displayName(c))} : {}">
-                      <img v-if="waAvatarUrl(c) && avatarOk(c) && !(c.jid && c.jid.includes('@telegram'))" class="tbl-avatar-img" :src="waAvatarUrl(c)" @error="onAvatarError(c)" alt="" />
+                    <div class="tbl-avatar" :style="!avatarOk(c) && !(c.jid && c.jid.includes('@g.us')) ? {background: (c.jid && c.jid.includes('@telegram')) ? '#2AABEE' : avatarColor(displayName(c))} : {}">
+                      <img v-if="!(c.jid && c.jid.includes('@g.us')) && waAvatarUrl(c) && avatarOk(c) && !(c.jid && c.jid.includes('@telegram'))" class="tbl-avatar-img" :src="waAvatarUrl(c)" @error="onAvatarError(c)" alt="" />
+                      <template v-else-if="c.jid && c.jid.includes('@g.us')"><span class="avatar-txt" style="font-size:18px;font-weight:700">群</span></template>
                       <template v-else-if="c.jid && c.jid.includes('@telegram')"><span class="avatar-txt" style="font-size:16px">✈️</span></template>
                       <template v-else-if="isPhoneNumber(displayName(c))">📱</template>
                       <template v-else><span class="avatar-txt">{{ (displayName(c) || '?')[0].toUpperCase() }}</span></template>
@@ -143,8 +147,9 @@
           <div class="card-list mobile-only">
           <div v-for="c in items" :key="c.id" class="cust-card" @click="goDetail(c)">
             <div class="card-top">
-              <div class="avatar" :style="!avatarOk(c) ? {background: (c.jid && c.jid.includes('@telegram')) ? '#2AABEE' : avatarColor(displayName(c))} : {}">
-                <img v-if="waAvatarUrl(c) && avatarOk(c) && !(c.jid && c.jid.includes('@telegram'))" class="card-avatar-img" :src="waAvatarUrl(c)" @error="onAvatarError(c)" alt="" />
+              <div class="avatar" :style="!avatarOk(c) && !(c.jid && c.jid.includes('@g.us')) ? {background: (c.jid && c.jid.includes('@telegram')) ? '#2AABEE' : avatarColor(displayName(c))} : {}">
+                <img v-if="!(c.jid && c.jid.includes('@g.us')) && waAvatarUrl(c) && avatarOk(c) && !(c.jid && c.jid.includes('@telegram'))" class="card-avatar-img" :src="waAvatarUrl(c)" @error="onAvatarError(c)" alt="" />
+                <template v-else-if="c.jid && c.jid.includes('@g.us')"><span class="avatar-txt" style="font-size:20px;font-weight:700">群</span></template>
                 <template v-else-if="c.jid && c.jid.includes('@telegram')"><span class="avatar-txt" style="font-size:20px">✈️</span></template>
                 <template v-else-if="isPhoneNumber(displayName(c))">📱</template>
                 <template v-else><span class="avatar-txt">{{ (displayName(c) || '?')[0].toUpperCase() }}</span></template>
@@ -241,6 +246,28 @@
         <button class="dlg-btn primary" :disabled="adding" @click="doAdd">{{ adding?'添加中...':'添加客户' }}</button>
       </template>
     </el-dialog>
+
+    <!-- 指派 Agent Dialog（V1.0 F1 批量指派） -->
+    <el-dialog v-model="showAssignDialog" :title="`🤖 指派 Agent（${selectedIds.size} 个客户）`" width="92%" class="cust-dialog assign-dialog" :append-to-body="true" :close-on-click-modal="false">
+      <div class="assign-tip">选择要指派的 Agent 后，对方可在 Agent 对话页选择这些客户进行跟进。</div>
+      <div class="assign-agents">
+        <div v-for="ag in ASSIGN_AGENTS" :key="ag.type" class="assign-agent-card" :class="{ active: assignAgentType === ag.type }" @click="assignAgentType = ag.type">
+          <span class="aa-icon">{{ ag.icon }}</span>
+          <div class="aa-info">
+            <div class="aa-name">{{ ag.name }}</div>
+            <div class="aa-desc">{{ ag.desc }}</div>
+          </div>
+          <span class="aa-check" v-if="assignAgentType === ag.type">✓</span>
+        </div>
+      </div>
+      <div class="assign-instruction">
+        <textarea v-model="assignInstruction" class="assign-input" rows="3" placeholder="给 Agent 的跟进指令（选填），如：重点跟进 A 级客户，本周内发首封开发信"></textarea>
+      </div>
+      <template #footer>
+        <button class="dlg-btn cancel" @click="showAssignDialog=false">取消</button>
+        <button class="dlg-btn primary" :disabled="assigning" @click="doAssign">{{ assigning?'指派中...':'确认指派' }}</button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -305,6 +332,7 @@ const avatarFailedMap = ref({});
 function waAvatarUrl(c) {
   const jid = c.jid || (c.phone ? c.phone.replace(/\D/g,'') + '@s.whatsapp.net' : '');
   if (!jid) return '';
+  if (jid.includes('@g.us')) return '';
   return '/api/wa/avatar?jid=' + encodeURIComponent(jid);
 }
 function avatarOk(c) {
@@ -485,6 +513,7 @@ async function reload(p) {
     if (activeTab.value === 'recent') params.recent = '1';
     if (filters.value.level) params.level = filters.value.level;
     if (filters.value.status) params.status = filters.value.status;
+    params.isBusiness = 'true'; // L2: 客户管理列表只显示已确认的业务客户（计数同步）
     const qs = new URLSearchParams(params).toString();
     const { data } = await api.get('/customers?' + qs);
     items.value = data.items || [];
@@ -537,6 +566,48 @@ async function doAdd() {
   } catch (e) {
     ElMessage.error(e?.response?.data?.error || '添加失败');
   } finally { adding.value = false; }
+}
+
+// ── Agent 指派（V1.0 F1 批量指派） ──
+const ASSIGN_AGENTS = [
+  { type: 'sales-champion', icon: '🚀', name: '外贸销冠', desc: '智能跟单 · 话术 · 成交' },
+  { type: 'background-report', icon: '🔍', name: '客户背调', desc: '背景调查 · 风险评估' },
+  { type: 'customs-agent', icon: '📋', name: '外贸单证', desc: '报关单证 · HS编码' },
+  { type: 'doc-agent', icon: '🏭', name: '工厂对接', desc: '验厂评估 · 生产跟进' },
+  { type: 'freight-agent', icon: '🚢', name: '货代对接', desc: '海运空运 · 报关报检' },
+  { type: 'legal-agent', icon: '⚖️', name: '外贸法务', desc: '合同审查 · 纠纷处理' },
+];
+const showAssignDialog = ref(false);
+const assignAgentType = ref('sales-champion');
+const assignInstruction = ref('');
+const assigning = ref(false);
+
+function openAssignDialog() {
+  if (selectedIds.value.size === 0) { ElMessage.warning('请先勾选要指派的客户'); return; }
+  assignAgentType.value = 'sales-champion';
+  assignInstruction.value = '';
+  showAssignDialog.value = true;
+}
+async function doAssign() {
+  const ids = Array.from(selectedIds.value);
+  if (!ids.length) return;
+  assigning.value = true;
+  try {
+    const { data } = await api.post('/agent/tasks', {
+      agentType: assignAgentType.value,
+      customerIds: ids,
+      instruction: assignInstruction.value.trim() || null,
+      source: 'customer_list'
+    });
+    const created = (data.results || []).filter(r => r.status === 'created').length;
+    const exists = (data.results || []).filter(r => r.status === 'exists').length;
+    const failed = (data.results || []).filter(r => r.status === 'failed').length;
+    ElMessage.success(`指派完成：新建 ${created} 个${exists ? '，已存在 ' + exists + ' 个' : ''}${failed ? '，失败 ' + failed + ' 个' : ''}`);
+    showAssignDialog.value = false;
+    selectedIds.value.clear();
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.error || '指派失败');
+  } finally { assigning.value = false; }
 }
 
 onMounted(() => reload(1));
@@ -721,4 +792,17 @@ onMounted(() => reload(1));
 .kpi-num.level-c-num { color:#6b7280; }
 .kpi-num.level-d-num { color:#374151; }
 .kpi-num.kpi-num-pending { color:#6366f1; }
+.assign-btn { background: var(--mgmt-whatsapp); border:none; color:#fff; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:14px; display:flex; align-items:center; font-weight:500; margin-right:8px; }
+.assign-tip { font-size:12px; color: var(--mgmt-text-secondary); margin-bottom:10px; }
+.assign-agents { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:12px; }
+.assign-agent-card { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1.5px solid var(--mgmt-input-border, rgba(0,0,0,.12)); cursor:pointer; transition:all .15s; background:var(--mgmt-card-bg, #fff); }
+.assign-agent-card:hover { border-color: var(--mgmt-whatsapp); }
+.assign-agent-card.active { border-color: var(--mgmt-whatsapp); background: rgba(37,211,102,.08); }
+.aa-icon { font-size:20px; }
+.aa-info { flex:1; min-width:0; }
+.aa-name { font-size:14px; font-weight:600; }
+.aa-desc { font-size:11px; color: var(--mgmt-text-secondary); }
+.aa-check { color: var(--mgmt-whatsapp); font-weight:700; font-size:16px; }
+.assign-instruction { }
+.assign-input { width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px; border:1px solid var(--mgmt-input-border, rgba(0,0,0,.12)); font-size:13px; resize:vertical; background:var(--mgmt-card-bg,#fff); color:inherit; }
 </style>

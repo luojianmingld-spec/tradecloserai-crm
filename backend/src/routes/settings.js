@@ -4,6 +4,14 @@
 import { Router } from 'express';
 import { encrypt, decrypt, isEncrypted } from '../utils/encryption.js';
 import { authMiddleware as auth } from '../middleware/auth.js';
+
+// 管理员权限校验（AI模型配置属系统级设置，仅管理员可修改/激活/删除）
+function requireAdmin(req, res, next) {
+  if (!req.userRole || req.userRole.toLowerCase() !== 'admin') {
+    return res.status(403).json({ error: '需要管理员权限' });
+  }
+  next();
+}
 import { getAISettings, updateSettings, updateSetting, getAvailableModels } from '../services/ai.service.js';
 import { getProviders, getActiveProvider, testConnection } from '../services/ai-client.js';
 import { PrismaClient } from '@prisma/client';
@@ -84,10 +92,11 @@ router.get('/ai', auth, async (req, res) => {
     const userId = req.userId;
     const settings = await getAISettings(userId);
     const models = getAvailableModels();
-    const providers = await readProviders();
+    // 【设置页瘦身】平台池优先：getProviders 已改为读 AIModelConfig 平台池（空时兜底旧租户配置）
+    const providers = await getProviders();
     const activeId = await readActiveId();
     const activeProvider = providers.find(p => p.id === activeId) || providers.find(p => p.isDefault) || providers[0] || null;
-    res.json({ settings, models, providers: providers.map(p => ({ ...p, apiKey: maskApiKey(p.apiKey) })), activeId });
+    res.json({ settings, models, providers: providers.map(p => ({ ...p, apiKey: maskApiKey(p.apiKey), _fromPool: undefined, _poolId: undefined })), activeId });
   } catch (err) {
     console.error('[AI Settings GET Error]', err);
     res.status(500).json({ error: '获取 AI 设置失败' });
@@ -97,7 +106,8 @@ router.get('/ai', auth, async (req, res) => {
 // PUT /api/settings/ai
 router.put('/ai', auth, async (req, res) => {
   try {
-    const allowedKeys = ['aiModel', 'translationEnabled', 'translationEngine', 'translationTargetLang', 'translationAutoSend'];
+    // 【设置页瘦身】移除 aiModel：租户不再自配模型，模型由平台池统一管理
+    const allowedKeys = ['translationEnabled', 'translationEngine', 'translationTargetLang', 'translationAutoSend'];
     const updates = {};
     for (const key of allowedKeys) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -118,9 +128,10 @@ router.put('/ai', auth, async (req, res) => {
 // GET /api/settings/ai-providers
 router.get('/ai-providers', auth, async (req, res) => {
   try {
-    const providers = await readProviders();
+    // 【设置页瘦身】平台池优先
+    const providers = await getProviders();
     const activeId = await readActiveId();
-    const masked = providers.map(p => ({ ...p, apiKey: maskApiKey(p.apiKey) }));
+    const masked = providers.map(p => ({ ...p, apiKey: maskApiKey(p.apiKey), _fromPool: undefined, _poolId: undefined }));
     res.json({ providers: masked, activeId });
   } catch (err) {
     console.error('[AI Providers GET Error]', err);
@@ -129,7 +140,7 @@ router.get('/ai-providers', auth, async (req, res) => {
 });
 
 // POST /api/settings/ai-providers
-router.post('/ai-providers', auth, async (req, res) => {
+router.post('/ai-providers', auth, requireAdmin, async (req, res) => {
   try {
     const { name, provider, apiKey, baseUrl, model } = req.body;
     if (!name || !apiKey || !model) {
@@ -160,7 +171,7 @@ router.post('/ai-providers', auth, async (req, res) => {
 });
 
 // PUT /api/settings/ai-providers/:id
-router.put('/ai-providers/:id', auth, async (req, res) => {
+router.put('/ai-providers/:id', auth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, provider, apiKey, baseUrl, model } = req.body;
@@ -183,7 +194,7 @@ router.put('/ai-providers/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/settings/ai-providers/:id
-router.delete('/ai-providers/:id', auth, async (req, res) => {
+router.delete('/ai-providers/:id', auth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     let providers = await readProviders();
@@ -214,7 +225,7 @@ router.delete('/ai-providers/:id', auth, async (req, res) => {
 });
 
 // POST /api/settings/ai-providers/:id/activate
-router.post('/ai-providers/:id/activate', auth, async (req, res) => {
+router.post('/ai-providers/:id/activate', auth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const providers = await readProviders();
@@ -234,7 +245,7 @@ router.post('/ai-providers/:id/activate', auth, async (req, res) => {
 });
 
 // POST /api/settings/ai-providers/test
-router.post('/ai-providers/test', auth, async (req, res) => {
+router.post('/ai-providers/test', auth, requireAdmin, async (req, res) => {
   try {
     const { apiKey, baseUrl, model, providerId } = req.body;
     let providerConfig;
@@ -267,9 +278,10 @@ router.post('/ai-providers/test', auth, async (req, res) => {
 
 router.get("/ai-models", auth, async (req, res) => {
   try {
-    const providers = await readProviders();
+    // 【设置页瘦身】平台池优先
+    const providers = await getProviders();
     const activeId = await readActiveId();
-    const masked = providers.map(p => ({ ...p, apiKey: maskApiKey(p.apiKey) }));
+    const masked = providers.map(p => ({ ...p, apiKey: maskApiKey(p.apiKey), _fromPool: undefined, _poolId: undefined }));
     res.json({ providers: masked, activeId });
   } catch (err) {
     res.status(500).json({ error: "获取AI模型列表失败" });
@@ -339,5 +351,28 @@ router.get("/auto-reply", auth, async (req, res) => {
   } catch (err) {
     console.error("[Auto Reply GET Error]", err);
     res.status(500).json({ error: "获取自动回复设置失败" });
+  }
+});
+
+/**
+ * 自动接待配置（按销售独立）
+ */
+router.get("/auto-reception", auth, async (req, res) => {
+  try {
+    const { default: autoReceptionService } = await import('../services/auto-reception.service.js');
+    const config = await autoReceptionService.getConfig(req.userId);
+    res.json(config);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put("/auto-reception", auth, async (req, res) => {
+  try {
+    const { default: autoReceptionService } = await import('../services/auto-reception.service.js');
+    const merged = await autoReceptionService.saveConfig(req.userId, req.body || {});
+    res.json(merged);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });

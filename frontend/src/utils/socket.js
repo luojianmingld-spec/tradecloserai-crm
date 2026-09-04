@@ -26,6 +26,16 @@ export function initSocket() {
   socket.on('connect', () => {
     console.log('[Socket] Connected');
     // fetchConversations 由 handleStatus('connected') 触发，这里不再重复调用
+    // On reconnect, trigger batch retranslation for current conversation
+    if (socket.recovered) {
+      setTimeout(() => {
+        const jid = chatStore.activeJid;
+        if (jid) {
+          console.log('[Socket] Reconnected, triggering batch retranslation for', jid);
+          chatStore.retranslateBatchMissing(jid);
+        }
+      }, 2000);
+    }
   });
 
   socket.on('disconnect', (reason) => {
@@ -111,6 +121,13 @@ export function initSocket() {
   // BANT score completed event
   socket.on('customer:bantscore:done', (data) => {
     window.dispatchEvent(new CustomEvent('customer:bantscore:done', { detail: data }));
+  });
+  // 日程提醒触发事件
+  socket.on('reminder:fired', (data) => {
+    window.dispatchEvent(new CustomEvent('reminder:fired', { detail: data }));
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage({ type: 'warning', message: '⏰ 日程提醒：' + (data.title || '') + (data.content ? '：' + data.content : ''), duration: 8000 });
+    });
   });
 
   socket.on('whatsapp:presence', (data) => {
