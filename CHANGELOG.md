@@ -29,6 +29,12 @@
 - **历史消息**：改调 /api/tg-userbot/history 实时拉取，Rachel 会话验证通过
 - 新租户天然生效（修复在源码层）
 
+### 🎁 积分充值新增 50 元档位（2026-09-05）
+- 档位：50/100/200/500/1000 元 + 自定义，起充金额 100 → 50 元
+- 后端：credits.js MIN_RECHARGE_YUAN=50，RECHARGE_PRESETS 增加 50
+- 前端：CreditsView.vue 新增 ¥50 档位卡片、自定义最低金额、起充文案同步
+- 验证：Jeremy 亲测通过（2026-09-05 15:21），API 冒烟 minRechargeYuan=50 + 50元订单 50000 积分
+
 ### 🛡 安全加固（继承）
 - Helmet 安全头 + RateLimit 限流
 - JWT 强密钥 + AI Key 加密存储
