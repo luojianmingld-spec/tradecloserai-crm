@@ -607,9 +607,21 @@ export async function generateReply({ userId, accountId, jid, style = 'formal', 
   }) : null;
   const lastMsgContent = lastMsg ? (lastMsg.body || lastMsg.content || '') : '';
 
+  // ── Phase 8: Tenant style profile + speech library injection ──
+  let styleBlock = '';
+  if (accountId) {
+    try {
+      const { getTenantStyleBlock } = await import('../learning/style-inject.js');
+      styleBlock = await getTenantStyleBlock(accountId, lastMsgContent || '');
+    } catch (e) {
+      console.warn('[generateReply] Phase8 style injection failed:', e.message);
+    }
+  }
+
+
   const systemPrompt = `${stylePrompt}
 
-根据以下对话历史，**重点针对客户最新一条消息**生成3个不同的回复选项。${contextBlock}${attitudeBlock}${strategyDirective}${suggestionsBlock}${extraBlock}${lastMsgContent ? '\n\n【重点回复目标】客户最新一条消息: "' + lastMsgContent + '"\n请围绕这条消息的内容进行回复，保持话题连贯，不要跑题。' : ''}
+根据以下对话历史，**重点针对客户最新一条消息**生成3个不同的回复选项。${contextBlock}${attitudeBlock}${strategyDirective}${suggestionsBlock}${styleBlock}${extraBlock}${lastMsgContent ? '\n\n【重点回复目标】客户最新一条消息: "' + lastMsgContent + '"\n请围绕这条消息的内容进行回复，保持话题连贯，不要跑题。' : ''}
 
 【长度要求】${lengthGuidance}
 

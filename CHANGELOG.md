@@ -7,6 +7,30 @@
 
 ---
 
+## v1.9.2 — 2026-09-05 【当前版本】
+
+### 🤖 话术库自主学习进化 V1.1（租户=销售，实战中持续学习）
+- **目标**：AI 从「生成通用话术」进化到「用你们实战验证过的话术 + 贴合销售个人风格」
+- **学习管道跑通（V1）**：采集「客户消息→销售回复」配对样本 → LLM 场景分类/质量评分/脱敏 → 质量分≥60 自动入库（accountId 隔离、查重、增量游标断点续跑）；首次运行采集20条评估20条入库2条（询盘，score 78/65）
+- **租户沟通风格画像（V1.1 新增）**：新增 TenantStyleProfile 表；style-profile.js 从该租户高质样本提炼沟通风格（语气/长度/表情/开场/结尾/句式/禁忌）；首次提炼 accountId=1：business-casual、medium、少表情、Hi+客户名开场、短句清晰
+- **生成链路注入（Phase 8）**：ai.service.js generateReply 注入 style-inject.js——生成话术时贴合该销售风格画像 + 附带本租户历史高质话术参考（只读私有池，跨租户隔离）
+- **每日自动学习**：服务器 cron 每日 03:05（UTC）跑 run-learning.js，持续采集实战数据更新画像
+- **AI 修改记忆（V1.2 待做）**：发送链路记录「AI建议 vs 销售实际发送」差异信号（aiModified），作为最高价值学习信号回流
+
+### 👥 客户管理字段 beta→staging 同步
+- 后端 customers.js 增加 _messageCount 批量统计（msgCountMap groupBy from+to）
+- 前端 CustomersListView.vue 12 处补丁：类型/消息数/客户状态三列 + 自动建档规则栏 + businessType 三函数 + CSS
+- 注意：staging 保留 L2 逻辑（列表仅显示 isBusiness=true 业务客户），与 beta 显示全部客户行为不同，待 Jeremy 决策是否对齐
+
+### 🏪 技能商店状态调整
+- 销售看板 → 已上线·第一期（补详情）
+- 智能获客 → 即将上线·第二期（下架）
+
+### 💰 积分充值 50 元档位
+- beta 同步完成（minRechargeYuan=50，50元订单/35元拒绝冒烟通过）
+
+---
+
 ## v1.9.1 — 2026-09-04 【当前版本】
 
 ### 🚀 工程治理基线（Week 1）

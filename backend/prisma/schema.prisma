@@ -432,6 +432,25 @@ model MessageSample {
   @@index([sourceType])
 }
 
+
+model TenantStyleProfile {
+  id            Int      @id @default(autoincrement())
+  accountId     Int      @unique // 租户=销售
+  styleSummary  String?  // LLM 总结的沟通风格描述
+  tone          String?  // 语气: formal/business-casual/friendly/enthusiastic/direct
+  lengthPref    String?  // 长度: short/medium/long
+  emojiPref     String?  // 表情: rarely/occasionally/frequently
+  greetingPref  String?  // 开场/称呼习惯
+  closingPref   String?  // 结尾习惯
+  sentenceStyle String?  // 句式特征
+  tabooPhrases  String?  // 避免用语
+  sampleCount   Int      @default(0) // 提炼所用样本数
+  sampleWindow  String?  // 样本时间窗口
+  status        String   @default("pending") // pending/active
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model CompanyMaterial {
   id        Int      @id @default(autoincrement())
   accountId Int      @default(1)

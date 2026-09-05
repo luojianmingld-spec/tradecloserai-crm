@@ -10,6 +10,7 @@ import { prisma, log, sessionsForAccount } from './learning.service.js';
 import { collectSamples } from './sample-collector.js';
 import { analyzeSamples } from './learning-engine.js';
 import { importSamples } from './auto-import.js';
+import { updateTenantStyleProfile } from './style-profile.js';
 
 function parseArgs(argv) {
   const opts = { accountId: CFG.defaultAccountId, limit: CFG.maxSamplesPerRun, force: false };
@@ -62,6 +63,13 @@ export async function runLearningLoop({ accountId = CFG.defaultAccountId, limit 
 
     // 自动入库
     const { imported, skipped } = await importSamples(results);
+
+    // 更新租户沟通风格画像（租户=销售，实战中持续进化）
+    try {
+      await updateTenantStyleProfile(accountId);
+    } catch (e) {
+      log('Run', `job#${job.id} 风格画像更新失败: ${e.message}`);
+    }
 
     const finished = new Date();
     const doneJob = await prisma.learningJob.update({
