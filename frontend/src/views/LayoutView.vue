@@ -1758,7 +1758,15 @@
                     </div>
                   </template>
                   <template v-else-if="msg.type === 'replies' && isRichRepliesMsg(msg)">
-                    <!-- 🔬 产品分析卡片 -->
+                    <!-- 📊 AI 洞察摘要条（默认收起，点击展开） -->
+                    <div v-if="hasAitalkInsights(msg)" class="aitalk-collapse" :class="{open: msg._insightsOpen}">
+                      <div class="aitalk-collapse-head" @click="toggleAitalkInsights(msg)">
+                        <span class="aitalk-collapse-icon">📊</span>
+                        <span class="aitalk-collapse-title">AI 洞察</span>
+                        <span class="aitalk-collapse-summary">{{ aitalkInsightSummary(msg) }}</span>
+                        <span class="aitalk-collapse-arrow">{{ msg._insightsOpen ? '▴' : '▾' }}</span>
+                      </div>
+                      <div v-show="msg._insightsOpen" class="aitalk-collapse-body">
                     <div v-if="msg.content.productAnalysis && msg.content.productAnalysis.needed" class="aitalk-product-card">
                       <div class="aitalk-product-header">
                         <span class="aitalk-product-icon">🔬</span>
@@ -1779,7 +1787,6 @@
                         </div>
                       </div>
                     </div>
-                    <!-- 询盘分类徽章 -->
                     <div v-if="msg.content.inquiryType" class="aitalk-inquiry-badge" :class="'inq-'+inqTypeClass(msg.content.inquiryType.category)">
                       <span class="inq-cat-prefix">🏷️ 询盘类型</span>
                       <span class="inq-cat-sep"></span>
@@ -1787,7 +1794,6 @@
                       <span class="inq-cat-label">{{ msg.content.inquiryType.label }}</span>
                       <span class="inq-cat-tip">{{ msg.content.inquiryType.tip }}</span>
                     </div>
-                    <!-- 场景分析 -->
                     <div v-if="msg.content.analysis" class="aitalk-scene-card">
                       <div class="aitalk-scene-icon">💡</div>
                       <div class="aitalk-scene-body">
@@ -1795,7 +1801,8 @@
                         <div class="aitalk-scene-text" style="white-space:pre-wrap">{{ msg.content.analysis }}</div>
                       </div>
                     </div>
-                    <!-- 推荐回复 分隔 -->
+                      </div>
+                    </div>
                     <div class="aitalk-section-label">推荐回复</div>
                     <div v-for="(r, idx) in msg.content.replies" :key="'r-'+idx" class="aitalk-reply-card-v2">
                       <div class="aitalk-reply-num">#{{ idx + 1 }}</div>
@@ -1827,22 +1834,36 @@
                         {{ r._applied ? '✓ 已填入输入框' : '✏️ 点这里直接用' }}
                       </button>
                     </div>
-                    <!-- 话术设计思路 -->
-                    <div v-if="Array.isArray(msg.content.designThinking) && msg.content.designThinking.length" class="aitalk-design-block">
-                      <div class="aitalk-section-label">话术设计思路</div>
+                    <!-- 话术设计思路（默认收起） -->
+                    <div v-if="Array.isArray(msg.content.designThinking) && msg.content.designThinking.length" class="aitalk-collapse" :class="{open: msg._designOpen}">
+                      <div class="aitalk-collapse-head" @click="msg._designOpen = !msg._designOpen">
+                        <span class="aitalk-collapse-icon">🧠</span>
+                        <span class="aitalk-collapse-title">话术设计思路</span>
+                        <span class="aitalk-collapse-summary">共 {{ msg.content.designThinking.length }} 条</span>
+                        <span class="aitalk-collapse-arrow">{{ msg._designOpen ? '▴' : '▾' }}</span>
+                      </div>
+                      <div v-show="msg._designOpen" class="aitalk-collapse-body">
                       <div class="aitalk-design-table">
                         <div v-for="(row, ri) in msg.content.designThinking" :key="'dt-'+ri" class="aitalk-design-row">
                           <div class="aitalk-design-psych">{{ row.customerPsych }}</div>
                           <div class="aitalk-design-strategy">{{ row.strategy }}</div>
                         </div>
                       </div>
+                      </div>
                     </div>
-                    <!-- 补充建议 -->
-                    <div v-if="Array.isArray(msg.content.suggestions) && msg.content.suggestions.length" class="aitalk-suggest-block">
-                      <div class="aitalk-section-label">补充建议</div>
+                    <!-- 补充建议（默认收起） -->
+                    <div v-if="Array.isArray(msg.content.suggestions) && msg.content.suggestions.length" class="aitalk-collapse" :class="{open: msg._suggestOpen}">
+                      <div class="aitalk-collapse-head" @click="msg._suggestOpen = !msg._suggestOpen">
+                        <span class="aitalk-collapse-icon">💡</span>
+                        <span class="aitalk-collapse-title">补充建议</span>
+                        <span class="aitalk-collapse-summary">共 {{ msg.content.suggestions.length }} 条</span>
+                        <span class="aitalk-collapse-arrow">{{ msg._suggestOpen ? '▴' : '▾' }}</span>
+                      </div>
+                      <div v-show="msg._suggestOpen" class="aitalk-collapse-body">
                       <ul class="aitalk-suggest-list">
                         <li v-for="(s, si) in msg.content.suggestions" :key="'sg-'+si">{{ s }}</li>
                       </ul>
+                      </div>
                     </div>
                     <!-- 底部提示 -->
                     <div class="aitalk-footer-hint">💡 如果需要我帮你润色得更简短或更口语化，请切换到对话模式告诉我</div>
@@ -4082,6 +4103,26 @@ function isLegacyRepliesMsg(msg) {
 function isRichRepliesMsg(msg) {
   return msg && msg.type === 'replies' && msg.content && !Array.isArray(msg.content) && Array.isArray(msg.content.replies);
 }
+function hasAitalkInsights(msg) {
+  if (!msg || !msg.content) return false;
+  const c = msg.content;
+  return !!((c.productAnalysis && c.productAnalysis.needed) || c.inquiryType || c.analysis);
+}
+function aitalkInsightSummary(msg) {
+  const parts = [];
+  if (msg.content && msg.content.inquiryType && msg.content.inquiryType.label) parts.push(msg.content.inquiryType.label);
+  if (msg.content && msg.content.productAnalysis && msg.content.productAnalysis.matchLevel) {
+    const m = {HIGH: '高度匹配', MEDIUM: '部分匹配', LOW: '低匹配'}[msg.content.productAnalysis.matchLevel];
+    if (m) parts.push(m);
+    const n = (msg.content.productAnalysis.keyParamsToConfirm || []).length;
+    if (n > 0) parts.push('需追问 ' + n + ' 项');
+  }
+  return parts.length ? parts.join(' · ') : '点击展开';
+}
+function toggleAitalkInsights(msg) {
+  if (!msg) return;
+  msg._insightsOpen = !msg._insightsOpen;
+}
 function toggleRefineChip(msg, chip) {
   if (!msg) return;
   if (!Array.isArray(msg._refineChips)) msg._refineChips = [];
@@ -4130,7 +4171,7 @@ async function _doAnalyze({ feedback, onLoadingReplace, loadingMsg } = {}) {
         productAnalysis: data.data.productAnalysis || null,
         isFirstInquiry: data.data.isFirstInquiry === true,
       };
-      replaceMsg(lm.id, { role: 'assistant', type: 'replies', content: payload, ts: Date.now(), _refineChips: [], _refineText: '', _refineLoading: false });
+      replaceMsg(lm.id, { role: 'assistant', type: 'replies', content: payload, ts: Date.now(), _refineChips: [], _refineText: '', _refineLoading: false, _insightsOpen: false, _designOpen: false, _suggestOpen: false });
     } else {
       replaceMsg(lm.id, { role: 'assistant', type: 'text', content: data?.error || '未生成回复，请重试', error: true, ts: Date.now() });
     }
@@ -14573,6 +14614,27 @@ onUnmounted(() => {
   font-size: 12px; color: var(--text-secondary); font-weight: 600;
   margin: 12px 0 6px; letter-spacing: .3px;
 }
+/* ── 极简折叠条 ── */
+.aitalk-collapse {
+  margin: 10px 0 2px; border: 1px solid #233138; border-radius: 8px;
+  background: rgba(26, 38, 45, .55); overflow: hidden;
+}
+.aitalk-collapse-head {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 8px 12px; user-select: none;
+}
+.aitalk-collapse-head:hover { background: rgba(35, 49, 56, .5); }
+.aitalk-collapse-icon { font-size: 13px; line-height: 1; }
+.aitalk-collapse-title { color: var(--text-primary); font-size: 13px; font-weight: 700; }
+.aitalk-collapse-summary {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-secondary); font-size: 11.5px;
+}
+.aitalk-collapse-arrow { color: var(--text-secondary); font-size: 12px; }
+.aitalk-collapse-body { padding: 2px 10px 10px; border-top: 1px dashed #233138; }
+.aitalk-collapse-body > .aitalk-product-card,
+.aitalk-collapse-body > .aitalk-inquiry-badge,
+.aitalk-collapse-body > .aitalk-scene-card { margin-top: 10px; }
 /* ── 话术设计思路表格 ── */
 .aitalk-design-block { margin-top: 4px; }
 .aitalk-design-table {
