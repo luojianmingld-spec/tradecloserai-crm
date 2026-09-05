@@ -205,7 +205,7 @@ router.post("/telegram/disconnect/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const account = await prisma.whatsAppAccount.findFirst({
-      where: { id, userId: req.userId, platform: "telegram" },
+      where: { id, platform: "telegram" },
     });
     if (!account) return res.status(404).json({ error: "Not found" });
     if (account.telegramBotToken) {
@@ -232,7 +232,7 @@ router.delete("/telegram/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const account = await prisma.whatsAppAccount.findFirst({
-      where: { id, userId: req.userId, platform: "telegram" },
+      where: { id, platform: "telegram" },
     });
     if (!account) return res.status(404).json({ error: "Not found" });
     if (account.telegramBotToken) {
@@ -254,7 +254,7 @@ router.get("/telegram/:id/proxy", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const account = await prisma.whatsAppAccount.findFirst({
-      where: { id, userId: req.userId, platform: "telegram" },
+      where: { id, platform: "telegram" },
     });
     if (!account) return res.status(404).json({ error: "Not found" });
     res.json({
@@ -278,7 +278,7 @@ router.post("/telegram/:id/proxy", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const account = await prisma.whatsAppAccount.findFirst({
-      where: { id, userId: req.userId, platform: "telegram" },
+      where: { id, platform: "telegram" },
     });
     if (!account) return res.status(404).json({ error: "Not found" });
     const { enabled, host, port, protocol, username, password } = req.body || {};
@@ -309,7 +309,7 @@ router.post("/telegram/:id/launch", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const account = await prisma.whatsAppAccount.findFirst({
-      where: { id, userId: req.userId, platform: "telegram" },
+      where: { id, platform: "telegram" },
     });
     if (!account) return res.status(404).json({ error: "Not found" });
     if (!account.telegramBotToken) return res.status(400).json({ error: "Bot token missing" });
