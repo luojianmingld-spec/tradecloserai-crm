@@ -944,13 +944,13 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
         const tgChatId = toJid.split("@")[0];
         // 优先找 UserBot 账号（无 telegramBotToken），其次找 Bot 账号
         let tgAccount = await prisma.whatsAppAccount.findFirst({
-          where: { userId: req.userId, platform: "telegram", telegramBotToken: null, status: "connected" },
+          where: { platform: "telegram", telegramBotToken: null, status: "connected" },
           orderBy: { createdAt: "desc" },
         });
         const isUserBot = !!tgAccount;
         if (!tgAccount) {
           tgAccount = await prisma.whatsAppAccount.findFirst({
-            where: { userId: req.userId, platform: "telegram", telegramBotToken: { not: null }, status: "connected" },
+            where: { platform: "telegram", telegramBotToken: { not: null }, status: "connected" },
             orderBy: { createdAt: "desc" },
           });
         }
@@ -1576,7 +1576,7 @@ app.post("/api/whatsapp/send-media", authMiddleware, async (req, res) => {
     if (toJid.endsWith('@telegram')) {
       const tgChatId = toJid.split('@')[0];
       let tgAccount = await prisma.whatsAppAccount.findFirst({
-        where: { userId: req.userId, platform: 'telegram', status: 'connected' },
+        where: { platform: 'telegram', status: 'connected' },
         orderBy: { createdAt: 'desc' },
       });
       if (!tgAccount) return res.status(400).json({ error: '未连接Telegram账号' });
