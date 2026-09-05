@@ -3,7 +3,7 @@
     <div class="cp-header">
       <div>
         <h2 class="cp-title">积分充值</h2>
-        <p class="cp-sub">AI 调用每次消耗 150 积分 · 1 元 = 1000 积分 · 100 元起充</p>
+        <p class="cp-sub">AI 调用每次消耗 150 积分 · 1 元 = 1000 积分 · 50 元起充</p>
       </div>
       <router-link to="/credits/transactions" class="cp-link">积分明细 →</router-link>
     </div>
@@ -41,12 +41,12 @@
           v-model.number="customAmount"
           placeholder="请输入充值金额"
           type="number"
-          min="100"
-          :step="100"
+          min="50"
+          :step="50"
           class="cp-custom-input"
           @keyup.enter="createOrder"
         />
-        <span class="cp-custom-tip">最低 100 元</span>
+        <span class="cp-custom-tip">最低 50 元</span>
       </div>
 
       <div class="cp-order-row">
@@ -108,10 +108,10 @@ import api from '../../utils/api.js';
 const balance = ref(0);
 const aiCost = ref(150);
 const creditPerYuan = ref(1000);
-const minRecharge = ref(100);
-const presets = [100, 200, 500, 1000];
+const minRecharge = ref(50);
+const presets = [50, 100, 200, 500, 1000];
 
-const selectedPreset = ref(100);
+const selectedPreset = ref(50);
 const customMode = ref(false);
 const customAmount = ref(null);
 const creating = ref(false);

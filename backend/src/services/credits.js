@@ -7,7 +7,7 @@
  * 商业模式参数（决策 v1.3 已拍板）：
  *   - 1 元 = 1000 积分
  *   - 每次 AI 调用 = 150 积分
- *   - 充值档位 100/200/500/1000 元 + 自定义，100 元起
+ *   - 充值档位 50/100/200/500/1000 元 + 自定义，50 元起
  */
 import { PrismaClient } from '@prisma/client';
 
@@ -15,8 +15,8 @@ const prisma = new PrismaClient();
 
 export const DEFAULT_AI_COST = 150;   // 每次 AI 调用消耗积分
 export const CREDIT_PER_YUAN = 1000;  // 1元 = 1000积分
-export const MIN_RECHARGE_YUAN = 100; // 100元起充
-export const RECHARGE_PRESETS = [100, 200, 500, 1000];
+export const MIN_RECHARGE_YUAN = 50; // 50元起充
+export const RECHARGE_PRESETS = [50, 100, 200, 500, 1000];
 
 // 读取用户当前积分余额
 export async function getCreditBalance(userId) {
