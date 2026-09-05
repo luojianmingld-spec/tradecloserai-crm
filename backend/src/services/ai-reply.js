@@ -77,7 +77,7 @@ export async function generateReply({ userId, conversationId, accountId, jid, st
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `最近对话上下文（对方=客户，我方=销售）：\n${contextStr}\n\n请生成3个回复建议，严格按JSON格式返回。` },
       ],
-      { temperature: 0.8 }
+      { temperature: 0.8, creditUserId: effectiveUserId } // 【积分铁律 2026-09-05】按 effectiveUserId 扣
     );
     const content = (response || '').trim();
     const replies = parseReplies(content);

@@ -15,6 +15,8 @@ export const LEARNING_CONFIG = {
   maxSamplesPerRun: 120,
   /** LLM 并发数 */
   llmConcurrency: 3,
+  /** 学习管道固定使用的 providerId（DeepSeek V4 Flash，成本最低） */
+  llmProviderId: 'p1786601770927',
   /** 默认租户 accountId（V1 单租户主命名空间） */
   defaultAccountId: 1,
   /** 主用户 userId（accountId=1 的历史命名空间归属） */

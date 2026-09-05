@@ -146,7 +146,7 @@ router.post('/reply', auth, chargeCredits(), async (req, res) => {
 });
 
 // ─── POST /api/ai/reply/all-lengths — Phase 5: 一次生成短/中/长三种长度 ───
-router.post('/reply/all-lengths', auth, async (req, res) => {
+router.post('/reply/all-lengths', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, style, model, messages, includeContext } = req.body;
     const acctId = accountId ? parseInt(accountId) : req.userId;
@@ -202,7 +202,7 @@ router.post('/closing-reply', auth, chargeCredits(), async (req, res) => {
 });
 
 // ─── POST /api/ai/analyze — AI 深度分析（翻译+意图分析+3版回复，元宝风格） ───
-router.post('/analyze', auth, async (req, res) => {
+router.post('/analyze', auth, chargeCredits(), async (req, res) => {
   const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { accountId, jid, model, messages, targetLang, feedback } = req.body;
@@ -258,7 +258,7 @@ router.post('/summarize', auth, chargeCredits(), async (req, res) => {
 });
 
 // ─── Legacy endpoints (backward compatible) ───
-router.post('/generate-reply', auth, async (req, res) => {
+router.post('/generate-reply', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, style } = req.body;
     if (!accountId || !jid) return res.status(400).json({ error: 'accountId and jid are required' });
@@ -276,7 +276,7 @@ router.post('/generate-reply', auth, async (req, res) => {
   }
 });
 
-router.post('/summarize-need', auth, async (req, res) => {
+router.post('/summarize-need', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid } = req.body;
     if (!accountId || !jid) return res.status(400).json({ error: 'accountId and jid are required' });

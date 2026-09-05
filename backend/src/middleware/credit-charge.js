@@ -12,13 +12,21 @@
  *   1. 预检：余额不足 → 402 + code=INSUFFICIENT_CREDITS（前端可跳断点充值引导）
  *   2. 包装 res.json：仅当响应 2xx 成功时先扣分再返回，保证前端拿到的余额实时准确
  */
-import { assertEnoughCredits, deductCredits, DEFAULT_AI_COST } from '../services/credits.js';
+import { assertEnoughCredits, deductCredits, DEFAULT_AI_COST, getModelCost, MODEL_COST_MAP } from '../services/credits.js';
+import { getCreditContext } from './credit-context.js';
 
-export function chargeCredits(amount = DEFAULT_AI_COST) {
+export function chargeCredits(amount = null) {
   return async (req, res, next) => {
+    // 动态确定本次调用的积分消耗：
+    // 1. 优先从 req.body.model (providerId) 查 MODEL_COST_MAP
+    // 2. 如果传入了固定 amount 则用固定值
+    // 3. 兜底 DEFAULT_AI_COST
+    const modelKey = req.body?.model || null;
+    const cost = amount ?? getModelCost(modelKey);
+
     // 1. 预检余额
     try {
-      await assertEnoughCredits(req.userId, amount);
+      await assertEnoughCredits(req.userId, cost);
     } catch (e) {
       if (e.code === 'INSUFFICIENT_CREDITS') {
         return res.status(402).json({
@@ -26,7 +34,7 @@ export function chargeCredits(amount = DEFAULT_AI_COST) {
           code: 'INSUFFICIENT_CREDITS',
           balance: e.balance,
           required: e.required,
-          credits: { balance: e.balance, cost: amount },
+          credits: { balance: e.balance, cost },
         });
       }
       console.error('[chargeCredits] balance check error:', e);
@@ -39,10 +47,13 @@ export function chargeCredits(amount = DEFAULT_AI_COST) {
       const statusOk = res.statusCode >= 200 && res.statusCode < 300;
       if (statusOk && !res.headersSent) {
         try {
-          await deductCredits(req.userId, amount, 'AI 调用消耗');
+          const reason = modelKey ? `AI 调用消耗（按模型分级）` : 'AI 调用消耗';
+          await deductCredits(req.userId, cost, reason, { model: modelKey || '' });
+          // 标记本次请求已手动扣分，避免 ai-client 底层重复扣
+          const ctx = getCreditContext();
+          if (ctx) ctx.manualCharged = true;
         } catch (err) {
           console.error(`[chargeCredits] deduct error userId=${req.userId}:`, err);
-          // 扣分失败仍返回原响应（不影响 AI 结果），由后台流水兜底核查
         }
       }
       return originalJson(body);
@@ -52,4 +63,4 @@ export function chargeCredits(amount = DEFAULT_AI_COST) {
   };
 }
 
-export { DEFAULT_AI_COST };
+export { DEFAULT_AI_COST, getModelCost, MODEL_COST_MAP };

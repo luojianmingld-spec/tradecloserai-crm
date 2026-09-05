@@ -459,6 +459,7 @@ class AssistantService {
     const aiResponse = await chatComplete(messages, {
       temperature: AI_CONFIG.assistant.toolDecision.temperature,
       maxTokens: AI_CONFIG.assistant.toolDecision.maxTokens,
+      creditUserId: userId, // 【积分铁律 2026-09-05】按 userId 扣
       ...(selectedProvider ? { provider: selectedProvider } : {})
     });
 
@@ -595,7 +596,7 @@ ${rawSummary}
           const analysisReply = await chatComplete([
             { role: 'system', content: systemPrompt },
             { role: 'user', content: analysisPrompt }
-          ], { temperature: AI_CONFIG.assistant.analysis.temperature, maxTokens: AI_CONFIG.assistant.analysis.maxTokens, ...(selectedProvider ? { provider: selectedProvider } : {}) });
+          ], { temperature: AI_CONFIG.assistant.analysis.temperature, maxTokens: AI_CONFIG.assistant.analysis.maxTokens, ...(selectedProvider ? { provider: selectedProvider } : {}) , creditUserId: userId }); // 【积分铁律 2026-09-05】按 userId 扣
           
           const analysisText = String(analysisReply || '').trim();
           let reply;
@@ -650,7 +651,7 @@ ${rawSummary}
             { role: 'system', content: chatPrompt },
             ...contextMessages,
             { role: 'user', content: userContent || '（发送了附件）' }
-          ], { temperature: AI_CONFIG.assistant.analysis.temperature, maxTokens: AI_CONFIG.assistant.analysis.maxTokens, ...(selectedProvider ? { provider: selectedProvider } : {}) });
+          ], { temperature: AI_CONFIG.assistant.analysis.temperature, maxTokens: AI_CONFIG.assistant.analysis.maxTokens, ...(selectedProvider ? { provider: selectedProvider } : {}) , creditUserId: userId }); // 【积分铁律 2026-09-05】按 userId 扣
           if (chatReply && String(chatReply).trim()) {
             replyText = chatReply;
           }

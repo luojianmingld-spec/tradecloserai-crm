@@ -20,7 +20,7 @@ const STYLE_SYSTEM_PROMPT = `你是外贸销售沟通风格分析师。给定一
   "tabooPhrases": "该销售明显避免的用语或风格（如：不用感叹号、避免过于正式、不写长段落）"
 }`;
 
-export async function updateTenantStyleProfile(accountId, { maxSamples = 60 } = {}) {
+export async function updateTenantStyleProfile(accountId, { maxSamples = 60, chargeUserId = null } = {}) {
   const samples = await prisma.messageSample.findMany({
     where: { accountId, qualityScore: { gte: 55 } },
     orderBy: { createdAt: 'desc' },
@@ -42,7 +42,7 @@ export async function updateTenantStyleProfile(accountId, { maxSamples = 60 } = 
         { role: 'system', content: STYLE_SYSTEM_PROMPT },
         { role: 'user', content: `请分析以下该销售的实战回复样本，提炼其沟通风格画像。\n\n${sampleText}` },
       ],
-      { temperature: 0.3, max_tokens: 1500, timeout: CFG.llmTimeoutMs }
+      { temperature: 0.3, max_tokens: 1500, timeout: CFG.llmTimeoutMs, chargeUserId }
     );
     analysis = parseLLMJson(raw) || {};
     if (!analysis.styleSummary) throw new Error('LLM 返回缺少 styleSummary');

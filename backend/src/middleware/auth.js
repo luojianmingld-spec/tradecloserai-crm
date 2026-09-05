@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { runCreditContext } from './credit-context.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) { console.error('[FATAL] JWT_SECRET environment variable is required'); process.exit(1); };
@@ -24,7 +25,7 @@ export async function authMiddleware(req, res, next) {
 
   // admin token（无 userId）不校验 User 表状态，交给下游 admin 鉴权
   if (decoded.userId === undefined || decoded.userId === null) {
-    return next();
+    return runCreditContext(req.userId, req.body?.model, () => next());
   }
 
   // 停用/删除后旧 token 立即失效：查库校验最新状态
@@ -40,7 +41,7 @@ export async function authMiddleware(req, res, next) {
     console.error('[Auth] DB check failed:', dbErr.message);
     return res.status(503).json({ error: 'Service temporarily unavailable' });
   }
-  next();
+  return runCreditContext(req.userId, req.body?.model, () => next());
 }
 
 export function generateToken(userId, role) {

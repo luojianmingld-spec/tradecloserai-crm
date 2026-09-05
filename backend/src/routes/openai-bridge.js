@@ -99,7 +99,7 @@ router.post('/v1/chat/completions', async (req, res) => {
       });
     }
 
-    const raw = await chatComplete(null, systemPrompt, userText, { temperature: 0.7 });
+    const raw = await chatComplete(null, systemPrompt, userText, { temperature: 0.7, creditUserId: 1 }); // 【积分铁律 2026-09-05】微信通道按主账号扣
 
     const base = {
       id: `chatcmpl-${Date.now()}`,

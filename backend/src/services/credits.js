@@ -13,7 +13,30 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const DEFAULT_AI_COST = 150;   // 每次 AI 调用消耗积分
+export const DEFAULT_AI_COST = 150;   // 默认 AI 调用消耗积分（兜底）
+
+/**
+ * 按模型分级积分扣费表（定价公式：API成本 × 1.9，即90%利润margin）
+ * key = providerId, value = 每次调用扣除积分数
+ * 数据来源：各厂商官网 2026-08 定价，按典型调用(输入~2000+输出~500 tokens)估算
+ */
+export const MODEL_COST_MAP = {
+  'p1786588190918': 10,   // SenseNova 6.8 Flash-Lite（公测免费，预估正式价）
+  'p1786601770927': 20,   // DeepSeek V4 Flash（高峰: 输入¥3/M, 输出¥9/M）
+  'p1786601765650': 25,   // Doubao Seed 2.1 Turbo（输入¥3/M, 输出¥15/M）
+  'p1786588228470': 25,   // Doubao Seed 2.0 Pro（≤32K: 输入¥3.2/M, 输出¥16/M）
+  'p1786601765227': 50,   // Doubao Seed Evolving（输入¥6/M, 输出¥30/M）
+  'p1786601714577': 60,   // DeepSeek V4 Pro（高峰: 输入¥9/M, 输出¥27/M）
+  'p1786604068598': 135,  // GPT-5.6 Terra（/M input, 2/M output ≈ ¥0.072/次）
+};
+
+// 根据 providerId 获取该模型每次调用的积分消耗，未配置则返回默认值
+export function getModelCost(modelKey) {
+  if (modelKey && MODEL_COST_MAP[modelKey] !== undefined) {
+    return MODEL_COST_MAP[modelKey];
+  }
+  return DEFAULT_AI_COST;
+}
 export const CREDIT_PER_YUAN = 1000;  // 1元 = 1000积分
 export const MIN_RECHARGE_YUAN = 50; // 50元起充
 export const RECHARGE_PRESETS = [50, 100, 200, 500, 1000];

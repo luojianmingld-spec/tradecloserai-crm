@@ -63,7 +63,7 @@ ${contact ? `- 客户名称：${contact.name || '未知'}
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `对话记录：\n${contextStr}\n\n请分析客户需求并生成结构化总结。` },
       ],
-      { temperature: 0.3 }
+      { temperature: 0.3, creditUserId: userId } // 【积分铁律 2026-09-05】按 userId 扣
     );
 
     const content = response.trim();

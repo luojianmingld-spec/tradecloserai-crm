@@ -12,7 +12,7 @@ const SCENES = ['询盘', '报价', '砍价', '催单', '售后', '技术答疑'
  * @param {object} sample 采集器输出的原始样本
  * @returns {Promise<object|null>} 分析结果
  */
-export async function analyzeSample(sample) {
+export async function analyzeSample(sample, chargeUserId = null) {
   const customerMsg = String(sample.customerMsg || '').slice(0, 2000);
   const salesReply = String(sample.salesReply || '').slice(0, 2000);
   if (!customerMsg || !salesReply) return null;
@@ -43,7 +43,7 @@ ${context}
   try {
     const raw = await llmChatComplete(
       [{ role: 'user', content: prompt }],
-      { temperature: 0.2, max_tokens: CFG.llmMaxTokens, timeout: CFG.llmTimeoutMs }
+      { temperature: 0.2, max_tokens: CFG.llmMaxTokens, timeout: CFG.llmTimeoutMs, chargeUserId }
     );
     const obj = parseLLMJson(raw) || {};
     if (!obj || typeof obj.qualityScore !== 'number') {
@@ -60,7 +60,7 @@ ${context}
       keyPhrase: obj.keyPhrase && obj.keyPhrase !== 'null' ? String(obj.keyPhrase).slice(0, 200) : null,
     };
     // 脱敏：正则 + LLM 复核
-    const des = await llmDesensitize(sample.customerMsg, sample.salesReply);
+    const des = await llmDesensitize(sample.customerMsg, sample.salesReply, chargeUserId);
     result.customerMsg = des.customerMsg;
     result.salesReply = des.salesReply;
     return result;
@@ -88,14 +88,14 @@ function clampScore(n) {
 /**
  * 批量分析（受控并发，控制 token 成本）
  */
-export async function analyzeSamples(samples, { concurrency = CFG.llmConcurrency } = {}) {
+export async function analyzeSamples(samples, { concurrency = CFG.llmConcurrency, chargeUserId = null } = {}) {
   const results = [];
   let idx = 0;
   const worker = async () => {
     while (idx < samples.length) {
       const cur = idx++;
       try {
-        const r = await analyzeSample(samples[cur]);
+        const r = await analyzeSample(samples[cur], chargeUserId);
         results[cur] = { sample: samples[cur], analysis: r };
       } catch (e) {
         log('Engine', 'analyzeSamples worker error:', e.message);

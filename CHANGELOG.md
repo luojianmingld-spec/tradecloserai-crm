@@ -7,6 +7,19 @@
 
 ---
 
+## v1.9.3 — 2026-09-05 【当前版本】
+
+### 🚀 全量大模型调用积分分级扣减治理
+- **分级扣费恢复（MODEL_COST_MAP）**：按模型成本分级定价（售价=成本×1.9，90% 利润 margin），credits.js 恢复 7 级定价：SenseNova 6.8 Flash-Lite 10分 / DeepSeek V4 Flash 20分 / Doubao Seed 2.1 Turbo 25分 / Doubao Seed 2.0 Pro 25分 / Doubao Seed Evolving 50分 / DeepSeek V4 Pro 60分 / GPT-5.6 Terra 135分，未配置兜底 150 分
+- **学习管道扣分闭环**：话术学习每次 LLM 调用扣租户积分（20分/次，accountId=1 归主账号），断点续跑不重复扣
+- **ALS 统一自动扣分通道**：authMiddleware 挂载路由统一自动扣分（customers/background-check/conversation-manager/emails/trade-agent/speech-library/bant-score/attitude/suggestions/product-knowledge/translation），调用后必扣
+- **ai.js 11 接口全挂 chargeCredits**：HTTP 路由显式扣分（余额预检体验），与 ALS 自动扣分通过 manualCharged 防双扣
+- **内部服务 creditUserId 补扣（10 文件）**：ai-client.js 扣分主体解析「ALS userId → options.creditUserId → 不扣」；auto-reception/ai-summarize/unattended/automation/ai-reply/closing-reply/assistant×3 按销售 userId 归属，openai-bridge 按主账号 1，ai.service 透传
+- **真实 HTTP 验证通过**：/api/ai/analyze 扣 20、/api/translation/translate 自动扣 20、creditUserId 直调扣 135（降级 GPT-5.6 Terra），无双扣，测试积分已还原
+- **GPT-5.6 Terra（API2D）key 失效提醒**：chat completions 401 bad forward key（8-29 曾 402），autoSwitch 已自动降级 DeepSeek V4 Flash，不影响主链路；如需旗舰模型需处理 API2D key
+
+---
+
 ## v1.9.2 — 2026-09-05 【当前版本】
 
 ### 🤖 话术库自主学习进化 V1.1（租户=销售，实战中持续学习）

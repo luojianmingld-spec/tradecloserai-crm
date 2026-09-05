@@ -3,7 +3,8 @@
  * 负责: prisma 单例、租户/账号解析、去重、脱敏、LLM JSON 解析、日志
  */
 import { PrismaClient } from '@prisma/client';
-import { chatComplete } from '../services/ai-client.js';
+import { chatComplete, getProviderById } from '../services/ai-client.js';
+import { getModelCost, deductCredits, assertEnoughCredits } from '../services/credits.js';
 import { LEARNING_CONFIG as CFG } from './config.js';
 
 export const prisma = new PrismaClient();
@@ -22,11 +23,32 @@ export function log(tag, ...args) {
  * → 空返回/异常时自动重试，最多 retries 次，避免解析失败导致整批不入库。
  */
 export async function llmChatComplete(messages, options = {}, retries = 4) {
+  // 学习管道扣分：调用方传 chargeUserId（租户主账号）时，LLM 成功后按模型分级扣积分
+  const { chargeUserId, chargeModel, ...chatOpts } = options || {};
+  // 学习管道固定使用成本最低的 provider（DeepSeek V4 Flash），避免误用旗舰模型
+  let fixedProvider = null;
+  try {
+    if (!chatOpts.provider && CFG.llmProviderId) {
+      fixedProvider = await getProviderById(CFG.llmProviderId);
+      if (fixedProvider) chatOpts.provider = fixedProvider;
+    }
+  } catch (e) { log('LLM', `学习管道 provider 解析失败: ${e.message}`); }
   let lastErr = null;
   for (let i = 0; i < retries; i++) {
     try {
-      const raw = await chatComplete(messages, options);
-      if (raw && String(raw).trim()) return raw;
+      const raw = await chatComplete(messages, chatOpts);
+      if (raw && String(raw).trim()) {
+        if (chargeUserId) {
+          try {
+            const pid = chargeModel || fixedProvider?.id || chatOpts.provider?.id;
+            const cost = getModelCost(pid);
+            await deductCredits(chargeUserId, cost, '话术学习（按模型分级）', { model: pid || '' });
+          } catch (e) {
+            log('LLM', `学习扣分失败 userId=${chargeUserId}: ${e.message}`);
+          }
+        }
+        return raw;
+      }
       lastErr = new Error(`LLM 返回空内容(第${i + 1}次)`);
       log('LLM', `空返回，重试 ${i + 1}/${retries}`);
     } catch (e) {
@@ -166,7 +188,7 @@ export function regexDesensitize(text) {
  * LLM 复核脱敏：进一步移除姓名/公司名/专有上下文（PII）
  * @returns {Promise<{customerMsg:string, salesReply:string}>}
  */
-export async function llmDesensitize(customerMsg, salesReply) {
+export async function llmDesensitize(customerMsg, salesReply, chargeUserId = null) {
   const prompt = `你是数据脱敏助手。请移除以下外贸对话中的隐私信息：人名、公司全名、邮箱、手机号、具体地址、银行账号、发票号、网站URL、WhatsApp号码等PII。可保留产品名、行业、通用术语。不要改变原意与语气，只做删除/替换为[PII]。不要添加解释。
 
 客户消息：
@@ -180,7 +202,7 @@ export async function llmDesensitize(customerMsg, salesReply) {
   try {
     const raw = await llmChatComplete(
       [{ role: 'user', content: prompt }],
-      { temperature: 0.1, max_tokens: CFG.llmMaxTokens, timeout: CFG.llmTimeoutMs }
+      { temperature: 0.1, max_tokens: CFG.llmMaxTokens, timeout: CFG.llmTimeoutMs, chargeUserId }
     );
     const obj = parseLLMJson(raw);
     if (obj && typeof obj.customerMsg === 'string' && typeof obj.salesReply === 'string') {

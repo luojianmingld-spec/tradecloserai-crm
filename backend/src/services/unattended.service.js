@@ -141,7 +141,7 @@ ${customerInfo}
     const reply = await chatComplete([
       { role: 'system', content: prompt },
       { role: 'user', content: 'Generate the auto-reply now.' }
-    ], { temperature: 0.6, maxTokens: 250 });
+    ], { temperature: 0.6, maxTokens: 250, creditUserId: USER_ID }); // 【积分铁律 2026-09-05】无人值守按主账号扣
     return reply.trim();
   } catch (e) {
     console.error('[Unattended] AI generation failed:', e.message);

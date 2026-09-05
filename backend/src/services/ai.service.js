@@ -4,6 +4,7 @@
  * 通过 ai-client 调用LLM，从Settings表读取当前激活的provider配置
  */
 import { PrismaClient } from '@prisma/client';
+import { MODEL_COST_MAP } from './credits.js';
 import { chatComplete as aiChatComplete, chatCompleteLite, getActiveProvider, getProviderById, DOUBAO_PRO_MODEL, DOUBAO_LITE_MODEL } from './ai-client.js';
 
 const prisma = new PrismaClient();
@@ -71,6 +72,7 @@ export async function chatComplete(modelId, systemPrompt, userPrompt, options = 
     timeout: options.timeout ?? 60000,
     provider: options.provider || undefined,
     signal: options.signal || undefined, // 【终止按钮】
+    creditUserId: options.creditUserId || undefined, // 【积分铁律 2026-09-05】内部服务显式指定扣分主体
   });
 }
 
@@ -830,6 +832,7 @@ export async function getAvailableModels() {
         desc: p.baseUrl ? (p.baseUrl.includes('deepseek') ? 'DeepSeek，性价比高' : '') : '',
         providerType: p.provider,
         isDefault: !!p.isDefault,
+        creditCost: MODEL_COST_MAP[p.id] || 150,
       };
     });
 

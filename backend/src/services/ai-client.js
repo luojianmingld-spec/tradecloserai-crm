@@ -5,6 +5,8 @@
  * v2: 模型下线自动检测 + 自动替换 + 智能 fallback
  */
 import { PrismaClient } from "@prisma/client";
+import { getCreditContext } from '../middleware/credit-context.js';
+import { getModelCost, deductCredits } from './credits.js';
 import { encrypt, decrypt, isEncrypted } from "../utils/encryption.js";
 
 const prisma = new PrismaClient();
@@ -435,6 +437,21 @@ export async function chatComplete(messages, options = {}) {
       if (!_c0.trim()) {
         // 【空响应修复 2026-09-02】provider 返回空 content（finish=length），视为 provider 级错误触发 fallback
         throw new Error(`AI provider ${provider.name || provider.id} returned empty content (finish=${response.choices?.[0]?.finish_reason || 'unknown'})`);
+      }
+      // 【积分铁律 2026-09-05】扣分主体解析：
+      // 1. HTTP 请求上下文（ALS）存在 userId 且未手动扣分 → 用 ALS userId 自动扣
+      // 2. 无 ALS（内部服务/cron/webhook 调用）但调用方显式传 creditUserId → 按该主体扣
+      // 3. 两者都无 → 不扣（无法确定扣分主体，不猜测）
+      try {
+        const creditCtx = getCreditContext();
+        const alsUserId = creditCtx && creditCtx.userId ? creditCtx.userId : null;
+        const creditUserId = alsUserId || options.creditUserId || null;
+        if (creditUserId && !(creditCtx && creditCtx.manualCharged)) {
+          const cost = getModelCost(provider.id);
+          await deductCredits(creditUserId, cost, 'AI 调用消耗（按模型分级）', { model: provider.id });
+        }
+      } catch (creditErr) {
+        console.warn(`[AI Client] credit deduct skipped: ${creditErr.message}`);
       }
       return _c0;
     } catch (err) {

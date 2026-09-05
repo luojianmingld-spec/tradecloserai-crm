@@ -1644,7 +1644,7 @@
             <div class="aitalk-top-bar aitalk-top-bar-compact">
               <div class="aitalk-top-first-row">
                 <el-select v-model="aitalkModel" class="sub-select aitalk-model-select" popper-class="crm-dark-popper" placeholder="选择模型" size="small" @change="v => localStorage.setItem('crm_aitalk_model', v)">
-                  <el-option v-for="m in aiModels" :key="m.key" :label="m.name" :value="m.key" />
+                  <el-option v-for="m in aiModels" :key="m.key" :label="m.name + ' (' + (m.creditCost || 150) + '积分)'" :value="m.key" />
                 </el-select>
                 <el-select v-model="aitalkTargetLang" class="sub-select aitalk-lang-select-compact" popper-class="crm-dark-popper" placeholder="语言" size="small">
                   <el-option label="🌐 自动" value="follow" />
@@ -3359,7 +3359,7 @@
               </div>
             </div>
             <div class="credits-tips">
-              <p>· AI 翻译 / 回复生成 / 背调 / 文档生成等调用，每次消耗 150 积分</p>
+              <p>· AI 调用按模型分级扣费：轻量模型 10~60 积分，旗舰模型 135 积分</p>
               <p>· 1 元 = 1000 积分，100 元起充</p>
             </div>
           </div>

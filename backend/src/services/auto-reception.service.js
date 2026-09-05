@@ -337,7 +337,7 @@ ${taskStr}
     const raw = await chatComplete([
       { role: 'system', content: prompt },
       { role: 'user', content: 'Generate the JSON now.' },
-    ], { temperature: 0.5, maxTokens: 400 });
+    ], { temperature: 0.5, maxTokens: 400, creditUserId: userId }); // 【积分铁律 2026-09-05】自动接待按销售 userId 扣
     return parseJsonReply(raw, customerMessage);
   } catch (e) {
     console.error('[AutoReception] AI generation failed:', e.message);

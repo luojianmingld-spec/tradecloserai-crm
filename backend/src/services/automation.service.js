@@ -82,7 +82,7 @@ async function generateForCustomer(rule, customer) {
     content = (await chatComplete([
       { role: 'system', content: prompt },
       { role: 'user', content: 'Write the message now.' }
-    ], { temperature: 0.7, maxTokens: 500 })).trim();
+    ], { temperature: 0.7, maxTokens: 500, creditUserId: rule.userId })).trim(); // 【积分铁律 2026-09-05】按规则所属 userId 扣
   } catch (e) {
     console.error('[Automation] AI generation failed:', e.message);
     content = `[AI generation failed: ${e.message}]`;

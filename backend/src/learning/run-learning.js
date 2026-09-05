@@ -7,6 +7,7 @@
  */
 import { LEARNING_CONFIG as CFG } from './config.js';
 import { prisma, log, sessionsForAccount } from './learning.service.js';
+import { assertEnoughCredits, getModelCost, DEFAULT_AI_COST } from '../services/credits.js';
 import { collectSamples } from './sample-collector.js';
 import { analyzeSamples } from './learning-engine.js';
 import { importSamples } from './auto-import.js';
@@ -34,6 +35,37 @@ export async function runLearningLoop({ accountId = CFG.defaultAccountId, limit 
   log('Run', `job#${job.id} 开始学习 accountId=${accountId} limit=${limit} force=${force}`);
 
   try {
+    // 扣分主体：租户=销售，学习进化属于该租户消费
+    // accountId=1 → 主用户(userId=1)；其他 → Tenant.adminUserId 或 WhatsAppAccount.userId
+    let chargeUserId = null;
+    try {
+      if (accountId === CFG.defaultAccountId) {
+        chargeUserId = CFG.primaryUserId;
+      } else {
+        const tenant = await prisma.tenant.findUnique({ where: { id: accountId }, select: { adminUserId: true } });
+        chargeUserId = tenant?.adminUserId || null;
+        if (!chargeUserId) {
+          const wa = await prisma.whatsAppAccount.findUnique({ where: { id: accountId }, select: { userId: true } });
+          chargeUserId = wa?.userId || null;
+        }
+      }
+    } catch (e) { log('WARN', '扣分主体解析失败:', e.message); }
+
+    // 积分预检：不足则跳过本轮（成本不由平台兜底）
+    if (chargeUserId) {
+      try {
+        await assertEnoughCredits(chargeUserId, 1);
+      } catch (e) {
+        if (e.code === 'INSUFFICIENT_CREDITS') {
+          log('Run', `job#${job.id} 租户积分不足(余额=${e.balance})，跳过本轮学习`);
+          await prisma.learningJob.update({
+            where: { id: job.id },
+            data: { status: 'done', processed: 0, total: 0, imported: 0, cursor: null, message: '积分不足，跳过本轮学习', finished: new Date() },
+          });
+          return { jobId: job.id, samples: 0, imported: 0, skipped: 0, message: '积分不足，跳过本轮学习' };
+        }
+      }
+    }
     // 增量游标：取该租户最近一次 done 任务的 cursor
     let cursor = null;
     if (!force) {
@@ -58,7 +90,7 @@ export async function runLearningLoop({ accountId = CFG.defaultAccountId, limit 
     }
 
     // 学习引擎（分类+评分+脱敏），LLM 调用
-    const results = await analyzeSamples(samples);
+    const results = await analyzeSamples(samples, { chargeUserId });
     log('Run', `job#${job.id} 完成 ${results.length} 条评估`);
 
     // 自动入库
@@ -66,7 +98,7 @@ export async function runLearningLoop({ accountId = CFG.defaultAccountId, limit 
 
     // 更新租户沟通风格画像（租户=销售，实战中持续进化）
     try {
-      await updateTenantStyleProfile(accountId);
+      await updateTenantStyleProfile(accountId, { chargeUserId });
     } catch (e) {
       log('Run', `job#${job.id} 风格画像更新失败: ${e.message}`);
     }
