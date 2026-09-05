@@ -484,6 +484,21 @@ router.get('/', async (req, res) => {
       }
     }
 
+    // Batch message count per jid
+    const msgCountMap = new Map();
+    if (jidSet.length > 0) {
+      try {
+        const fromCounts = await prisma.wAMessage.groupBy({
+          by: ['from'], where: { from: { in: jidSet } }, _count: { id: true },
+        });
+        for (const r of fromCounts) msgCountMap.set(r.from, (msgCountMap.get(r.from) || 0) + r._count.id);
+        const toCounts = await prisma.wAMessage.groupBy({
+          by: ['to'], where: { to: { in: jidSet } }, _count: { id: true },
+        });
+        for (const r of toCounts) msgCountMap.set(r.to, (msgCountMap.get(r.to) || 0) + r._count.id);
+      } catch(e) { console.error('[Customers] msgCount batch error:', e.message); }
+    }
+
     // Pending doc counts (per customer)
     const idList = customers.map(c=>c.id);
     const pendingMap = new Map();
@@ -513,6 +528,7 @@ router.get('/', async (req, res) => {
         _docCount: Number(docEnt.count || 0),
         _pendingDocCount: Number(docEnt.pending || 0),
         _followUpCount: Number(c._count?.followUps || 0),
+        _messageCount: Number(msgCountMap.get(c.jid) || 0),
         _lastMessage: lastMessage,
         _lastMessageAt: lastMsg?.timestamp || c.lastContactAt || null,
         _lastMessageDir: lastMsg?.direction || null,

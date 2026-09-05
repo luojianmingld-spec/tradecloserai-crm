@@ -78,8 +78,11 @@
               <tr>
                 <th class="col-check"><input type="checkbox" v-model="selectAll" @change="toggleSelectAll" /></th>
                 <th class="col-name">姓名</th>
+                <th class="col-type">类型</th>
                 <th class="col-company">公司名</th>
                 <th class="col-contact">邮箱/WhatsApp</th>
+                <th class="col-msgcnt">消息数</th>
+                <th class="col-status">客户状态</th>
                 <th class="col-country">国家/地区</th>
                 <th class="col-product">采购产品</th>
                 <th class="col-level">客户等级</th>
@@ -105,6 +108,11 @@
                     <span v-if="sourceBadge(c)" class="source-badge" :style="{background:sourceBadge(c).bg,color:sourceBadge(c).fg}">{{ sourceBadge(c).icon }} {{ sourceBadge(c).label }}</span>
                   </div>
                 </td>
+                <td class="col-type">
+                  <span class="type-badge" :class="businessTypeClass(c)" @click.stop="toggleBusiness(c)">
+                    {{ businessTypeLabel(c) }}
+                  </span>
+                </td>
                 <td class="col-company">{{ c.companyName || c.company || '—' }}</td>
                 <td class="col-contact">
                   <div class="contact-cell">
@@ -112,6 +120,13 @@
                     <div v-if="c.phone || c.jid" class="contact-line wa-line">💬 {{ formatPhone(c.phone || c.jid) }}</div>
                     <div v-if="!c.email && !c.phone && !c.jid" class="muted">—</div>
                   </div>
+                </td>
+                <td class="col-msgcnt">
+                  <span v-if="c._messageCount" class="msg-count-badge">{{ c._messageCount }}</span>
+                  <span v-else class="muted">0</span>
+                </td>
+                <td class="col-status">
+                  <span class="status-tag" :class="'status-'+(c.status||'new')">{{ statusLabel(c.status) }}</span>
                 </td>
                 <td class="col-country">
                   <span v-if="c.country" class="country-cell">
@@ -163,6 +178,7 @@
                 <div class="card-sub">
                   <span v-if="c.companyName" class="card-company">🏢 {{ c.companyName }}</span>
                   <span class="card-country">{{ countryFlag(c) }} {{ displayCountry(c) }}</span>
+                  <span class="type-badge" :class="businessTypeClass(c)" @click.stop="toggleBusiness(c)">{{ businessTypeLabel(c) }}</span>
                 </div>
               </div>
               <span class="status-tag" :class="'status-'+(c.status||'new')">{{ statusLabel(c.status) }}</span>
@@ -174,6 +190,7 @@
             <div class="card-bottom">
               <div class="card-left-info">
                 <span v-if="c.jid || c.phone" class="card-phone">💬 {{ formatPhone(c.phone || c.jid) }}</span>
+                <span v-if="c._messageCount" class="card-msgcnt">💬{{ c._messageCount }}</span>
                 <span v-if="c.email" class="card-email">✉️ {{ c.email }}</span>
                 <span class="card-time" v-if="c._lastMessageAt || c.lastContactAt">{{ relTime(c._lastMessageAt || c.lastContactAt) }}</span>
               </div>
@@ -200,6 +217,13 @@
       </template>
     </div>
 
+      <!-- 自动建档规则说明 -->
+      <div class="auto-rule-note">
+        <span class="arn-icon">💡</span>
+        <span class="arn-text">
+          <strong>自动建档规则：</strong>当联系人通过 WhatsApp / Telegram 等渠道与您产生真实消息往来后，系统会自动为其创建客户档案。仅在通讯录中但未发生过沟通的联系人不会自动建档。
+        </span>
+      </div>
     <!-- Add Customer Dialog -->
     <el-dialog v-model="showAddDialog" title="添加新客户" width="92%" class="cust-dialog" :append-to-body="true" :close-on-click-modal="false">
       <el-form :model="addForm" label-width="80px" label-position="top">
@@ -452,6 +476,30 @@ function statusLabel(s) {
   const m = { potential:'潜在', active:'活跃', following:'跟进中', dormant:'沉睡', new:'新客户' };
   return m[s] || s || '新客户';
 }
+function businessTypeClass(c) {
+  if (c.isBusiness === true) return 'type-business';
+  if (c.isBusiness === false) return 'type-personal';
+  return 'type-unknown';
+}
+function businessTypeLabel(c) {
+  if (c.isBusiness === true) return '💼 业务';
+  if (c.isBusiness === false) return '👤 私人';
+  return '🔍 待定';
+}
+async function toggleBusiness(c) {
+  const current = c.isBusiness;
+  let next;
+  if (current === true) next = false;
+  else if (current === false) next = null;
+  else next = true;
+  try {
+    await api.put('/customers/' + c.id, { isBusiness: next });
+    c.isBusiness = next;
+    ElMessage.success(next === true ? '已标记为业务客户' : next === false ? '已标记为私人聊天' : '已重置');
+  } catch (e) {
+    ElMessage.error('标记失败');
+  }
+}
 function isUnfilled(c) {
   return !c.companyName && !c.contactName && !c.email && !c.country;
 }
@@ -678,6 +726,9 @@ onMounted(() => reload(1));
 .name-link:hover { text-decoration:underline; }
 .col-company { min-width:150px; color:var(--mgmt-text); font-weight:500; }
 .col-contact { min-width:180px; }
+.col-msgcnt { width:70px; text-align:center; }
+.msg-count-badge { display:inline-block; background:var(--mgmt-tag-green-bg,#e8f5e9); color:var(--mgmt-tag-green,#00a854); padding:2px 10px; border-radius:10px; font-size:13px; font-weight:600; min-width:28px; }
+.card-msgcnt { font-size:12px; color:var(--mgmt-text-muted); }
 .contact-cell { display:flex; flex-direction:column; gap:2px; }
 .contact-line { font-size:13px; color:var(--mgmt-text-muted); }
 .email-line { color:var(--mgmt-tag-blue); }
@@ -689,6 +740,7 @@ onMounted(() => reload(1));
   display:inline-block; background:var(--mgmt-tag-blue-bg); color:var(--mgmt-tag-blue); padding:3px 10px; border-radius:4px;
   font-size:12px; font-weight:500; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
+.col-status { width:90px; text-align:center; }
 .col-level { width:90px; text-align:center; }
 .lv-badge {
   display:inline-block; padding:3px 10px; border-radius:4px; font-size:12px; font-weight:600;
@@ -728,6 +780,12 @@ onMounted(() => reload(1));
 .status-tag.status-dormant { background:var(--mgmt-tag-gray-bg); color:var(--mgmt-text-muted); border-radius:4px; }
 .status-tag.status-potential { background:var(--mgmt-tag-red-bg); color:var(--mgmt-tag-red); border-radius:4px; }
 .status-tag.status-new { background:var(--mgmt-tag-purple-bg); color:var(--mgmt-tag-purple); border-radius:4px; }
+.type-badge { display:inline-flex; align-items:center; gap:2px; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:500; cursor:pointer; transition:all .15s; }
+.type-badge:hover { opacity:.85; transform:scale(1.05); }
+.type-business { background:rgba(0,168,132,.12); color:#00a884; }
+.type-personal { background:rgba(158,158,158,.12); color:#9e9e9e; }
+.type-unknown { background:rgba(255,152,0,.12); color:#f59c00; }
+.col-type { width:120px; white-space:nowrap; }
 
 .card-msg { margin-top:10px; padding:8px 12px; background:var(--mgmt-bg); border-radius:4px; border-left:3px solid var(--mgmt-input-border); font-size:13px; color:var(--mgmt-text-secondary); display:flex; align-items:center; gap:6px; max-width:100%; }
 .msg-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
@@ -740,6 +798,12 @@ onMounted(() => reload(1));
 .card-action-btn { background:var(--mgmt-bg); border:1px solid var(--mgmt-divider); color:var(--mgmt-text-secondary); padding:5px 12px; border-radius:4px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px; transition:all .15s; }
 .card-action-btn.chat-btn { color:#fff; background:var(--mgmt-whatsapp); border-color:var(--mgmt-whatsapp); }
 .card-action-btn:active { opacity:0.7; }
+
+/* ===== 自动建档规则说明 ===== */
+.auto-rule-note { display:flex; align-items:flex-start; gap:8px; margin:12px 0 4px; padding:12px 16px; background:var(--mgmt-card-bg); border-radius:10px; border:1px solid var(--mgmt-divider); box-shadow:var(--mgmt-shadow); }
+.arn-icon { font-size:15px; line-height:1.5; flex-shrink:0; }
+.arn-text { font-size:12px; color:var(--mgmt-text-secondary); line-height:1.6; }
+.arn-text strong { color:var(--mgmt-text); font-weight:600; }
 
 /* ===== 分页 ===== */
 .pager { display:flex; align-items:center; justify-content:center; gap:12px; padding:14px 16px 4px; background:var(--mgmt-card-bg); border-radius:12px; margin:10px 0 0; box-shadow:var(--mgmt-shadow); }
