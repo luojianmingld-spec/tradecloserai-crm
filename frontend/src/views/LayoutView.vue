@@ -3672,8 +3672,8 @@ const chatlistCollapsed = ref(false);
 const activePanel = ref(null); // 默认收起面板（右侧导航列显示图标+文字，点击图标再展开）
 const lastActivePanel = ref('aitalk');
 const panelWidth = ref((() => {
-  const v = parseInt(localStorage.getItem('crm-function-panel-width') || localStorage.getItem('panel-width') || '360');
-  if (isNaN(v) || v < 280 || v > 600) return 360;
+  const v = parseInt(localStorage.getItem('crm-function-panel-width') || localStorage.getItem('panel-width') || '480');
+  if (isNaN(v) || v < 280 || v > 720) return 480;
   return v;
 })());
 const iconbarCollapsed = ref(localStorage.getItem('iconbar-collapsed') ? localStorage.getItem('iconbar-collapsed') === '1' : false);
@@ -4614,7 +4614,7 @@ function onPanelDrag(e) {
   const dx = panelDragStartX - e.clientX;
   let w = panelDragStartWidth + dx;
   if (w < 280) w = 280;
-  if (w > 600) w = 600;
+  if (w > 720) w = 720;
   panelWidth.value = w;
   aiMiniMode.value = false;
 }
