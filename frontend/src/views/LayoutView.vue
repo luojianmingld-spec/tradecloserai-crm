@@ -57,9 +57,9 @@
           <div v-if="platformCollapsed" class="p-tooltip">设置</div>
         </button>
         <button class="p-setting ta-nav-wx-btn" @click="openWxQr" title="微信直连外贸Agent">
-          <span class="p-icon" style="color:#07c160;font-size:20px;line-height:1;">💬</span>
+          <span class="p-icon" style="font-size:20px;line-height:1;">💬</span>
           <transition name="fade">
-            <span v-if="!platformCollapsed" style="color:#07c160;font-weight:600;">微信直连</span>
+            <span v-if="!platformCollapsed">微信直连</span>
           </transition>
           <div v-if="platformCollapsed" class="p-tooltip">微信直连</div>
         </button>
@@ -132,8 +132,8 @@
             <span class="mdp-label">设置</span>
           </button>
           <button class="mdp-item ta-nav-wx-btn" @click="openWxQr; mobileDrawerOpen = false">
-            <span class="mdp-icon" style="color:#07c160;">💬</span>
-            <span class="mdp-label" style="color:#07c160;font-weight:600;">微信直连</span>
+            <span class="mdp-icon">💬</span>
+            <span class="mdp-label">微信直连</span>
           </button>
           <button class="mdp-item" @click="feedbackOpen = !feedbackOpen">
             <span class="mdp-icon">💬</span>
@@ -3502,21 +3502,29 @@
 <transition name="fade">
   <div v-if="showWxQrModal" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;" @click.self="closeWxQr">
     <div style="background:var(--bg-elevated,#202c33);border-radius:16px;padding:24px;width:420px;max-width:92vw;color:var(--text-primary,#e9edef);text-align:center;">
-      <div style="font-size:18px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <div style="font-size:18px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:8px;">
         <span style="font-size:22px;">💬</span> 微信直连外贸Agent
       </div>
-      <div style="font-size:13px;color:var(--text-secondary,#8696a0);margin-bottom:16px;line-height:1.7;">
-        打开微信「扫一扫」添加外贸Agent为好友<br/>随时随地做单证、问报价、跟进客户
+      <div style="font-size:13px;color:var(--text-secondary,#8696a0);margin-bottom:10px;line-height:1.6;">
+        加这个微信，等于给生意配了个 AI 总裁助理——不用打开电脑，微信里就能管生意：
       </div>
-      <div style="background:#fff;border-radius:12px;padding:12px;width:260px;height:260px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
-        <img :src="'/wechat-agent-qr.png?v=' + wxQrTs" style="width:236px;height:236px;" alt="外贸Agent微信二维码"/>
+      <div style="display:flex;flex-direction:column;gap:5px;text-align:left;font-size:13px;color:var(--text-primary,#e9edef);background:var(--bg-input,#2a3942);border-radius:10px;padding:10px 14px;margin-bottom:12px;line-height:1.5;">
+        <div>📢 <b>报</b>：新询盘、异常、待办，主动推到你微信</div>
+        <div>💬 <b>答</b>：业绩、周报、客户进度，发消息就有答案</div>
+        <div>✍️ <b>办</b>：跟进客户、起草报价，你说它干、你确认发</div>
       </div>
-      <div style="font-size:12px;color:var(--text-secondary,#8696a0);line-height:1.6;">
-        <template v-if="wxConnected">✅ 已成功连接，去微信和外贸Agent打个招呼吧！</template>
+      <div style="background:#fff;border-radius:12px;padding:10px;width:200px;height:200px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;">
+        <img :src="'/wechat-agent-qr.png?v=' + wxQrTs" style="width:180px;height:180px;" alt="外贸Agent微信二维码"/>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary,#8696a0);line-height:1.7;text-align:left;display:inline-block;">
+        ① 打开手机微信「扫一扫」扫码<br/>② 添加「外贸Agent」为好友<br/>③ 发消息指挥，结果自动回微信
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary,#8696a0);line-height:1.6;margin-top:8px;">
+        <template v-if="wxConnected">✅ 已成功连接，去微信和你的 AI 总裁助理打个招呼吧！</template>
         <template v-else>⏳ 二维码每 5 分钟自动刷新，请用手机微信扫码连接</template>
       </div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
-        <button @click="closeWxQr" style="padding:8px 24px;background:rgba(7,193,96,.12);color:#07c160;border:1px solid rgba(7,193,96,.35);border-radius:8px;cursor:pointer;">关闭</button>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+        <button @click="closeWxQr" style="padding:8px 24px;background:var(--panel-header-bg,#1f2c33);color:var(--text-primary,#e9edef);border:1px solid var(--border-color,#233138);border-radius:8px;cursor:pointer;">关闭</button>
       </div>
     </div>
   </div>
@@ -18577,13 +18585,6 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .ta-wx-link-btn { background: #07c160 !important; color: #fff !important; border-color: #07c160 !important; font-weight: 600; padding: 6px 14px; font-size: 13px; box-shadow: 0 2px 8px rgba(7,193,96,.4); animation: taWxPulse 2s infinite; }
 .ta-wx-link-btn:hover { background: #06ad56 !important; }
 @keyframes taWxPulse { 0%,100% { box-shadow: 0 2px 8px rgba(7,193,96,.4); } 50% { box-shadow: 0 2px 16px rgba(7,193,96,.75); } }
-.ta-nav-wx-btn { background: rgba(7,193,96,.10) !important; }
-.ta-nav-wx-btn:hover { background: rgba(7,193,96,.20) !important; }
-.ta-nav-wx-btn .p-icon, .ta-nav-wx-btn span { color: #07c160 !important; }
-.ta-nav-wx-btn:hover .p-icon, .ta-nav-wx-btn:hover span { color: #06ad56 !important; }
-.platform-collapsed .ta-nav-wx-btn { position: relative; }
-.platform-collapsed .ta-nav-wx-btn::after { content:''; position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#07c160; animation: taWxPulse 2s infinite; }
-.mdp-item.ta-nav-wx-btn { background: rgba(7,193,96,.10); border-radius: 8px; margin: 2px 8px; width: auto; }
 .ta-wx-entry { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 480px; margin: 0 0 28px; padding: 16px 18px; background: linear-gradient(135deg, rgba(7,193,96,.18), rgba(7,193,96,.06)); border: 1px solid rgba(7,193,96,.45); border-radius: 14px; cursor: pointer; transition: transform .15s, box-shadow .15s; }
 .ta-wx-entry:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(7,193,96,.25); }
 .ta-wx-entry-icon { font-size: 34px; flex-shrink: 0; }
