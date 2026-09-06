@@ -3640,7 +3640,6 @@
               </div>
             </div>
             <div class="mp-detail-meta">
-              <span class="mp-meta-chip">⚡ {{ modelPickerDetail.creditCost || 0 }} 积分/次</span>
               <span v-if="modelPickerDetail.providerType" class="mp-meta-chip">{{ modelPickerDetail.providerType }}</span>
               <span v-if="modelPickerDetail.isDefault" class="mp-meta-chip">系统默认</span>
             </div>
