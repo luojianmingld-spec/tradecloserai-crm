@@ -776,7 +776,7 @@
 
         <!-- ④ 聊天列表栏 -->
         <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid), 'wa-hidden': activeChannel === 'whatsapp' && (chatStore.currentWaAccountId === null || !chatStore.isConnected), 'tg-hidden': activeChannel === 'telegram' && tgAccounts.length === 0 && !tgConnecting }">
-          <div class="col-header" v-if="activeChannel === 'telegram' && !isMobile">
+          <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
               <span class="wa-col-title">Telegram</span>
@@ -2086,6 +2086,11 @@
                     </div>
                   </div>
 
+                  <!-- 模型选择 -->
+                  <div class="bg-model-row" style="margin-bottom:10px">
+                    <span class="sub-label">识别模型</span>
+                    <button type="button" class="mp-trigger" @click="openModelPicker('extract')"><span class="mp-trigger-label">{{ modelPickerDisplay(extractModel) }}</span><span class="mp-chevron">▾</span></button>
+                  </div>
                   <!-- 字段列表 -->
                   <div class="customer-fields">
                     <template v-for="f in CUSTOMER_FIELDS" :key="f.key">
@@ -2231,6 +2236,10 @@
             <template v-else>
               <div class="bgcheck-content">
                 <div class="profile-section-hint">背调客户背景、公司资质与风险评级，一键生成背调报告</div>
+                <div class="bg-model-row">
+                  <span class="sub-label">背调模型</span>
+                  <button type="button" class="mp-trigger" @click="openModelPicker('bgcheck')"><span class="mp-trigger-label">{{ modelPickerDisplay(bgcheckModel) }}</span><span class="mp-chevron">▾</span></button>
+                </div>
                 <div class="customer-bg-btn-wrap">
                   <button class="customer-bg-btn" @click="runBgCheck" :disabled="bgCheckLoading">
                     {{ bgCheckLoading ? '🔍 背调进行中...' : (customerData.bgReport ? '🔄 重新背调' : '🚀 开始背调') }}
@@ -2271,6 +2280,10 @@
                 <span style="color:#f59e0b">🤖 {{ reqAiHint }}</span>
               </div>
               <div class="req-fields">
+                <div class="bg-model-row" style="margin-bottom:10px">
+                  <span class="sub-label">分析模型</span>
+                  <button type="button" class="mp-trigger" @click="openModelPicker('req')"><span class="mp-trigger-label">{{ modelPickerDisplay(reqModel) }}</span><span class="mp-chevron">▾</span></button>
+                </div>
                 <div v-if="reqSections.length === 0" class="req-empty-hint">
                   <div style="font-size:40px;margin-bottom:8px">🎯</div>
                   <div>点击下方按钮，AI自动分析客户沟通记录</div>
@@ -3579,6 +3592,65 @@
     </div>
   </div>
 </transition>
+
+
+  <!-- 模型二级选择面板（扣子风格：左列表+右详情） -->
+  <div v-if="modelPickerVisible" class="mp-overlay" @click.self="modelPickerVisible = false">
+    <div class="mp-panel">
+      <div class="mp-header">
+        <div>
+          <div class="mp-title">选择 AI 模型</div>
+          <div class="mp-sub">自动推荐或手动指定本次使用的模型</div>
+        </div>
+        <button type="button" class="mp-close" @click="modelPickerVisible = false">✕</button>
+      </div>
+      <div class="mp-body">
+        <div class="mp-list">
+          <div class="mp-item" :class="{ active: modelPickerPreview === 'auto' }" @mouseenter="modelPickerPreview = 'auto'" @click="applyModelPicker('auto')">
+            <div class="mp-item-main">
+              <span class="mp-item-name">⚡ 自动（系统推荐）</span>
+              <span class="mp-item-tag">推荐</span>
+            </div>
+            <span class="mp-item-credit">系统智能选择</span>
+          </div>
+          <div v-for="m in aiModels" :key="m.key" class="mp-item" :class="{ active: modelPickerPreview === m.key }" @mouseenter="modelPickerPreview = m.key" @click="applyModelPicker(m.key)">
+            <div class="mp-item-main">
+              <span class="mp-item-name">{{ m.name }}</span>
+              <span v-if="m.isDefault" class="mp-item-tag">默认</span>
+            </div>
+            <span class="mp-item-credit">{{ m.creditCost || 150 }} 积分</span>
+          </div>
+        </div>
+        <div class="mp-detail">
+          <template v-if="modelPickerDetail">
+            <div class="mp-detail-name">{{ modelPickerDetail.name }}</div>
+            <div class="mp-detail-role">{{ modelPickerDetail.desc || '该模型可用于本功能，选择后立即生效。' }}</div>
+            <div class="mp-detail-sec">
+              <div class="mp-detail-sec-label">优势特点</div>
+              <div class="mp-detail-sec-body">{{ modelPickerDetail.features || '—' }}</div>
+            </div>
+            <div class="mp-detail-sec">
+              <div class="mp-detail-sec-label">外贸场景优势</div>
+              <div class="mp-detail-sec-body">{{ modelPickerDetail.trade || '—' }}</div>
+            </div>
+            <div class="mp-detail-sec">
+              <div class="mp-detail-sec-label">可用功能</div>
+              <div class="mp-detail-tags">
+                <span v-for="(t, ti) in (modelPickerDetail.tags || [])" :key="ti" class="mp-detail-tag">{{ t }}</span>
+              </div>
+            </div>
+            <div class="mp-detail-meta">
+              <span class="mp-meta-chip">⚡ {{ modelPickerDetail.creditCost || 0 }} 积分/次</span>
+              <span v-if="modelPickerDetail.providerType" class="mp-meta-chip">{{ modelPickerDetail.providerType }}</span>
+              <span v-if="modelPickerDetail.isDefault" class="mp-meta-chip">系统默认</span>
+            </div>
+            <button type="button" class="mp-use-btn" @click="applyModelPicker(modelPickerPreview)">使用此模型</button>
+          </template>
+          <div v-else class="mp-detail-empty">← 将鼠标悬停或点击左侧模型查看介绍</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -3694,6 +3766,10 @@ const aitalkModel = ref(localStorage.getItem('crm_aitalk_model') || '');
 const aitalkAutoGen = ref(localStorage.getItem('crm_script_autogen') !== '0');
 watch(aitalkAutoGen, (v) => localStorage.setItem('crm_script_autogen', v ? '1' : '0'));
 const aiModels = ref([]);
+// 【2026-09-06 staging 三面板模型选择】默认自动，localStorage 记忆
+const bgcheckModel = ref(localStorage.getItem('crm_bgcheck_model') || 'auto');
+const reqModel = ref(localStorage.getItem('crm_req_model') || 'auto');
+const extractModel = ref(localStorage.getItem('crm_extract_model') || 'auto');
 const aitalkLoading = ref(false);
 const aitalkError = ref('');
 const aitalkMode = ref('quick');
@@ -3726,6 +3802,13 @@ async function loadAiModels() {
     const list = Array.isArray(data?.models) ? data.models : [];
     aiModels.value = list;
     if (list.length) {
+      // 【2026-09-06】面板模型默认"自动"，localStorage 有记忆且模型仍存在则用记忆
+      const savedBg = localStorage.getItem('crm_bgcheck_model');
+      const savedReq = localStorage.getItem('crm_req_model');
+      const savedExt = localStorage.getItem('crm_extract_model');
+      bgcheckModel.value = savedBg && list.some(m => m.key === savedBg) ? savedBg : 'auto';
+      reqModel.value = savedReq && list.some(m => m.key === savedReq) ? savedReq : 'auto';
+      extractModel.value = savedExt && list.some(m => m.key === savedExt) ? savedExt : 'auto';
       // 自动模式：跟随系统默认模型（当前首选 GPT-4o）
       const def = list.find(m => m.isDefault) || list[0];
       const saved = localStorage.getItem('crm_aitalk_model');
@@ -3742,6 +3825,36 @@ async function loadAiModels() {
   }
 }
 loadAiModels();
+
+// 【2026-09-06】模型二级选择面板（扣子风格：左列表+右详情）
+const modelPickerVisible = ref(false);
+const modelPickerFor = ref('bgcheck');
+const modelPickerPreview = ref('auto');
+const MODEL_PICKER_LS = { bgcheck: 'crm_bgcheck_model', req: 'crm_req_model', extract: 'crm_extract_model' };
+function openModelPicker(which) {
+  modelPickerFor.value = which;
+  const r = which === 'bgcheck' ? bgcheckModel : which === 'req' ? reqModel : extractModel;
+  modelPickerPreview.value = r.value || 'auto';
+  modelPickerVisible.value = true;
+}
+function applyModelPicker(key) {
+  const r = modelPickerFor.value === 'bgcheck' ? bgcheckModel : modelPickerFor.value === 'req' ? reqModel : extractModel;
+  r.value = key;
+  localStorage.setItem(MODEL_PICKER_LS[modelPickerFor.value], key);
+  modelPickerVisible.value = false;
+}
+function modelPickerDisplay(key) {
+  if (!key || key === 'auto') return '⚡ 自动（系统推荐）';
+  const m = aiModels.value.find(x => x.key === key);
+  return m ? m.name : '选择模型';
+}
+const modelPickerDetail = computed(() => {
+  if (modelPickerPreview.value === 'auto') {
+    return { name: '自动（系统推荐）', desc: '不手动指定，由系统自动选择当前默认模型（DeepSeek V4 Flash）。', features: '无需关注模型差异，系统自动选择当前最适合的默认模型。', trade: '适合大多数日常场景：翻译、话术、分析、背调均可，省心省力。', tags: ['自动', '推荐', '通用'], creditCost: 0, providerType: '系统', isDefault: true };
+  }
+  return aiModels.value.find(m => m.key === modelPickerPreview.value) || null;
+});
+
 
 function inqTypeClass(cat) {
   const map = { '信息型':'info','价格型':'price','样品型':'sample','资质型':'cert','合作型':'coop','拒绝型':'reject','转介绍型':'refer' };
@@ -5078,7 +5191,7 @@ async function runReqAiAnalyze() {
     const cust = await api.get(`/customers/by-jid/${encodeURIComponent(chatStore.activeJid)}`);
     const cid = cust.data.id;
     if (!cid) { ElMessage.error('客户档案未建立'); return; }
-    const { data } = await api.post(`/customers/${cid}/ai-requirement`, { limit: 50 });
+    const { data } = await api.post(`/customers/${cid}/ai-requirement`, { limit: 50, model: reqModel.value === 'auto' ? undefined : reqModel.value });
     if (data.summary) {
       reqData.value.requirementSummary = data.summary;
       parseReqSummary(data.summary);
@@ -5818,7 +5931,7 @@ async function runCustomerAiExtract() {
   customerExtractLoading.value = true;
   customerExtractResult.value = null;
   try {
-    const { data } = await api.post(`/customers/by-jid/${encodeURIComponent(chatStore.activeJid)}/extract-ai`, { limit: 20 });
+    const { data } = await api.post(`/customers/by-jid/${encodeURIComponent(chatStore.activeJid)}/extract-ai`, { limit: 20, model: extractModel.value === 'auto' ? undefined : extractModel.value });
     // 只保留非空字段
     const filtered = {};
     for (const k of Object.keys(data)) {
@@ -6174,7 +6287,7 @@ async function runBgCheck() {
   bgCheckLoading.value = true;
   bgAskInserted.value = false;
   try {
-    const { data } = await api.post(`/customers/by-jid/${encodeURIComponent(chatStore.activeJid)}/bg-check`, {});
+    const { data } = await api.post(`/customers/by-jid/${encodeURIComponent(chatStore.activeJid)}/bg-check`, { model: bgcheckModel.value === 'auto' ? undefined : bgcheckModel.value });
     bgCheckReport.value = data.report || '';
     bgMissingInfo.value = Array.isArray(data.missingInfo) ? data.missingInfo : [];
     bgAskReply.value = data.askReply || '';
@@ -13531,6 +13644,42 @@ onUnmounted(() => {
 .switch-label { flex: 1; font-size: 15px; color: var(--text-primary); font-weight: 500; }
 .sub-row { display: flex; align-items: center; min-height: 40px; padding: 0 4px 0 24px; margin-top: 2px; }
 .sub-label { width: 72px; font-size: 14px; color: var(--text-secondary); flex-shrink: 0; }
+
+/* 模型二级选择面板（扣子风格：左列表+右详情） */
+.mp-trigger { display:flex; align-items:center; justify-content:space-between; gap:8px; flex:1; min-width:0; padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary,#e9edef); font-size:13px; cursor:pointer; }
+.mp-trigger:hover { border-color:rgba(37,211,102,0.5); }
+.mp-trigger-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mp-chevron { font-size:11px; color:var(--text-secondary,#8696a0); flex-shrink:0; }
+.mp-overlay { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; padding:20px; }
+.mp-panel { width:680px; max-width:96vw; max-height:82vh; overflow:hidden; background:var(--mgmt-card-bg,#1e252b); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.5); display:flex; flex-direction:column; }
+.mp-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
+.mp-title { font-size:16px; font-weight:600; color:var(--text-primary,#e9edef); }
+.mp-sub { font-size:12px; color:var(--text-secondary,#8696a0); margin-top:2px; }
+.mp-close { width:28px; height:28px; border-radius:8px; border:none; background:rgba(255,255,255,0.08); color:var(--text-secondary,#8696a0); cursor:pointer; font-size:14px; }
+.mp-close:hover { background:rgba(255,255,255,0.15); color:#fff; }
+.mp-body { display:flex; min-height:300px; }
+.mp-list { width:260px; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); overflow-y:auto; padding:8px; }
+.mp-item { padding:10px 12px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; transition:background 0.15s; }
+.mp-item:hover { background:rgba(255,255,255,0.06); }
+.mp-item.active { background:rgba(37,211,102,0.12); border:1px solid rgba(37,211,102,0.25); }
+.mp-item-main { display:flex; align-items:center; gap:6px; min-width:0; }
+.mp-item-name { font-size:13px; color:var(--text-primary,#e9edef); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mp-item-tag { font-size:10px; color:#25D366; background:rgba(37,211,102,0.12); padding:1px 6px; border-radius:999px; flex-shrink:0; }
+.mp-item-credit { font-size:11px; color:var(--text-secondary,#8696a0); flex-shrink:0; }
+.mp-detail { flex:1; padding:20px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+.mp-detail-name { font-size:18px; font-weight:600; color:var(--text-primary,#e9edef); }
+.mp-detail-role { font-size:13px; line-height:1.6; color:var(--text-secondary,#d1d7db); }
+.mp-detail-sec { margin-top:2px; }
+.mp-detail-sec-label { font-size:12px; font-weight:600; color:var(--text-secondary,#8696a0); margin-bottom:4px; }
+.mp-detail-sec-body { font-size:13px; line-height:1.7; color:var(--text-primary,#e9edef); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px 12px; }
+.mp-detail-tags { display:flex; flex-wrap:wrap; gap:8px; }
+.mp-detail-tag { font-size:12px; color:var(--text-primary,#e9edef); background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); padding:4px 12px; border-radius:999px; }
+.mp-detail-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+.mp-meta-chip { font-size:11px; color:var(--text-secondary,#8696a0); background:rgba(255,255,255,0.07); padding:4px 10px; border-radius:999px; }
+.mp-use-btn { margin-top:auto; padding:10px 0; border:none; border-radius:10px; background:#25D366; color:#06120a; font-size:14px; font-weight:600; cursor:pointer; }
+.mp-use-btn:hover { opacity:0.9; }
+.mp-detail-empty { font-size:13px; color:var(--text-secondary,#8696a0); text-align:center; margin:auto; }
+
 .sub-select { flex: 1; }
 .sub-help { color: var(--text-secondary); font-size: 14px; margin-right: 6px; cursor: help; transition: color .15s; }
 .sub-help:hover { color: var(--accent); }

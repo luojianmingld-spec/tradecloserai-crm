@@ -813,6 +813,50 @@ export async function getAvailableModels() {
   }
 
   // 构建展示列表：每个 provider 作为一个可选模型
+  const MODEL_DESC_MAP = {
+    'p1786588190918': {
+      desc: '商汤 SenseNova 6.8 Flash-Lite：轻量快速、成本最低，适合日常翻译与快捷话术',
+      features: '响应极快、成本最低、运行稳定，适合高频调用，几乎无感知延迟',
+      trade: '消息翻译、快捷话术等高频轻量任务首选，最省积分',
+      tags: ['轻量', '翻译', '快捷话术'],
+    },
+    'p1786588228470': {
+      desc: '火山方舟 Doubao Seed 2.0 Pro：中文语义理解强，适合话术生成与需求分析',
+      features: '中文理解与表达能力强，指令遵循稳定，生成内容自然',
+      trade: '中文客户沟通、需求分析与话术润色，外贸团队上手快',
+      tags: ['中文', '话术生成', '需求分析'],
+    },
+    'p1786601714577': {
+      desc: 'DeepSeek V4 Pro：推理与长文生成能力强，适合客户背调、深度分析报告',
+      features: '深度推理、长上下文、结构化输出能力强，适合复杂任务',
+      trade: '客户背调、深度分析报告、复杂询盘拆解，产出专业度高',
+      tags: ['背调', '深度分析', '推理'],
+    },
+    'p1786601765227': {
+      desc: 'Doubao Seed Evolving：持续进化旗舰，综合能力均衡，适合复杂多轮任务',
+      features: '持续进化，多轮对话连贯，综合任务表现均衡',
+      trade: '外贸 Agent 多轮对话、跟进策略建议、客户全周期管理',
+      tags: ['多轮对话', 'Agent', '综合'],
+    },
+    'p1786601765650': {
+      desc: 'Doubao Seed 2.1 Turbo：响应快、性价比高，适合高频轻量任务',
+      features: '生成速度快、成本低、语气自然，兼顾质量与速度',
+      trade: '高频话术生成、即时回复，群发场景量大也不心疼积分',
+      tags: ['快速', '话术', '性价比'],
+    },
+    'p1786601770927': {
+      desc: 'DeepSeek V4 Flash：系统默认推荐，速度快成本低，适合大多数日常场景',
+      features: '速度快、成本低、综合能力可靠，无需纠结直接可用',
+      trade: '日常翻译、话术、分析、背调通用，外贸团队默认选择',
+      tags: ['默认', '通用', '性价比'],
+    },
+    'p1786604068598': {
+      desc: 'GPT-5.6 Terra：旗舰模型，综合能力最强，适合高质量报告与复杂分析',
+      features: '综合能力最强，多语言地道、复杂推理、长报告质量最高',
+      trade: '高质量客户画像、背调报告、英文询盘深度分析，客户体验最佳',
+      tags: ['旗舰', '高质量', '多语言'],
+    },
+  };
   const providerLabels = {
     doubao: '豆包',
     deepseek: 'DeepSeek',
@@ -829,7 +873,10 @@ export async function getAvailableModels() {
         key: p.id,
         id: p.model,
         name: `${p.name || label}`,
-        desc: p.baseUrl ? (p.baseUrl.includes('deepseek') ? 'DeepSeek，性价比高' : '') : '',
+        desc: MODEL_DESC_MAP[p.id]?.desc || (p.baseUrl ? (p.baseUrl.includes('deepseek') ? 'DeepSeek，性价比高' : '') : ''),
+        features: MODEL_DESC_MAP[p.id]?.features || '',
+        trade: MODEL_DESC_MAP[p.id]?.trade || '',
+        tags: MODEL_DESC_MAP[p.id]?.tags || [],
         providerType: p.provider,
         isDefault: !!p.isDefault,
         creditCost: MODEL_COST_MAP[p.id] || 150,
