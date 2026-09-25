@@ -220,7 +220,7 @@ router.get('/transactions', async (req, res) => {
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        select: { id: true, type: true, amount: true, balanceAfter: true, reason: true, orderId: true, createdAt: true },
+        select: { id: true, type: true, amount: true, balanceAfter: true, reason: true, orderId: true, model: true, createdAt: true },
       }),
       prisma.creditTransaction.count({ where: { userId: req.userId } }),
     ]);

@@ -81,7 +81,7 @@
             rows="1"
             class="chat-input"
           ></textarea>
-          <button class="model-select-btn" @click="showModelPicker = !showModelPicker">
+          <button class="model-select-btn" @click="openModelPicker">
             <span>{{ currentModelName }}</span>
             <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
           </button>
@@ -100,24 +100,64 @@
         <input type="file" ref="fileInput" multiple accept="image/*,video/*,.pdf,.doc,.docx,.txt,.csv,.xlsx" style="display:none" @change="handleFileSelect" />
       </div>
 
-      <!-- 模型选择弹窗 -->
-      <transition name="fade">
-        <div v-if="showModelPicker" class="model-dropdown">
-          
-            
-            <div class="model-option" :class="{ active: useAutoModel }" @click="useAutoModel = true; showModelPicker = false">
-              <span class="mo-icon">🤖</span>
-              <div class="mo-text"><div class="mo-name">Auto 智能选择</div><div class="mo-desc">自动匹配最优模型</div></div>
-              <span v-if="useAutoModel" class="mo-check">✓</span>
+      <!-- 模型选择弹窗（扣子式二级菜单） -->
+      <div v-if="showModelPicker" class="agm-overlay" @click.self="closeModelPicker">
+        <div class="agm-panel">
+          <div class="agm-header">
+            <div>
+              <div class="agm-title">选择 AI 模型</div>
+              <div class="agm-sub">自动推荐或手动指定本次使用的模型</div>
             </div>
-            <div class="model-divider"></div>
-            <div v-for="p in providers" :key="p.id" class="model-option" :class="{ active: !useAutoModel && selectedProviderId === p.id }" @click="useAutoModel = false; selectedProviderId = p.id; showModelPicker = false">
-              <span>{{ modelIcons[p.name] || '🤖' }}</span>
-              <div class="mo-text"><div class="mo-name">{{ p.name }}</div><div class="mo-desc">{{ modelDescriptions[p.name] || p.model }}</div></div>
-              <span v-if="!useAutoModel && selectedProviderId === p.id" class="mo-check">✓</span>
+            <button type="button" class="agm-close" @click="closeModelPicker">✕</button>
+          </div>
+          <div class="agm-body">
+            <!-- 左：一级模型列表 -->
+            <div class="agm-list">
+              <div class="agm-item" :class="{ active: pickerPreview === 'auto' }" @mouseenter="pickerPreview = 'auto'" @click="pickerPreview = 'auto'">
+                <div class="agm-item-main">
+                  <span class="agm-item-name">⚡ 自动（系统推荐）</span>
+                  <span class="agm-item-tag">推荐</span>
+                </div>
+                <span class="agm-item-credit">系统智能选择</span>
+              </div>
+              <div v-for="m in pickerModels" :key="m.key" class="agm-item" :class="{ active: pickerPreview === m.key }" @mouseenter="pickerPreview = m.key" @click="pickerPreview = m.key">
+                <div class="agm-item-main">
+                  <span class="agm-item-name">{{ m.name }}</span>
+                  <span v-if="m.isDefault" class="agm-item-tag agm-item-tag-default">默认</span>
+                </div>
+                <span class="agm-item-credit">{{ m.creditCost || 150 }} 积分</span>
+              </div>
             </div>
+            <!-- 右：二级模型详情 -->
+            <div class="agm-detail">
+              <template v-if="pickerDetail">
+                <div class="agm-detail-name">{{ pickerDetail.name }}</div>
+                <div class="agm-detail-role">{{ pickerDetail.desc || '该模型可用于本功能，选择后立即生效。' }}</div>
+                <div class="agm-detail-sec">
+                  <div class="agm-detail-sec-label">优势特点</div>
+                  <div class="agm-detail-sec-body">{{ pickerDetail.features || '—' }}</div>
+                </div>
+                <div class="agm-detail-sec">
+                  <div class="agm-detail-sec-label">外贸场景优势</div>
+                  <div class="agm-detail-sec-body">{{ pickerDetail.trade || '—' }}</div>
+                </div>
+                <div class="agm-detail-sec">
+                  <div class="agm-detail-sec-label">可用功能</div>
+                  <div class="agm-detail-tags">
+                    <span v-for="(t, ti) in (pickerDetail.tags || [])" :key="ti" class="agm-detail-tag">{{ t }}</span>
+                  </div>
+                </div>
+                <div class="agm-detail-meta">
+                  <span v-if="pickerDetail.providerType" class="agm-meta-chip">{{ pickerDetail.providerType }}</span>
+                  <span v-if="pickerDetail.isDefault" class="agm-meta-chip">系统默认</span>
+                </div>
+                <button type="button" class="agm-use-btn" @click="applyPickerModel">使用此模型</button>
+              </template>
+              <div v-else class="agm-detail-empty">← 将鼠标悬停或点击左侧模型查看介绍</div>
+            </div>
+          </div>
         </div>
-      </transition>
+      </div>
     </main>
 
     <!-- ========== 右侧栏（扣子风格：窄图标栏 + 弹出面板） ========== -->
@@ -262,6 +302,10 @@ const providers = ref([])
 const selectedProviderId = ref('')
 const useAutoModel = ref(true)
 const showModelPicker = ref(false)
+// 扣子式二级菜单：模型列表富详情 + 选中预览 + providerId 映射
+const pickerModels = ref([])
+const pickerPreview = ref('auto')
+const pickerProviderMap = ref({})
 
 // 模型简介描述（类似扣子风格）
 const modelDescriptions = {
@@ -341,6 +385,41 @@ const currentModelName = computed(() => {
   return p?.name || 'Auto'
 })
 
+// ===== 扣子式二级模型菜单 =====
+const pickerDetail = computed(() => {
+  if (pickerPreview.value === 'auto') {
+    return { name: '自动（系统推荐）', desc: '不手动指定，由系统自动选择当前默认模型（DeepSeek V4 Flash）。', features: '无需关注模型差异，系统自动选择当前最适合的默认模型。', trade: '适合大多数日常外贸场景：翻译、话术、分析、背调均可，省心省力。', tags: ['自动', '推荐', '通用'], creditCost: 0, providerType: '系统', isDefault: true }
+  }
+  return pickerModels.value.find(m => m.key === pickerPreview.value) || null
+})
+function openModelPicker() {
+  if (useAutoModel.value) pickerPreview.value = 'auto'
+  else pickerPreview.value = selectedProviderId.value || 'auto'
+  showModelPicker.value = true
+}
+function closeModelPicker() { showModelPicker.value = false }
+function applyPickerModel() {
+  if (pickerPreview.value === 'auto') {
+    useAutoModel.value = true; selectedProviderId.value = ''
+  } else {
+    useAutoModel.value = false
+    selectedProviderId.value = pickerProviderMap.value[pickerPreview.value] || pickerPreview.value
+  }
+  showModelPicker.value = false
+}
+async function loadPickerModels() {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(window.__API_BASE__ + '/api/ai/models', { headers: { Authorization: `Bearer ${token}` } })
+    const data = await res.json()
+    const list = Array.isArray(data?.models) ? data.models : []
+    pickerModels.value = list
+    const map = {}
+    for (const m of list) map[m.key] = m.key
+    pickerProviderMap.value = map
+  } catch (e) { console.warn('loadPickerModels failed:', e.message) }
+}
+
 function getAgentConfig(type) {
   const cfgs = {
     'sales-champion': {
@@ -406,7 +485,7 @@ onMounted(async () => {
   const pathMap = { '/sales-champion': 'sales-champion', '/background-report': 'background-report', '/customs-agent': 'customs-agent', '/doc-agent': 'doc-agent', '/freight-agent': 'freight-agent', '/legal-agent': 'legal-agent' }
   if (pathMap[route.path]) currentAgent.value = pathMap[route.path]
   window.addEventListener('reminder:fired', handleReminderFired)
-  await Promise.all([loadProviders(), loadCustomers(), loadSessions(), loadHistory()])
+  await Promise.all([loadProviders(), loadPickerModels(), loadCustomers(), loadSessions(), loadHistory()])
   inputRef.value?.focus()
 })
 
@@ -464,7 +543,7 @@ async function loadHistory() {
 async function loadProviders() {
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch('/api/assistant/providers', { headers: { Authorization: `Bearer ${token}` } })
+    const res = await fetch(window.__API_BASE__ + '/api/assistant/providers', { headers: { Authorization: `Bearer ${token}` } })
     if (res.ok) providers.value = await res.json()
   } catch (e) { console.error(e) }
 }
@@ -489,7 +568,7 @@ async function sendMessage() {
     if (!useAutoModel.value && selectedProviderId.value) formData.append('providerId', selectedProviderId.value)
     for (const f of sentAttachments) { if (f.file) formData.append('files', f.file) }
     loadingStatus.value = '处理中...'
-    const res = await fetch('/api/assistant/chat', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData })
+    const res = await fetch(window.__API_BASE__ + '/api/assistant/chat', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const result = await res.json()
     messages.value.push({ role: 'assistant', content: result.reply || result.content || '抱歉，处理出错', tasks: result.tasks || [], attachments: result.attachments || [], createdAt: new Date().toISOString() })
@@ -527,7 +606,7 @@ const generalSessionCount = computed(() => {
 async function loadCustomers() {
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch('/api/customers?pageSize=200', { headers: { Authorization: `Bearer ${token}` } })
+    const res = await fetch(window.__API_BASE__ + '/api/customers?pageSize=200', { headers: { Authorization: `Bearer ${token}` } })
     if (res.ok) {
       const j = await res.json()
       customerList.value = Array.isArray(j) ? j : (j.items || j.data || [])
@@ -537,7 +616,7 @@ async function loadCustomers() {
 async function loadSessions() {
   try {
     const token = localStorage.getItem('token')
-    const res = await fetch(`/api/assistant/sessions?agentType=${currentAgent.value}`, { headers: { Authorization: `Bearer ${token}` } })
+    const res = await fetch(window.__API_BASE__ + `/api/assistant/sessions?agentType=${currentAgent.value}`, { headers: { Authorization: `Bearer ${token}` } })
     if (res.ok) {
       const j = await res.json()
       sessionList.value = (j && j.sessions) || []
@@ -793,6 +872,49 @@ function scrollToBottom() { nextTick(() => { if (messagesArea.value) messagesAre
 .mo-badge { display: inline-block; font-size: 10px; color: #c8a040; background: #3a3020; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
 .model-divider { height: 1px; background: #3a3a3a; margin: 4px 0; }
 .mo-check { color: #00a884; font-weight: 600; margin-left: auto; font-size: 14px; }
+
+/* ===== 扣子式二级模型菜单 ===== */
+.agm-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; animation: agmFade 0.18s ease;
+}
+@keyframes agmFade { from { opacity: 0 } to { opacity: 1 } }
+.agm-panel {
+  width: 860px; max-width: 94vw; max-height: 82vh;
+  background: var(--mgmt-card, #0f1a24); border: 1px solid var(--mgmt-border, #22334a);
+  border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: agmPop 0.2s ease;
+}
+@keyframes agmPop { from { transform: scale(0.96); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+.agm-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid var(--mgmt-border, #22334a); }
+.agm-title { font-size: 18px; font-weight: 600; color: var(--text-primary, #e9edef); }
+.agm-sub { font-size: 12px; color: var(--text-secondary, #8696a0); margin-top: 4px; }
+.agm-close { background: none; border: none; color: #8696a0; font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.agm-close:hover { background: rgba(255,255,255,0.08); color: #e9edef; }
+.agm-body { display: flex; min-height: 320px; }
+.agm-list { width: 280px; flex-shrink: 0; border-right: 1px solid var(--mgmt-border, #22334a); overflow-y: auto; padding: 8px; }
+.agm-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; cursor: pointer; transition: background 0.15s; }
+.agm-item:hover { background: rgba(255,255,255,0.05); }
+.agm-item.active { background: #0a3d2e; }
+.agm-item-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.agm-item-name { font-size: 14px; font-weight: 500; color: var(--text-primary, #e9edef); white-space: nowrap; }
+.agm-item-tag { font-size: 10px; color: #ffb84d; background: rgba(255,184,77,0.15); padding: 1px 7px; border-radius: 10px; flex-shrink: 0; }
+.agm-item-tag-default { color: #00a884; background: rgba(0,168,132,0.15); }
+.agm-item-credit { font-size: 11px; color: var(--text-secondary, #8696a0); flex-shrink: 0; }
+.agm-detail { flex: 1; padding: 24px; overflow-y: auto; }
+.agm-detail-name { font-size: 20px; font-weight: 600; color: var(--text-primary, #e9edef); }
+.agm-detail-role { font-size: 13px; color: var(--text-secondary, #8696a0); margin: 8px 0 18px; line-height: 1.6; }
+.agm-detail-sec { margin-bottom: 16px; }
+.agm-detail-sec-label { font-size: 12px; font-weight: 600; color: var(--text-secondary, #8696a0); margin-bottom: 6px; }
+.agm-detail-sec-body { font-size: 13px; color: var(--text-primary, #e9edef); background: rgba(0,168,132,0.08); border-radius: 10px; padding: 12px 14px; line-height: 1.7; }
+.agm-detail-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.agm-detail-tag { font-size: 12px; color: var(--text-secondary, #8696a0); background: rgba(255,255,255,0.07); padding: 5px 12px; border-radius: 14px; }
+.agm-detail-meta { display: flex; gap: 8px; margin-top: 8px; }
+.agm-meta-chip { font-size: 11px; color: #8696a0; background: rgba(255,255,255,0.06); padding: 3px 10px; border-radius: 12px; }
+.agm-use-btn { width: 100%; margin-top: 20px; padding: 12px; border: none; border-radius: 12px; background: #00a884; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.agm-use-btn:hover { background: #00c49a; }
+.agm-detail-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary, #8696a0); font-size: 13px; }
 
 /* ========== 右侧图标栏 ========== */
 .right-icon-bar {

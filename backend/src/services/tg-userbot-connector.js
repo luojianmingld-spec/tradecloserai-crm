@@ -184,13 +184,28 @@ export function stopPolling() {
 
 let pollStartTime = 0; // 只处理此时间戳之后的消息
 
+/** 提取会话归属 peerId（私聊=对方user，群=群chat，频道=channel；支持负数/超大id转字符串） */
+function tgPeerIdOf(peerId) {
+  if (!peerId) return null;
+  const cn = peerId.className;
+  let v = cn === 'PeerUser' ? peerId.userId
+        : cn === 'PeerChat' ? peerId.chatId
+        : cn === 'PeerChannel' ? peerId.channelId
+        : null;
+  // Telegram 群组/频道完整 id 需带 -100 前缀；与轮询 d.id（已带 -100）对齐，避免同一会话两种 jid 重复建档
+  if (cn === 'PeerChannel' && v != null && !String(v).startsWith('-100')) {
+    v = '-100' + String(v);
+  }
+  return v == null ? null : String(v);
+}
+
 async function initKnownMessages() {
   if (!client) return;
   pollStartTime = Math.floor(Date.now() / 1000) - 30; // 30秒缓冲
   try {
     const dialogs = await client.getDialogs({ limit: 8 });
     for (const d of dialogs) {
-      if (!d.isUser) continue;
+      // 群组/频道/私聊全部放行
       const peerId = d.id?.toString?.();
       if (!peerId) continue;
       // 获取每个对话最近20条消息，确保覆盖
@@ -211,7 +226,7 @@ async function pollNewMessages() {
     const dialogs = await client.getDialogs({ limit: 8 });
     for (let di = 0; di < dialogs.length; di++) {
       const d = dialogs[di];
-      if (!d.isUser) continue;
+      // 群组/频道/私聊全部放行
       const peerId = d.id?.toString?.();
       if (!peerId) continue;
       if (di > 0) await new Promise(r => setTimeout(r, 2000));
@@ -269,12 +284,11 @@ function registerUpdateHandler() {
     try {
       const msg = event.message;
       if (!msg) return;
-      // 只处理私聊消息
-      if (msg.peerId && msg.peerId.className !== 'PeerUser') return;
       // 跳过自己发的
       if (msg.out) return;
 
-      const peerId = msg.peerId?.userId?.toString() || msg.senderId?.toString();
+      // 会话归属 peer：私聊=对方，群=群(PeerChat/PeerChannel)
+      const peerId = tgPeerIdOf(msg.peerId) || msg.senderId?.toString();
       if (!peerId) return;
       const text = msg.message || '';
       const msgId = msg.id;
@@ -324,12 +338,11 @@ async function handleIncomingUpdate(update) {
   if (ctorName === 'UpdateNewMessage' || ctorName === 'UpdateNewChannelMessage' || update.className === 'UpdateNewMessage' || update.className === 'UpdateNewChannelMessage') {
     const msg = update.message;
     if (!msg || !msg.peerId) return;
-    // 只处理私聊消息
-    if (msg.peerId.className !== 'PeerUser') return;
     // 跳过自己发的
     if (msg.out) return;
 
-    const peerId = msg.peerId.userId.toString();
+    const peerId = tgPeerIdOf(msg.peerId);
+    if (!peerId) return;
     const text = msg.message || '';
     const msgId = msg.id;
     const timestamp = msg.date ? (msg.date * 1000) : Date.now(); // TG返回秒级时间戳
@@ -384,7 +397,23 @@ async function handleIncomingUpdate(update) {
 
   // UpdateShortChatMessage - 群组短消息
   if (ctorName === 'UpdateShortChatMessage' || update.className === 'UpdateShortChatMessage') {
-    // 群组消息暂不处理（CRM只做私聊）
+    if (update.out) return;
+    const peerId = update.chatId?.toString?.();
+    if (!peerId) return;
+    const text = update.message || '';
+    const msgId = update.id;
+    const timestamp = update.date ? (update.date * 1000) : Date.now();
+    const incoming = {
+      chatId: peerId,
+      messageId: msgId,
+      text: text || '',
+      timestamp,
+      mediaType: null,
+      fromMe: false,
+      raw: update,
+    };
+    console.log('[TG-UB] UpdateShortChatMessage from', peerId, 'text:', text?.substring(0, 50));
+    if (eventHandlers.onMessage) eventHandlers.onMessage(incoming);
     return;
   }
 }
@@ -412,10 +441,13 @@ export async function getDialogs(limit = 100) {
   if (!client || connectionState !== 'connected') throw new Error('TG User Bot not connected');
   const dialogs = [];
   for await (const dialog of client.iterDialogs({ limit })) {
-    if (!dialog.isUser) continue; // 只取私聊
+    const type = dialog.isUser ? 'private' : (dialog.isGroup ? 'group' : (dialog.isChannel ? 'channel' : 'other'));
     const entity = dialog.entity || dialog.participant;
     dialogs.push({
       id: dialog.id?.toString?.() || (entity ? entity.id.toString() : ''),
+      type,
+      isGroup: !!dialog.isGroup,
+      isChannel: !!dialog.isChannel,
       name: dialog.name || [entity?.firstName, entity?.lastName].filter(Boolean).join(' ').trim() || entity?.username || '',
       username: entity?.username || '',
       phone: entity?.phone || '',
@@ -433,12 +465,26 @@ export async function getHistory(peerId, limit = 50, offsetId = 0) {
   if (!client || connectionState !== 'connected') throw new Error('TG User Bot not connected');
   const messages = [];
   for await (const msg of client.iterMessages(peerId, { limit, offsetId })) {
+    // 提取回复引用信息
+    let replyToMsgId = null;
+    let replyToBody = null;
+    try {
+      if (msg.replyTo) {
+        replyToMsgId = msg.replyTo.replyToMsgId || null;
+        // quoteText 在某些 GramJS 版本中不可用
+        if (msg.replyTo.quoteText) {
+          replyToBody = msg.replyTo.quoteText;
+        }
+      }
+    } catch(e) { /* ignore */ }
     messages.push({
       id: msg.id,
       text: msg.message || (msg.media ? `[${msg.media.className}]` : ''),
       fromMe: msg.out || false,
       timestamp: msg.date ? (msg.date * 1000) : Date.now(),
       mediaType: msg.media ? msg.media.className : null,
+      replyToMsgId,
+      replyToBody,
       raw: msg,
     });
   }
@@ -459,6 +505,7 @@ export async function sendMessage(peerId, text, options = {}) {
     text: sent.message || text,
     fromMe: true,
     timestamp: sent.date ? (sent.date * 1000) : Date.now(),
+    replyToMsgId: options?.replyToMsgId || null,
   };
 }
 
@@ -503,7 +550,7 @@ export async function getUserInfo(peerId) {
       lastName: entity.lastName || '',
       username: entity.username || '',
       phone: entity.phone || '',
-      displayName: [entity.firstName, entity.lastName].filter(Boolean).join(' ').trim() || entity.username || '',
+      displayName: [entity.firstName, entity.lastName].filter(Boolean).join(' ').trim() || entity.username || entity.title || '',
     };
   } catch (e) {
     return null;

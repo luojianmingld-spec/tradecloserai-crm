@@ -89,13 +89,16 @@ export async function notifyBoss(text) {
  */
 export function buildInquiryNotify(p) {
   const name = p?.name || p?.phone || '未知客户';
-  const lines = [
-    '【新询盘】📩',
-    `👤 客户：${name}${p?.phone && p.phone !== name ? '（' + p.phone + '）' : ''}`,
-    `💬 内容：${truncate(p?.body || '', 80)}`,
-    `⏰ ${formatTime(p?.ts || new Date())}`,
-    '💡 已自动建档，AI 正在跟进',
-  ];
+  const grade = String(p?.aiGrade || '').toUpperCase();
+  const high = grade === 'A';
+  const lines = [];
+  lines.push(high ? '【新询盘】🔥 高价值客户' : '【新询盘】📩');
+  lines.push(`👤 客户：${name}${p?.phone && p.phone !== name ? '（' + p.phone + '）' : ''}`);
+  if (p?.intentLabel) lines.push(`📈 意向：${p.intentLabel}`);
+  if (p?.orderVolume) lines.push(`🛒 采购量：${truncate(p.orderVolume, 40)}`);
+  lines.push(`💬 内容：${truncate(p?.body || '', 80)}`);
+  lines.push(`⏰ ${formatTime(p?.ts || new Date())}`);
+  lines.push(high ? '🚀 已自动建档，AI 正在跟进' : '💡 已自动建档，AI 正在跟进');
   return lines.join('\n');
 }
 

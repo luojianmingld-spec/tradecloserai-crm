@@ -67,7 +67,7 @@ function extractCustomerJid(msg, selfJid) {
   if (jid.includes('@broadcast')) return null;
   if (jid === 'status@broadcast') return null;
   if (selfJid && jid === selfJid) return null;
-  if (!jid.includes('@s.whatsapp.net') && !jid.includes('@lid')) return null;
+  if (!jid.includes('@s.whatsapp.net') && !jid.includes('@lid') && !jid.includes('@telegram')) return null;
   // ★ 归一化：@lid → @s.whatsapp.net
   jid = resolveToPhoneJid(jid);
   return jid;
@@ -85,6 +85,8 @@ function truncate(s, max = 60) {
 export async function getPendingFollowups(opts = {}) {
   const userId = opts.userId || 1;
   const sessionId = opts.sessionId || DEFAULT_SESSION_ID;
+  const sessionIds = Array.isArray(sessionId) ? sessionId : [sessionId];
+  const sessionFilter = sessionIds.length === 1 ? sessionIds[0] : { in: sessionIds };
 
   const now = new Date();
   // 回溯 14 天足够覆盖 72h 待跟进 + 缓冲
@@ -93,17 +95,19 @@ export async function getPendingFollowups(opts = {}) {
   // 取最近 14 天所有消息，按时间倒序
   const messages = await prisma.wAMessage.findMany({
     where: {
-      sessionId,
+      sessionId: sessionFilter,
       timestamp: { gte: since },
     },
     orderBy: { timestamp: 'desc' },
   });
 
-  // 确定自身 JID
+  // 确定自身 JID（多 sessionId 时仅单连接场景；TG 无 selfJid）
   let selfJid = null;
   try {
-    const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
-    if (conn?.phone) selfJid = conn.phone + '@s.whatsapp.net';
+    if (sessionIds.length === 1) {
+      const conn = await prisma.wAConnection.findUnique({ where: { sessionId: sessionIds[0] } });
+      if (conn?.phone) selfJid = conn.phone + '@s.whatsapp.net';
+    }
   } catch (e) { /* ignore */ }
 
   // 按 JID 归并，每个客户只保留**最后一条有效消息**

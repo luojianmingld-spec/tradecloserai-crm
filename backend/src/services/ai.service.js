@@ -662,7 +662,7 @@ export async function generateReply({ userId, accountId, jid, style = 'formal', 
       { role: 'system', content: systemPrompt },
       { role: 'user', content: contextStr },
     ],
-    { temperature: 0.8, max_tokens: 2048, model: selectedModelId, provider: callProvider, timeout: 60000, signal } // 【终止按钮】
+    { temperature: 0.8, max_tokens: 4096, model: selectedModelId, provider: callProvider, timeout: 60000, signal } // 【终止按钮】
   );
 
   // ── Phase 5: Parse bilingual JSON response ──
@@ -1425,7 +1425,7 @@ export async function analyzeConversation({ userId, accountId, jid, model: model
     ],
     {
       temperature: 0.7,
-      max_tokens: 2500,
+      max_tokens: 4096,
       model: modelId,
       provider,
       timeout: 60000,

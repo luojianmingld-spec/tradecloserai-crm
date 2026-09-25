@@ -10,6 +10,20 @@ import { getProviderById } from '../services/ai-client.js';
 const router = Router();
 const prisma = new PrismaClient();
 
+/**
+ * 综合分级（AI Grade）：A=高价值/B=意向中/C=普通/D=低值垃圾
+ * 依据 BANT 等级 + attitude 意向/紧迫度。
+ */
+export function computeAiGrade(bant, att) {
+  const bantLv = (bant && bant.level) || '';
+  const intent = (att && att.intentLevel) || '';
+  const urgency = (att && att.urgency) || '';
+  if (bantLv === 'HIGH' || intent === 'HIGH' || (intent === 'MEDIUM' && urgency === 'URGENT')) return 'A';
+  if (bantLv === 'LOW' && intent === 'LOW') return 'D';
+  if (bantLv === 'MEDIUM' || intent === 'MEDIUM') return 'B';
+  return 'C';
+}
+
 // ── Helpers ──────────────────────────────────────────────────────
 function normalizeJid(jid) {
   if (!jid || !jid.includes('@')) return [];
@@ -184,6 +198,10 @@ Analyze the customer's attitude based on their messages. Consider:
    - STABLE: Similar level of engagement
    - DECLINING: Less responsive, shorter messages, losing interest
 
+6. **Order Volume (采购量)**: Extract any purchase quantity / volume signals from the conversation: MOQ, order quantity, annual volume, order frequency, container count, etc. Examples: "5000pcs", "1-2 containers per month", "annual ~10000 units", "MOQ 500". If there is no clear volume signal, use "".
+
+7. **Is Junk (垃圾询盘)**: Is this inquiry likely a low-quality / invalid / spam lead (vague generic request, no real need, reseller spam, no purchase intent)? true or false.
+
 Respond with this exact JSON:
 {
   "intentLevel": "HIGH|MEDIUM|LOW",
@@ -191,6 +209,8 @@ Respond with this exact JSON:
   "urgency": "URGENT|NORMAL|PATIENT",
   "focusPoints": ["focus1", "focus2"],
   "trend": "IMPROVING|STABLE|DECLINING",
+  "orderVolume": "采购量线索，如 5000pcs/month；无则空字符串",
+  "isJunk": false,
   "confidenceScore": 0.85,
   "reasoning": "Brief explanation of the analysis"
 }`;
@@ -252,9 +272,28 @@ Respond with this exact JSON:
       },
     });
 
+    // 写回采购量到 Customer.requirementQuantity（复用已有字段）
+    try {
+      const volume = String(analysisResult.orderVolume || '').trim();
+      if (volume && customer && customer.id) {
+        await prisma.customer.update({ where: { id: customer.id }, data: { requirementQuantity: volume } });
+      }
+    } catch (e) { console.warn('[Attitude] save volume error:', e.message); }
+
+    // 综合分级 aiGrade 写回 Customer
+    try {
+      const grade = computeAiGrade(bant, analysisResult);
+      if (customer && customer.id) {
+        await prisma.customer.update({ where: { id: customer.id }, data: { aiGrade: grade, aiGradeAt: new Date() } });
+        console.log(`[Attitude] aiGrade=${grade} for customer#${customer.id}`);
+      }
+    } catch (e) { console.warn('[Attitude] save aigrade error:', e.message); }
+
     return {
       success: true,
       contactId: contact.id,
+      aiGrade: (() => { try { return computeAiGrade(bant, analysisResult); } catch { return 'C'; } })(),
+      orderVolume: String(analysisResult.orderVolume || '').trim() || null,
       intentLevel: saved.intentLevel,
       sentiment: saved.sentiment,
       urgency: saved.urgency,

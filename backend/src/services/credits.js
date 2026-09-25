@@ -94,6 +94,7 @@ export async function deductCredits(userId, amount = DEFAULT_AI_COST, reason = '
         reason,
         paymentMethod: extra.paymentMethod || null,
         orderId: extra.orderId || null,
+        model: extra.model || null,
       },
     });
   });
@@ -112,6 +113,7 @@ export async function addCredits(userId, amount, type = 'gift', reason = '', ext
         reason,
         paymentMethod: extra.paymentMethod || null,
         orderId: extra.orderId || null,
+        model: extra.model || null,
       },
     });
   });

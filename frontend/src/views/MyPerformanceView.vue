@@ -115,7 +115,7 @@ const replyRatio = computed(() => {
 async function loadData() {
   loading.value = true;
   try {
-    const res = await fetch('/api/dashboard/my-stats?period=' + period.value, {
+    const res = await fetch(window.__API_BASE__ + '/api/dashboard/my-stats?period=' + period.value, {
       headers: { Authorization: 'Bearer ' + localStorage.getItem('crm_token') },
     });
     if (res.ok) {

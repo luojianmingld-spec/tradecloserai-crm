@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
+import { importFromUrl } from '../services/product-import.service.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -185,6 +186,24 @@ router.post('/', authMiddleware, async (req, res) => {
   } catch (e) {
     console.error('[companyMaterials] POST error:', e);
     res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /import/url — 网址智能提取产品（复用产品知识库的 AI 提取能力）
+router.post('/import/url', authMiddleware, async (req, res) => {
+  try {
+    const { url, note } = req.body || {};
+    if (!url) return res.status(400).json({ success: false, error: 'url is required' });
+    let parsedUrl;
+    try { parsedUrl = new URL(url); } catch { return res.status(400).json({ success: false, error: '无效的网址' }); }
+    if (!/^https?:$/.test(parsedUrl.protocol)) return res.status(400).json({ success: false, error: '仅支持 http/https 网址' });
+
+    const result = await importFromUrl(url, note || '');
+    const products = result.products || [];
+    return res.json({ success: true, data: products, meta: result.meta || null });
+  } catch (e) {
+    console.error('[companyMaterials] URL import error:', e.message);
+    return res.status(500).json({ success: false, error: e.message || '提取失败，请重试' });
   }
 });
 

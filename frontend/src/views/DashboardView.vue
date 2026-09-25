@@ -397,7 +397,7 @@ function funnelHeight(count) {
 
 async function loadQuality() {
   try {
-    const res = await fetch('/api/dashboard/qualify-leads', {
+    const res = await fetch(window.__API_BASE__ + '/api/dashboard/qualify-leads', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' }
     });
@@ -407,7 +407,7 @@ async function loadQuality() {
 
 async function loadOverview() {
   try {
-    const res = await fetch('/api/dashboard/overview', {
+    const res = await fetch(window.__API_BASE__ + '/api/dashboard/overview', {
       headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
     });
     if (res.ok) overviewData.value = await res.json();

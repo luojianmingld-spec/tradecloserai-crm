@@ -10,7 +10,11 @@ export function initSocket() {
 
   if (socket?.connected) return socket;
 
-  socket = io({
+  // Detect Capacitor environment and use absolute URL
+  const isNativeApp = window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() !== 'web';
+  const socketUrl = isNativeApp ? 'http://45.76.223.251:3002' : undefined;
+  
+  socket = io(socketUrl, {
     auth: {
       userId: authStore.user?.id,
       token: authStore.token,
@@ -116,6 +120,9 @@ export function initSocket() {
   // Background check completed event
   socket.on('customer:bgcheck:done', (data) => {
     window.dispatchEvent(new CustomEvent('customer:bgcheck:done', { detail: data }));
+  });
+  socket.on('whatsapp:bg-ask', (data) => {
+    window.dispatchEvent(new CustomEvent('whatsapp:bg-ask', { detail: data }));
   });
 
   // BANT score completed event

@@ -1,4 +1,5 @@
 html, body { height: 100%; height: 100dvh; margin:0; padding:0; }
+[data-theme='light'] .aitalk-reply-chinese { color: #37474f !important; }
 :root {
   --sidebar-bg: #111b21;
   --sidebar-header-bg: #202c33;

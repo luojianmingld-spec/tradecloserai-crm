@@ -5,6 +5,7 @@ import { recordLidMapping, resolveToPhoneJid } from "../services/lid-mapping.js"
 import { detectLanguage, translateText, transcribeAudio } from "../services/ai.service.js";
 import { getTranslationSettings } from "./translation.js";
 import { autoFillCustomer, autoBackgroundCheck } from "./customers.js";
+import { analyzeAttitude } from "./attitude-analysis.js";
 import { inferCountry } from "../utils/phone-country.js";
 import autoReceptionService from "../services/auto-reception.service.js";
 import { notifyBoss, buildInquiryNotify } from "../services/wechat-boss-notify.service.js";
@@ -840,14 +841,23 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
     const phone = jidToPhone(remoteJid);
     const ownerInfo = await resolveAccountByInstance(instanceName);
     const upsertRes = await upsertCustomer(phone, pushName, remoteJid, ownerInfo?.account?.userId);
-    // 【新询盘通知】首次建档的新客户 + 入站消息 → 推送给老板微信（异步不阻塞）
+    // 【新询盘通知】首次建档的新客户 + 入站消息 → 分层推送老板微信（异步不阻塞）
     if (upsertRes && upsertRes.isNew && direction === 'inbound' && !duplicate) {
-      notifyBoss(buildInquiryNotify({
-        name: upsertRes.cust?.name || pushName || phone,
-        phone,
-        body,
-        ts: timestamp,
-      })).catch((e) => console.warn('[BossNotify] 新询盘通知异常:', e.message));
+      const _c = upsertRes.cust || {};
+      const grade = String(_c.aiGrade || '').toUpperCase();
+      // 降噪：已判为低值垃圾(D)的询盘不推；首次(空)或高/中/普通照推，避免丢单
+      if (grade !== 'D') {
+        const intentByGrade = { A: '🔥 高意向', B: '⚡ 中等意向', C: '一般意向' };
+        notifyBoss(buildInquiryNotify({
+          name: _c.name || pushName || phone,
+          phone,
+          body,
+          ts: timestamp,
+          aiGrade: grade,
+          intentLabel: intentByGrade[grade] || '',
+          orderVolume: _c.requirementQuantity || '',
+        })).catch((e) => console.warn('[BossNotify] 新询盘通知异常:', e.message));
+      }
     }
     if (ownerInfo) {
       syncContactPushName(ownerInfo.accountId, remoteJid, pushName);
@@ -864,6 +874,10 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
     autoFillCustomer(remoteJid, _ownerUid).catch(err => console.warn('[autoFill] async error:', err.message));
     // 自动背调（异步，不阻塞；7天冷却；需要公司名或联系人名）
     autoBackgroundCheck(remoteJid, _ownerUid, io).catch(err => console.warn('[autoBgCheck] async error:', err.message));
+    // 自动意向/采购量分析（异步，不阻塞；30min冷却）
+    triggerAttitudeAnalysis(remoteJid).catch(err => console.warn('[Attitude] auto error:', err.message));
+    // 🆕 二调识别：客户回复补全官网/邮箱/名片 → 自动二调 + 联动重分级
+    detectKeyInfoAndSecondBg(remoteJid, _ownerUid, body, type).catch(err => console.warn('[bg2nd] auto error:', err.message));
   }
 
   const lidNote = rawRemoteJid !== remoteJid ? ` [@lid->${remoteJid}]` : "";
@@ -871,6 +885,81 @@ async function processOneMessage(instanceName, msg, fromMe, rawRemoteJid, ownerJ
     const k = msg?.key || {};
   }
   console.log(`[Evolution Webhook] ${direction} jid=${convJid} me=${fromMe} type=${type} dup=${duplicate}${lidNote} text="${body.slice(0,50)}"`);
+
+/**
+ * 🆕 第二轮回调触发：识别客户回复是否补全了关键信息（官网URL/邮箱/名片图片），
+ * 补全后更新档案 + 自动触发第二轮深度背调 + 联动重分级（A/B/C/D）。
+ */
+async function detectKeyInfoAndSecondBg(remoteJid, userId, body, type) {
+  if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.startsWith('status@') || remoteJid.startsWith('broadcast') || /^0@/.test(remoteJid)) return { skipped: true, reason: 'not p2p' };
+  const pn = remoteJid.split('@')[0];
+  const variants = [remoteJid];
+  if (remoteJid.endsWith('@s.whatsapp.net')) variants.push(pn + '@c.us', pn + '@lid');
+  else if (remoteJid.endsWith('@c.us')) variants.push(pn + '@s.whatsapp.net', pn + '@lid');
+  else if (remoteJid.endsWith('@lid')) variants.push(pn + '@s.whatsapp.net', pn + '@c.us');
+  const cust = await prisma.customer.findFirst({ where: { jid: { in: variants } } });
+  if (!cust || !cust.id) return { skipped: true, reason: 'no customer' };
+
+  const text = String(body || '');
+  const data = {};
+
+  // 官网 URL → 补 website（提取域名；支持 http:// 与 www. 前缀）
+  const urlMatch = text.match(/(?:https?:\/\/)?(?:www\.)[^\s,;]+/i) || text.match(/https?:\/\/[^\s,;]+/i);
+  if (urlMatch) {
+    try {
+      let raw = urlMatch[0];
+      if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
+      const host = new URL(raw).hostname.replace(/^www\./, '').toLowerCase();
+      if (host.includes('.') && !host.includes('whatsapp') && cust.website !== host) data.website = host;
+    } catch (e) {}
+  }
+  // 邮箱 → 补 email（并提取其域名）
+  const emailMatch = text.match(/[\w.+-]+@([\w-]+\.)+[a-zA-Z]{2,}/i);
+  if (emailMatch) {
+    const em = emailMatch[0].toLowerCase();
+    if (cust.email !== em) data.email = em;
+  }
+  // 名片/图片附件
+  const isImage = ['image', 'ptt', 'document'].includes(String(type || '').toLowerCase());
+  const hasKeySignal = Object.keys(data).length > 0 || (isImage && !cust.website && !cust.email);
+
+  if (!hasKeySignal) return { skipped: true, reason: 'no key info to enrich' };
+
+  // 更新档案
+  if (Object.keys(data).length > 0) {
+    try { await prisma.customer.update({ where: { id: cust.id }, data }); } catch (e) { console.warn('[bg2nd] update cust err:', e.message); }
+  }
+
+  // 触发第二轮背调（force 跳过冷却；有公司名则走 runFullBackgroundCheck 深度二调）
+  let bg = { skipped: true };
+  try { bg = await autoBackgroundCheck(remoteJid, userId, null, true); } catch (e) { console.warn('[bg2nd] second bg err:', e.message); }
+
+  // 联动重分级（按新信息重算 aiGrade）
+  try { await analyzeAttitude(remoteJid); } catch (e) { console.warn('[bg2nd] attitude err:', e.message); }
+
+  console.log('[bg2nd] triggered jid=' + remoteJid + ' enriched=' + JSON.stringify(data) + ' bg=' + (bg.firstRound ? 'first' : (bg.rating || 'ok')));
+  return { skipped: false, enriched: data, secondBg: !bg.skipped };
+}
+
+/**
+ * 自动意向/采购量分析（带冷却：距上次 aiGrade 分析 <30min 跳过，避免空聊/高频耗积分）
+ */
+async function triggerAttitudeAnalysis(remoteJid) {
+  if (!remoteJid || remoteJid.includes('@g.us') || remoteJid.startsWith('status@') || remoteJid.startsWith('broadcast')) return { skipped: true };
+  const pn = remoteJid.split('@')[0];
+  const variants = [remoteJid];
+  if (remoteJid.endsWith('@s.whatsapp.net')) variants.push(pn + '@c.us', pn + '@lid');
+  else if (remoteJid.endsWith('@c.us')) variants.push(pn + '@s.whatsapp.net', pn + '@lid');
+  else if (remoteJid.endsWith('@lid')) variants.push(pn + '@s.whatsapp.net', pn + '@c.us');
+  const cust = await prisma.customer.findFirst({ where: { userId: 1, jid: { in: variants } } });
+  if (!cust) return { skipped: true, reason: 'no customer' };
+  if (cust.aiGradeAt) {
+    const elapsed = Date.now() - new Date(cust.aiGradeAt).getTime();
+    if (elapsed < 30 * 60 * 1000) return { skipped: true, reason: 'within 30min cooldown' };
+  }
+  // 需要已有对话（analyzeAttitude 内部会取最近消息），无数据则跳过
+  return analyzeAttitude(remoteJid);
+}
 
   // 入站消息实时推送；出站REST端已乐观推送，webhook回环跳过避免前端重复
   if (io && !duplicate && direction === "inbound") {

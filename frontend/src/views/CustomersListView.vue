@@ -4,6 +4,9 @@
     <div class="cust-header">
       <h2 class="page-title">👥 客户管理</h2>
       <div class="spacer"></div>
+      <button class="hdr-btn delete-btn" v-if="selectedIds.size > 0" @click="openDeleteDialog">
+        <span style="margin-right:4px">️</span><span class="btn-text">删除 ({{ selectedIds.size }})</span>
+      </button>
       <button class="hdr-btn assign-btn" @click="openAssignDialog">
         <span style="margin-right:4px">🤖</span><span class="btn-text">指派 Agent{{ selectedIds.size ? ' (' + selectedIds.size + ')' : '' }}</span>
       </button>
@@ -53,6 +56,7 @@
     <!-- 快捷筛选胶囊 -->
     <div class="chip-bar">
       <button class="chip" :class="{active: activeTab==='all' && !filters.level && !filters.status}" @click="switchTab('all')">全部</button>
+      <button class="chip" :class="{active: filters.aiGrade==='A'}" @click="filterByAiGrade('A')">🔥 高价值</button>
       <button class="chip" :class="{active: filters.status==='active'}" @click="filterByStatus('active')">🔥 活跃</button>
       <button class="chip" :class="{active: filters.status==='following'}" @click="filterByStatus('following')">📞 跟进中</button>
       <button class="chip" :class="{active: activeTab==='recent'}" @click="switchTab('recent')">🕐 最近</button>
@@ -105,6 +109,7 @@
                       <template v-else><span class="avatar-txt">{{ (displayName(c) || '?')[0].toUpperCase() }}</span></template>
                     </div>
                     <a class="name-link" @click.prevent="goDetail(c)">{{ displayName(c) }}</a>
+                    <span v-if="aiBadge(c)" :style="{background:aiBadge(c).bg,color:'#fff',fontSize:'11px',lineHeight:'16px',padding:'0 6px',borderRadius:'4px',marginLeft:'6px',flexShrink:0,whiteSpace:'nowrap'}">{{ aiBadge(c).label }}</span>
                     <span v-if="sourceBadge(c)" class="source-badge" :style="{background:sourceBadge(c).bg,color:sourceBadge(c).fg}">{{ sourceBadge(c).icon }} {{ sourceBadge(c).label }}</span>
                   </div>
                 </td>
@@ -291,6 +296,30 @@
         <button class="dlg-btn cancel" @click="showAssignDialog=false">取消</button>
         <button class="dlg-btn primary" :disabled="assigning" @click="doAssign">{{ assigning?'指派中...':'确认指派' }}</button>
       </template>
+    </el-dialog>
+
+    <el-dialog v-model="showDeleteDialog" title="🗑️ 删除客户" width="480px" class="cust-dialog" :append-to-body="true" :close-on-click-modal="false">
+      <div style="margin-bottom:16px">
+        <div style="color:var(--text-secondary);font-size:14px;margin-bottom:8px">
+          即将删除 <b style="color:var(--color-primary)">{{ selectedIds.size }}</b> 个客户，此操作不可恢复。
+        </div>
+        <div style="color:var(--text-muted);font-size:13px;margin-bottom:12px">
+          ️ 删除后该客户不会再自动建档（除非手动创建）。
+        </div>
+        <label style="font-size:14px;font-weight:600;display:block;margin-bottom:6px">删除理由</label>
+        <el-input
+          v-model="deleteReason"
+          type="textarea"
+          :rows="3"
+          placeholder="请填写删除理由（必填），AI 将记录以防重复建档"
+          maxlength="200"
+          show-word-limit
+        />
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="dlg-btn cancel" @click="showDeleteDialog = false">取消</button>
+        <button class="dlg-btn danger" :disabled="!deleteReason.trim()" @click="confirmDelete">确认删除</button>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -561,6 +590,7 @@ async function reload(p) {
     if (activeTab.value === 'recent') params.recent = '1';
     if (filters.value.level) params.level = filters.value.level;
     if (filters.value.status) params.status = filters.value.status;
+    if (filters.value.aiGrade) params.aiGrade = filters.value.aiGrade;
     params.isBusiness = 'true'; // L2: 客户管理列表只显示已确认的业务客户（计数同步）
     const qs = new URLSearchParams(params).toString();
     const { data } = await api.get('/customers?' + qs);
@@ -577,18 +607,28 @@ async function reload(p) {
 function onPageChange(p) { reload(p); }
 function switchTab(key) {
   activeTab.value = key;
-  filters.value.level = null; filters.value.status = null;
+  filters.value.level = null; filters.value.status = null; filters.value.aiGrade = null;
   reload(1);
 }
 function filterByLevel(lv) {
   if (filters.value.level === lv) { filters.value.level = null; }
-  else { filters.value.level = lv; filters.value.status = null; activeTab.value = 'all'; }
+  else { filters.value.level = lv; filters.value.status = null; filters.value.aiGrade = null; activeTab.value = 'all'; }
   reload(1);
 }
 function filterByStatus(st) {
   if (filters.value.status === st) { filters.value.status = null; }
-  else { filters.value.status = st; filters.value.level = null; activeTab.value = 'all'; }
+  else { filters.value.status = st; filters.value.level = null; filters.value.aiGrade = null; activeTab.value = 'all'; }
   reload(1);
+}
+function filterByAiGrade(g) {
+  if (filters.value.aiGrade === g) { filters.value.aiGrade = null; }
+  else { filters.value.aiGrade = g; filters.value.level = null; filters.value.status = null; activeTab.value = 'all'; }
+  reload(1);
+}
+function aiBadge(c) {
+  const g = String((c && c.aiGrade) || '').toUpperCase();
+  const m = { A: { label: '🔥 高', bg: '#ef4444' }, B: { label: '⚡ 中', bg: '#f59e0b' }, D: { label: '💤 低', bg: '#94a3b8' } };
+  return m[g] || null;
 }
 function onSearch() { reload(1); }
 function onSearchInput() {
@@ -628,7 +668,38 @@ const ASSIGN_AGENTS = [
 const showAssignDialog = ref(false);
 const assignAgentType = ref('sales-champion');
 const assignInstruction = ref('');
+const showDeleteDialog = ref(false);
+const deleteReason = ref('');
+const deleteLoading = ref(false);
 const assigning = ref(false);
+
+function openDeleteDialog() {
+  if (selectedIds.value.size === 0) { ElMessage.warning('请先勾选要删除的客户'); return; }
+  deleteReason.value = '';
+  showDeleteDialog.value = true;
+}
+
+async function confirmDelete() {
+  if (!deleteReason.value.trim()) { ElMessage.warning('请填写删除理由'); return; }
+  deleteLoading.value = true;
+  try {
+    const ids = Array.from(selectedIds.value);
+    const { data } = await api.post('/customers/batch-delete', {
+      ids,
+      reason: deleteReason.value.trim()
+    });
+    ElMessage.success(`已删除 ${data.deleted} 个客户`);
+    showDeleteDialog.value = false;
+    selectedIds.value.clear();
+  } catch (e) {
+    console.error('[Delete] error:', e);
+    ElMessage.error(e?.response?.data?.error || '删除失败');
+    return;
+  } finally {
+    deleteLoading.value = false;
+  }
+  await reload();
+}
 
 function openAssignDialog() {
   if (selectedIds.value.size === 0) { ElMessage.warning('请先勾选要指派的客户'); return; }
@@ -856,6 +927,7 @@ onMounted(() => reload(1));
 .kpi-num.level-c-num { color:#6b7280; }
 .kpi-num.level-d-num { color:#374151; }
 .kpi-num.kpi-num-pending { color:#6366f1; }
+.delete-btn { background:var(--color-danger, #e74c3c) !important; }
 .assign-btn { background: var(--mgmt-whatsapp); border:none; color:#fff; padding:8px 14px; border-radius:6px; cursor:pointer; font-size:14px; display:flex; align-items:center; font-weight:500; margin-right:8px; }
 .assign-tip { font-size:12px; color: var(--mgmt-text-secondary); margin-bottom:10px; }
 .assign-agents { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-bottom:12px; }

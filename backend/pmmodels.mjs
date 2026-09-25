@@ -1,0 +1,11 @@
+import { getProviders } from './src/services/ai-client.js';
+import { getAvailableModels } from './src/services/ai.service.js';
+import { MODEL_COST_MAP } from './src/services/credits.js';
+const p = await getProviders();
+console.log('=== getProviders (raw) ===');
+for (const x of p) console.log(JSON.stringify({id:x.id, name:x.name, model:x.model, provider:x.provider, isDefault:x.isDefault}));
+const m = await getAvailableModels();
+console.log('=== getAvailableModels ===');
+for (const x of m) console.log(JSON.stringify({key:x.key, id:x.id, name:x.name, creditCost:x.creditCost, isDefault:x.isDefault}));
+console.log('=== MODEL_COST_MAP keys ===');
+console.log(JSON.stringify(MODEL_COST_MAP));

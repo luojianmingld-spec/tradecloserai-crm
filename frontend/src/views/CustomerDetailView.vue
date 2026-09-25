@@ -287,6 +287,37 @@
         </template>
       </div>
 
+      <!-- BG Tab (背调报告) -->
+      <div v-if="activeTab==='bg'" class="tab-pane">
+        <div class="info-group">
+          <div class="grp-title">⚖ 企业真实度评级</div>
+          <div class="bg-row" v-if="bgGrade.brand.emoji">
+            <span class="bg-dot" :style="{background:bgGrade.brand.color}"></span>
+            <span class="bg-name">品牌与经营真实性</span>
+            <span class="bg-score">{{ bgGrade.brand.score ? bgGrade.brand.score+'/5' : '待核实' }}</span>
+          </div>
+          <div class="bg-row" v-if="bgGrade.kyb.emoji">
+            <span class="bg-dot" :style="{background:bgGrade.kyb.color}"></span>
+            <span class="bg-name">法定主体完整度 KYB</span>
+            <span class="bg-score">{{ bgGrade.kyb.score ? bgGrade.kyb.score+'/5' : '待核实' }}</span>
+            <span class="bg-kyb-tag" v-if="bgGrade.kyb.emoji!=='🟢'">待核实</span>
+          </div>
+          <div class="bg-row" v-if="aiGradeBadge()">
+            <span class="bg-name">🤖 AI客户分级</span>
+            <span :style="{background:aiGradeBadge().bg,color:'#fff',fontSize:'11px',padding:'1px 8px',borderRadius:'4px',marginLeft:'4px'}">{{ aiGradeBadge().label }}</span>
+          </div>
+        </div>
+        <div class="info-group">
+          <div class="grp-title">📄 背调报告</div>
+          <pre v-if="customer.bgReport" class="bg-report-pre">{{ customer.bgReport }}</pre>
+          <div v-else class="empty-state">
+            <div style="font-size:40px;opacity:0.3">🔍</div>
+            <div class="empty-desc">暂无背调报告。可到沟通窗口的客户面板或列表页发起背调。</div>
+          </div>
+          <div class="bg-time" v-if="customer.bgUpdatedAt">背调时间：{{ fmtDateTime(customer.bgUpdatedAt) }}</div>
+        </div>
+      </div>
+
       <!-- Chat Tab -->
       <div v-if="activeTab==='chat'" class="tab-pane">
         <div class="tab-toolbar">
@@ -408,6 +439,7 @@
             <div class="att-card">
               <div class="att-card-hdr">
                 <span class="att-label">最新分析</span>
+                <span v-if="aiGradeBadge()" :style="{background:aiGradeBadge().bg,color:'#fff',fontSize:'11px',lineHeight:'16px',padding:'0 6px',borderRadius:'4px',marginLeft:'8px'}">{{ aiGradeBadge().label }}</span>
                 <span class="att-time muted">{{ fmtDateTime(latestAttitude.analyzedAt) }}</span>
               </div>
               <div class="att-metrics">
@@ -663,6 +695,7 @@ const tabs = [
   { key: 'follow', label: '📝 跟进' },
   { key: 'attitude', label: '🧠 态度' },
   { key: 'suggestions', label: '💡 建议' },
+  { key: 'bg', label: '🔍 背调' },
 ];
 
 // Docs
@@ -860,6 +893,27 @@ const attTrendLoading = ref(false);
 const latestAttitude = computed(() => {
   if (!attitudes.value.length) return {};
   return attitudes.value[0]; // most recent
+});
+function aiGradeBadge() {
+  const g = String((customer.value && customer.value.aiGrade) || '').toUpperCase();
+  const m = { A: { label: '🔥 高价值', bg: '#ef4444' }, B: { label: '⚡ 中意向', bg: '#f59e0b' }, D: { label: '💤 低价值', bg: '#94a3b8' } };
+  return m[g] || null;
+}
+const bgGrade = computed(() => {
+  const r = { brand: { emoji:'', score:'', color:'' }, kyb: { emoji:'', score:'', color:'' } };
+  const text = (customer.value && customer.value.bgReport) || '';
+  if (!text) return r;
+  for (const ln of text.split(/\n/)) {
+    const em = ln.match(/[🟢🟡🔴]/);
+    if (!em) continue;
+    const isKyb = ln.indexOf('法定主体完整度') >= 0;
+    if (!isKyb && ln.indexOf('品牌与经营真实性') < 0) continue;
+    const sc = ln.match(/([0-9])\s*\/\s*5/);
+    const key = isKyb ? 'kyb' : 'brand';
+    const color = em[0] === '🟢' ? '#16a34a' : em[0] === '🟡' ? '#ca8a04' : '#dc2626';
+    r[key] = { emoji: em[0], score: sc ? sc[1] : '', color };
+  }
+  return r;
 });
 function intentLabel(v) { return ({HIGH:'🔥 高',MEDIUM:'⚡ 中',LOW:'💤 低'})[v] || v || '—'; }
 function sentimentLabel(v) { return ({POSITIVE:'😊 积极',NEUTRAL:'😐 中性',NEGATIVE:'😠 消极'})[v] || v || '—'; }
@@ -1326,4 +1380,11 @@ onMounted(load);
 .aa-desc { font-size:11px; color: var(--mgmt-text-secondary); }
 .aa-check { color: var(--mgmt-whatsapp); font-weight:700; font-size:16px; }
 .assign-input { width:100%; box-sizing:border-box; padding:8px 10px; border-radius:8px; border:1px solid var(--mgmt-input-border, rgba(0,0,0,.12)); font-size:13px; resize:vertical; }
+.bg-row { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:13px; }
+.bg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.bg-name { color:var(--mgmt-text, #333); font-weight:600; }
+.bg-score { color:#666; }
+.bg-kyb-tag { background:#fef3c7; color:#b45309; font-size:11px; padding:1px 8px; border-radius:10px; }
+.bg-time { margin-top:8px; color:#999; font-size:12px; }
+.bg-report-pre { white-space:pre-wrap; word-break:break-word; font-family:inherit; font-size:13px; line-height:1.7; color:var(--mgmt-text,#333); background:var(--mgmt-bg-soft, rgba(0,0,0,.03)); padding:12px; border-radius:8px; max-height:520px; overflow:auto; }
 </style>

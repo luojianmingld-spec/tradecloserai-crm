@@ -1,0 +1,2301 @@
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+[Fraud Scheduler] Started, auto-scan daily
+[Production] Serving frontend from: /opt/whatsapp-crm-staging/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Seed] Database not ready, running db push...
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "crm_staging", schema "public" at "localhost:5432"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v6.8.2) to ./node_modules/@prisma/client in 482ms
+
+[Server] Sessions dir: /opt/whatsapp-crm-staging/backend/sessions
+[WA Sync] contact sync scheduler started (interval 5min)
+[Production] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[2026-09-20T06:41:40.355Z] [production] [INFO] [Server] listening on port 3003, env=production
+[33m[2026-09-20T06:41:40.357] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=wa_whatsapp1_mtc3zz7c
+[Startup] Webhook reset disabled (ENABLE_WEBHOOK_RESET != true), skip WA instance webhook reset
+[33m[2026-09-20T06:41:40.375] [INFO] - [Connecting to 149.154.175.53:80/TCPFull...][0m
+[Reminder Scheduler] Starting...
+[Reminder Scheduler] Started, checking every 30s
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[wa-avatar] Loaded WA instances from DB: wa_whatsapp1_mtc3zz7c, wa_whatsapp2_mtyiwrio, wa_whatsapp1_mtld53is
+[Evolution Connector] state=open
+[33m[2026-09-20T06:41:40.596] [INFO] - [Connection to 149.154.175.53:80/TCPFull complete!][0m
+[33m[2026-09-20T06:41:40.596] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: Jeremy8559
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=3389 qts=0
+[TG-UB] Starting message polling (every 120s)...
+[TG-UB] Auto-connected: Jeremy8559
+[TG-UB] Raw update #1: VirtualClass
+[TG-UB] Raw update #2: VirtualClass
+[TG-UB] Initialized 65 known msg IDs, pollStartTime=1789886471
+[Socket] User 1 connected (socket: TexF0-vsDOftfFTcAAAB)
+[Backfill] Loaded instances from DB: wa_whatsapp1_mtc3zz7c, wa_whatsapp1_mtld53is, wa_whatsapp2_mtyiwrio
+[Backfill] Session map: {"wa_whatsapp1_mtc3zz7c":"user_9","wa_whatsapp1_mtld53is":"user_15","wa_whatsapp2_mtyiwrio":"user_17"}
+[Backfill] Owner JIDs: {"wa_whatsapp1_mtc3zz7c":"8613016242602@s.whatsapp.net","wa_whatsapp1_mtld53is":"8613016242602@s.whatsapp.net","wa_whatsapp2_mtyiwrio":"8613016242602@s.whatsapp.net"}
+[Socket] User 1 connected (socket: EnX4JfF4FgOazI7wAAAD)
+[TG-UB] Raw update #3: VirtualClass
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[TG-UB] Raw update #6: VirtualClass
+[TG-UB] Raw update #7: VirtualClass
+[TG-UB] NewMessage from 6451398844 text: 你说话呀   我这样子一直等也不是办法
+[TG-UB] Incoming message: 6451398844 你说话呀   我这样子一直等也不是办法
+[TG-UB] Raw update #8: VirtualClass
+[TG-UB] UpdateShortMessage from 6451398844 text: 你说话呀   我这样子一直等也不是办法
+[TG-UB] Incoming message: 6451398844 你说话呀   我这样子一直等也不是办法
+[TG-UB] Skip duplicate onMessage: 6451398844_1329_in
+[33m[2026-09-20T06:42:17.680] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:42:18.084] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[TG-UB] NewMessage from 6451398844 text: 不是吗
+[TG-UB] Incoming message: 6451398844 不是吗
+[TG-UB] Raw update #10: VirtualClass
+[TG-UB] UpdateShortMessage from 6451398844 text: 不是吗
+[TG-UB] Incoming message: 6451398844 不是吗
+[TG-UB] Skip duplicate onMessage: 6451398844_1330_in
+[33m[2026-09-20T06:42:19.196] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:42:20.584] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-20T06:42:20.584] [INFO] - [Exporting authorization for data center 91.108.56.183 with layer 198][0m
+[TG-UB] Raw update #12: VirtualClass
+[TG-UB] NewMessage from 6451398844 text: 还约不约呢
+[TG-UB] Incoming message: 6451398844 还约不约呢
+[TG-UB] Raw update #14: VirtualClass
+[TG-UB] UpdateShortMessage from 6451398844 text: 还约不约呢
+[TG-UB] Incoming message: 6451398844 还约不约呢
+[TG-UB] Skip duplicate onMessage: 6451398844_1331_in
+[33m[2026-09-20T06:42:38.095] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Automation Scheduler] Running check at 2026-09-20T06:42:40.386Z
+[35m[2026-09-20T06:43:08.095] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:43:08.096] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T06:43:08.096] [INFO] - [connection closed][0m
+[33m[2026-09-20T06:43:10.048] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:43:10.048] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T06:43:10.115] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[33m[2026-09-20T06:43:11.061] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:43:11.062] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:43:11.256] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:43:11.662] [INFO] - [File lives in another DC][0m
+[33m[2026-09-20T06:43:15.700] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 6451398844@telegram
+[33m[2026-09-20T06:43:16.814] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:43:17.814] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:43:18.124] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:43:18.651] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:43:19.458] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:43:19.661] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 100) for 6451398844@telegram
+[WA Send] resolve default account failed: 
+Invalid `prisma.whatsAppAccount.findFirst()` invocation:
+
+{
+  where: {
+    userId: 1,
+    platform: "whatsapp",
+    instanceName: {
+      not: null
+    }
+  },
+  orderBy: {
+    updatedAt: "desc",
+    ~~~~~~~~~
+?   id?: SortOrder,
+?   userId?: SortOrder,
+?   platform?: SortOrder,
+?   phone?: SortOrder | SortOrderInput,
+?   name?: SortOrder | SortOrderInput,
+?   pushName?: SortOrder | SortOrderInput,
+?   status?: SortOrder,
+?   sessionDir?: SortOrder | SortOrderInput,
+?   avatarUrl?: SortOrder | SortOrderInput,
+?   telegramBotToken?: SortOrder | SortOrderInput,
+?   telegramBotUsername?: SortOrder | SortOrderInput,
+?   telegramBotInfo?: SortOrder | SortOrderInput,
+?   telegramProxyProtocol?: SortOrder | SortOrderInput,
+?   telegramProxyHost?: SortOrder | SortOrderInput,
+?   telegramProxyPort?: SortOrder | SortOrderInput,
+?   telegramProxyUser?: SortOrder | SortOrderInput,
+?   telegramProxyPass?: SortOrder | SortOrderInput,
+?   createdAt?: SortOrder,
+?   lastActiveAt?: SortOrder | SortOrderInput,
+?   instanceName?: SortOrder | SortOrderInput,
+?   contacts?: ContactOrderByRelationAggregateInput,
+?   conversations?: ConversationOrderByRelationAggregateInput,
+?   messages?: MessageOrderByRelationAggregateInput,
+?   user?: UserOrderByWithRelationInput
+  },
+  select: {
+    id: true,
+    instanceName: true
+  }
+}
+
+Unknown argument `updatedAt`. Did you mean `createdAt`? Available options are marked with ?.
+[TG-UB] Poll found OUTGOING message to 6451398844 text: 这个平台套路深
+[TG-UB] Incoming message: 6451398844 这个平台套路深
+[TG-UB] Poll found message from 6451398844 text: 还约不约呢
+[TG-UB] Incoming message: 6451398844 还约不约呢
+[TG-UB] Skip duplicate onMessage: 6451398844_1331_in
+[TG-UB] Poll found message from 6451398844 text: 不是吗
+[TG-UB] Incoming message: 6451398844 不是吗
+[TG-UB] Skip duplicate onMessage: 6451398844_1330_in
+[TG-UB] Poll found message from 6451398844 text: 你说话呀   我这样子一直等也不是办法
+[TG-UB] Incoming message: 6451398844 你说话呀   我这样子一直等也不是办法
+[TG-UB] Skip duplicate onMessage: 6451398844_1329_in
+[33m[2026-09-20T06:43:44.036] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[WA Send] resolve default account failed: 
+Invalid `prisma.whatsAppAccount.findFirst()` invocation:
+
+{
+  where: {
+    userId: 1,
+    platform: "whatsapp",
+    instanceName: {
+      not: null
+    }
+  },
+  orderBy: {
+    updatedAt: "desc",
+    ~~~~~~~~~
+?   id?: SortOrder,
+?   userId?: SortOrder,
+?   platform?: SortOrder,
+?   phone?: SortOrder | SortOrderInput,
+?   name?: SortOrder | SortOrderInput,
+?   pushName?: SortOrder | SortOrderInput,
+?   status?: SortOrder,
+?   sessionDir?: SortOrder | SortOrderInput,
+?   avatarUrl?: SortOrder | SortOrderInput,
+?   telegramBotToken?: SortOrder | SortOrderInput,
+?   telegramBotUsername?: SortOrder | SortOrderInput,
+?   telegramBotInfo?: SortOrder | SortOrderInput,
+?   telegramProxyProtocol?: SortOrder | SortOrderInput,
+?   telegramProxyHost?: SortOrder | SortOrderInput,
+?   telegramProxyPort?: SortOrder | SortOrderInput,
+?   telegramProxyUser?: SortOrder | SortOrderInput,
+?   telegramProxyPass?: SortOrder | SortOrderInput,
+?   createdAt?: SortOrder,
+?   lastActiveAt?: SortOrder | SortOrderInput,
+?   instanceName?: SortOrder | SortOrderInput,
+?   contacts?: ContactOrderByRelationAggregateInput,
+?   conversations?: ConversationOrderByRelationAggregateInput,
+?   messages?: MessageOrderByRelationAggregateInput,
+?   user?: UserOrderByWithRelationInput
+  },
+  select: {
+    id: true,
+    instanceName: true
+  }
+}
+
+Unknown argument `updatedAt`. Did you mean `createdAt`? Available options are marked with ?.
+[35m[2026-09-20T06:43:49.459] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:43:49.459] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:43:49.459] [INFO] - [connection closed][0m
+[WA Send] resolve default account failed: 
+Invalid `prisma.whatsAppAccount.findFirst()` invocation:
+
+{
+  where: {
+    userId: 1,
+    platform: "whatsapp",
+    instanceName: {
+      not: null
+    }
+  },
+  orderBy: {
+    updatedAt: "desc",
+    ~~~~~~~~~
+?   id?: SortOrder,
+?   userId?: SortOrder,
+?   platform?: SortOrder,
+?   phone?: SortOrder | SortOrderInput,
+?   name?: SortOrder | SortOrderInput,
+?   pushName?: SortOrder | SortOrderInput,
+?   status?: SortOrder,
+?   sessionDir?: SortOrder | SortOrderInput,
+?   avatarUrl?: SortOrder | SortOrderInput,
+?   telegramBotToken?: SortOrder | SortOrderInput,
+?   telegramBotUsername?: SortOrder | SortOrderInput,
+?   telegramBotInfo?: SortOrder | SortOrderInput,
+?   telegramProxyProtocol?: SortOrder | SortOrderInput,
+?   telegramProxyHost?: SortOrder | SortOrderInput,
+?   telegramProxyPort?: SortOrder | SortOrderInput,
+?   telegramProxyUser?: SortOrder | SortOrderInput,
+?   telegramProxyPass?: SortOrder | SortOrderInput,
+?   createdAt?: SortOrder,
+?   lastActiveAt?: SortOrder | SortOrderInput,
+?   instanceName?: SortOrder | SortOrderInput,
+?   contacts?: ContactOrderByRelationAggregateInput,
+?   conversations?: ConversationOrderByRelationAggregateInput,
+?   messages?: MessageOrderByRelationAggregateInput,
+?   user?: UserOrderByWithRelationInput
+  },
+  select: {
+    id: true,
+    instanceName: true
+  }
+}
+
+Unknown argument `updatedAt`. Did you mean `createdAt`? Available options are marked with ?.
+[WA Send] resolve default account failed: 
+Invalid `prisma.whatsAppAccount.findFirst()` invocation:
+
+{
+  where: {
+    userId: 1,
+    platform: "whatsapp",
+    instanceName: {
+      not: null
+    }
+  },
+  orderBy: {
+    updatedAt: "desc",
+    ~~~~~~~~~
+?   id?: SortOrder,
+?   userId?: SortOrder,
+?   platform?: SortOrder,
+?   phone?: SortOrder | SortOrderInput,
+?   name?: SortOrder | SortOrderInput,
+?   pushName?: SortOrder | SortOrderInput,
+?   status?: SortOrder,
+?   sessionDir?: SortOrder | SortOrderInput,
+?   avatarUrl?: SortOrder | SortOrderInput,
+?   telegramBotToken?: SortOrder | SortOrderInput,
+?   telegramBotUsername?: SortOrder | SortOrderInput,
+?   telegramBotInfo?: SortOrder | SortOrderInput,
+?   telegramProxyProtocol?: SortOrder | SortOrderInput,
+?   telegramProxyHost?: SortOrder | SortOrderInput,
+?   telegramProxyPort?: SortOrder | SortOrderInput,
+?   telegramProxyUser?: SortOrder | SortOrderInput,
+?   telegramProxyPass?: SortOrder | SortOrderInput,
+?   createdAt?: SortOrder,
+?   lastActiveAt?: SortOrder | SortOrderInput,
+?   instanceName?: SortOrder | SortOrderInput,
+?   contacts?: ContactOrderByRelationAggregateInput,
+?   conversations?: ConversationOrderByRelationAggregateInput,
+?   messages?: MessageOrderByRelationAggregateInput,
+?   user?: UserOrderByWithRelationInput
+  },
+  select: {
+    id: true,
+    instanceName: true
+  }
+}
+
+Unknown argument `updatedAt`. Did you mean `createdAt`? Available options are marked with ?.
+[33m[2026-09-20T06:45:36.784] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:45:36.785] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:45:37.010] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:45:37.243] [INFO] - [File lives in another DC][0m
+[TG-UB] Poll found OUTGOING message to 6451398844 text: 直接过来
+[TG-UB] Incoming message: 6451398844 直接过来
+[TG-UB] Poll found OUTGOING message to 6451398844 text: 要约的话你单独约
+[TG-UB] Incoming message: 6451398844 要约的话你单独约
+[TG-UB] Poll found OUTGOING message to 6451398844 text: 我已经卸载了
+[TG-UB] Incoming message: 6451398844 我已经卸载了
+[33m[2026-09-20T06:45:44.038] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:45:44.255] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:45:44.257] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-20T06:46:07.010] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:46:07.010] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:46:07.011] [INFO] - [connection closed][0m
+[33m[2026-09-20T06:46:22.707] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[33m[2026-09-20T06:46:23.705] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:46:23.705] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:46:23.915] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG] Backfilled 0 new messages (total history: 16) for 7325442846@telegram
+[33m[2026-09-20T06:46:24.227] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for 7325442846@telegram
+[TG] Backfilled 0 new messages (total history: 56) for 3821755044@telegram
+[BatchRetranslate] Processed 20 messages, translated 0 for 3821755044@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[Fraud] scan done: clusters=0, penalized=0
+[35m[2026-09-20T06:46:53.916] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:46:53.916] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:46:53.916] [INFO] - [connection closed][0m
+[33m[2026-09-20T06:47:59.710] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:47:59.710] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:47:59.904] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:48:00.106] [INFO] - [File lives in another DC][0m
+[33m[2026-09-20T06:48:22.088] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:48:22.290] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T06:48:52.088] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:48:52.089] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:48:52.089] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+[33m[2026-09-20T06:50:31.920] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:50:31.920] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:50:32.108] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:50:32.306] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T06:51:02.109] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:51:02.109] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:51:02.109] [INFO] - [connection closed][0m
+[TG-UB] Raw update #71: VirtualClass
+[TG-UB] NewMessage from 6451398844 text: 不私约的
+[TG-UB] Incoming message: 6451398844 不私约的
+[TG-UB] Raw update #73: VirtualClass
+[TG-UB] UpdateShortMessage from 6451398844 text: 不私约的
+[TG-UB] Incoming message: 6451398844 不私约的
+[TG-UB] Skip duplicate onMessage: 6451398844_1336_in
+[33m[2026-09-20T06:51:24.740] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 6451398844 text: 什么套路深呢
+[TG-UB] Incoming message: 6451398844 什么套路深呢
+[TG-UB] Raw update #74: VirtualClass
+[TG-UB] UpdateShortMessage from 6451398844 text: 什么套路深呢
+[TG-UB] Incoming message: 6451398844 什么套路深呢
+[TG-UB] Skip duplicate onMessage: 6451398844_1337_in
+[33m[2026-09-20T06:51:29.779] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Poll found message from 6451398844 text: 什么套路深呢
+[TG-UB] Incoming message: 6451398844 什么套路深呢
+[TG-UB] Skip duplicate onMessage: 6451398844_1337_in
+[TG-UB] Poll found message from 6451398844 text: 不私约的
+[TG-UB] Incoming message: 6451398844 不私约的
+[TG-UB] Skip duplicate onMessage: 6451398844_1336_in
+[TG Backfill] media download error msgId=20213: -503: Timeout (caused by upload.GetFile)
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+[TG-UB] Raw update #79: VirtualClass
+[TG-UB] Raw update #80: VirtualClass
+[TG-UB] Raw update #83: VirtualClass
+[TG-UB] Raw update #84: VirtualClass
+[35m[2026-09-20T06:52:22.274] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:52:22.274] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T06:52:22.275] [INFO] - [connection closed][0m
+[TG-UB] Poll found OUTGOING message to 6451398844 text: 不私约就算了
+[TG-UB] Incoming message: 6451398844 不私约就算了
+[33m[2026-09-20T06:53:44.040] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:53:44.041] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T06:53:44.108] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-20T06:54:14.109] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:54:14.109] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T06:54:14.109] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 6451398844 text: 那没办法私约
+[TG-UB] Incoming message: 6451398844 那没办法私约
+[TG-UB] UpdateShortMessage from 6451398844 text: 那没办法私约
+[TG-UB] Incoming message: 6451398844 那没办法私约
+[TG-UB] Skip duplicate onMessage: 6451398844_1339_in
+[33m[2026-09-20T06:55:09.972] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:55:09.972] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T06:55:10.040] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from 6451398844 text: 你是新卡？
+[TG-UB] Incoming message: 6451398844 你是新卡？
+[TG-UB] UpdateShortMessage from 6451398844 text: 你是新卡？
+[TG-UB] Incoming message: 6451398844 你是新卡？
+[TG-UB] Skip duplicate onMessage: 6451398844_1340_in
+[33m[2026-09-20T06:55:15.988] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T06:55:20.652] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:55:20.993] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:55:21.260] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:55:21.260] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:55:21.448] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 6451398844@telegram
+[33m[2026-09-20T06:55:22.347] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:55:22.543] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 100) for 6451398844@telegram
+[33m[2026-09-20T06:55:25.258] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:55:25.718] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:55:25.960] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[TG] Backfilled 0 new messages (total history: 56) for 3821755044@telegram
+[BatchRetranslate] Processed 20 messages, translated 0 for 3821755044@telegram
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[TG] History fallback error (async): Could not find the input entity for {"userId":"1714667923","className":"PeerUser"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for 1714667923@telegram
+[TG-UB] Poll found message from 6451398844 text: 你是新卡？
+[TG-UB] Incoming message: 6451398844 你是新卡？
+[TG-UB] Skip duplicate onMessage: 6451398844_1340_in
+[TG-UB] Poll found message from 6451398844 text: 那没办法私约
+[TG-UB] Incoming message: 6451398844 那没办法私约
+[TG-UB] Skip duplicate onMessage: 6451398844_1339_in
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"2964913883","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[35m[2026-09-20T06:55:55.727] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:55:55.727] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:55:55.744] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 1) for 1425007136@telegram
+[TG] Backfilled 0 new messages (total history: 1) for 8880130885@telegram
+[TG] History fallback error (async): Could not find the input entity for {"userId":"1714667923","className":"PeerUser"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for 1714667923@telegram
+[33m[2026-09-20T06:56:08.237] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:56:08.238] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"2964913883","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[33m[2026-09-20T06:56:08.432] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:56:08.634] [INFO] - [File lives in another DC][0m
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[TG] Backfilled 0 new messages (total history: 56) for 3821755044@telegram
+[BatchRetranslate] Processed 20 messages, translated 0 for 3821755044@telegram
+[TG] Backfilled 0 new messages (total history: 16) for 7325442846@telegram
+[33m[2026-09-20T06:56:29.922] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:56:30.373] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:56:30.578] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for 7325442846@telegram
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[35m[2026-09-20T06:57:00.373] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:57:00.374] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:57:00.374] [INFO] - [connection closed][0m
+[33m[2026-09-20T06:57:13.313] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:57:13.313] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:57:13.507] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:57:13.709] [INFO] - [File lives in another DC][0m
+[33m[2026-09-20T06:57:39.637] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:57:39.839] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T06:58:09.638] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:58:09.638] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:58:09.638] [INFO] - [connection closed][0m
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[TG] History fallback error (async): Could not find the input entity for {"userId":"1714667923","className":"PeerUser"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for 1714667923@telegram
+[TG] Backfilled 0 new messages (total history: 1) for 1425007136@telegram
+[TG] Backfilled 0 new messages (total history: 1) for 8880130885@telegram
+[TG] History fallback error (async): Could not find the input entity for {"userId":"1714667923","className":"PeerUser"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for 1714667923@telegram
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"2964913883","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[33m[2026-09-20T06:58:50.829] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:58:50.829] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:58:51.027] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T06:58:51.283] [INFO] - [File lives in another DC][0m
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[TG] Backfilled 0 new messages (total history: 56) for 3821755044@telegram
+[BatchRetranslate] Processed 20 messages, translated 0 for 3821755044@telegram
+[33m[2026-09-20T06:59:09.960] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T06:59:10.436] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T06:59:10.643] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[35m[2026-09-20T06:59:40.436] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T06:59:40.436] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T06:59:40.436] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+[33m[2026-09-20T07:00:14.287] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:00:14.287] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:00:14.484] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:00:14.689] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:00:44.485] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:00:44.485] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:00:44.485] [INFO] - [connection closed][0m
+[33m[2026-09-20T07:01:00.748] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:01:00.748] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:01:00.973] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:01:01.205] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:01:30.976] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:01:30.976] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:01:30.977] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+[35m[2026-09-20T07:02:22.243] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:02:22.243] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:02:22.244] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T07:11:40.385Z
+[33m[2026-09-20T07:11:45.493] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:11:45.493] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:11:45.560] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-20T07:11:45.870] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:11:46.150] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:11:46.150] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:11:46.352] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 6451398844@telegram
+[33m[2026-09-20T07:11:47.156] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:11:47.320] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:11:47.524] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:11:47.528] [INFO] - [File lives in another DC][0m
+[33m[2026-09-20T07:11:47.735] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[TG] Backfilled 0 new messages (total history: 100) for 6451398844@telegram
+[TG] Backfilled 0 new messages (total history: 56) for 3821755044@telegram
+[BatchRetranslate] Processed 20 messages, translated 0 for 3821755044@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"2964913883","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[33m[2026-09-20T07:12:16.283] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:12:16.396] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:12:16.698] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:12:17.060] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 6451398844@telegram
+[33m[2026-09-20T07:12:17.270] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 100) for 6451398844@telegram
+[33m[2026-09-20T07:12:37.975] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:12:38.188] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:13:07.975] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:13:07.975] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:13:07.975] [INFO] - [connection closed][0m
+[33m[2026-09-20T07:13:13.461] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:13:13.639] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:13:13.931] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:13:13.931] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:13:14.156] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 6451398844@telegram
+[33m[2026-09-20T07:13:15.233] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:13:15.467] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 100) for 6451398844@telegram
+[33m[2026-09-20T07:13:27.329] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:13:27.747] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:13:27.983] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[33m[2026-09-20T07:13:34.976] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:13:35.209] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:14:04.976] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:14:04.977] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:14:04.977] [INFO] - [connection closed][0m
+[33m[2026-09-20T07:14:37.679] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:14:37.680] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:14:37.867] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:14:38.064] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+[35m[2026-09-20T07:15:07.867] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:15:07.867] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:15:07.868] [INFO] - [connection closed][0m
+[33m[2026-09-20T07:15:36.896] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:15:36.896] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:15:37.098] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:15:37.321] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:16:07.098] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:16:07.098] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:16:07.099] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 56) for -1003821755044@telegram
+[35m[2026-09-20T07:17:04.544] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:17:04.544] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:17:04.544] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 
+[TG-UB] Incoming message: -1003821755044 [MessageMediaDocument]
+[TG-UB] Incoming message: -1003821755044 [MessageMediaDocument]
+[TG-UB] Skip duplicate onMessage: -1003821755044_20253_in
+[33m[2026-09-20T07:24:22.371] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T07:24:22.371] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:24:22.566] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20253 type=MessageMediaDocument rawType=Message
+[33m[2026-09-20T07:24:22.776] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:24:22.978] [INFO] - [File lives in another DC][0m
+[33m[2026-09-20T07:24:22.978] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:24:23.045] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-20T07:24:52.776] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:24:52.776] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:24:52.777] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: [media]
+[TG-UB] Incoming message: -1003821755044 [media]
+[TG-UB] Skip duplicate onMessage: -1003821755044_20253_in
+[TG-UB Media] Download result: buf=buffer:108133616
+[TG-UB] Media downloaded: 01feb5507baa9c13a2ad23faef68fde0.jpg
+[35m[2026-09-20T07:34:36.100] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:34:36.101] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:34:36.101] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T07:41:40.385Z
+[33m[2026-09-20T07:44:04.408] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T07:44:04.408] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:44:04.476] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[BatchRetranslate] Processed 6 messages, translated 0 for -1003821755044@telegram
+[33m[2026-09-20T07:44:05.411] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:44:05.411] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:44:05.605] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:44:06.004] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:44:35.606] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:44:35.606] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:44:35.606] [INFO] - [connection closed][0m
+[33m[2026-09-20T07:46:37.887] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:46:37.888] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:46:38.076] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:46:38.272] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:47:08.076] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:47:08.076] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:47:08.077] [INFO] - [connection closed][0m
+[33m[2026-09-20T07:49:29.003] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T07:49:29.003] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:49:29.212] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T07:49:29.430] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T07:49:59.212] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:49:59.213] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:49:59.221] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 求Pm thx 🙏🏻
+[TG-UB] Incoming message: -1003821755044 求Pm thx 🙏🏻
+[TG-UB] Incoming message: -1003821755044 求Pm thx 🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20254_in
+[33m[2026-09-20T07:50:41.895] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T07:50:41.896] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:50:42.105] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T07:51:12.105] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:51:12.105] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T07:51:12.106] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 求Pm thx 🙏🏻
+[TG-UB] Incoming message: -1003821755044 求Pm thx 🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20254_in
+[TG] Backfilled 0 new messages (total history: 57) for -1003821755044@telegram
+[35m[2026-09-20T07:53:03.587] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T07:53:03.587] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T07:53:03.587] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T08:11:40.385Z
+[TG-UB] NewMessage from -1003821755044 text: 👑2026西班牙甲組聯賽👑
+9月20日 夜晚 10:15PM (日)
+馬德里體育會 vs 皇家馬
+[TG-UB] Incoming message: -1003821755044 👑2026西班牙甲組聯賽👑
+9月20日 夜晚 10:15PM (日)
+馬德里體育會 vs 皇家馬
+[TG-UB] Incoming message: -1003821755044 👑2026西班牙甲組聯賽👑
+9月20日 夜晚 10:15PM (日)
+馬德里體育會 vs 皇家馬
+[TG-UB] Skip duplicate onMessage: -1003821755044_20255_in
+[33m[2026-09-20T08:34:55.786] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T08:34:55.786] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:34:55.989] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaPhoto isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20255 type=MessageMediaPhoto rawType=Message
+[33m[2026-09-20T08:34:56.204] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T08:34:56.204] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T08:34:56.272] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:388261
+[TG-UB] Media downloaded: d017e05c45b1815d8134c7238b197770.jpg
+[35m[2026-09-20T08:35:25.991] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T08:35:25.991] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:35:25.991] [INFO] - [connection closed][0m
+[35m[2026-09-20T08:35:27.417] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T08:35:27.417] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T08:35:27.417] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 👑2026西班牙甲組聯賽👑
+9月20日 夜晚 10:15PM (日)
+馬德里體育會 vs 皇家馬
+[TG-UB] Incoming message: -1003821755044 👑2026西班牙甲組聯賽👑
+9月20日 夜晚 10:15PM (日)
+馬德里體育會 vs 皇家馬
+[TG-UB] Skip duplicate onMessage: -1003821755044_20255_in
+[Automation Scheduler] Running check at 2026-09-20T08:41:40.385Z
+[TG-UB] NewMessage from -1003821755044 text: 有冇男
+[TG-UB] Incoming message: -1003821755044 有冇男
+[TG-UB] Incoming message: -1003821755044 有冇男
+[TG-UB] Skip duplicate onMessage: -1003821755044_20256_in
+[33m[2026-09-20T08:55:49.357] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T08:55:49.357] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:55:49.559] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] NewMessage from -1003821755044 text: 男朋友想3p
+[TG-UB] Incoming message: -1003821755044 男朋友想3p
+[TG-UB] Incoming message: -1003821755044 男朋友想3p
+[TG-UB] Skip duplicate onMessage: -1003821755044_20257_in
+[33m[2026-09-20T08:55:58.737] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-20T08:56:28.740] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T08:56:28.740] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:56:28.740] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 唔比
+[TG-UB] Incoming message: -1003821755044 唔比
+[TG-UB] Incoming message: -1003821755044 唔比
+[TG-UB] Skip duplicate onMessage: -1003821755044_20258_in
+[33m[2026-09-20T08:56:40.642] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T08:56:40.643] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:56:40.836] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T08:57:10.836] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T08:57:10.836] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:57:10.837] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: Ok
+[TG-UB] Incoming message: -1003821755044 Ok
+[TG-UB] Incoming message: -1003821755044 Ok
+[TG-UB] Skip duplicate onMessage: -1003821755044_20259_in
+[33m[2026-09-20T08:57:14.064] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T08:57:14.064] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:57:14.258] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: Ok
+[TG-UB] Incoming message: -1003821755044 Ok
+[TG-UB] Skip duplicate onMessage: -1003821755044_20259_in
+[TG-UB] Poll found message from -1003821755044 text: 唔比
+[TG-UB] Incoming message: -1003821755044 唔比
+[TG-UB] Skip duplicate onMessage: -1003821755044_20258_in
+[35m[2026-09-20T08:57:44.259] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T08:57:44.259] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T08:57:44.259] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T09:11:40.385Z
+[Socket] User 1 disconnected (socket: EnX4JfF4FgOazI7wAAAD, reason: ping timeout)
+[Socket] User 1 disconnected (socket: TexF0-vsDOftfFTcAAAB, reason: ping timeout)
+[Socket] User 1 connected (socket: 2GHbnl-U7iRsmbqVAAAF)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[33m[2026-09-20T09:22:34.386] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T09:22:34.386] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T09:22:34.453] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-20T09:22:35.124] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T09:22:35.124] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:22:35.318] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T09:22:35.522] [INFO] - [File lives in another DC][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[BatchRetranslate] Processed 11 messages, translated 1 for -1003821755044@telegram
+[33m[2026-09-20T09:22:45.831] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T09:22:45.991] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T09:22:46.300] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T09:22:47.191] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T09:22:47.393] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 6451398844@telegram
+[TG] Backfilled 0 new messages (total history: 100) for 6451398844@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[35m[2026-09-20T09:23:17.192] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T09:23:17.192] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:23:17.201] [INFO] - [connection closed][0m
+[Socket] User 1 disconnected (socket: 2GHbnl-U7iRsmbqVAAAF, reason: transport close)
+[33m[2026-09-20T09:23:26.450] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T09:23:26.451] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:23:26.676] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T09:23:26.911] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T09:23:56.676] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T09:23:56.676] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:23:56.685] [INFO] - [connection closed][0m
+[33m[2026-09-20T09:24:22.444] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T09:24:22.444] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:24:22.646] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T09:24:22.855] [INFO] - [File lives in another DC][0m
+[TG Backfill] media download error msgId=20213: -503: Timeout (caused by upload.GetFile)
+[TG] Backfilled 0 new messages (total history: 60) for -1003821755044@telegram
+[35m[2026-09-20T09:24:52.649] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T09:24:52.649] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:24:52.650] [INFO] - [connection closed][0m
+[35m[2026-09-20T09:24:54.225] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T09:24:54.225] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T09:24:54.225] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T09:41:40.386Z
+[Socket] User 1 connected (socket: s5XvG75vpJzhp74BAAAI)
+[Socket] User 1 connected (socket: 5-ppcD_grkcGhQDjAAAJ)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[TG-UB] NewMessage from -1003821755044 text: Pm pls 🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm pls 🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm pls 🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20260_in
+[33m[2026-09-20T09:48:21.918] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T09:48:21.918] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:48:22.119] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T09:48:52.119] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T09:48:52.119] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:48:52.120] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm pls 🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm pls 🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20260_in
+[TG-UB] NewMessage from -1003821755044 text: Pm thank you
+[TG-UB] Incoming message: -1003821755044 Pm thank you
+[TG-UB] Incoming message: -1003821755044 Pm thank you
+[TG-UB] Skip duplicate onMessage: -1003821755044_20261_in
+[33m[2026-09-20T09:57:52.718] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T09:57:52.718] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:57:52.927] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T09:58:22.928] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T09:58:22.928] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T09:58:22.929] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm thank you
+[TG-UB] Incoming message: -1003821755044 Pm thank you
+[TG-UB] Skip duplicate onMessage: -1003821755044_20261_in
+[Automation Scheduler] Running check at 2026-09-20T10:11:40.388Z
+[Automation Scheduler] Running check at 2026-09-20T10:41:40.389Z
+[Automation Scheduler] Running check at 2026-09-20T11:11:40.392Z
+[TG-UB] NewMessage from -1003821755044 text: Pm pls
+[TG-UB] Incoming message: -1003821755044 Pm pls
+[TG-UB] Incoming message: -1003821755044 Pm pls
+[TG-UB] Skip duplicate onMessage: -1003821755044_20262_in
+[33m[2026-09-20T11:17:12.113] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T11:17:12.113] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T11:17:12.301] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T11:17:42.302] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T11:17:42.302] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T11:17:42.303] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm pls
+[TG-UB] Incoming message: -1003821755044 Pm pls
+[TG-UB] Skip duplicate onMessage: -1003821755044_20262_in
+[Automation Scheduler] Running check at 2026-09-20T11:41:40.394Z
+[33m[2026-09-20T12:03:20.263] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T12:03:20.263] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T12:03:20.330] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-20T12:03:21.027] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T12:03:21.027] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:03:21.252] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T12:03:21.499] [INFO] - [File lives in another DC][0m
+[Socket] User 1 disconnected (socket: s5XvG75vpJzhp74BAAAI, reason: transport close)
+[Socket] User 1 disconnected (socket: 5-ppcD_grkcGhQDjAAAJ, reason: transport close)
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[Socket] User 1 connected (socket: WctuNJNMDT8wC3O5AAAL)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[33m[2026-09-20T12:03:32.511] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T12:03:32.745] [INFO] - [File lives in another DC][0m
+[BatchRetranslate] Processed 20 messages, translated 0 for 3821755044@telegram
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[BatchRetranslate] Processed 13 messages, translated 3 for -1003821755044@telegram
+[35m[2026-09-20T12:04:02.512] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:04:02.512] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:04:02.512] [INFO] - [connection closed][0m
+[33m[2026-09-20T12:04:31.574] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T12:04:31.574] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:04:31.762] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T12:04:31.960] [INFO] - [File lives in another DC][0m
+[33m[2026-09-20T12:04:44.853] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG] Backfilled 0 new messages (total history: 63) for 3821755044@telegram
+[35m[2026-09-20T12:05:01.763] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:05:01.763] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:05:01.763] [INFO] - [connection closed][0m
+[33m[2026-09-20T12:05:30.491] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T12:05:30.491] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:05:30.679] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T12:05:30.876] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T12:06:00.688] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:06:00.688] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:06:00.689] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 63) for -1003821755044@telegram
+[35m[2026-09-20T12:06:59.753] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:06:59.753] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T12:06:59.753] [INFO] - [connection closed][0m
+[Socket] User 1 disconnected (socket: WctuNJNMDT8wC3O5AAAL, reason: transport close)
+[Socket] User 1 connected (socket: GLJRYbXC2Ybl4CDqAAAN)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[Automation Scheduler] Running check at 2026-09-20T12:11:40.394Z
+[TG-UB] NewMessage from -1003821755044 text: Pm pls thztz
+[TG-UB] Incoming message: -1003821755044 Pm pls thztz
+[TG-UB] Incoming message: -1003821755044 Pm pls thztz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20263_in
+[33m[2026-09-20T12:31:26.740] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T12:31:26.740] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:31:26.942] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm pls thztz
+[TG-UB] Incoming message: -1003821755044 Pm pls thztz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20263_in
+[35m[2026-09-20T12:31:56.943] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:31:56.943] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:31:56.944] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T12:41:40.397Z
+[TG-UB] NewMessage from -1003821755044 text: 之前好似有3集，但只揾到兩集
+[TG-UB] Incoming message: -1003821755044 之前好似有3集，但只揾到兩集
+[TG-UB] Incoming message: -1003821755044 之前好似有3集，但只揾到兩集
+[TG-UB] Skip duplicate onMessage: -1003821755044_20264_in
+[33m[2026-09-20T12:53:25.011] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T12:53:25.011] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:53:25.208] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: 之前好似有3集，但只揾到兩集
+[TG-UB] Incoming message: -1003821755044 之前好似有3集，但只揾到兩集
+[TG-UB] Skip duplicate onMessage: -1003821755044_20264_in
+[35m[2026-09-20T12:53:55.208] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:53:55.209] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:53:55.209] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 師兄 分享下兩集🙏🏻
+[TG-UB] Incoming message: -1003821755044 師兄 分享下兩集🙏🏻
+[TG-UB] Incoming message: -1003821755044 師兄 分享下兩集🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20265_in
+[33m[2026-09-20T12:55:36.132] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T12:55:36.132] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:55:36.357] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: 師兄 分享下兩集🙏🏻
+[TG-UB] Incoming message: -1003821755044 師兄 分享下兩集🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20265_in
+[35m[2026-09-20T12:56:06.358] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:56:06.358] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:56:06.358] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: pm🙏🏾
+[TG-UB] Incoming message: -1003821755044 pm🙏🏾
+[TG-UB] Incoming message: -1003821755044 pm🙏🏾
+[TG-UB] Skip duplicate onMessage: -1003821755044_20266_in
+[33m[2026-09-20T12:58:14.417] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T12:58:14.417] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:58:14.618] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T12:58:44.620] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T12:58:44.620] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T12:58:44.621] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: pm🙏🏾
+[TG-UB] Incoming message: -1003821755044 pm🙏🏾
+[TG-UB] Skip duplicate onMessage: -1003821755044_20266_in
+[TG-UB] NewMessage from -1003821755044 text: 求PM thanks
+[TG-UB] Incoming message: -1003821755044 求PM thanks
+[TG-UB] Incoming message: -1003821755044 求PM thanks
+[TG-UB] Skip duplicate onMessage: -1003821755044_20267_in
+[33m[2026-09-20T13:00:17.603] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T13:00:17.603] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T13:00:17.790] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T13:00:47.793] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T13:00:47.793] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T13:00:47.793] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 求PM thanks
+[TG-UB] Incoming message: -1003821755044 求PM thanks
+[TG-UB] Skip duplicate onMessage: -1003821755044_20267_in
+[Automation Scheduler] Running check at 2026-09-20T13:11:40.400Z
+[Automation Scheduler] Running check at 2026-09-20T13:41:40.401Z
+[TG-UB] NewMessage from -1003821755044 text: PM plz
+[TG-UB] Incoming message: -1003821755044 PM plz
+[TG-UB] Incoming message: -1003821755044 PM plz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20268_in
+[33m[2026-09-20T13:49:25.708] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T13:49:25.708] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T13:49:25.902] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: PM plz
+[TG-UB] Incoming message: -1003821755044 PM plz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20268_in
+[35m[2026-09-20T13:49:55.903] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T13:49:55.903] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T13:49:55.904] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: Pm plz
+[TG-UB] Incoming message: -1003821755044 Pm plz
+[TG-UB] Incoming message: -1003821755044 Pm plz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20269_in
+[33m[2026-09-20T13:58:28.455] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T13:58:28.456] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T13:58:28.680] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T13:58:58.681] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T13:58:58.681] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T13:58:58.681] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm plz
+[TG-UB] Incoming message: -1003821755044 Pm plz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20269_in
+[Automation Scheduler] Running check at 2026-09-20T14:11:40.403Z
+[TG-UB] NewMessage from -1003821755044 text: Pm plz🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm plz🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm plz🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20270_in
+[33m[2026-09-20T14:38:14.777] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T14:38:14.777] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T14:38:14.972] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T14:38:44.974] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T14:38:44.974] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T14:38:44.974] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm plz🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm plz🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20270_in
+[Automation Scheduler] Running check at 2026-09-20T14:41:40.405Z
+[Automation Scheduler] Running check at 2026-09-20T15:11:40.406Z
+[Automation Scheduler] Running check at 2026-09-20T15:41:40.407Z
+[TG-UB] NewMessage from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20271_in
+[33m[2026-09-20T15:55:19.274] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T15:55:19.274] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T15:55:19.471] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] NewMessage from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20272_in
+[33m[2026-09-20T15:55:31.255] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20273_in
+[33m[2026-09-20T15:55:45.471] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Poll found message from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20273_in
+[TG-UB] Poll found message from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20272_in
+[TG-UB] Poll found message from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20271_in
+[TG-UB] NewMessage from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20274_in
+[33m[2026-09-20T15:55:55.286] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-20T15:56:25.289] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T15:56:25.289] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T15:56:25.289] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 求pm
+[TG-UB] Incoming message: -1003821755044 求pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20274_in
+[Automation Scheduler] Running check at 2026-09-20T16:11:40.408Z
+[TG-UB] NewMessage from -1003821755044 text: 求PM
+[TG-UB] Incoming message: -1003821755044 求PM
+[33m[2026-09-20T16:32:02.063] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T16:32:02.063] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[TG-UB] Incoming message: -1003821755044 求PM
+[TG-UB] Skip duplicate onMessage: -1003821755044_20275_in
+[33m[2026-09-20T16:32:02.257] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T16:32:32.258] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T16:32:32.258] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T16:32:32.258] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 求PM
+[TG-UB] Incoming message: -1003821755044 求PM
+[TG-UB] Skip duplicate onMessage: -1003821755044_20275_in
+[Automation Scheduler] Running check at 2026-09-20T16:41:40.411Z
+[Automation Scheduler] Running check at 2026-09-20T17:11:40.410Z
+[Automation Scheduler] Running check at 2026-09-20T17:41:40.412Z
+[TG-UB] NewMessage from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20276_in
+[33m[2026-09-20T18:04:19.300] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T18:04:19.300] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T18:04:19.495] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-20T18:04:49.497] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T18:04:49.497] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T18:04:49.498] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20276_in
+[Automation Scheduler] Running check at 2026-09-20T18:11:40.414Z
+[TG-UB] NewMessage from -1003821755044 text: Pm thx
+[TG-UB] Incoming message: -1003821755044 Pm thx
+[TG-UB] Incoming message: -1003821755044 Pm thx
+[TG-UB] Skip duplicate onMessage: -1003821755044_20277_in
+[33m[2026-09-20T18:27:37.876] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T18:27:37.876] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T18:27:38.070] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm thx
+[TG-UB] Incoming message: -1003821755044 Pm thx
+[TG-UB] Skip duplicate onMessage: -1003821755044_20277_in
+[35m[2026-09-20T18:28:08.073] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T18:28:08.073] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T18:28:08.074] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 想要
+[TG-UB] Incoming message: -1003821755044 想要
+[TG-UB] Incoming message: -1003821755044 想要
+[TG-UB] Skip duplicate onMessage: -1003821755044_20278_in
+[33m[2026-09-20T18:29:33.218] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T18:29:33.218] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T18:29:33.412] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: 想要
+[TG-UB] Incoming message: -1003821755044 想要
+[TG-UB] Skip duplicate onMessage: -1003821755044_20278_in
+[35m[2026-09-20T18:30:03.412] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T18:30:03.412] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T18:30:03.412] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T18:41:40.415Z
+[Automation Scheduler] Running check at 2026-09-20T19:11:40.416Z
+[Automation Scheduler] Running check at 2026-09-20T19:41:40.417Z
+[Automation Scheduler] Running check at 2026-09-20T20:11:40.418Z
+[Automation Scheduler] Running check at 2026-09-20T20:41:40.419Z
+[Automation Scheduler] Running check at 2026-09-20T21:11:40.421Z
+[Automation Scheduler] Running check at 2026-09-20T21:41:40.421Z
+[Automation Scheduler] Running check at 2026-09-20T22:11:40.422Z
+[TG-UB] NewMessage from -1003821755044 text: /botstat@GodKnowYouBot
+[TG-UB] Incoming message: -1003821755044 /botstat@GodKnowYouBot
+[TG-UB] Incoming message: -1003821755044 /botstat@GodKnowYouBot
+[TG-UB] Skip duplicate onMessage: -1003821755044_20279_in
+[33m[2026-09-20T22:37:55.594] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T22:37:55.594] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T22:37:55.789] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[Socket] User 1 connected (socket: hxIvrEClHxXv1aUdAAAP)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[35m[2026-09-20T22:38:25.789] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T22:38:25.790] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T22:38:25.790] [INFO] - [connection closed][0m
+[Socket] User 1 disconnected (socket: hxIvrEClHxXv1aUdAAAP, reason: transport close)
+[Automation Scheduler] Running check at 2026-09-20T22:41:40.423Z
+[TG-UB] NewMessage from -1003821755044 text: Pm 🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm 🙏🏻
+[33m[2026-09-20T22:53:42.578] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T22:53:42.579] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[TG-UB] Incoming message: -1003821755044 Pm 🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20280_in
+[33m[2026-09-20T22:53:42.781] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm 🙏🏻
+[TG-UB] Incoming message: -1003821755044 Pm 🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20280_in
+[35m[2026-09-20T22:54:12.780] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T22:54:12.780] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T22:54:12.781] [INFO] - [connection closed][0m
+[33m[2026-09-20T23:05:10.417] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-20T23:05:10.418] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T23:05:10.485] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-20T23:05:11.166] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T23:05:11.167] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:05:11.362] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T23:05:11.567] [INFO] - [File lives in another DC][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+RPCError: 400: CHANNEL_INVALID (caused by channels.GetChannels)
+    at RPCMessageToError (/opt/whatsapp-crm-staging/backend/node_modules/telegram/errors/index.js:28:12)
+    at MTProtoSender._handleRPCResult (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:561:58)
+    at MTProtoSender._processMessage (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:492:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async MTProtoSender._recvLoop (/opt/whatsapp-crm-staging/backend/node_modules/telegram/network/MTProtoSender.js:439:17) {
+  code: 400,
+  errorMessage: 'CHANNEL_INVALID'
+}
+[TG] History fallback error (async): Could not find the input entity for {"channelId":"1714667923","className":"PeerChannel"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[BatchRetranslate] Processed 20 messages, translated 0 for -1001714667923@telegram
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[35m[2026-09-20T23:05:41.362] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T23:05:41.362] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:05:41.362] [INFO] - [connection closed][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[BatchRetranslate] Processed 20 messages, translated 9 for -1003821755044@telegram
+[33m[2026-09-20T23:06:03.106] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T23:06:03.106] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:06:03.308] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T23:06:03.518] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T23:06:33.308] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T23:06:33.308] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:06:33.309] [INFO] - [connection closed][0m
+[33m[2026-09-20T23:06:58.826] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-20T23:06:58.826] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:06:59.036] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-20T23:06:59.258] [INFO] - [File lives in another DC][0m
+[35m[2026-09-20T23:07:29.036] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T23:07:29.036] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:07:29.037] [INFO] - [connection closed][0m
+[TG] Backfilled 0 new messages (total history: 80) for -1003821755044@telegram
+[35m[2026-09-20T23:08:30.278] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T23:08:30.278] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-20T23:08:30.278] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T23:11:40.425Z
+[TG-UB] NewMessage from -1003821755044 text: Pm plz
+[TG-UB] Incoming message: -1003821755044 Pm plz
+[TG-UB] Incoming message: -1003821755044 Pm plz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20281_in
+[33m[2026-09-20T23:13:30.602] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-20T23:13:30.603] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:13:30.805] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm plz
+[TG-UB] Incoming message: -1003821755044 Pm plz
+[TG-UB] Skip duplicate onMessage: -1003821755044_20281_in
+[35m[2026-09-20T23:14:00.806] [WARN] - [Disconnecting...][0m
+[33m[2026-09-20T23:14:00.806] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-20T23:14:00.806] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-20T23:41:40.426Z
+[Automation Scheduler] Running check at 2026-09-21T00:11:40.427Z
+[TG-UB] NewMessage from -1003821755044 text: PM 3片 pls 🙏🏼
+[TG-UB] Incoming message: -1003821755044 PM 3片 pls 🙏🏼
+[TG-UB] Incoming message: -1003821755044 PM 3片 pls 🙏🏼
+[TG-UB] Skip duplicate onMessage: -1003821755044_20282_in
+[33m[2026-09-21T00:28:06.437] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:28:06.438] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:28:06.647] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T00:28:36.649] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:28:36.649] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:28:36.649] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: PM 3片 pls 🙏🏼
+[TG-UB] Incoming message: -1003821755044 PM 3片 pls 🙏🏼
+[TG-UB] Skip duplicate onMessage: -1003821755044_20282_in
+[TG-UB] NewMessage from 8276017600 text: 
+[TG-UB] Incoming message: 8276017600 [MessageMediaDocument]
+[TG-UB] Incoming message: 8276017600 [MessageMediaDocument]
+[TG-UB] Skip duplicate onMessage: 8276017600_1342_in
+[33m[2026-09-21T00:35:34.583] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:35:34.583] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:35:34.650] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1342 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T00:35:34.808] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T00:35:34.808] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:35:35.012] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-21T00:35:35.226] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T00:35:35.228] [INFO] - [Connecting to 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T00:35:38.046] [INFO] - [Connection to 149.154.167.41:443/TCPFull complete!][0m
+[33m[2026-09-21T00:35:38.046] [INFO] - [Exporting authorization for data center 149.154.167.41 with layer 198][0m
+[TG-UB Media] Download result: buf=buffer:19515
+[TG-UB] Media downloaded: 4787666b49fae31126333e2970f4ab26.jpg
+[TG-UB] Poll found message from 8276017600 text: [media]
+[TG-UB] Incoming message: 8276017600 [media]
+[TG-UB] Skip duplicate onMessage: 8276017600_1342_in
+[TG-UB] Poll found OUTGOING message to 8276017600 text: [media]
+[TG-UB] Incoming message: 8276017600 [media]
+[33m[2026-09-21T00:35:46.989] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1341 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T00:35:47.143] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T00:35:47.354] [INFO] - [File lives in another DC][0m
+[TG-UB Media] Download result: buf=buffer:43537
+[TG-UB] Media downloaded: 2cfd65b300068bf63d5d06a2d76d32ed.jpg
+[TG-UB] NewMessage from 8276017600 text: 拉我一下
+[TG-UB] Incoming message: 8276017600 拉我一下
+[TG-UB] UpdateShortMessage from 8276017600 text: 拉我一下
+[TG-UB] Incoming message: 8276017600 拉我一下
+[TG-UB] Skip duplicate onMessage: 8276017600_1343_in
+[33m[2026-09-21T00:36:15.864] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-21T00:36:17.143] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:36:17.144] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:36:17.144] [INFO] - [connection closed][0m
+[35m[2026-09-21T00:36:17.354] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:36:17.354] [INFO] - [Disconnecting from 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T00:36:17.354] [INFO] - [connection closed][0m
+[35m[2026-09-21T00:36:45.864] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:36:45.864] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:36:45.865] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8276017600 text: 这下可以观摩了
+[TG-UB] Incoming message: 8276017600 这下可以观摩了
+[TG-UB] UpdateShortMessage from 8276017600 text: 这下可以观摩了
+[TG-UB] Incoming message: 8276017600 这下可以观摩了
+[TG-UB] Skip duplicate onMessage: 8276017600_1344_in
+[33m[2026-09-21T00:37:27.246] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:37:27.246] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:37:27.314] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] Poll found OUTGOING message to 8276017600 text: [media]
+[TG-UB] Incoming message: 8276017600 [media]
+[TG-UB] Poll found message from 8276017600 text: 这下可以观摩了
+[TG-UB] Incoming message: 8276017600 这下可以观摩了
+[TG-UB] Skip duplicate onMessage: 8276017600_1344_in
+[TG-UB] Poll found message from 8276017600 text: 拉我一下
+[TG-UB] Incoming message: 8276017600 拉我一下
+[TG-UB] Skip duplicate onMessage: 8276017600_1343_in
+[33m[2026-09-21T00:37:46.992] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1345 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T00:37:47.097] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T00:37:47.097] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:37:47.306] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-21T00:37:47.524] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T00:37:47.524] [INFO] - [Connecting to 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T00:37:47.751] [INFO] - [Connection to 149.154.167.41:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:7340
+[TG-UB] Media downloaded: f0bafd5afb10d09f8b841fe5102166fa.jpg
+[35m[2026-09-21T00:38:16.993] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:38:16.993] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:38:16.993] [INFO] - [connection closed][0m
+[35m[2026-09-21T00:38:17.307] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:38:17.307] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:38:17.307] [INFO] - [connection closed][0m
+[35m[2026-09-21T00:38:17.751] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:38:17.751] [INFO] - [Disconnecting from 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T00:38:17.751] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8276017600 text: 这个是啥
+[TG-UB] Incoming message: 8276017600 这个是啥
+[TG-UB] UpdateShortMessage from 8276017600 text: 这个是啥
+[TG-UB] Incoming message: 8276017600 这个是啥
+[TG-UB] Skip duplicate onMessage: 8276017600_1347_in
+[33m[2026-09-21T00:38:34.943] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:38:34.943] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:38:35.009] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from 8276017600 text: 进不去
+[TG-UB] Incoming message: 8276017600 进不去
+[TG-UB] UpdateShortMessage from 8276017600 text: 进不去
+[TG-UB] Incoming message: 8276017600 进不去
+[TG-UB] Skip duplicate onMessage: 8276017600_1349_in
+[33m[2026-09-21T00:38:42.818] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-21T00:39:12.819] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:39:12.819] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:39:12.820] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from 8276017600 text: 进不去
+[TG-UB] Incoming message: 8276017600 进不去
+[TG-UB] Skip duplicate onMessage: 8276017600_1349_in
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 可以进这个频道
+[TG-UB] Incoming message: 8276017600 可以进这个频道
+[TG-UB] Poll found message from 8276017600 text: 这个是啥
+[TG-UB] Incoming message: 8276017600 这个是啥
+[TG-UB] Skip duplicate onMessage: 8276017600_1347_in
+[TG-UB] Poll found OUTGOING message to 8276017600 text: https://t.me/qjdrsf
+[TG-UB] Incoming message: 8276017600 https://t.me/qjdrsf
+[33m[2026-09-21T00:39:46.996] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:39:46.996] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:39:47.062] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-21T00:39:47.200] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaWebPage isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1346 type=MessageMediaWebPage rawType=Message
+[TG-UB Media] Download result: buf=buffer:0
+[TG-UB] Media downloaded: d2c956951b5467cfa40a1248ae67c06f.jpg
+[TG-UB Translate] en->zh: "https://t.me/qjdrsf" => "https://t.me/qjdrsf"
+[TG-UB] Emitting translation events, io.connected: 1
+[35m[2026-09-21T00:40:17.201] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:40:17.201] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:40:17.201] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8276017600 text: 可以了
+[TG-UB] Incoming message: 8276017600 可以了
+[TG-UB] UpdateShortMessage from 8276017600 text: 可以了
+[TG-UB] Incoming message: 8276017600 可以了
+[TG-UB] Skip duplicate onMessage: 8276017600_1350_in
+[33m[2026-09-21T00:40:26.003] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:40:26.003] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:40:26.070] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from 8276017600 text: 棒棒糖的群是那个
+[TG-UB] Incoming message: 8276017600 棒棒糖的群是那个
+[TG-UB] UpdateShortMessage from 8276017600 text: 棒棒糖的群是那个
+[TG-UB] Incoming message: 8276017600 棒棒糖的群是那个
+[TG-UB] Skip duplicate onMessage: 8276017600_1351_in
+[33m[2026-09-21T00:40:37.017] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-21T00:41:07.018] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:41:07.018] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:41:07.018] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-21T00:41:40.428Z
+[TG-UB] Poll found message from 8276017600 text: 棒棒糖的频道是那个
+[TG-UB] Incoming message: 8276017600 棒棒糖的频道是那个
+[TG-UB] Skip duplicate onMessage: 8276017600_1351_in
+[TG-UB] Poll found message from 8276017600 text: 可以了
+[TG-UB] Incoming message: 8276017600 可以了
+[TG-UB] Skip duplicate onMessage: 8276017600_1350_in
+[TG-UB] NewMessage from 8276017600 text: 好嘛
+[TG-UB] Incoming message: 8276017600 好嘛
+[TG-UB] UpdateShortMessage from 8276017600 text: 好嘛
+[TG-UB] Incoming message: 8276017600 好嘛
+[TG-UB] Skip duplicate onMessage: 8276017600_1353_in
+[33m[2026-09-21T00:42:34.500] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:42:34.500] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:42:34.566] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from 8276017600 text: 也拉下呗
+[TG-UB] Incoming message: 8276017600 也拉下呗
+[TG-UB] UpdateShortMessage from 8276017600 text: 也拉下呗
+[TG-UB] Incoming message: 8276017600 也拉下呗
+[TG-UB] Skip duplicate onMessage: 8276017600_1354_in
+[33m[2026-09-21T00:42:42.780] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 8276017600 text: 你昨天拍了吗
+[TG-UB] Incoming message: 8276017600 你昨天拍了吗
+[TG-UB] UpdateShortMessage from 8276017600 text: 你昨天拍了吗
+[TG-UB] Incoming message: 8276017600 你昨天拍了吗
+[TG-UB] Skip duplicate onMessage: 8276017600_1355_in
+[33m[2026-09-21T00:42:50.533] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-21T00:43:20.536] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:43:20.537] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:43:20.537] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from 8276017600 text: 你昨天拍了吗
+[TG-UB] Incoming message: 8276017600 你昨天拍了吗
+[TG-UB] Skip duplicate onMessage: 8276017600_1355_in
+[TG-UB] Poll found message from 8276017600 text: 也拉下呗
+[TG-UB] Incoming message: 8276017600 也拉下呗
+[TG-UB] Skip duplicate onMessage: 8276017600_1354_in
+[TG-UB] Poll found message from 8276017600 text: 好嘛
+[TG-UB] Incoming message: 8276017600 好嘛
+[TG-UB] Skip duplicate onMessage: 8276017600_1353_in
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 棒棒糖那个群没啥人
+[TG-UB] Incoming message: 8276017600 棒棒糖那个群没啥人
+[33m[2026-09-21T00:43:47.014] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:43:47.014] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:43:47.081] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T00:44:17.083] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:44:17.083] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:44:17.083] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8276017600 text: 昨天拍的啊
+[TG-UB] Incoming message: 8276017600 昨天拍的啊
+[TG-UB] UpdateShortMessage from 8276017600 text: 昨天拍的啊
+[TG-UB] Incoming message: 8276017600 昨天拍的啊
+[TG-UB] Skip duplicate onMessage: 8276017600_1358_in
+[33m[2026-09-21T00:45:22.178] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:45:22.178] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:45:22.246] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 昨天拍的还有以前拍的
+[TG-UB] Incoming message: 8276017600 昨天拍的还有以前拍的
+[TG-UB] Poll found OUTGOING message to 8276017600 text: [media]
+[TG-UB] Incoming message: 8276017600 [media]
+[TG-UB] Poll found message from 8276017600 text: 昨天拍的啊
+[TG-UB] Incoming message: 8276017600 昨天拍的啊
+[TG-UB] Skip duplicate onMessage: 8276017600_1358_in
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 等会
+[TG-UB] Incoming message: 8276017600 等会
+[TG-UB] Poll found OUTGOING message to 8276017600 text: [media]
+[TG-UB] Incoming message: 8276017600 [media]
+[33m[2026-09-21T00:45:47.030] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1356 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T00:45:47.128] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T00:45:47.128] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:45:47.236] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:45:47.237] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:45:47.239] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:45:47.330] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1359 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T00:45:47.333] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG-UB Media] Download result: buf=buffer:2530452
+[TG-UB] Media downloaded: 138a274a2fe886db7602d43dc34aabc6.jpg
+[TG-UB Media] Download result: buf=buffer:3047999
+[TG-UB] Media downloaded: 8cc446f62fa72afd307001c26a1f5060.jpg
+[35m[2026-09-21T00:46:17.241] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:46:17.241] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:46:17.241] [INFO] - [connection closed][0m
+[35m[2026-09-21T00:46:27.182] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:46:27.182] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:46:27.182] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8276017600 text: 还有吗😍
+[TG-UB] Incoming message: 8276017600 还有吗😍
+[TG-UB] UpdateShortMessage from 8276017600 text: 还有吗😍
+[TG-UB] Incoming message: 8276017600 还有吗😍
+[TG-UB] Skip duplicate onMessage: 8276017600_1361_in
+[33m[2026-09-21T00:46:49.666] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:46:49.667] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:46:49.733] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T00:47:19.736] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:47:19.736] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:47:19.737] [INFO] - [connection closed][0m
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 每玩一个妹子都拍
+[TG-UB] Incoming message: 8276017600 每玩一个妹子都拍
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 有这个手机专用
+[TG-UB] Incoming message: 8276017600 有这个手机专用
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 有😀
+[TG-UB] Incoming message: 8276017600 有😀
+[TG-UB] Poll found message from 8276017600 text: 还有吗😍
+[TG-UB] Incoming message: 8276017600 还有吗😍
+[TG-UB] Skip duplicate onMessage: 8276017600_1361_in
+[33m[2026-09-21T00:47:47.019] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:47:47.019] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:47:47.086] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-21T00:47:47.223] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:47:47.224] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 8276017600 text: 老哥的鸡巴跟着你是享福了的
+[TG-UB] Incoming message: 8276017600 老哥的鸡巴跟着你是享福了的
+[TG-UB] UpdateShortMessage from 8276017600 text: 老哥的鸡巴跟着你是享福了的
+[TG-UB] Incoming message: 8276017600 老哥的鸡巴跟着你是享福了的
+[TG-UB] Skip duplicate onMessage: 8276017600_1365_in
+[33m[2026-09-21T00:48:00.785] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-21T00:48:30.786] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:48:30.786] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:48:30.787] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from 8276017600 text: 老哥的鸡巴跟着你是享福了的
+[TG-UB] Incoming message: 8276017600 老哥的鸡巴跟着你是享福了的
+[TG-UB] Skip duplicate onMessage: 8276017600_1365_in
+[TG-UB] Poll found OUTGOING message to 8276017600 text: [media]
+[TG-UB] Incoming message: 8276017600 [media]
+[33m[2026-09-21T00:51:47.007] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:51:47.007] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:51:47.073] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1366 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T00:51:47.158] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T00:51:47.159] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:51:47.368] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:8933782
+[TG-UB] Media downloaded: be482837c642d0bf7b1f1599c0735f2f.jpg
+[35m[2026-09-21T00:52:17.075] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:52:17.075] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:52:17.075] [INFO] - [connection closed][0m
+[35m[2026-09-21T00:52:40.950] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:52:40.951] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T00:52:40.951] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8276017600 text: 好看 爱看
+[TG-UB] Incoming message: 8276017600 好看 爱看
+[TG-UB] UpdateShortMessage from 8276017600 text: 好看 爱看
+[TG-UB] Incoming message: 8276017600 好看 爱看
+[TG-UB] Skip duplicate onMessage: 8276017600_1367_in
+[33m[2026-09-21T00:56:34.884] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:56:34.885] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:56:34.951] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T00:57:04.952] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:57:04.952] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:57:04.953] [INFO] - [connection closed][0m
+[TG-UB] Poll found OUTGOING message to 8276017600 text: 还有
+[TG-UB] Incoming message: 8276017600 还有
+[TG-UB] Poll found message from 8276017600 text: 好看 爱看
+[TG-UB] Incoming message: 8276017600 好看 爱看
+[TG-UB] Skip duplicate onMessage: 8276017600_1367_in
+[33m[2026-09-21T00:57:47.022] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T00:57:47.022] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:57:47.089] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T00:58:17.089] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T00:58:17.089] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T00:58:17.089] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-21T01:11:40.429Z
+[TG-UB] NewMessage from -1003821755044 text: Pm please
+[TG-UB] Incoming message: -1003821755044 Pm please
+[TG-UB] Incoming message: -1003821755044 Pm please
+[TG-UB] Skip duplicate onMessage: -1003821755044_20283_in
+[33m[2026-09-21T01:30:23.422] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T01:30:23.423] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T01:30:23.611] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T01:30:53.614] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T01:30:53.614] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T01:30:53.615] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm please
+[TG-UB] Incoming message: -1003821755044 Pm please
+[TG-UB] Skip duplicate onMessage: -1003821755044_20283_in
+[Automation Scheduler] Running check at 2026-09-21T01:41:40.431Z
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T02:05:20.415] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:05:20.415] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:05:20.482] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[TG-UB] Skip duplicate onMessage: -1002375529694_273_in
+[TG-UB] Poll found message from -1002375529694 text: 群里没什么人
+[TG-UB] Incoming message: -1002375529694 群里没什么人
+[TG-UB] Poll found message from -1002375529694 text: Here it comes
+[TG-UB] Incoming message: -1002375529694 Here it comes
+[TG-UB] Poll found message from -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T02:05:47.139] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:05:47.385] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:05:47.386] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Translate] en->zh: "Here it comes" => "它来了"
+[TG-UB] Emitting translation events, io.connected: 1
+[35m[2026-09-21T02:06:17.388] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:06:17.388] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:06:17.389] [INFO] - [connection closed][0m
+[Socket] User 1 disconnected (socket: GLJRYbXC2Ybl4CDqAAAN, reason: ping timeout)
+[Socket] User 1 connected (socket: uwTbvffoTKKcGzsuAAAR)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[TG-UB] Poll found OUTGOING message to 8276017600 text: https://t.me/+qpoEepRlZ51jOWRl
+[TG-UB] Incoming message: 8276017600 https://t.me/+qpoEepRlZ51jOWRl
+[33m[2026-09-21T02:09:47.346] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:09:47.346] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:09:47.413] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaWebPage isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1369 type=MessageMediaWebPage rawType=Message
+[33m[2026-09-21T02:09:47.501] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG-UB Media] Download result: buf=buffer:27011
+[TG-UB] Media downloaded: 0e660e4c826b5d770dca20e08af435a3.jpg
+[TG-UB Translate] en->zh: "https://t.me/+qpoEepRlZ51jOWRl" => "https://t.me/+qpoEepRlZ51jOWRl"
+[TG-UB] Emitting translation events, io.connected: 1
+[35m[2026-09-21T02:10:17.504] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:10:17.504] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:10:17.504] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-21T02:11:40.431Z
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: @Re_member775
+[TG-UB] Incoming message: -1002375529694 @Re_member775
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T02:15:47.328] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:15:47.328] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:15:47.401] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-21T02:15:47.531] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Translate] en->zh: "@Re_member775" => "@Re_member775"
+[TG-UB] Emitting translation events, io.connected: 1
+[35m[2026-09-21T02:16:17.530] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:16:17.530] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:16:17.531] [INFO] - [connection closed][0m
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: [media]
+[TG-UB] Incoming message: -1002375529694 [media]
+[33m[2026-09-21T02:37:47.144] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:37:47.145] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:37:47.375] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=276 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T02:37:47.624] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T02:37:47.624] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T02:37:47.822] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:8933782
+[TG-UB] Media downloaded: 72d7185487667893ced4fc3f94e45684.jpg
+[35m[2026-09-21T02:38:17.377] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:38:17.377] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:38:17.377] [INFO] - [connection closed][0m
+[35m[2026-09-21T02:38:40.590] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:38:40.590] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T02:38:40.591] [INFO] - [connection closed][0m
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: 昨天拍的
+[TG-UB] Incoming message: -1002375529694 昨天拍的
+[33m[2026-09-21T02:39:47.141] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:39:47.141] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:39:47.215] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T02:40:17.216] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:40:17.216] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:40:17.217] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-21T02:41:40.431Z
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: [media]
+[TG-UB] Incoming message: -1002375529694 [media]
+[33m[2026-09-21T02:49:47.156] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:49:47.156] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:49:47.386] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=280 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T02:49:47.870] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T02:49:47.870] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T02:49:48.079] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:2530516
+[TG-UB] Media downloaded: c7b034c1f213e76bc7e3d1c1724f2760.jpg
+[35m[2026-09-21T02:50:17.389] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:50:17.389] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T02:50:17.389] [INFO] - [connection closed][0m
+[35m[2026-09-21T02:50:25.133] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:50:25.134] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T02:50:25.134] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20284_in
+[33m[2026-09-21T02:55:01.308] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T02:55:01.308] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T02:55:01.503] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T02:55:31.504] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T02:55:31.504] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T02:55:31.504] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20284_in
+[Automation Scheduler] Running check at 2026-09-21T03:11:40.432Z
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: [media]
+[TG-UB] Incoming message: -1002375529694 [media]
+[33m[2026-09-21T03:15:47.376] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T03:15:47.376] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T03:15:47.449] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=281 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T03:15:47.555] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T03:15:47.555] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T03:15:47.759] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:3191002
+[TG-UB] Media downloaded: 775b70cf97bc73b8c9b6da67aaf38d92.jpg
+[35m[2026-09-21T03:16:17.449] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T03:16:17.449] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T03:16:17.450] [INFO] - [connection closed][0m
+[35m[2026-09-21T03:16:26.462] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T03:16:26.462] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T03:16:26.462] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20285_in
+[33m[2026-09-21T03:16:38.865] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T03:16:38.865] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T03:16:39.062] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T03:17:09.068] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T03:17:09.068] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T03:17:09.069] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20285_in
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: [media]
+[TG-UB] Incoming message: -1002375529694 [media]
+[33m[2026-09-21T03:39:47.190] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T03:39:47.190] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T03:39:47.264] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=282 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T03:39:47.376] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T03:39:47.376] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T03:39:47.570] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found OUTGOING message to 7325442846 text: [media]
+[TG-UB] Incoming message: 7325442846 [media]
+[33m[2026-09-21T03:39:49.420] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1370 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T03:39:49.549] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG-UB Media] Download result: buf=buffer:7136507
+[TG-UB] Media downloaded: e3281c8388a425508034a6016cd9ced0.jpg
+[TG-UB Media] Download result: buf=buffer:7271774
+[TG-UB] Media downloaded: 715bbe90878e5e792fb85c6de569394c.jpg
+[35m[2026-09-21T03:40:19.420] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T03:40:19.420] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T03:40:19.421] [INFO] - [connection closed][0m
+[35m[2026-09-21T03:40:41.270] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T03:40:41.271] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T03:40:41.271] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-21T03:41:40.432Z
+[Automation Scheduler] Running check at 2026-09-21T04:11:40.433Z
+[Automation Scheduler] Running check at 2026-09-21T04:41:40.434Z
+[Automation Scheduler] Running check at 2026-09-21T05:11:40.435Z
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T05:30:55.434] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T05:30:55.434] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T05:30:55.665] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T05:31:25.669] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T05:31:25.669] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T05:31:25.669] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[TG-UB] Skip duplicate onMessage: -1002375529694_283_in
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T05:32:42.847] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T05:32:42.847] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T05:32:42.920] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from -1003821755044 text: 
+[TG-UB] Incoming message: -1003821755044 [MessageMediaDocument]
+[TG-UB] Incoming message: -1003821755044 [MessageMediaDocument]
+[TG-UB] Skip duplicate onMessage: -1003821755044_20286_in
+[33m[2026-09-21T05:33:10.390] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T05:33:10.390] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T05:33:10.599] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20286 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T05:33:11.033] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T05:33:11.249] [INFO] - [File lives in another DC][0m
+[TG-UB Media] Download result: buf=buffer:25069709
+[TG-UB] Media downloaded: aa55336c86963bf883e2d4abe2c63bd8.jpg
+[35m[2026-09-21T05:33:41.034] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T05:33:41.034] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T05:33:41.034] [INFO] - [connection closed][0m
+[TG-UB] Poll found OUTGOING message to -1002375529694 text: 欢迎新人
+[TG-UB] Incoming message: -1002375529694 欢迎新人
+[TG-UB] Poll found message from -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[TG-UB] Skip duplicate onMessage: -1002375529694_284_in
+[33m[2026-09-21T05:33:47.283] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Poll found message from -1003821755044 text: [media]
+[TG-UB] Incoming message: -1003821755044 [media]
+[TG-UB] Skip duplicate onMessage: -1003821755044_20286_in
+[35m[2026-09-21T05:34:17.284] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T05:34:17.284] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T05:34:17.284] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 車廂內嚴禁飲食🤣
+[TG-UB] Incoming message: -1003821755044 車廂內嚴禁飲食🤣
+[TG-UB] Incoming message: -1003821755044 車廂內嚴禁飲食🤣
+[TG-UB] Skip duplicate onMessage: -1003821755044_20288_in
+[33m[2026-09-21T05:35:26.680] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T05:35:26.680] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T05:35:26.874] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20288 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T05:35:27.080] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T05:35:27.286] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T05:35:27.287] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T05:35:27.518] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:1841708
+[TG-UB] Media downloaded: b8873a456eda9963133633a001100728.jpg
+[TG-UB] Poll found message from -1003821755044 text: 車廂內嚴禁飲食🤣
+[TG-UB] Incoming message: -1003821755044 車廂內嚴禁飲食🤣
+[TG-UB] Skip duplicate onMessage: -1003821755044_20288_in
+[TG-UB] Poll found OUTGOING message to -1003821755044 text: [media]
+[TG-UB] Incoming message: -1003821755044 [media]
+[33m[2026-09-21T05:35:47.291] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20287 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T05:35:47.535] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG-UB Media] Download result: buf=buffer:7136507
+[TG-UB] Media downloaded: 5765c5a89f587f7919ebfdc64d7b77f0.jpg
+[35m[2026-09-21T05:36:09.749] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T05:36:09.749] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T05:36:09.749] [INFO] - [connection closed][0m
+[35m[2026-09-21T05:36:35.092] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T05:36:35.092] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T05:36:35.093] [INFO] - [connection closed][0m
+[Automation Scheduler] Running check at 2026-09-21T05:41:40.435Z
+[Automation Scheduler] Running check at 2026-09-21T06:11:40.434Z
+[TG-UB] NewMessage from 5043535617 text: 1
+[TG-UB] Incoming message: 5043535617 1
+[TG-UB] UpdateShortMessage from 5043535617 text: 1
+[TG-UB] Incoming message: 5043535617 1
+[TG-UB] Skip duplicate onMessage: 5043535617_1371_in
+[TG-UB] downloadProfilePhoto error: 5043535617 Could not find the input entity for {"userId":"5043535617","className":"PeerUser"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[TG-UB Translate] en->zh: "1" => "1"
+[TG-UB] Emitting translation events, io.connected: 1
+[TG-UB] NewMessage from 8611915963 text: 棒棒糖
+[TG-UB] Incoming message: 8611915963 棒棒糖
+[TG-UB] UpdateShortMessage from 8611915963 text: 棒棒糖
+[TG-UB] Incoming message: 8611915963 棒棒糖
+[TG-UB] Skip duplicate onMessage: 8611915963_1372_in
+[TG-UB] downloadProfilePhoto error: 8611915963 Could not find the input entity for {"userId":"8611915963","className":"PeerUser"}.
+         Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+[TG-UB] NewMessage from 5043535617 text: 帅哥，发个链接
+[TG-UB] Incoming message: 5043535617 帅哥，发个链接
+[TG-UB] UpdateShortMessage from 5043535617 text: 帅哥，发个链接
+[TG-UB] Incoming message: 5043535617 帅哥，发个链接
+[TG-UB] Skip duplicate onMessage: 5043535617_1374_in
+[33m[2026-09-21T06:24:43.441] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T06:24:43.441] [INFO] - [Connecting to 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T06:24:43.663] [INFO] - [Connection to 149.154.167.41:443/TCPFull complete!][0m
+[35m[2026-09-21T06:25:13.664] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:25:13.664] [INFO] - [Disconnecting from 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T06:25:13.665] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from 5043535617 text: 帅哥，发个链接
+[TG-UB] Incoming message: 5043535617 帅哥，发个链接
+[TG-UB] Skip duplicate onMessage: 5043535617_1374_in
+[TG-UB] Poll found OUTGOING message to 5043535617 text: [media]
+[TG-UB] Incoming message: 5043535617 [media]
+[TG-UB] Poll found message from 5043535617 text: 1
+[TG-UB] Incoming message: 5043535617 1
+[TG-UB] Skip duplicate onMessage: 5043535617_1371_in
+[33m[2026-09-21T06:25:47.322] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T06:25:47.322] [INFO] - [Connecting to 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T06:25:47.543] [INFO] - [Connection to 149.154.167.41:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaDocument isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1373 type=MessageMediaDocument rawType=Message
+[33m[2026-09-21T06:25:47.783] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T06:25:47.783] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T06:25:47.970] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-21T06:25:48.356] [INFO] - [File lives in another DC][0m
+[TG-UB Media] Download result: buf=buffer:7269
+[TG-UB] Media downloaded: 569c929334cdba22b5c262139bfd4eea.jpg
+[TG-UB] Poll found message from 8611915963 text: 棒棒糖
+[TG-UB] Incoming message: 8611915963 棒棒糖
+[TG-UB] Skip duplicate onMessage: 8611915963_1372_in
+[35m[2026-09-21T06:26:17.971] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:26:17.971] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T06:26:17.972] [INFO] - [connection closed][0m
+[35m[2026-09-21T06:26:18.357] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:26:18.357] [INFO] - [Disconnecting from 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T06:26:18.357] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 8756413964 text: 拉个群
+[TG-UB] Incoming message: 8756413964 拉个群
+[TG-UB] UpdateShortMessage from 8756413964 text: 拉个群
+[TG-UB] Incoming message: 8756413964 拉个群
+[TG-UB] Skip duplicate onMessage: 8756413964_1375_in
+[TG-UB] Poll found OUTGOING message to 8756413964 text: 我拉你
+[TG-UB] Incoming message: 8756413964 我拉你
+[TG-UB] Poll found message from 8756413964 text: 拉个群
+[TG-UB] Incoming message: 8756413964 拉个群
+[TG-UB] Skip duplicate onMessage: 8756413964_1375_in
+[TG-UB] NewMessage from -1003821755044 text: 👑Gigarush新賽季應援祭👑
+豪華特典・見參🦸‍♀🦸‍♀🦸‍♀
+由即日起至10月31日
+[TG-UB] Incoming message: -1003821755044 👑Gigarush新賽季應援祭👑
+豪華特典・見參🦸‍♀🦸‍♀🦸‍♀
+由即日起至10月31日
+[TG-UB] Incoming message: -1003821755044 👑Gigarush新賽季應援祭👑
+豪華特典・見參🦸‍♀🦸‍♀🦸‍♀
+由即日起至10月31日
+[TG-UB] Skip duplicate onMessage: -1003821755044_20289_in
+[33m[2026-09-21T06:38:19.480] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T06:38:19.480] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T06:38:19.675] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB Media DEBUG] type=MessageMediaPhoto isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20289 type=MessageMediaPhoto rawType=Message
+[33m[2026-09-21T06:38:19.884] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T06:38:19.884] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T06:38:19.957] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:318044
+[TG-UB] Media downloaded: 880ff95cb225e6235f48ae7ecccfabc9.jpg
+[TG-UB] onMessage save error: PrismaClientKnownRequestError: 
+Invalid `prisma.conversation.update()` invocation:
+
+
+unexpected end of hex escape at line 1 column 530
+    at Zn.handleRequestError (/opt/whatsapp-crm-staging/backend/node_modules/@prisma/client/runtime/library.js:121:7459)
+    at Zn.handleAndLogRequestError (/opt/whatsapp-crm-staging/backend/node_modules/@prisma/client/runtime/library.js:121:6784)
+    at Zn.request (/opt/whatsapp-crm-staging/backend/node_modules/@prisma/client/runtime/library.js:121:6491)
+    at async l (/opt/whatsapp-crm-staging/backend/node_modules/@prisma/client/runtime/library.js:130:9778)
+    at async Object.onMessage (file:///opt/whatsapp-crm-staging/backend/src/server.js:3491:13)
+[35m[2026-09-21T06:38:49.675] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:38:49.675] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T06:38:49.675] [INFO] - [connection closed][0m
+[35m[2026-09-21T06:38:50.535] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:38:50.536] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T06:38:50.536] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 👑Gigarush新賽季應援祭👑
+豪華特典・見參🦸‍♀🦸‍♀🦸‍♀
+由即日起至10月31日
+[TG-UB] Incoming message: -1003821755044 👑Gigarush新賽季應援祭👑
+豪華特典・見參🦸‍♀🦸‍♀🦸‍♀
+由即日起至10月31日
+[TG-UB] Skip duplicate onMessage: -1003821755044_20289_in
+[Fraud] scan done: clusters=0, penalized=0
+[Automation Scheduler] Running check at 2026-09-21T06:41:40.435Z
+[TG-UB] Poll found OUTGOING message to 5043535617 text: https://t.me/+qpoEepRlZ51jOWRl
+[TG-UB] Incoming message: 5043535617 https://t.me/+qpoEepRlZ51jOWRl
+[33m[2026-09-21T06:43:47.349] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T06:43:47.349] [INFO] - [Connecting to 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T06:43:48.597] [INFO] - [Connection to 149.154.167.41:443/TCPFull complete!][0m
+[TG-UB] Poll found OUTGOING message to 8611915963 text: https://t.me/+qpoEepRlZ51jOWRl
+[TG-UB] Incoming message: 8611915963 https://t.me/+qpoEepRlZ51jOWRl
+[TG-UB Media DEBUG] type=MessageMediaWebPage isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1378 type=MessageMediaWebPage rawType=Message
+[33m[2026-09-21T06:43:49.562] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T06:43:49.562] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T06:43:49.635] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:27011
+[TG-UB] Media downloaded: 95a24b3146790e3d7d05d843c1fdf332.jpg
+[TG-UB Translate] en->zh: "https://t.me/+qpoEepRlZ51jOWRl" => "https://t.me/+qpoEepRlZ51jOWRl"
+[TG-UB] Emitting translation events, io.connected: 1
+[TG-UB Media DEBUG] type=MessageMediaWebPage isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1379 type=MessageMediaWebPage rawType=Message
+[33m[2026-09-21T06:43:50.245] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG-UB Media] Download result: buf=buffer:27011
+[TG-UB] Media downloaded: 48e0cb57b73893a953997c4b5de1c776.jpg
+[TG-UB Translate] en->zh: "https://t.me/+qpoEepRlZ51jOWRl" => "https://t.me/+qpoEepRlZ51jOWRl"
+[TG-UB] Emitting translation events, io.connected: 1
+[TG-UB] Poll found OUTGOING message to 8756413964 text: https://t.me/+qpoEepRlZ51jOWRl
+[TG-UB] Incoming message: 8756413964 https://t.me/+qpoEepRlZ51jOWRl
+[TG-UB Media DEBUG] type=MessageMediaWebPage isOut=true hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=1377 type=MessageMediaWebPage rawType=Message
+[33m[2026-09-21T06:43:51.772] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[TG-UB Media] Download result: buf=buffer:27011
+[TG-UB] Media downloaded: 6bd2a1209b12b0e87ca10b98406ce180.jpg
+[TG-UB Translate] en->zh: "https://t.me/+qpoEepRlZ51jOWRl" => "https://t.me/+qpoEepRlZ51jOWRl"
+[TG-UB] Emitting translation events, io.connected: 1
+[35m[2026-09-21T06:44:18.599] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:44:18.599] [INFO] - [Disconnecting from 149.154.167.41:443/TCPFull...][0m
+[33m[2026-09-21T06:44:18.599] [INFO] - [connection closed][0m
+[35m[2026-09-21T06:44:21.773] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:44:21.773] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T06:44:21.773] [INFO] - [connection closed][0m
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T06:46:51.873] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T06:46:51.873] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T06:46:51.946] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T06:47:21.947] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:47:21.947] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T06:47:21.947] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[TG-UB] Skip duplicate onMessage: -1002375529694_286_in
+[TG-UB] NewMessage from -1003821755044 text: pm
+[TG-UB] Incoming message: -1003821755044 pm
+[TG-UB] Incoming message: -1003821755044 pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20290_in
+[33m[2026-09-21T06:48:45.970] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T06:48:45.970] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T06:48:46.171] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T06:49:16.172] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T06:49:16.172] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T06:49:16.172] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: pm
+[TG-UB] Incoming message: -1003821755044 pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20290_in
+[TG-UB] Incoming message: -1002375529694 
+[33m[2026-09-21T07:08:56.463] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T07:08:56.463] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:08:56.536] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[35m[2026-09-21T07:09:26.537] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:09:26.537] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:09:26.537] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1002375529694 text: 
+[TG-UB] Incoming message: -1002375529694 
+[TG-UB] Skip duplicate onMessage: -1002375529694_287_in
+[Automation Scheduler] Running check at 2026-09-21T07:11:40.435Z
+[TG-UB] NewMessage from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20291_in
+[33m[2026-09-21T07:18:01.950] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T07:18:01.950] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:18:02.159] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T07:18:32.162] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:18:32.162] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:18:32.163] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 要香港人4p 片
+自己pm我攞
+[TG-UB] Incoming message: -1003821755044 要香港人4p 片
+自己pm我攞
+[TG-UB] Incoming message: -1003821755044 要香港人4p 片
+自己pm我攞
+[TG-UB] Skip duplicate onMessage: -1003821755044_20292_in
+[33m[2026-09-21T07:19:33.645] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T07:19:33.645] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:19:33.854] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1003821755044 text: 要香港人4p 片
+自己pm我攞
+[TG-UB] Incoming message: -1003821755044 要香港人4p 片
+自己pm我攞
+[TG-UB] Skip duplicate onMessage: -1003821755044_20292_in
+[TG-UB] Poll found message from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20291_in
+[TG-UB] NewMessage from -1003821755044 text: 我pm唔到任何人
+[TG-UB] Incoming message: -1003821755044 我pm唔到任何人
+[TG-UB] Incoming message: -1003821755044 我pm唔到任何人
+[TG-UB] Skip duplicate onMessage: -1003821755044_20293_in
+[33m[2026-09-21T07:19:51.066] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-21T07:20:21.068] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:20:21.068] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:20:21.068] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 我pm唔到任何人
+[TG-UB] Incoming message: -1003821755044 我pm唔到任何人
+[TG-UB] Skip duplicate onMessage: -1003821755044_20293_in
+[Socket] User 1 connected (socket: wv6oGpKSzm6ky0aGAAAT)
+[Socket] User 1 connected (socket: ES-4cmoLGm4K6dGBAAAV)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[33m[2026-09-21T07:30:10.818] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:10.818] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:30:10.892] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-21T07:30:11.866] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:12.417] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:12.929] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[33m[2026-09-21T07:30:13.163] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:13.323] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:13.323] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:30:13.527] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-21T07:30:13.741] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:14.449] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:14.663] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:16.918] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:17.135] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:21.862] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:22.075] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:22.224] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:22.533] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:22.636] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:22.980] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:23.005] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:23.118] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:23.395] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:23.489] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:23.667] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[33m[2026-09-21T07:30:23.860] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:23.981] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:24.059] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:24.264] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:24.431] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:24.713] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:24.896] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:25.134] [INFO] - [File lives in another DC][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[33m[2026-09-21T07:30:25.297] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[BatchRetranslate] Processed 20 messages, translated 1 for -1002375529694@telegram
+[33m[2026-09-21T07:30:25.550] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:25.702] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:26.008] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:26.114] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:26.429] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:26.522] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:26.861] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:26.962] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:27.324] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:27.525] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:27.739] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:27.829] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:28.154] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:28.261] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:28.617] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:28.809] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:29.031] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:29.140] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:29.447] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:29.590] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:29.914] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:30.024] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:30.332] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:30.485] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:30:30.746] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:30:30.919] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[BatchRetranslate] Processed 20 messages, translated 6 for -1003821755044@telegram
+[Socket] User 1 disconnected (socket: wv6oGpKSzm6ky0aGAAAT, reason: transport close)
+[Socket] User 1 disconnected (socket: ES-4cmoLGm4K6dGBAAAV, reason: transport close)
+[33m[2026-09-21T07:31:20.210] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:31:20.434] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:31:21.255] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:31:21.476] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:31:23.205] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-21T07:31:23.448] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:31:47.715] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:31:47.927] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:31:48.120] [INFO] - [Starting direct file download in chunks of 524288 at 0, stride 524288][0m
+[33m[2026-09-21T07:32:30.098] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-21T07:32:30.552] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 93) for -1003821755044@telegram
+[35m[2026-09-21T07:34:07.311] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:34:07.311] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:34:07.311] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 有沒有師兄，有e一段影片，全套？🙏🏻🙏🏻🙏🏻
+[TG-UB] Incoming message: -1003821755044 有沒有師兄，有e一段影片，全套？🙏🏻🙏🏻🙏🏻
+[TG-UB] Incoming message: -1003821755044 有沒有師兄，有e一段影片，全套？🙏🏻🙏🏻🙏🏻
+[TG-UB] Skip duplicate onMessage: -1003821755044_20294_in
+[33m[2026-09-21T07:34:49.256] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB Media DEBUG] type=MessageMediaPhoto isOut=false hasRaw=true client=undef
+[TG-UB Media] Downloading msgId=20294 type=MessageMediaPhoto rawType=Message
+[33m[2026-09-21T07:34:49.513] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:34:49.513] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:34:49.587] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB Media] Download result: buf=buffer:48759
+[TG-UB] Media downloaded: 7ac3c0c756a5c1440af9a2e0a63d1d04.jpg
+[35m[2026-09-21T07:35:19.586] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:35:19.587] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:35:19.587] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20295_in
+[33m[2026-09-21T07:37:34.060] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[TG-UB] Skip duplicate onMessage: -1003821755044_20295_in
+[33m[2026-09-21T07:41:27.322] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-21T07:41:27.537] [INFO] - [File lives in another DC][0m
+[33m[2026-09-21T07:41:27.537] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:41:27.770] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[Automation Scheduler] Running check at 2026-09-21T07:41:40.436Z
+[35m[2026-09-21T07:41:57.324] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:41:57.324] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:41:57.324] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from -1003821755044 text: 想起當年跟女友坐最後一排
+女友幫我口
+後來直接坐上來搖起來了
+我看到司機透過後照鏡
+看我們在幹嘛
+[TG-UB] Incoming message: -1003821755044 想起當年跟女友坐最後一排
+女友幫我口
+後來直接坐上來搖起來了
+我看到司機透過後照鏡
+看我們在幹嘛
+[TG-UB] Incoming message: -1003821755044 想起當年跟女友坐最後一排
+女友幫我口
+後來直接坐上來搖起來了
+我看到司機透過後照鏡
+看我們在幹嘛
+[TG-UB] Skip duplicate onMessage: -1003821755044_20296_in
+[33m[2026-09-21T07:44:01.792] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T07:44:01.792] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:44:02.001] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T07:44:32.001] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:44:32.002] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:44:32.002] [INFO] - [connection closed][0m
+[33m[2026-09-21T07:44:32.275] [INFO] - [Starting direct file download in chunks of 262144 at 0, stride 262144][0m
+[33m[2026-09-21T07:44:32.275] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:44:32.473] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-21T07:44:32.678] [INFO] - [File lives in another DC][0m
+[35m[2026-09-21T07:45:02.473] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:45:02.473] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:45:02.473] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: 想起當年跟女友坐最後一排
+女友幫我口
+後來直接坐上來搖起來了
+我看到司機透過後照鏡
+看我們在幹嘛
+[TG-UB] Incoming message: -1003821755044 想起當年跟女友坐最後一排
+女友幫我口
+後來直接坐上來搖起來了
+我看到司機透過後照鏡
+看我們在幹嘛
+[TG-UB] Skip duplicate onMessage: -1003821755044_20296_in
+[33m[2026-09-21T07:54:56.235] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:54:56.544] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:54:56.828] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:54:56.831] [INFO] - [Connecting to 149.154.167.91:443/TCPFull...][0m
+[33m[2026-09-21T07:54:59.236] [INFO] - [Connection to 149.154.167.91:443/TCPFull complete!][0m
+[33m[2026-09-21T07:54:59.236] [INFO] - [Exporting authorization for data center 149.154.167.91 with layer 198][0m
+[33m[2026-09-21T07:55:01.248] [INFO] - [Starting direct file download in chunks of 131072 at 0, stride 131072][0m
+[33m[2026-09-21T07:55:01.248] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:55:01.436] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[33m[2026-09-21T07:55:01.633] [INFO] - [File lives in another DC][0m
+[TG] Backfilled 0 new messages (total history: 100) for -1002375529694@telegram
+[35m[2026-09-21T07:55:30.988] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:55:30.988] [INFO] - [Disconnecting from 149.154.167.91:443/TCPFull...][0m
+[33m[2026-09-21T07:55:30.988] [INFO] - [connection closed][0m
+[35m[2026-09-21T07:55:31.436] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:55:31.436] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:55:31.436] [INFO] - [connection closed][0m
+[Socket] User 1 connected (socket: 8H7cuu36ZWmL7HOzAAAX)
+[Socket] User 1 connected (socket: JEqy3s_n0SX2o3XOAAAZ)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[35m[2026-09-21T07:55:41.714] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:55:41.714] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-21T07:55:41.714] [INFO] - [connection closed][0m
+[Socket] User 1 disconnected (socket: 8H7cuu36ZWmL7HOzAAAX, reason: transport close)
+[Socket] User 1 disconnected (socket: JEqy3s_n0SX2o3XOAAAZ, reason: transport close)
+[AI route] client connection closed early, aborting upstream LLM call
+[AI Reply] aborted by client
+[Socket] User 1 connected (socket: JUmbeoXPWTMVRasJAAAb)
+[Socket] User 1 connected (socket: 5JKa3XwnavXNZuhlAAAd)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[Socket] User 1 disconnected (socket: JUmbeoXPWTMVRasJAAAb, reason: transport close)
+[Socket] User 1 disconnected (socket: 5JKa3XwnavXNZuhlAAAd, reason: transport close)
+[AI route] client connection closed early, aborting upstream LLM call
+[AI Reply] aborted by client
+[TG-UB] NewMessage from -1003821755044 text: BI仔港島即出幫你含爆，pm約
+[TG-UB] Incoming message: -1003821755044 BI仔港島即出幫你含爆，pm約
+[TG-UB] Incoming message: -1003821755044 BI仔港島即出幫你含爆，pm約
+[TG-UB] Skip duplicate onMessage: -1003821755044_20297_in
+[33m[2026-09-21T07:59:09.321] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-21T07:59:09.321] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:59:09.515] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[35m[2026-09-21T07:59:39.517] [WARN] - [Disconnecting...][0m
+[33m[2026-09-21T07:59:39.518] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-21T07:59:39.519] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: BI仔港島即出幫你含爆，pm約
+[TG-UB] Incoming message: -1003821755044 BI仔港島即出幫你含爆，pm約
+[TG-UB] Skip duplicate onMessage: -1003821755044_20297_in

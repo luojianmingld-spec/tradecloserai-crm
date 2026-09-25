@@ -318,6 +318,22 @@ class AssistantService {
       }
     }
 
+    // 【2026-09-20】客户背调(background-report)默认优先 GPT-5.6 Terra：
+    // 用户未手动指定模型时，背调强制用旗舰 GPT 保证报告质量；获取失败则回退默认。
+    if (!selectedProvider && agentType === 'background-report') {
+      try {
+        const gpt = await getProviderById('p1786604068598');
+        if (gpt && gpt.apiKey && gpt.model) {
+          selectedProvider = gpt;
+          console.log("[Assistant] background-report default -> GPT: " + gpt.name);
+        } else {
+          console.warn("[Assistant] GPT provider unavailable for background-report, fallback to default");
+        }
+      } catch (e) {
+        console.warn('[Assistant] resolve GPT for background-report failed:', e.message);
+      }
+    }
+
     // 1. 保存用户消息
     const userConv = await prisma.assistantConversation.create({
       data: {
@@ -1461,30 +1477,46 @@ ${rawSummary}
         const enable = args.enabled !== false;
         const timeText = String(args.timeText || '').trim();
         const uid = (ctx && ctx.userId) || 1;
+        // 【2026-09-17 客户级接管】接管需先在该客户会话发指令（点胶囊）才开启；有当前客户则只对该客户生效
+        let custJid = null;
+        if (ctx && ctx.customerId) {
+          try {
+            const _c = await prisma.customer.findUnique({ where: { id: parseInt(ctx.customerId, 10) } });
+            if (_c) custJid = _c.jid || (_c.phone ? _c.phone + '@s.whatsapp.net' : null);
+          } catch (_e) {}
+        }
         if (!enable) {
-          await autoReceptionService.saveConfig(uid, { enabled: false });
+          if (custJid) {
+            await autoReceptionService.disableCustomerTakeover(uid, custJid);
+          } else {
+            await autoReceptionService.saveConfig(uid, { enabled: false });
+            await autoReceptionService.disableAllCustomerTakeovers(uid);
+          }
           await this._setUnattendedPending(false);
-          return { success: true, action: 'off', message: '已关闭自动接待，客户询盘将不再自动回复。' };
+          return { success: true, action: 'off', scope: custJid ? 'customer' : 'all', message: custJid ? '已对该客户关闭自动接待，之后不再自动回复。' : '已关闭自动接待，客户询盘将不再自动回复。' };
         }
         // 超时接管：如"3分钟内没回就自动接待"
         if (args.timeoutMinutes) {
           const mins = parseInt(args.timeoutMinutes, 10);
           if (mins >= 1 && mins <= 60) {
-            await autoReceptionService.saveConfig(uid, { enabled: true, timeoutMinutes: mins, mode: 'always' });
+            if (custJid) await autoReceptionService.enableCustomerTakeover(uid, custJid, { timeoutMinutes: mins, mode: 'always' });
+            else await autoReceptionService.saveConfig(uid, { enabled: true, timeoutMinutes: mins, mode: 'always' });
             await this._setUnattendedPending(false);
-            return { success: true, action: 'on', timeoutMinutes: mins, message: '已开启自动接待：客户消息 ' + mins + ' 分钟内无人回复，将由外贸销冠 Agent 自动接待。' };
+            return { success: true, action: 'on', scope: custJid ? 'customer' : 'global', timeoutMinutes: mins, message: '已开启自动接待：客户消息 ' + mins + ' 分钟内无人回复，将由外贸销冠 Agent 自动接待。' };
           }
         }
         const range = this._parseOffHoursRange(timeText);
         if (range) {
-          await autoReceptionService.saveConfig(uid, { enabled: true, startHour: range.start, endHour: range.end, mode: 'offhours', timezone: 'Asia/Shanghai' });
+          if (custJid) await autoReceptionService.enableCustomerTakeover(uid, custJid, { mode: 'offhours', startHour: range.start, endHour: range.end, timezone: 'Asia/Shanghai' });
+          else await autoReceptionService.saveConfig(uid, { enabled: true, startHour: range.start, endHour: range.end, mode: 'offhours', timezone: 'Asia/Shanghai' });
           await this._setUnattendedPending(false);
           const fmt = (h) => String(h).padStart(2, '0') + ':00';
           return { success: true, action: 'on', startHour: range.start, endHour: range.end, message: '已开启自动接待（' + fmt(range.start) + ' - ' + fmt(range.end) + '），该时段客户消息超时未回复将由外贸销冠 Agent 自动接待。' };
         }
         // 纯开启意图（无时段、无超时）→ 默认开启：3 分钟超时接管
         if (/(开启|打开|开始|启用).{0,6}(接待|自动)|(接待|自动接待).{0,4}(开启|打开|开始|启用)|^(自动接待|开启接待|打开接待)$/.test(timeText)) {
-          await autoReceptionService.saveConfig(uid, { enabled: true, timeoutMinutes: 3, mode: 'always' });
+          if (custJid) await autoReceptionService.enableCustomerTakeover(uid, custJid, { timeoutMinutes: 3, mode: 'always' });
+          else await autoReceptionService.saveConfig(uid, { enabled: true, timeoutMinutes: 3, mode: 'always' });
           await this._setUnattendedPending(false);
           return { success: true, action: 'on', timeoutMinutes: 3, message: '已开启自动接待：客户消息 3 分钟内无人回复，将由外贸销冠 Agent 自动接待。' };
         }

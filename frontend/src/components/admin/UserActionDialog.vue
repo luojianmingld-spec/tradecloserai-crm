@@ -89,19 +89,19 @@ async function handleConfirm() {
   try {
     const userId = props.user?.id
     if (props.actionType === 'subscription') {
-      const res = await fetch(`/api/admin/users/${userId}/subscription`, {
+      const res = await fetch(window.__API_BASE__ + `/api/admin/users/${userId}/subscription`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: form.value.plan, expireAt: form.value.expireAt, remark: form.value.remark })
       })
       if (!res.ok) throw new Error()
     } else if (props.actionType === 'credits') {
-      const res = await fetch(`/api/admin/users/${userId}/credits`, {
+      const res = await fetch(window.__API_BASE__ + `/api/admin/users/${userId}/credits`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: form.value.creditAction, amount: form.value.amount, remark: form.value.remark })
       })
       if (!res.ok) throw new Error()
     } else if (props.actionType === 'ban') {
-      const res = await fetch(`/api/admin/users/${userId}/ban`, {
+      const res = await fetch(window.__API_BASE__ + `/api/admin/users/${userId}/ban`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: form.value.banReason, duration: form.value.banDuration, remark: form.value.remark })
       })

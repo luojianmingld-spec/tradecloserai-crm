@@ -231,7 +231,7 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
   const waMsgId = `tg_${account.id}_${msg.messageId}_in`;
   const savedWa = await prisma.wAMessage.upsert({
     where: { waMessageId: waMsgId },
-    update: { body: msg.text || `[${msg.type}]`, timestamp: msg.timestamp, read: false, mediaUrl: mediaUrl },
+    update: { body: msg.text || `[${msg.type}]`, timestamp: msg.timestamp, read: false, mediaUrl: mediaUrl, replyToMsgId: msg.replyToMsgId || null, replyToBody: msg.replyToBody || null },
     create: {
       sessionId: tgSessionId,
       from: jid,
@@ -245,6 +245,8 @@ async function handleIncomingPrivate(prisma, account, connector, msg, io) {
       sourceLang: null,
       translation: null,
       mediaUrl: mediaUrl,
+      replyToMsgId: msg.replyToMsgId || null,
+      replyToBody: msg.replyToBody || null,
     },
   });
 

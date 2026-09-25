@@ -59,10 +59,6 @@
             <span class="qa-icon">📈</span>
             <span class="qa-text">数据概览</span>
           </div>
-          <div class="quick-action-item" @click="goToAgent('product-knowledge')">
-            <span class="qa-icon">📦</span>
-            <span class="qa-text">产品知识</span>
-          </div>
           <div class="quick-action-item" @click="goToAgent('my-stats')">
             <span class="qa-icon">🏆</span>
             <span class="qa-text">我的业绩</span>

@@ -1,0 +1,414 @@
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+[Fraud Scheduler] Started, auto-scan daily
+[Production] Serving frontend from: /opt/whatsapp-crm-staging/frontend/dist (dist exists: true)
+[DB] Database connected, tables exist
+[Seed] Database not ready, running db push...
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "crm_staging", schema "public" at "localhost:5432"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v6.8.2) to ./node_modules/@prisma/client in 482ms
+
+[wa-avatar] Loaded WA instances from DB: wa_whatsapp1_mtc3zz7c, wa_whatsapp2_mtyiwrio, wa_whatsapp1_mtld53is
+[Server] Sessions dir: /opt/whatsapp-crm-staging/backend/sessions
+[WA Sync] contact sync scheduler started (interval 5min)
+[Production] Server running on port 3003
+[Server] Build version: evolution-api-v1 | Mode: Evolution REST API
+[2026-09-19T14:45:15.907Z] [production] [INFO] [Server] listening on port 3003, env=production
+[33m[2026-09-19T14:45:15.909] [INFO] - [Running gramJS version 2.26.21][0m
+[Evolution Connector] API=http://127.0.0.1:8081 instance=wa_whatsapp1_mtc3zz7c
+[Startup] Webhook reset disabled (ENABLE_WEBHOOK_RESET != true), skip WA instance webhook reset
+[33m[2026-09-19T14:45:15.935] [INFO] - [Connecting to 149.154.175.53:80/TCPFull...][0m
+[Reminder Scheduler] Starting...
+[Reminder Scheduler] Started, checking every 30s
+[Backfill] start in 30s, every 60s (lookback 180s)
+[Automation Scheduler] Starting...
+[Automation Scheduler] Started, checking every 30 minutes
+[Evolution Connector] state=open
+[33m[2026-09-19T14:45:16.176] [INFO] - [Connection to 149.154.175.53:80/TCPFull complete!][0m
+[33m[2026-09-19T14:45:16.177] [INFO] - [Using LAYER 198 for initial connect][0m
+[TG-UB] Auto-connected as: Jeremy8559
+[TG-UB] Registering update handler...
+[TG-UB] Update handlers registered. Client connected: true
+[TG-UB] GetState success, pts=2981 qts=0
+[TG-UB] Starting message polling (every 120s)...
+[TG-UB] Auto-connected: Jeremy8559
+[TG-UB] Initialized 79 known msg IDs, pollStartTime=1789829087
+[Socket] User 1 connected (socket: 1yYIrAKziPrAXdLQAAAB)
+[Backfill] Loaded instances from DB: wa_whatsapp1_mtc3zz7c, wa_whatsapp1_mtld53is, wa_whatsapp2_mtyiwrio
+[Backfill] Session map: {"wa_whatsapp1_mtc3zz7c":"user_9","wa_whatsapp1_mtld53is":"user_15","wa_whatsapp2_mtyiwrio":"user_17"}
+[Backfill] Owner JIDs: {"wa_whatsapp1_mtc3zz7c":"8613016242602@s.whatsapp.net","wa_whatsapp1_mtld53is":"8613016242602@s.whatsapp.net","wa_whatsapp2_mtyiwrio":"8613016242602@s.whatsapp.net"}
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[TG-UB] NewMessage from 1714667923 text: ？。？
+[TG-UB] Incoming message: 1714667923 ？。？
+[TG-UB] Raw update #3: VirtualClass
+[TG-UB] Incoming message: 1714667923 ？。？
+[TG-UB] Skip duplicate onMessage: 1714667923_4265697_in
+[33m[2026-09-19T14:45:44.889] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:45:45.135] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:45:46.702] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-19T14:45:46.703] [INFO] - [Exporting authorization for data center 91.108.56.183 with layer 198][0m
+[TG-UB] NewMessage from 1714667923 text: 琴晚邊度講嘅？我miss 咗?!
+[TG-UB] Incoming message: 1714667923 琴晚邊度講嘅？我miss 咗?!
+[TG-UB] Raw update #6: VirtualClass
+[TG-UB] Incoming message: 1714667923 琴晚邊度講嘅？我miss 咗?!
+[TG-UB] Skip duplicate onMessage: 1714667923_4265698_in
+[33m[2026-09-19T14:46:04.610] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Automation Scheduler] Running check at 2026-09-19T14:46:15.939Z
+[TG-UB] NewMessage from 1714667923 text: 哩到囉
+[TG-UB] Incoming message: 1714667923 哩到囉
+[TG-UB] Raw update #9: VirtualClass
+[TG-UB] Incoming message: 1714667923 哩到囉
+[TG-UB] Skip duplicate onMessage: 1714667923_4265699_in
+[33m[2026-09-19T14:46:23.470] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 出埋4條女概圖呀
+[TG-UB] Incoming message: 1714667923 出埋4條女概圖呀
+[TG-UB] Raw update #11: VirtualClass
+[TG-UB] Incoming message: 1714667923 出埋4條女概圖呀
+[TG-UB] Skip duplicate onMessage: 1714667923_4265700_in
+[33m[2026-09-19T14:46:37.309] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 😳😳😳
+[TG-UB] Incoming message: 1714667923 😳😳😳
+[TG-UB] Raw update #13: VirtualClass
+[TG-UB] Incoming message: 1714667923 😳😳😳
+[TG-UB] Skip duplicate onMessage: 1714667923_4265701_in
+[33m[2026-09-19T14:46:48.263] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 有女安慰我嘅話
+我唔介意無都認中咗招🤭
+[TG-UB] Incoming message: 1714667923 有女安慰我嘅話
+我唔介意無都認中咗招🤭
+[TG-UB] Raw update #16: VirtualClass
+[TG-UB] Incoming message: 1714667923 有女安慰我嘅話
+我唔介意無都認中咗招🤭
+[TG-UB] Skip duplicate onMessage: 1714667923_4265702_in
+[33m[2026-09-19T14:47:02.494] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Poll found message from -1001714667923 text: 有女安慰我嘅話
+我唔介意無都認中咗招🤭
+[TG-UB] Incoming message: -1001714667923 有女安慰我嘅話
+我唔介意無都認中咗招🤭
+[TG-UB] Poll found message from -1001714667923 text: 😳😳😳
+[TG-UB] Incoming message: -1001714667923 😳😳😳
+[TG-UB] Poll found message from -1001714667923 text: 出埋4條女概圖呀
+[TG-UB] Incoming message: -1001714667923 出埋4條女概圖呀
+[TG-UB] Poll found message from -1001714667923 text: 哩到囉
+[TG-UB] Incoming message: -1001714667923 哩到囉
+[TG-UB] Poll found message from -1001714667923 text: 琴晚邊度講嘅？我miss 咗?!
+[TG-UB] Incoming message: -1001714667923 琴晚邊度講嘅？我miss 咗?!
+[TG-UB] Poll found message from -1001714667923 text: ？。？
+[TG-UB] Incoming message: -1001714667923 ？。？
+[33m[2026-09-19T14:47:20.204] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:47:20.428] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:47:20.430] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:47:20.431] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:47:20.432] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:47:20.434] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 無，我睇返原來係騙案
+[TG-UB] Incoming message: 1714667923 無，我睇返原來係騙案
+[TG-UB] Raw update #21: VirtualClass
+[TG-UB] Incoming message: 1714667923 無，我睇返原來係騙案
+[TG-UB] Skip duplicate onMessage: 1714667923_4265703_in
+[33m[2026-09-19T14:47:43.049] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Raw update #24: VirtualClass
+[35m[2026-09-19T14:48:13.050] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:48:13.050] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:48:13.051] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 1714667923 text: 係呀
+[TG-UB] Incoming message: 1714667923 係呀
+[TG-UB] Raw update #28: VirtualClass
+[TG-UB] Incoming message: 1714667923 係呀
+[TG-UB] Skip duplicate onMessage: 1714667923_4265704_in
+[33m[2026-09-19T14:48:23.865] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:48:23.865] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:48:23.932] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from 1714667923 text: 今晚好似有繼續
+[TG-UB] Incoming message: 1714667923 今晚好似有繼續
+[TG-UB] Raw update #30: VirtualClass
+[TG-UB] Incoming message: 1714667923 今晚好似有繼續
+[TG-UB] Skip duplicate onMessage: 1714667923_4265705_in
+[33m[2026-09-19T14:48:32.347] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 真係大數法則，1% 蠢人都夠做
+[TG-UB] Incoming message: 1714667923 真係大數法則，1% 蠢人都夠做
+[TG-UB] Raw update #31: VirtualClass
+[TG-UB] Incoming message: 1714667923 真係大數法則，1% 蠢人都夠做
+[TG-UB] Skip duplicate onMessage: 1714667923_4265706_in
+[33m[2026-09-19T14:48:34.269] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 仲要女多男少 即刻衝🤭
+[TG-UB] Incoming message: 1714667923 仲要女多男少 即刻衝🤭
+[TG-UB] Raw update #32: VirtualClass
+[TG-UB] Incoming message: 1714667923 仲要女多男少 即刻衝🤭
+[TG-UB] Skip duplicate onMessage: 1714667923_4265707_in
+[33m[2026-09-19T14:48:36.405] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-19T14:49:06.411] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:49:06.411] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:49:06.411] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 1714667923 text: 我仲記得有粉嫩波圖
+[TG-UB] Incoming message: 1714667923 我仲記得有粉嫩波圖
+[TG-UB] Raw update #38: VirtualClass
+[33m[2026-09-19T14:49:19.909] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:49:19.909] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[TG-UB] Incoming message: 1714667923 我仲記得有粉嫩波圖
+[TG-UB] Skip duplicate onMessage: 1714667923_4265708_in
+[33m[2026-09-19T14:49:19.976] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] Poll found message from -1001714667923 text: 我仲記得有粉嫩波圖
+[TG-UB] Incoming message: -1001714667923 我仲記得有粉嫩波圖
+[TG-UB] Poll found message from -1001714667923 text: 仲要女多男少 即刻衝🤭
+[TG-UB] Incoming message: -1001714667923 仲要女多男少 即刻衝🤭
+[TG-UB] Poll found message from -1001714667923 text: 真係大數法則，1% 蠢人都夠做
+[TG-UB] Incoming message: -1001714667923 真係大數法則，1% 蠢人都夠做
+[TG-UB] Poll found message from -1001714667923 text: 今晚好似有繼續
+[TG-UB] Incoming message: -1001714667923 今晚好似有繼續
+[TG-UB] Poll found message from -1001714667923 text: 係呀
+[TG-UB] Incoming message: -1001714667923 係呀
+[TG-UB] Poll found message from -1001714667923 text: 無，我睇返原來係騙案
+[TG-UB] Incoming message: -1001714667923 無，我睇返原來係騙案
+[33m[2026-09-19T14:49:20.404] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:49:20.627] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:49:20.629] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:49:20.630] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:49:20.630] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:49:20.632] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[Socket] User 1 connected (socket: zR6EjEogpQDtRtxoAAAD)
+[Socket] User 1 disconnected (socket: zR6EjEogpQDtRtxoAAAD, reason: transport close)
+[TG-UB] Raw update #42: VirtualClass
+[35m[2026-09-19T14:49:50.633] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:49:50.633] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:49:50.633] [INFO] - [connection closed][0m
+[Socket] User 1 connected (socket: x08tUhknDtBVrAovAAAF)
+[Socket] User 1 disconnected (socket: x08tUhknDtBVrAovAAAF, reason: transport close)
+[Fraud] scan done: clusters=0, penalized=0
+[TG-UB] NewMessage from 1714667923 text: 咁怪唔得知 諗到都扯
+[TG-UB] Incoming message: 1714667923 咁怪唔得知 諗到都扯
+[TG-UB] Raw update #46: VirtualClass
+[TG-UB] Incoming message: 1714667923 咁怪唔得知 諗到都扯
+[TG-UB] Skip duplicate onMessage: 1714667923_4265709_in
+[33m[2026-09-19T14:50:15.494] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:50:15.494] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:50:15.561] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[Socket] User 1 connected (socket: LKuhjjSK_IMXZywpAAAH)
+[Socket] User 1 disconnected (socket: LKuhjjSK_IMXZywpAAAH, reason: transport close)
+[TG-UB] NewMessage from 1714667923 text: 珍，吸手波，粉嫩lin
+[TG-UB] Incoming message: 1714667923 珍，吸手波，粉嫩lin
+[TG-UB] Raw update #49: VirtualClass
+[TG-UB] Incoming message: 1714667923 珍，吸手波，粉嫩lin
+[TG-UB] Skip duplicate onMessage: 1714667923_4265710_in
+[33m[2026-09-19T14:50:35.302] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: FQyGmUg1RXcDzxceAAAJ)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[Socket] User 1 disconnected (socket: FQyGmUg1RXcDzxceAAAJ, reason: transport close)
+[35m[2026-09-19T14:51:05.303] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:51:05.303] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:51:05.303] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 1714667923 text: 仲話1對4喎
+[TG-UB] Incoming message: 1714667923 仲話1對4喎
+[TG-UB] Raw update #53: VirtualClass
+[TG-UB] Incoming message: 1714667923 仲話1對4喎
+[TG-UB] Skip duplicate onMessage: 1714667923_4265711_in
+[33m[2026-09-19T14:51:07.078] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:51:07.079] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:51:07.145] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] Raw update #54: VirtualClass
+[Socket] User 1 connected (socket: a6gaoqKhRBUXwrifAAAL)
+[Socket] User 1 disconnected (socket: a6gaoqKhRBUXwrifAAAL, reason: transport close)
+[TG-UB] Poll found message from -1001714667923 text: 仲話1對4喎
+[TG-UB] Incoming message: -1001714667923 仲話1對4喎
+[TG-UB] Poll found message from -1001714667923 text: 珍，吸手波，粉嫩lin
+[TG-UB] Incoming message: -1001714667923 珍，吸手波，粉嫩lin
+[TG-UB] Poll found message from -1001714667923 text: 咁怪唔得知 諗到都扯
+[TG-UB] Incoming message: -1001714667923 咁怪唔得知 諗到都扯
+[33m[2026-09-19T14:51:20.238] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:51:20.463] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:51:20.464] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Raw update #57: VirtualClass
+[Socket] User 1 connected (socket: xFIU85PgRMi0iaGyAAAN)
+[Socket] User 1 disconnected (socket: xFIU85PgRMi0iaGyAAAN, reason: transport close)
+[TG-UB] Raw update #60: VirtualClass
+[TG-UB] NewMessage from 1714667923 text: 但250又真係。。。易令人沖？。？
+[TG-UB] Incoming message: 1714667923 但250又真係。。。易令人沖？。？
+[TG-UB] Raw update #61: VirtualClass
+[TG-UB] Incoming message: 1714667923 但250又真係。。。易令人沖？。？
+[TG-UB] Skip duplicate onMessage: 1714667923_4265712_in
+[33m[2026-09-19T14:51:40.247] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[Socket] User 1 connected (socket: HV2u8zY7qYp6Hnb4AAAP)
+[TG-UB] Raw update #63: VirtualClass
+[Socket] User 1 disconnected (socket: HV2u8zY7qYp6Hnb4AAAP, reason: transport close)
+[TG-UB] NewMessage from 1714667923 text: 建議每個男人都儲一大堆咸channels提供海量波圖 曳d會清醒d
+[TG-UB] Incoming message: 1714667923 建議每個男人都儲一大堆咸channels提供海量波圖 曳d會清醒d
+[TG-UB] Raw update #64: VirtualClass
+[TG-UB] Incoming message: 1714667923 建議每個男人都儲一大堆咸channels提供海量波圖 曳d會清醒d
+[TG-UB] Skip duplicate onMessage: 1714667923_4265713_in
+[33m[2026-09-19T14:51:51.973] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Raw update #66: VirtualClass
+[TG-UB] Raw update #67: VirtualClass
+[Socket] User 1 connected (socket: 0loOUVE9zhCtIJsDAAAR)
+[TG-UB] NewMessage from 1714667923 text: 250係訂金？
+[TG-UB] Incoming message: 1714667923 250係訂金？
+[TG-UB] Raw update #68: VirtualClass
+[TG-UB] Raw update #69: VirtualClass
+[TG-UB] Incoming message: 1714667923 250係訂金？
+[TG-UB] Skip duplicate onMessage: 1714667923_4265714_in
+[33m[2026-09-19T14:52:01.444] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 又有 ？！咁激
+[TG-UB] Incoming message: 1714667923 又有 ？！咁激
+[TG-UB] Raw update #70: VirtualClass
+[TG-UB] Incoming message: 1714667923 又有 ？！咁激
+[TG-UB] Skip duplicate onMessage: 1714667923_4265715_in
+[33m[2026-09-19T14:52:02.556] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 disconnected (socket: 0loOUVE9zhCtIJsDAAAR, reason: transport close)
+[TG-UB] Raw update #72: VirtualClass
+[TG-UB] Raw update #74: VirtualClass
+[TG-UB] NewMessage from 1714667923 text: 😳👍
+[TG-UB] Incoming message: 1714667923 😳👍
+[TG-UB] Raw update #75: VirtualClass
+[TG-UB] Incoming message: 1714667923 😳👍
+[TG-UB] Skip duplicate onMessage: 1714667923_4265716_in
+[33m[2026-09-19T14:52:14.834] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: VjynIAVnSzCDnFqtAAAT)
+[TG-UB] NewMessage from 1714667923 text: 你會沖？。？
+[TG-UB] Incoming message: 1714667923 你會沖？。？
+[TG-UB] Raw update #77: VirtualClass
+[TG-UB] Incoming message: 1714667923 你會沖？。？
+[TG-UB] Skip duplicate onMessage: 1714667923_4265717_in
+[33m[2026-09-19T14:52:26.353] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 disconnected (socket: VjynIAVnSzCDnFqtAAAT, reason: transport close)
+[TG-UB] NewMessage from 1714667923 text: 唔知呢，搵緊賢者
+[TG-UB] Incoming message: 1714667923 唔知呢，搵緊賢者
+[TG-UB] Raw update #80: VirtualClass
+[TG-UB] Incoming message: 1714667923 唔知呢，搵緊賢者
+[TG-UB] Skip duplicate onMessage: 1714667923_4265718_in
+[33m[2026-09-19T14:52:40.483] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] NewMessage from 1714667923 text: 怕怕
+[TG-UB] Incoming message: 1714667923 怕怕
+[TG-UB] Raw update #81: VirtualClass
+[TG-UB] Incoming message: 1714667923 怕怕
+[TG-UB] Skip duplicate onMessage: 1714667923_4265719_in
+[33m[2026-09-19T14:52:48.331] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: OuNEWUFcPShe_fuhAAAV)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[TG-UB] NewMessage from 3821755044 text: Pm
+[TG-UB] Incoming message: 3821755044 Pm
+[TG-UB] Raw update #83: VirtualClass
+[TG-UB] Incoming message: 3821755044 Pm
+[TG-UB] Skip duplicate onMessage: 3821755044_20224_in
+[33m[2026-09-19T14:52:54.636] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:52:54.637] [INFO] - [Connecting to 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-19T14:52:54.839] [INFO] - [Connection to 149.154.175.56:443/TCPFull complete!][0m
+[Socket] User 1 disconnected (socket: OuNEWUFcPShe_fuhAAAV, reason: transport close)
+[AI Client] picked model deepseek-flash probe failed: , probing fallbacks...
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[Socket] User 1 connected (socket: 7f70DEQKcnpgrRl6AAAX)
+[TG-UB Translate] en->zh: "Pm" => "下午"
+[TG-UB] Emitting translation events, io.connected: 2
+[Socket] User 1 disconnected (socket: 7f70DEQKcnpgrRl6AAAX, reason: transport close)
+[35m[2026-09-19T14:53:18.332] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:53:18.332] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:53:18.332] [INFO] - [connection closed][0m
+[TG-UB] Poll found message from -1003821755044 text: Pm
+[TG-UB] Incoming message: -1003821755044 Pm
+[33m[2026-09-19T14:53:20.168] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[AI Client] DeepSeek V4 Pro reasoning-only empty content (finish=length), retry with max_tokens=4096
+[TG-UB] Poll found message from -1001714667923 text: 怕怕
+[TG-UB] Incoming message: -1001714667923 怕怕
+[TG-UB] Poll found message from -1001714667923 text: 唔知呢，搵緊賢者
+[TG-UB] Incoming message: -1001714667923 唔知呢，搵緊賢者
+[TG-UB] Poll found message from -1001714667923 text: 你會沖？。？
+[TG-UB] Incoming message: -1001714667923 你會沖？。？
+[TG-UB] Poll found message from -1001714667923 text: 😳👍
+[TG-UB] Incoming message: -1001714667923 😳👍
+[TG-UB] Poll found message from -1001714667923 text: 又有 ？！咁激
+[TG-UB] Incoming message: -1001714667923 又有 ？！咁激
+[TG-UB] Poll found message from -1001714667923 text: 250係訂金？
+[TG-UB] Incoming message: -1001714667923 250係訂金？
+[TG-UB] Poll found message from -1001714667923 text: 建議每個男人都儲一大堆咸channels提供海量波圖 曳d會清醒d
+[TG-UB] Incoming message: -1001714667923 建議每個男人都儲一大堆咸channels提供海量波圖 曳d會清醒d
+[TG-UB] Poll found message from -1001714667923 text: 但250又真係。。。易令人沖？。？
+[TG-UB] Incoming message: -1001714667923 但250又真係。。。易令人沖？。？
+[33m[2026-09-19T14:53:22.439] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.439] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:53:22.507] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[33m[2026-09-19T14:53:22.672] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.673] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.676] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.678] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.679] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.679] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:53:22.680] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: ulMOF9BoVFfOYslxAAAZ)
+[Socket] User 1 disconnected (socket: ulMOF9BoVFfOYslxAAAZ, reason: transport close)
+[TG-UB Translate] en->zh: "Pm" => "下午"
+[TG-UB] Emitting translation events, io.connected: 1
+[TG-UB] NewMessage from 1714667923 text: 賣腎的賢者
+[TG-UB] Incoming message: 1714667923 賣腎的賢者
+[TG-UB] Raw update #89: VirtualClass
+[TG-UB] Incoming message: 1714667923 賣腎的賢者
+[TG-UB] Skip duplicate onMessage: 1714667923_4265720_in
+[33m[2026-09-19T14:53:43.156] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[35m[2026-09-19T14:53:50.170] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:53:50.170] [INFO] - [Disconnecting from 149.154.175.56:443/TCPFull...][0m
+[33m[2026-09-19T14:53:50.170] [INFO] - [connection closed][0m
+[Socket] User 1 connected (socket: f33avFT64inKPZZnAAAb)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[Socket] User 1 disconnected (socket: f33avFT64inKPZZnAAAb, reason: transport close)
+[35m[2026-09-19T14:54:13.155] [WARN] - [Disconnecting...][0m
+[33m[2026-09-19T14:54:13.155] [INFO] - [Disconnecting from 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:54:13.156] [INFO] - [connection closed][0m
+[TG-UB] NewMessage from 1714667923 text: 唔知邊個咁勇呢
+[TG-UB] Incoming message: 1714667923 唔知邊個咁勇呢
+[TG-UB] Raw update #94: VirtualClass
+[TG-UB] Incoming message: 1714667923 唔知邊個咁勇呢
+[TG-UB] Skip duplicate onMessage: 1714667923_4265721_in
+[33m[2026-09-19T14:54:13.807] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:54:13.807] [INFO] - [Connecting to 91.108.56.183:443/TCPFull...][0m
+[33m[2026-09-19T14:54:13.875] [INFO] - [Connection to 91.108.56.183:443/TCPFull complete!][0m
+[TG-UB] NewMessage from 1714667923 text: 其實都係要呃過下次先醒目
+[TG-UB] Incoming message: 1714667923 其實都係要呃過下次先醒目
+[TG-UB] Raw update #95: VirtualClass
+[TG-UB] Incoming message: 1714667923 其實都係要呃過下次先醒目
+[TG-UB] Skip duplicate onMessage: 1714667923_4265722_in
+[33m[2026-09-19T14:54:21.104] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: RqqeSWiU_SsjsHkMAAAd)
+[Socket] User 1 disconnected (socket: RqqeSWiU_SsjsHkMAAAd, reason: transport close)
+[TG-UB] NewMessage from 1714667923 text: 慘😂
+[TG-UB] Incoming message: 1714667923 慘😂
+[TG-UB] Raw update #99: VirtualClass
+[TG-UB] Incoming message: 1714667923 慘😂
+[TG-UB] Skip duplicate onMessage: 1714667923_4265723_in
+[33m[2026-09-19T14:54:40.861] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: iQuWIWRSF2nZiGABAAAf)
+[WA Sync] wa_whatsapp1_mtc3zz7c synced 8 contacts
+[TG-UB] NewMessage from 1714667923 text: 唔會再比人呃多次？
+[TG-UB] Incoming message: 1714667923 唔會再比人呃多次？
+[33m[2026-09-19T14:55:07.707] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[TG-UB] Incoming message: 1714667923 唔會再比人呃多次？
+[TG-UB] Skip duplicate onMessage: 1714667923_4265724_in
+[Socket] User 1 disconnected (socket: iQuWIWRSF2nZiGABAAAf, reason: transport close)
+[TG-UB] Poll found message from -1001714667923 text: 唔會再比人呃多次？
+[TG-UB] Incoming message: -1001714667923 唔會再比人呃多次？
+[TG-UB] Poll found message from -1001714667923 text: 慘😂
+[TG-UB] Incoming message: -1001714667923 慘😂
+[TG-UB] Poll found message from -1001714667923 text: 其實都係要呃過下次先醒目
+[TG-UB] Incoming message: -1001714667923 其實都係要呃過下次先醒目
+[TG-UB] Poll found message from -1001714667923 text: 唔知邊個咁勇呢
+[TG-UB] Incoming message: -1001714667923 唔知邊個咁勇呢
+[TG-UB] Poll found message from -1001714667923 text: 賣腎的賢者
+[TG-UB] Incoming message: -1001714667923 賣腎的賢者
+[33m[2026-09-19T14:55:20.173] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:55:20.403] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:55:20.405] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:55:20.406] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[33m[2026-09-19T14:55:20.407] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 connected (socket: mqrAT5J7hEKDINs3AAAh)
+[TG-UB] NewMessage from 1714667923 text: 😢用$買教訓
+[TG-UB] Incoming message: 1714667923 😢用$買教訓
+[TG-UB] Incoming message: 1714667923 😢用$買教訓
+[TG-UB] Skip duplicate onMessage: 1714667923_4265725_in
+[33m[2026-09-19T14:55:37.946] [INFO] - [Starting direct file download in chunks of 65536 at 0, stride 65536][0m
+[Socket] User 1 disconnected (socket: mqrAT5J7hEKDINs3AAAh, reason: transport close)
+
+[SIGTERM] Shutting down gracefully...
+[Socket] User 1 disconnected (socket: 1yYIrAKziPrAXdLQAAAB, reason: server shutting down)

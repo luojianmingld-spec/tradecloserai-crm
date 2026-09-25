@@ -177,9 +177,11 @@ router.get('/history', async (req, res) => {
 router.post('/send', async (req, res) => {
   try {
     if (!isConnected()) return res.status(400).json({ error: '未连接' });
-    const { peerId, text } = req.body;
+    const { peerId, text, replyToMsgId } = req.body;
     if (!peerId || !text) return res.status(400).json({ error: '需要peerId和text' });
-    const result = await sendMessage(peerId, text);
+    const options = {};
+    if (replyToMsgId) options.replyToMsgId = parseInt(replyToMsgId);
+    const result = await sendMessage(peerId, text, options);
     res.json({ sent: true, ...result });
   } catch (e) {
     res.status(500).json({ error: e.message });

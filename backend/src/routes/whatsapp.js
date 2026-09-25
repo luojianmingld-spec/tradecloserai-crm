@@ -174,7 +174,9 @@ router.post('/send', async (req, res) => {
     if (isTg) {
       // TG UserBot 走专用发送
       if (!isTgConnected()) return res.status(400).json({ error: 'TG UserBot 未连接' });
-      const tgResult = await sendTgMsg(toJid.replace('@telegram', ''), outgoingText);
+      const tgOpts = {};
+      if (body.replyToMsgId) tgOpts.replyToMsgId = parseInt(body.replyToMsgId);
+      const tgResult = await sendTgMsg(toJid.replace('@telegram', ''), outgoingText, tgOpts);
       result = { messageId: 'tg_' + (tgResult?.id || Date.now()) };
     } else {
       result = await whatsappProvider.sendMessage(sessionId, toJid, outgoingText);
@@ -207,6 +209,8 @@ router.post('/send', async (req, res) => {
           direction: 'outbound',
           timestamp: new Date(),
           waMessageId: result.messageId || null,
+          replyToMsgId: tgOpts?.replyToMsgId || null,
+          replyToBody: body._replyToBody || null,
         },
       });
     } catch (e) {

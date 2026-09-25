@@ -137,6 +137,14 @@ router.get('/by-jid/:jid', async (req, res) => {
     }
 
     if (!customer) {
+      // 检查 blocklist：被删客户不再自动建档
+      const blocked = await prisma.customerBlocklist.findFirst({
+        where: { userId, OR: [{ jid }, { jid: realJid }] }
+      });
+      if (blocked) {
+        console.log('[Customers] by-jid blocked, jid:', jid, 'reason:', blocked.reason);
+        return res.status(403).json({ error: 'Customer was deleted and blocked from re-creation', reason: blocked.reason, deletedAt: blocked.deletedAt });
+      }
       // L2: 空会话不自动建档 —— 两个jid下均无任何消息时返回404（杜绝"看一眼就建档"的幽灵客户）
       const msgWhere = { OR: [{ from: { in: lookupJids } }, { to: { in: lookupJids } }] };
       const msgCount = await prisma.wAMessage.count({ where: msgWhere });
@@ -191,6 +199,16 @@ router.put('/by-jid/:jid', async (req, res) => {
     const userId = req.userId;
 
     let customer = await findCustomerByJid(prisma, userId, jid);
+    // 检查 blocklist
+    if (!customer) {
+      const blocked = await prisma.customerBlocklist.findFirst({
+        where: { userId, OR: [{ jid }] }
+      });
+      if (blocked) {
+        console.log('[Customers] PUT by-jid blocked, jid:', jid);
+        return res.status(403).json({ error: 'Customer was deleted and blocked', reason: blocked.reason });
+      }
+    }
     if (!customer) {
       const phone = jid.split('@')[0] || null;
       customer = await prisma.customer.create({
@@ -417,6 +435,11 @@ router.get('/', async (req, res) => {
     }
     where.source = { not: "self" };
     if (level && ['A', 'B', 'C', 'D'].includes(level.toUpperCase())) where.customerLevel = level.toUpperCase();
+    // AI 综合分级筛选（A=高价值/B=意向中/C=普通/D=低值垃圾）
+    if (req.query.aiGrade) {
+      const g = req.query.aiGrade.toUpperCase();
+      if (['A', 'B', 'C', 'D'].includes(g)) where.aiGrade = g;
+    }
     if (statusQ) where.status = statusQ;
     if (source) where.source = source;
     if (country) where.country = { contains: country, mode: 'insensitive' };
@@ -739,6 +762,56 @@ router.put('/:id', async (req, res, next) => {
   } catch (err) {
     console.error('[Customers] Update error:', err);
     res.status(500).json({ error: 'Failed to update customer: ' + err.message });
+  }
+});
+
+// ====== 批量删除客户（含理由记录 + 防重复建档） ======
+router.post('/batch-delete', async (req, res) => {
+  try {
+    const userId = req.userId || req.headers['x-user-id'];
+    const { ids, reason } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids is required (array)' });
+    }
+    const delReason = (reason || '').trim() || '未填写理由';
+
+    // 1. 查出被删客户，记录 blocklist
+    const customers = await prisma.customer.findMany({
+      where: { id: { in: ids }, ...(userId ? { userId } : {}) },
+      select: { id: true, phone: true, jid: true, name: true }
+    });
+
+    if (customers.length === 0) {
+      return res.json({ deleted: 0, message: 'no matching customers' });
+    }
+
+    // 2. 写入 blocklist
+    const blocklistEntries = customers.map(c => ({
+      userId: Number(userId) || 0,
+      phone: c.phone,
+      jid: c.jid,
+      name: c.name,
+      reason: delReason
+    }));
+    await prisma.customerBlocklist.createMany({ data: blocklistEntries });
+
+    // 3. 删除关联数据（Conversation、FollowUp、Documents 等）
+    const customerIds = customers.map(c => c.id);
+    const delJids = customers.map(c => c.jid).filter(Boolean);
+
+    await prisma.$transaction([
+      prisma.customerFollowUp.deleteMany({ where: { customerId: { in: customerIds } } }),
+      prisma.automationCustomer.deleteMany({ where: { customerId: { in: customerIds } } }),
+      prisma.document.deleteMany({ where: { customerId: { in: customerIds } } }),
+      ...(delJids.length > 0 ? [prisma.conversation.deleteMany({ where: { jid: { in: delJids } } })] : []),
+      prisma.customer.deleteMany({ where: { id: { in: customerIds } } }),
+    ]);
+
+    console.log('[BatchDelete] deleted', customerIds.length, 'customers, reason:', delReason);
+    res.json({ deleted: customers.length, ids: customerIds });
+  } catch (err) {
+    console.error('[BatchDelete] error:', err);
+    res.status(500).json({ error: 'batch delete failed' });
   }
 });
 
@@ -1555,7 +1628,10 @@ router.post('/by-jid/:jid/bg-check', async (req, res) => {
 1. 必须严格使用纯文本，禁止使用任何markdown格式符号（禁止#、*、-、|、\`等），分区用emoji+标题，段落之间用空行分隔。
 2. 报告语言为简体中文。
 3. 如果联网搜索有结果，请结合搜索结果给出具体内容；如果搜索没结果，直接基于已知字段+号码区号做合理推断，不要胡编具体公司名/网址等未验证信息，未验证的点要标注"待核实"。
-4. 输出必须包含并严格按以下7个分区顺序输出（每个分区用emoji开头+标题+换行，再写正文）：
+4. 报告必须以「⚖ 企业真实度评级」头部块开头（位于全部7个分区之前），格式严格固定为如下两行（纯文本、禁markdown，emoji+文字）：
+🟢🟡🔴 品牌与经营真实性：x/5（一句话判断，说明依据：官网是否真实运营/第三方平台验证/Njuškalo类平台/实体仓储等交叉验证；证据不足必须标🟡或🔴，不得因网站完整就默认真实）
+🟢🟡🔴 法定主体完整度KYB：x/5（一句话判断，是否已核实到法定公司名/税号OIB/注册号/股东UBO；未核实必须标🟡或🔴并明确写"待核实"，并列出待核实项：公司名/OIB/股东UBO/财务/法院破产；绝不能把品牌真实性等同于法定主体已核实）
+5. 输出必须包含并严格按以下7个分区顺序输出（紧跟评级头部块之后，每个分区用emoji开头+标题+换行，再写正文）：
 
 👤 客户基本信息
 （整理已知字段：号码、姓名、职位、公司、国家、邮箱、网站、来源、客户等级等；号码至少一定有）
@@ -1916,7 +1992,98 @@ export async function autoFillCustomer(jid, userId = 1) {
 
 // ===== 自动背调（入站消息后异步调用） =====
 // 规则：7天冷却；至少要有公司名或联系人名；不阻塞主流程
-export async function autoBackgroundCheck(jid, userId = 1, io = null) {
+/**
+ * 🆕 首轮背调（只凭 WhatsApp 号码）：首次询盘客户通常无公司名/联系人名，
+ * 用号码+国家推断做第一轮背调，明确信息缺口并生成追问草稿（人工一键发）。
+ */
+async function runFirstRoundByPhone(cust, jid, userId, io) {
+  try {
+    const phone = cust.phone || extractPhoneFromJid(jid);
+    const country = cust.country || guessCountryByPhone(phone) || inferCountry(phone) || null;
+
+    const knownInfo = [
+      `WhatsApp号码(JID): ${jid}`,
+      `纯号码: ${phone || '未知'}`,
+      `联系人名: ${cust.contactName || cust.name || '未知'}`,
+      `公司名: ${cust.companyName || '未知（尚未获知）'}`,
+      `国家: ${country || '未知'}`,
+      `邮箱: ${cust.email || '未知'}`,
+      `网站: ${cust.website || '未知'}`,
+      `来源: ${cust.source || 'whatsapp'}`,
+    ].join('\n');
+
+    const reportSys = `你是资深外贸情报分析师。现在有一个刚通过WhatsApp发来询盘的新客户，我们只掌握其号码（可能还有国家/联系人名），需要做第一轮背调。
+输出要求：
+1. 必须纯文本，禁用markdown符号（禁#、*、-等），分区用emoji+标题，段落空行分隔。
+2. 简体中文。
+3. 严禁编造公司名/网址/人名等未验证信息；未知点标注"待核实"。
+4. 报告必须以「⚖ 企业真实度评级」头部块开头（位于所有分区之前），格式严格固定为如下两行（纯文本、禁markdown，emoji+文字）：
+🟢🟡🔴 品牌与经营真实性：x/5（一句话判断：是否有真实经营痕迹/官网/第三方平台可交叉验证；首轮通常证据不足，证据不足必须标🟡或🔴并写明依据，不得夸大成🟢）
+🟢🟡🔴 法定主体完整度KYB：x/5（一句话判断：是否已核实到法定公司名/OIB/股东UBO；首轮通常未核实，必须标🟡或🔴并明确写"待核实"，绝不可因有询盘或号码就默认主体可靠）
+5. 严格按以下分区输出（emoji+标题+正文，紧跟评级头部块之后）：
+📱 已知信息（号码、联系人、国家等，号码一定有）
+🏢 公司信息（通常尚未获知，明确写"公司名/官网/名片暂未提供，需向客户核实"）
+🌍 市场概况（按号码区号推断国家，简述该国贸易特征、对华贸易情况；无法推断则说明）
+⚠️ 风险提示（如新客户、无公司信息等，最多4条）
+❓ 信息缺口（列出缺失的关键信息，必须含：公司名、公司官网/名片、联系人职位；每条一句话）`;
+
+    const reportUser = `${knownInfo}\n请生成第一轮背调报告。`;
+
+    const modelId = await resolveModelId();
+    let report = '';
+    try {
+      report = (await chatComplete(modelId, reportSys, reportUser, { temperature: 0.4, maxTokens: 1200, timeout: 90000 })).trim();
+    } catch (e) {
+      console.warn('[autoBgCheck][firstRound] report gen failed:', e.message);
+      report = '';
+    }
+    if (!report) {
+      report = `📱 已知信息\n号码: ${phone || '未知'}；国家: ${country || '待核实'}\n\n❓ 信息缺口\n- 公司名\n- 公司官网/名片\n- 联系人职位`;
+    }
+
+    // 生成追问草稿（本土化 + 中文翻译）
+    let askReply = '';
+    const askSys = `你是外贸业务员助手。我刚刚接到一个WhatsApp新客户的询盘，但只知道他的号码，背景信息不足。请生成一段自然、不生硬、不像问卷的询问话术，一次性礼貌地问出最关键的资料：公司名称、公司官网或名片、联系人职位/名片。
+输出严格两行：
+[按客户国家/号码区号推断的本土化语言，默认英文；日本=日语、韩国=韩语、西语/葡语/法语/德语/阿语/俄语区用对应语言]
+[中文翻译]
+不要输出其他字符、不要markdown、不要标签。`;
+    const askUser = `客户国家：${country || '未知（默认英文）'}\n号码：${phone || '未知'}\n请生成话术。`;
+    try {
+      askReply = (await chatComplete(modelId, askSys, askUser, { temperature: 0.8, maxTokens: 400, timeout: 60000 })).trim();
+    } catch (e) {
+      console.warn('[autoBgCheck][firstRound] ask gen failed:', e.message);
+      askReply = '';
+    }
+    if (!askReply) {
+      askReply = `Thank you for your inquiry! To serve you best, could you kindly share your company name and website (or a business card)? That helps us understand your needs better.\n感谢您的询盘！为了更好地为您服务，能否方便告知贵公司名称和官网（或一张名片）？`;
+    }
+
+    const now = new Date();
+    const details = JSON.stringify({ textReport: report, askReply, firstRound: true, completedAt: now.toISOString() });
+    try {
+      await prisma.customerBackgroundCheck.upsert({
+        where: { contactId: cust.id },
+        update: { companyName: null, country: country || null, details, riskLevel: null, notes: report, source: 'llm' },
+        create: { contactId: cust.id, companyName: null, country: country || null, details, riskLevel: null, notes: report, source: 'llm' },
+      });
+    } catch (e) { console.warn('[autoBgCheck][firstRound] save CBC failed:', e.message); }
+    try {
+      await prisma.customer.update({ where: { id: cust.id }, data: { bgReport: report, bgUpdatedAt: now } });
+    } catch (e) { console.warn('[autoBgCheck][firstRound] update cust failed:', e.message); }
+
+    // 推送追问草稿到前端（人工一键发）
+    if (io) io.emit('whatsapp:bg-ask', { jid, askReply, firstRound: true, ts: Date.now() });
+
+    console.log('[autoBgCheck][firstRound] done jid=' + jid + ' askDraft=' + (askReply ? 'yes' : 'no'));
+    return { skipped: false, firstRound: true, report, askReply, jid };
+  } catch (err) {
+    console.error('[autoBgCheck][firstRound] error:', err.message);
+    return { skipped: true, reason: err.message };
+  }
+}
+
+export async function autoBackgroundCheck(jid, userId = 1, io = null, force = false) {
   try {
     if (!jid) return { skipped: true, reason: 'no jid' };
     let cust = await findCustomerByJid(prisma, userId, jid);
@@ -1927,8 +2094,8 @@ export async function autoBackgroundCheck(jid, userId = 1, io = null) {
     }
     if (!cust) return { skipped: true, reason: 'customer not found' };
 
-    // 7天冷却
-    if (cust.bgUpdatedAt) {
+    // 7天冷却（force 二调时跳过）
+    if (!force && cust.bgUpdatedAt) {
       const elapsed = Date.now() - new Date(cust.bgUpdatedAt).getTime();
       if (elapsed < 7 * 24 * 3600 * 1000) {
         return { skipped: true, reason: 'within 7-day cooldown' };
@@ -1938,8 +2105,10 @@ export async function autoBackgroundCheck(jid, userId = 1, io = null) {
     // 至少要有公司名或联系人名
     const hasCompany = cust.companyName && cust.companyName.trim();
     const hasContactName = cust.contactName && cust.contactName.trim();
+
+    // 🆕 首轮背调：客户只有号码（无公司名/联系人名），仍做第一轮背调并产出追问草稿
     if (!hasCompany && !hasContactName) {
-      return { skipped: true, reason: 'missing companyName and contactName' };
+      return await runFirstRoundByPhone(cust, jid, userId, io);
     }
 
     let query = hasCompany ? cust.companyName : cust.contactName;

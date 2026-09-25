@@ -79,6 +79,7 @@ const routes = [
       { path: "speech-library", name: "SpeechLibrary", component: () => import("../views/SpeechLibraryView.vue") },
       { path: "effect-tracking", name: "EffectTracking", component: () => import("../views/EffectTrackingView.vue") },
       { path: "automation", name: "Automation", component: () => import("../views/AutomationView.vue") },
+      { path: "workbench", name: "Workbench", component: () => import("../views/WorkbenchView.vue") },
       { path: "skill-store", name: "SkillStore", component: () => import("../views/SkillStoreView.vue") },
       { path: "product-knowledge", name: "ProductKnowledge", component: ProductKnowledgeView },
       { path: 'trade-shows', name: 'TradeShows', component: () => import('../views/TradeShowsView.vue') },

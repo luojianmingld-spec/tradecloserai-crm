@@ -25,14 +25,19 @@ const _modelCache = new Map();
 // ── Provider fallback: priority order for auto-switching when current provider fails ──
 // Higher priority = tried first. Uses provider.id values.
 const FALLBACK_ORDER = [
-  "p1786604068598", // GPT-4o (API2D) — 首选
-  "p1786601770927", // DeepSeek V4 Flash — 备用
-  "p1786601765650", // Doubao Seed 2.1 Turbo — 次备
-  "p1786588190918", // 商汤SenseNova — 三备
+  "p1786601770927", // DeepSeek V4 Flash — 首选（实测话术 7s 出 3 回复）
+  "p1786601714577", // DeepSeek V4 Pro — 备用
+  "p1786601765650", // Doubao Seed 2.1 Turbo — 次备（短任务可用，reasoning 长任务可能挂起）
+  "p1786588228470", // 火山方舟 Doubao 2.0 Pro — 备用
+  "p1786588190918", // 商汤SenseNova — 末位
 ];
 
 // Track fallback hits per provider (in-memory, resets on restart)
 const _fallbackHits = new Map();
+// Track fatal(permanent) error hits per provider — 连续确定性错误后自动下线该 provider（防再发生 2026-09-09）
+const _fatalHits = new Map();
+// 连续几次确定性错误后自动禁用 provider（防失效 provider 反复进 fallback）
+const FATAL_DISABLE_THRESHOLD = 2;
 
 // How many fallback hits before auto-switching the active provider
 const FALLBACK_SWITCH_THRESHOLD = 2;
@@ -69,13 +74,14 @@ async function getFallbackCandidates(currentProvider) {
   const ordered = [];
   for (const fid of FALLBACK_ORDER) {
     const p = providers.find((p) => p.id === fid);
-    if (p && p.id !== currentProvider?.id && p.apiKey && p.model) {
+    // 【修复 2026-09-09】过滤已禁用 provider（平台池 active=false / 旧配置 enabled=false），防失效 key/未开通模型反复进 fallback
+    if (p && p.id !== currentProvider?.id && p.apiKey && p.model && p.active !== false && p.enabled !== false) {
       ordered.push(p);
     }
   }
   // 追加不在 FALLBACK_ORDER 里但可用的 provider
   for (const p of providers) {
-    if (!FALLBACK_ORDER.includes(p.id) && p.id !== currentProvider?.id && p.apiKey && p.model) {
+    if (!FALLBACK_ORDER.includes(p.id) && p.id !== currentProvider?.id && p.apiKey && p.model && p.active !== false && p.enabled !== false) {
       ordered.push(p);
     }
   }
@@ -284,10 +290,11 @@ async function resolveWorkingModel(provider, opts = {}) {
       "doubao-seed-2-0-pro": { doubao: "doubao-seed-2-1-turbo" },
     };
 
-    let desiredModel = opts.preferLite ? null : provider.model;
-    // 对于 lite 需求，优先选快模型；无显式 model 时用默认策略
-    if (opts.preferLite) {
-      desiredModel = null; // 让自动选择逻辑处理
+    let desiredModel = provider.model;
+    // 【修复 2026-09-09】lite 需求：优先复用 provider.model（如已配置 turbo/lite 快模型），
+    // 不再强制置空后从 /models 盲挑 flash —— 火山方舟列表含大量 Shutdown 模型，盲挑会选到 chat 404 的模型
+    if (opts.preferLite && provider.model && !/flash|lite|mini|small|turbo|haiku|nano|speed|fast/i.test(provider.model)) {
+      desiredModel = null; // 配置模型不是快模型时才自动挑选
     }
 
     // 如果当前配置的模型已知下线，直接切
@@ -330,6 +337,23 @@ async function resolveWorkingModel(provider, opts = {}) {
           pickByKeyword(["pro", "max", "large", "opus", "sonnet", "4o", "turbo", "premium"]) ||
           available[0] ||
           desiredModel;
+      }
+      // 【修复 2026-09-09】从 /models 盲挑的候选先轻量实测再采用：列表里有 ≠ 实际可用
+      if (picked && picked !== desiredModel) {
+        const first = picked;
+        const probed = await probeModel(provider, first);
+        if (!probed.ok) {
+          console.warn(`[AI Client] picked model ${first} probe failed: ${probed.err}, probing fallbacks...`);
+          picked = null;
+          for (const cand of available) {
+            if (cand === first || cand === desiredModel) continue;
+            const r = await probeModel(provider, cand);
+            if (r.ok) { picked = r.model; break; }
+          }
+          picked = picked || desiredModel;
+        } else {
+          picked = probed.model;
+        }
       }
     }
 
@@ -388,6 +412,86 @@ function isModelInvalidError(err) {
 }
 
 /**
+ * 错误是否表示"provider 永久性失效"（key 失效/未开通/模型下线等确定性错误）
+ * 与瞬时错误（超时/429/5xx）不同，此类错误重试无意义 → 连续命中后自动下线该 provider（防再发生 2026-09-09）
+ */
+function isFatalProviderError(err) {
+  const msg = (err?.message || err?.error?.message || "") + "";
+  if (!msg) return false;
+  const patterns = [
+    /401|unauthorized|bad forward key|api[ -]?key.*(invalid|incorrect|not valid)/i,
+    /403|forbidden/i,
+    /ModelNotOpen|model not open|not.*open.*model/i,
+    /InvalidEndpointOrModel|model.*not found|endpoint.*not found/i,
+    /no such model|model.*not exist|model.*doesn't exist/i,
+    /access.*denied|not.*authorized/i,
+  ];
+  return patterns.some((re) => re.test(msg));
+}
+
+/**
+ * 轻量实测某个模型是否真的可用（1 token 探测，5s 超时）
+ * 列表里有 ≠ 实际可用：火山方舟 /models 含大量 Shutdown 模型，doubao-seed-1-6-flash 在列表但 chat 404
+ * 返回 { ok, model, err }
+ */
+async function probeModel(provider, model) {
+  try {
+    const client = await createClient(provider, 5000);
+    const resp = await client.chat.completions.create({
+      model,
+      messages: [{ role: "user", content: "hi" }],
+      max_tokens: 1,
+    });
+    const msg = resp.choices?.[0]?.message || {};
+    return { ok: !!(msg.content || "").trim() || !!(msg.reasoning_content || "").trim(), model, err: "" };
+  } catch (e) {
+    return { ok: false, model, err: e.message };
+  }
+}
+
+/**
+ * 自动下线永久失效的 provider（持久化，防后续请求反复命中）
+ * 平台池模式 → AIModelConfig.isEnabled=false；旧模式 → provider.enabled=false
+ */
+async function autoDisableProvider(provider, reason) {
+  try {
+    if (provider._fromPool && provider._poolId) {
+      await prisma.aIModelConfig.update({ where: { id: provider._poolId }, data: { isEnabled: false } });
+    } else {
+      const providers = await getProviders();
+      const target = providers.find((p) => p.id === provider.id);
+      if (target) {
+        target.enabled = false;
+        target.disabledReason = reason;
+        await saveProviders(providers);
+      }
+    }
+    _modelCache.delete(provider.id);
+    _modelCache.delete(provider.id + ":lite");
+    console.warn(`[AI Client] AUTO-DISABLED provider ${provider.id} (${provider.name || provider.model}) reason: ${reason}`);
+  } catch (e) {
+    console.warn("[AI Client] auto-disable provider failed:", e.message);
+  }
+}
+
+/**
+ * 记录确定性错误；连续命中 FATAL_DISABLE_THRESHOLD 次后自动下线该 provider
+ */
+async function recordFatalError(provider, err) {
+  try {
+    const key = provider.id + ":" + (err?.status || 0);
+    const hits = (_fatalHits.get(key) || 0) + 1;
+    _fatalHits.set(key, hits);
+    if (hits >= FATAL_DISABLE_THRESHOLD) {
+      _fatalHits.delete(key);
+      await autoDisableProvider(provider, String(err?.message || err?.error?.message || "fatal error").slice(0, 200));
+    }
+  } catch (e) {
+    console.warn("[AI Client] recordFatalError failed:", e.message);
+  }
+}
+
+/**
  * 统一的 chat completion 调用
  * @param {Array} messages - [{role, content}]
  * @param {Object} options - { model, temperature, max_tokens, provider, timeout, useLite }
@@ -435,6 +539,24 @@ export async function chatComplete(messages, options = {}) {
       const response = await client.chat.completions.create(params, options.signal ? { signal: options.signal } : undefined); // 【终止按钮】透传 AbortSignal
       const _c0 = response.choices?.[0]?.message?.content || "";
       if (!_c0.trim()) {
+        // 【空响应修复 2026-09-02 + 2026-09-09 修订】reasoning 模型（DeepSeek/商汤）max_tokens 不足时
+        // 只输出 reasoning_content、content 为空（finish=length），这不是 provider 故障 → 调大 max_tokens 重试一次
+        const _reasoning0 = response.choices?.[0]?.message?.reasoning_content || "";
+        if (_reasoning0.trim() && response.choices?.[0]?.finish_reason === "length") {
+          const oldMt = params.max_tokens;
+          params.max_tokens = Math.max(oldMt || 0, 4096);
+          if (params.max_tokens !== oldMt) {
+            console.warn(`[AI Client] ${provider.name || provider.id} reasoning-only empty content (finish=length), retry with max_tokens=${params.max_tokens}`);
+            try {
+              const r2 = await client.chat.completions.create(params, options.signal ? { signal: options.signal } : undefined);
+              const _c2 = r2.choices?.[0]?.message?.content || "";
+              if (_c2.trim()) return _c2;
+              throw new Error(`AI provider ${provider.name || provider.id} reasoning-only empty content after max_tokens bump`);
+            } catch (e2) {
+              throw e2;
+            }
+          }
+        }
         // 【空响应修复 2026-09-02】provider 返回空 content（finish=length），视为 provider 级错误触发 fallback
         throw new Error(`AI provider ${provider.name || provider.id} returned empty content (finish=${response.choices?.[0]?.finish_reason || 'unknown'})`);
       }
@@ -448,7 +570,7 @@ export async function chatComplete(messages, options = {}) {
         const creditUserId = alsUserId || options.creditUserId || null;
         if (creditUserId && !(creditCtx && creditCtx.manualCharged)) {
           const cost = getModelCost(provider.id);
-          await deductCredits(creditUserId, cost, 'AI 调用消耗（按模型分级）', { model: provider.id });
+          await deductCredits(creditUserId, cost, 'AI 调用消耗（按模型分级）', { model: provider.name || provider.id });
         }
       } catch (creditErr) {
         console.warn(`[AI Client] credit deduct skipped: ${creditErr.message}`);
@@ -487,6 +609,11 @@ export async function chatComplete(messages, options = {}) {
           lastError = e2;
           // 继续走 provider 级 fallback
         }
+      }
+
+      // 【防再发生 2026-09-09】确定性永久错误（401/403/ModelNotOpen/模型不存在）→ 连续命中自动下线
+      if (isFatalProviderError(err)) {
+        await recordFatalError(provider, err);
       }
 
       // Provider 级错误 → 尝试下一个 fallback
@@ -531,7 +658,7 @@ export async function chatCompleteLite(messages, options = {}) {
     ...options,
     useLite: true,
     timeout: options.timeout || DEFAULT_TIMEOUT_MS,
-    max_tokens: options.max_tokens || options.maxTokens || 256,
+    max_tokens: options.max_tokens || options.maxTokens || 2048,
     temperature: options.temperature ?? 0.1,
   });
 }

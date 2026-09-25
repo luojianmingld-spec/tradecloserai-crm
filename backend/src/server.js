@@ -9,8 +9,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { setupSocketHandlers } from './socket/handlers.js';
@@ -64,8 +64,12 @@ import docArchiveRoutes from './routes/doc-archive.js';
 import partnerRoutes from './routes/partners.js';
 import wecomRoutes from './routes/wecom.js';
 import wechatOfficialRoutes from './routes/wechat-official.js';
+import autoReceptionConfirmRoutes from './routes/auto-reception-confirm.js';
+import autoReceptionCustomerRoutes from './routes/auto-reception-customer.js';
 import wechatNotifyRoutes from './routes/wechat-notify.js';import tradeAgentRoutes from './routes/trade-agent.js';import adminRoutes from './routes/admin/index.js';import openaiBridgeRoutes from './routes/openai-bridge.js';
+
 import { getPendingFollowups } from './services/followup.service.js';
+import followupRoutes from './routes/followup.js';
 import { readTranslationSettings, getTranslationSettings } from "./routes/translation.js";
 import { detectLanguage as _detectLangForSend, translateText as _translateTextForSend } from "./services/ai.service.js";
 import { authMiddleware } from './middleware/auth.js';
@@ -258,7 +262,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 app.use(cors({
-  origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
+  origin: '*',
   credentials: true,
 }));
 
@@ -266,6 +270,7 @@ app.use(cors({
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false,
 }));
 
 // ── Trust proxy (Nginx reverse proxy) ──
@@ -356,6 +361,39 @@ app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 // ─── API Routes ───
 app.use('/api/auth', loginLimiter, authRoutes);
+// ── App Update ─
+app.get('/api/app-update/version', (req, res) => {
+  try {
+    const versionFile = path.join(__dirname, '..', 'apk', 'version.json');
+    if (fs.existsSync(versionFile)) {
+      const data = JSON.parse(fs.readFileSync(versionFile, 'utf8'));
+      res.json(data);
+    } else {
+      res.status(404).json({ error: 'Version file not found' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read version' });
+  }
+});
+
+app.get('/app-update/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    if (!filename.endsWith('.apk') || filename.includes('..')) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const filePath = path.join(__dirname, '..', 'apk', filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
+    res.sendFile(filePath);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to serve file' });
+  }
+});
+
 app.use('/api/accounts', authMiddleware, accountRoutes);
 app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/messages', authMiddleware, messageRoutes);
@@ -366,6 +404,9 @@ app.use('/api/wecom', authMiddleware, wecomRoutes);
 
 // 微信公众号回调（不需要认证，微信服务器调用）
 app.use('/api/wechat', wechatOfficialRoutes);
+// 自动接待待销售确认 H5（免登录，一次性 token）
+app.use('/auto-reception', autoReceptionConfirmRoutes);
+app.use('/api/auto-reception', authMiddleware, autoReceptionCustomerRoutes);
 
 // 微信通知推送（需要认证）
 app.use('/api/wechat', authMiddleware, wechatNotifyRoutes);
@@ -386,6 +427,7 @@ app.use('/api/trade-agent', authMiddleware, tradeAgentRoutes);
 // OpenClaw 微信通道桥接（CRM Agent 包装为 OpenAI 兼容模型，独立 OPENAI_BRIDGE_KEY 鉴权）
 app.use('/api/openai', openaiBridgeRoutes);
 app.use('/api/agent-group', authMiddleware, agentGroupRoutes);
+app.use('/api/ai/followup', authMiddleware, followupRoutes);
 app.use('/api/agent/tasks', authMiddleware, agentTaskRoutes);
 app.use('/api/customer/channels', authMiddleware, customerChannelRoutes);
 app.use('/api/customer', authMiddleware, customerPanoramaRoutes);
@@ -933,7 +975,7 @@ app.post("/api/whatsapp/send", authMiddleware, async (req, res) => {
           console.warn('[WA Send] resolve default account failed:', e.message);
         }
       }
-      if (!sendConnector) {
+      if (!sendConnector && !toJid.endsWith("@telegram")) {
         return res.status(400).json({ error: "请先连接WhatsApp账号再发送消息" });
       }
     }
@@ -1953,11 +1995,13 @@ app.post('/api/whatsapp/retranslate-batch', authMiddleware, async (req, res) => 
       targetJid = targetJid.endsWith('@telegram') ? targetJid : `${targetJid.replace(/\D/g, '')}@s.whatsapp.net`;
     }
     
-    // Find messages without translations
+    // Find messages without translations (support both WA user_ and TG tg_ sessions)
     const whereClause = {
       OR: [
         { from: targetJid, sessionId: { startsWith: 'user_' } },
-        { to: targetJid, sessionId: { startsWith: 'user_' } }
+        { to: targetJid, sessionId: { startsWith: 'user_' } },
+        { from: targetJid, sessionId: { startsWith: 'tg_' } },
+        { to: targetJid, sessionId: { startsWith: 'tg_' } }
       ],
       type: 'text',
       translation: null
@@ -2214,6 +2258,7 @@ app.get("/api/whatsapp/conversations", authMiddleware, async (req, res) => {
           lastMessage: lastMsg,
           lastMessageTime: lastMsgTime,
           direction,
+          isGroup: String(chatId).startsWith("-"),
           unreadCount: cv.unreadCount || 0,
           pinned: !!cv.pinned, starred: !!cv.starred, blocked: !!cv.blocked,
         });
@@ -2767,9 +2812,9 @@ app.get("/api/whatsapp/messages", authMiddleware, async (req, res) => {
       if (!tgAccounts.length) return res.json([]);
       const sessions = tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`);
       const tgWhere = { sessionId: { in: sessions }, OR: [{ from: targetJid }, { to: targetJid }] };
-      if (before) { tgWhere.id = { lt: parseInt(before) }; }
+      if (before) { tgWhere.timestamp = { lt: new Date(parseInt(before)) }; }
       const dbMsgs = await prisma.wAMessage.findMany({
-        where: tgWhere, orderBy: { id: "desc" }, take: parseInt(limit),
+        where: tgWhere, orderBy: { timestamp: "desc" }, take: parseInt(limit),
       });
       // Fire-and-forget: mark as read in background, don't block response
       (async () => {
@@ -3134,7 +3179,7 @@ if (isProduction) {
 // ─── Socket.io ───
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: isProduction ? false : ['http://localhost:5173', 'http://localhost:5000', 'http://localhost:3000'],
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -3376,6 +3421,58 @@ async function startServer() {
               waMsg = _existingWa;
             } else {
               try {
+                // 提取回复引用信息
+                let _replyToMsgId = null;
+                let _replyToBody = null;
+                try {
+                  if (msg.raw && msg.raw.replyTo) {
+                    _replyToMsgId = msg.raw.replyTo.replyToMsgId || null;
+                    // 尝试从上下文获取被回复的消息内容
+                    if (_replyToMsgId && msg.raw.replyTo.quoteText) {
+                      _replyToBody = msg.raw.replyTo.quoteText;
+                    } else if (_replyToMsgId) {
+                      // 从消息列表中查找被回复的消息
+                      const repliedMsg = (msg._context || []).find(m => m.messageId === _replyToMsgId);
+                      if (repliedMsg) _replyToBody = repliedMsg.text || repliedMsg.body || null;
+                    }
+                  }
+                } catch(replyErr) { console.warn("[TG-UB] reply extract error:", replyErr.message); }
+
+                // ── 📣 TG群聊发言人提取(2026-09-21)：群聊消息记录真实发送者昵称+头像 ──
+                let _senderName = null;
+                let _senderAvatar = null;
+                const _isTgGroup = jid.startsWith('-100');
+                if (_isTgGroup && !isOut) {
+                  try {
+                    let _senderId = null;
+                    // 优先用 raw 消息里的发送者(群聊必须用senderId而非chatId)
+                    if (msg.raw) {
+                      _senderId = msg.raw.senderId || (msg.raw.sender && msg.raw.sender.id) || msg.senderId || null;
+                    } else {
+                      _senderId = msg.senderId || null;
+                    }
+                    if (_senderId) {
+                      const ubMod3 = await import('./services/tg-userbot-connector.js');
+                      try {
+                        const _ui = await ubMod3.getUserInfo(_senderId);
+                        _senderName = (_ui && (_ui.displayName || _ui.firstName)) || String(_senderId);
+                      } catch (_) {
+                        // 若 raw.sender 已含实体则用其名称
+                        if (msg.raw && msg.raw.sender) {
+                          const _sc = msg.raw.sender;
+                          _senderName = [_sc.firstName, _sc.lastName].filter(Boolean).join(' ').trim() || _sc.username || String(_senderId);
+                        } else {
+                          _senderName = String(_senderId);
+                        }
+                      }
+                      // 头像：失败不阻塞落库
+                      try { _senderAvatar = await ubMod3.downloadProfilePhoto(_senderId); } catch (_) {}
+                    }
+                  } catch (senderErr) {
+                    console.warn('[TG-UB] sender extract error:', senderErr.message);
+                  }
+                }
+
                 waMsg = await prisma.wAMessage.create({
                   data: {
                     sessionId: tgSessionId,
@@ -3387,6 +3484,10 @@ async function startServer() {
                     timestamp: new Date(msg.timestamp).toISOString(),
                     waMessageId: _waMsgId,
                     mediaUrl: mediaUrl,
+                    replyToMsgId: _replyToMsgId,
+                    replyToBody: _replyToBody,
+                    senderName: _senderName,
+                    senderAvatar: _senderAvatar,
                   },
                 });
               } catch (ce) {

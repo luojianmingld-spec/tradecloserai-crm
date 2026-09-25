@@ -770,7 +770,7 @@
                   <div class="msg-reaction-bubble">{{ msg.body || '👍' }}</div>
                 </template>
                 <template v-else>
-                  <div class="msg-text">{{ msg.body || msg.content }}</div>
+                  <div class="msg-text">{{ msgPrimaryText(msg) }}</div>
                 </template>
                 <div v-if="msg.translation" class="msg-translation">
                   <span class="msg-trans-text">{{ getTranslationText(msg) }}</span>
@@ -892,7 +892,7 @@
         <button class="aisb-refresh" :disabled="aiSuggestLoading" title="刷新建议" @click="refreshAiSuggests">🔄</button>
       </div>
 
-      <div class="conv-input-area" v-if="chatStore.isConnected && chatStore.activeConversation">
+      <div class="conv-input-area" v-if="chatStore.activeConversation">
         <div class="attach-wrap">
           <button class="input-action" title="添加" @click="toggleAttachMenu"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
           <div v-if="attachMenuOpen" class="attach-menu">
@@ -1918,6 +1918,20 @@ function doSendText(text) {
 
 function doSendMsg() { doSendText(draftMsg.value.trim()); }
 
+function msgPrimaryText(msg) {
+  // 出站消息：主气泡强制显示发给客户的外文(英文)原文；中文对照由 getTranslationText 放下方虚线
+  const b = msg.body || msg.content || "";
+  if (msg.fromMe || msg.direction === 'outbound' || msg.direction === 'outgoing') {
+    const t = msg.translation;
+    if (t && typeof t === 'object') {
+      const cands = [t.translated, t.original, b].filter(x => x && typeof x === 'string');
+      const foreign = cands.find(x => !/[一-鿿]/.test(x));
+      if (foreign) return foreign;
+    }
+  }
+  return b;
+}
+
 function getTranslationText(msg) {
   const t = msg.translation;
   if (!t) return "";
@@ -2869,6 +2883,10 @@ html:not([data-theme='light']) .wa-scan-card * { color:inherit; }
 }
 .asb-title { font-weight: 600; color: #00c49a; font-size: 13px; white-space: nowrap; }
 .asb-item { display: inline-flex; align-items: center; gap: 3px; color: #bcd9ca; }
+/* 【P0修复 2026-09-20】日间模式销冠横栏文字加深 */
+[data-theme='light'] .auto-step-banner { color: #1f6f5c; }
+[data-theme='light'] .asb-title { color: #00897b; }
+[data-theme='light'] .asb-item { color: #1f6f5c; }
 .asb-ico { font-size: 11px; }
 
 .fr-wait-banner {
@@ -2996,8 +3014,8 @@ html:not([data-theme='light']) .wa-scan-card * { color:inherit; }
 .msg-check { color:var(--accent-info); font-size:12px; margin-left:3px; }
 .msg-check.pending { color:var(--text-secondary); font-size:11px; }
 .msg-check.sent { color:var(--text-secondary); font-size:12px; }
-.msg-check.delivered { color:var(--text-secondary); font-size:12px; }
-.msg-check.read { color:var(--accent-info); font-size:12px; }
+.msg-check.delivered { color:#22bb55; font-size:12px; font-weight:600; }
+.msg-check.read { color:#22bb55; font-size:12px; font-weight:600; }
 .msg-check.error { color:var(--danger); font-size:11px; }
 
 /* ── 消息悬浮 AI 小圆点按钮（只在 incoming 上显示） ── */

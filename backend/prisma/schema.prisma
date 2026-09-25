@@ -181,6 +181,10 @@ model WAMessage {
   deliveredAt     DateTime?
   readAt          DateTime?
   isAuto          Boolean      @default(false)
+  replyToMsgId    Int?
+  replyToBody     String?
+  senderName      String?
+  senderAvatar    String?
   connection      WAConnection @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
 
   @@index([from, to], map: "idx_wamessage_fromto")
@@ -197,6 +201,8 @@ model Customer {
   title                   String?
   website                 String?
   customerLevel           String                @default("C")
+  aiGrade                 String                @default("")
+  aiGradeAt               DateTime?
   firstContactAt          DateTime?
   businessProfileSyncedAt DateTime?
   aiExtractedAt           DateTime?
@@ -959,6 +965,7 @@ model CreditTransaction {
   operatorId    Int?      // 操作管理员ID
   paymentMethod String?
   orderId       String?   // 关联订单号
+  model         String?   // 关联模型/服务名称
   createdAt     DateTime  @default(now())
 
   @@index([userId])
@@ -1371,3 +1378,37 @@ model DocArchive {
   @@index([tenantId, jid])
 }
 
+
+model CustomerBlocklist {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  phone     String?
+  jid       String?
+  name      String?
+  reason    String   @default("未填写理由")
+  deletedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, jid])
+}
+
+model FollowUpIntelligence {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  jid         String?
+  customerId  Int?
+  customerName String  @default("")
+  scenario    String   @default("auto")
+  stage       String   @default("strategy")
+  strategy    String?
+  speech      String?
+  language    String   @default("zh")
+  modelKey    String   @default("doubao-lite")
+  status      String   @default("done")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, customerId])
+  @@index([userId, jid])
+  @@index([userId, createdAt])
+}

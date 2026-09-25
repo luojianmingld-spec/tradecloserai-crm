@@ -12,23 +12,24 @@
         </div>
         </div>
         <nav class="platform-menu">
-          <template v-for="item in platformItems" :key="item.key">
-            <div class="platform-item-wrap">
-            <div
-              class="platform-item"
-              :class="{ active: isParentActive(item), 'has-children': item.children && !platformCollapsed }"
-              @click="item.children && !isPlatformActive(item.key) ? toggleExpand(item.key) : switchPlatform(item)"
-            >
+          <template v-for="(item, idx) in platformItems" :key="item.key">
+            <!-- Category separator -->
+            <div v-if="idx > 0" class="platform-category-sep"></div>
+
+            <!-- Category header row -->
+            <div class="platform-category-header" :class="{ active: isParentActive(item) }" @click="item.children && !platformCollapsed ? toggleExpand(item.key) : switchPlatform(item)">
               <span class="p-icon" v-html="item.icon"></span>
               <transition name="fade">
-                <span v-if="!platformCollapsed" class="p-label">{{ item.label }}</span>
+                <span v-if="!platformCollapsed" class="p-cat-label">{{ item.label }}</span>
               </transition>
               <span v-if="item.badge && !platformCollapsed" class="p-badge">{{ item.badge }}</span>
               <svg v-if="item.children && !platformCollapsed" class="p-arrow" :class="{ open: expandedKeys[item.key] }" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
-              <div v-if="platformCollapsed && !(item.children && expandedKeys[item.key])" class="p-tooltip">{{ item.label }}</div>
+              <div v-if="platformCollapsed" class="p-tooltip">{{ item.label }}</div>
             </div>
+
+            <!-- Sub-menu for items with children -->
             <transition name="slide-down">
-              <div v-if="item.children && expandedKeys[item.key]" class="platform-children">
+              <div v-if="item.children && item.category !== 'communication' && expandedKeys[item.key] && !platformCollapsed" class="platform-children">
                 <div
                   v-for="child in item.children"
                   :key="child.key"
@@ -41,7 +42,25 @@
                 </div>
               </div>
             </transition>
-            </div>
+
+            <!-- 客户沟通渠道子项 -->
+            <transition name="slide-down">
+              <div v-if="item.category === 'communication' && item.children && expandedKeys['communication'] && !platformCollapsed" class="platform-children">
+                <div
+                  v-for="ch in item.children"
+                  :key="ch.key"
+                  class="platform-child"
+                  :class="{ active: activeChannel === ch.channelId && activePlatform === 'communication', disabled: getChannelStatus(ch.channelId) === 'offline' }"
+                  @click.stop="getChannelStatus(ch.channelId) === 'offline' ? $message.info(ch.label + ' 渠道即将上线') : onChannelChildClick(ch)"
+                >
+                  <span class="p-child-icon ch-icon" v-html="channelIcons[ch.channelId] || ''"></span>
+                  <span class="p-child-label">{{ ch.label }}</span>
+                  <span v-if="ch.channelId==='whatsapp' && chatStore.followupCounts?.firstResponse > 0" class="ch-ch-badge ch-sw-warn">{{ chatStore.followupCounts.firstResponse }}</span>
+                  <span v-if="ch.channelId==='telegram' && tgUnreadTotal > 0" class="ch-ch-badge" style="background:#ef4444;">{{ tgUnreadTotal }}</span>
+                  <span v-if="ch.channelId==='email' && emailUnreadTotal > 0" class="ch-ch-badge" style="background:#EA4335;">{{ emailUnreadTotal }}</span>
+                </div>
+              </div>
+            </transition>
           </template>
         </nav>
       </div>
@@ -105,12 +124,12 @@
             <button
               class="mdp-item"
               :class="{ active: isDrawerActive(item.key) }"
-              @click="item.key === 'trade-agent' ? goHome() : (item.children ? (expandedKeys[item.key] = expandedKeys[item.key] === false ? true : false) : onDrawerItemClick(item))"
+              @click="item.children ? (expandedKeys[item.key] = expandedKeys[item.key] === false ? true : false) : onDrawerItemClick(item)"
             >
               <span class="mdp-icon" v-html="item.icon"></span>
               <span class="mdp-label">{{ item.label }}</span>
               <span v-if="item.badge" class="mdp-badge">{{ item.badge }}</span>
-              <svg v-if="item.children" class="mdp-arrow" :class="{ open: expandedKeys[item.key] !== false }" @click.stop="expandedKeys[item.key] = expandedKeys[item.key] === false ? true : false" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="cursor:pointer;padding:4px"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+              <svg v-if="item.children" class="mdp-arrow" :class="{ open: expandedKeys[item.key] !== false }" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
             </button>
             <div v-if="item.children && expandedKeys[item.key] !== false" class="mdp-children">
               <button
@@ -188,7 +207,7 @@
                     @click="selectChannel(ch.id); channelSheetOpen=false">
               <span class="asi-icon asi-ch-icon" v-html="channelIcons[ch.id] || ch.icon"></span>
               <span class="asi-label">{{ ch.name }}</span>
-              <span v-if="ch.id==='telegram' && tgUnreadTotal > 0" class="asi-badge" style="background:#2AABEE;">{{ tgUnreadTotal }}</span>
+              <span v-if="ch.id==='telegram' && tgUnreadTotal > 0" class="asi-badge" style="background:#ef4444;">{{ tgUnreadTotal }}</span>
               <span v-else-if="ch.id==='email' && emailUnreadTotal > 0" class="asi-badge" style="background:#EA4335;">{{ emailUnreadTotal }}</span>
               <span v-if="ch.status==='offline'" class="asi-tag asi-tag-soon">即将上线</span>
               <span v-if="activeChannel===ch.id" class="asi-check">✓</span>
@@ -236,7 +255,7 @@
         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
       </button>
       <div class="mh-title"
-           :class="{'mh-clickable': (mobileInConv && activeChannel==='whatsapp') || (!mobileInConv && activePlatform==='communication') || (!mobileInConv && activePlatform==='assistant') || (activePlatform==='trade-agent'), 'mh-title-list': !mobileInConv && activePlatform==='communication'}"
+           :class="{'mh-clickable': (mobileInConv && activeChannel==='whatsapp') || (!mobileInConv && activePlatform==='communication') || (!mobileInConv && activePlatform==='assistant'), 'mh-title-list': !mobileInConv && activePlatform==='communication'}"
            @click="!mobileInConv && activePlatform==='assistant' ? (emitAssistantProfile = true) : onMhTitleClick()"
            style="touch-action:manipulation;">
         <!-- 列表视图 + 客户沟通页：显示渠道图标+名称+下拉箭头 -->
@@ -320,8 +339,11 @@
           </div>
         </div>
 
+        <!-- 移动端三点菜单按钮 -->
+        <button class="ta-header-more-btn" @click.stop="taMobileMenuOpen = !taMobileMenuOpen" title="更多">⋮</button>
+
         <!-- 消息区 -->
-        <div class="ta-chat-messages" ref="chatMessagesEl">
+        <div class="ta-chat-messages" ref="chatMessagesEl" @scroll="syncCustomScrollbar">
           <template v-if="agentMessages.length === 0">
             <div class="ta-welcome">
               <div class="ta-welcome-icon">{{ currentAgentObj?.icon || '🤖' }}</div>
@@ -342,7 +364,7 @@
           </template>
           <div v-else v-for="(msg, i) in agentMessages" :key="i" class="ta-message" :class="msg.role">
             <div v-if="msg.role === 'ai' || msg.role === 'assistant'" class="ta-msg-avatar"><span>{{ currentAgentObj?.icon || '🤖' }}</span></div>
-            <div class="ta-msg-bubble" :class="[msg.role, { 'ta-img-only': isImageOnlyMsg(msg) }]" v-html="renderMsgContent(msg)"></div>
+            <div class="ta-msg-bubble" :class="msg.role">{{ msg.content }}</div>
             <div v-if="msg.role === 'user'" class="ta-msg-avatar user-avatar"><span>👤</span></div>
           </div>
           <!-- Agent 执行过程可视化：步骤流 + 思考中 -->
@@ -365,29 +387,30 @@
         <!-- 底部输入区 -->
         <div class="ta-input-area">
           <div class="ta-input-row">
-            <!-- 附件预览条：在输入框内部顶部，元宝风格 -->
-            <div v-if="pendingFiles.length" class="ta-attach-bar">
-              <div v-for="(f, i) in pendingFiles" :key="i" class="ta-attach-chip">
-                <img v-if="f.type === 'image'" :src="f.content" class="ta-attach-thumb" />
-                <span v-else class="ta-attach-fileicon"></span>
-                <span v-if="f.type !== 'image'" class="ta-attach-filename">{{ f.name }}</span>
-                <button class="ta-attach-remove" @click="removePendingFile(i)" title="移除">×</button>
+            <button class="ta-input-plus" @click.stop="showAttachMenu = !showAttachMenu" title="上传附件">+</button>
+            <!-- File preview -->
+            <div v-if="pendingFile" class="pending-file-preview">
+              <div class="pending-file-info">
+                <img v-if="pendingFile.type === 'image'" :src="pendingFile.content" class="pending-file-thumb" />
+                <span v-else class="pending-file-icon">📄</span>
+                <span class="pending-file-name">{{ pendingFile.name }}</span>
+                <span class="pending-file-size">{{ (pendingFile.size/1024).toFixed(1) }}KB</span>
+                <button class="pending-file-remove" @click="removePendingFile" title="移除">×</button>
               </div>
             </div>
-            <div class="ta-input-inner">
-              <textarea v-model="agentInput" class="ta-input-textarea"
-                        :placeholder="isMobile ? '跟我说说你的需求' : '跟我说说你的需求，我来帮你处理'"
-                        @keydown.enter.exact.prevent="sendAgentMessage"
-                        rows="1" ref="agentTextarea"></textarea>
-              <div class="ta-input-actions">
-              <button class="ta-model-btn" @click.stop="showModelSelector = !showModelSelector">
+            <textarea v-model="agentInput" class="ta-input-textarea"
+                      :placeholder="isMobile ? '跟我说说你的需求' : '跟我说说你的需求，我来帮你处理'"
+                      @focus="agentInputFocused = true"
+                      @blur="hideAgentActions"
+                      @keydown.enter.exact.prevent="sendAgentMessage"
+                      rows="1" ref="agentTextarea"></textarea>
+            <div class="ta-input-actions" :class="{ 'agent-actions-idle': isMobile && !agentInputFocused }">
+              <button class="ta-model-btn" @click.stop="openAgentModelPicker()">
                 {{ selectedModel }} <span class="ta-chevron">▾</span>
               </button>
               <button class="ta-file-btn" @click.stop="toggleFilePanel()" title="文件面板">📁</button>
               <button class="ta-mic-btn" title="语音输入">🎙️</button>
-              <button class="ta-input-plus" @click.stop="showAttachMenu = !showAttachMenu" title="上传附件">+</button>
-              <button class="ta-send-btn" @click="sendAgentMessage" :disabled="!canSend" title="发送">↑</button>
-              </div>
+              <button class="ta-send-btn" @click="sendAgentMessage" :disabled="!agentInput.trim()" title="发送">↑</button>
             </div>
           </div>
           <!-- 附件菜单 -->
@@ -395,43 +418,73 @@
             <button @click="triggerFileUpload">📄 上传文件</button>
             <button @click="triggerImageUpload">🖼️ 上传图片</button>
           </div>
-          <input type="file" ref="fileInput" style="display:none" multiple @change="handleFileUpload" />
+          <input type="file" ref="fileInput" style="display:none" @change="handleFileUpload" />
           <!-- 模型选择弹窗 -->
           <div v-if="showModelSelector" class="ta-model-overlay">
             <div class="ta-model-backdrop" @click="showModelSelector = false"></div>
             <div class="ta-model-popup">
-              <!-- 智能选择开关 -->
-              <div class="ta-model-auto-row">
-                <div class="ta-model-auto-info">
-                  <span class="ta-model-auto-icon">⚡</span>
-                  <div>
-                    <div class="ta-model-auto-title">智能选择</div>
-                    <div class="ta-model-auto-desc">不用自己选，系统帮你挑最合适的</div>
-                  </div>
-                </div>
-                <button class="ta-model-toggle" :class="{on: selectedAutoMode}" @click.stop="toggleAutoMode">
-                  <span class="ta-model-toggle-knob"></span>
-                </button>
-              </div>
-
-
-              <div class="ta-model-list">
-                <div v-for="m in filteredModels" :key="m.model || m.name"
-                     class="ta-model-item" :class="{active: selectedModel === m.name}"
-                     @click="selectModel(m.name)">
-                  <span class="ta-model-icon">{{ m.icon }}</span>
-                  <div class="ta-model-item-content">
-                    <div class="ta-model-item-header">
-                      <span class="ta-model-name">{{ m.name }}</span>
-                      <span v-if="m.tag" class="ta-model-tag" :class="m.tagType">{{ m.tag }}</span>
-                      <span v-if="selectedModel === m.name" class="ta-model-check">✓</span>
+              <!-- 左：一级模型列表 -->
+              <div class="agm-col agm-col-list">
+                <!-- 智能选择开关 -->
+                <div class="ta-model-auto-row">
+                  <div class="ta-model-auto-info">
+                    <span class="ta-model-auto-icon">⚡</span>
+                    <div>
+                      <div class="ta-model-auto-title">智能选择</div>
+                      <div class="ta-model-auto-desc">不用自己选，系统帮你挑最合适的</div>
                     </div>
-                    <span class="ta-model-desc">{{ m.desc }}</span>
+                  </div>
+                  <button class="ta-model-toggle" :class="{on: selectedAutoMode}" @click.stop="toggleAutoMode">
+                    <span class="ta-model-toggle-knob"></span>
+                  </button>
+                </div>
+                <div class="agm-list">
+                  <div v-for="m in filteredModels" :key="m.model || m.name"
+                       class="agm-item" :class="{active: pickerPreview === (m.name || m.model)}"
+                       @click="pickerSelect(m.name || m.model)"
+                       @mouseenter="pickerSelect(m.name || m.model)">
+                    <span class="agm-item-icon">{{ m.icon }}</span>
+                    <div class="agm-item-body">
+                      <div class="agm-item-name">{{ m.name }}</div>
+                      <div class="agm-item-tagrow">
+                        <span v-if="pickCtx(m).isDefault" class="agm-tag agm-tag-default">推荐</span>
+                        <span v-if="pickCtx(m).isDefault" class="agm-tag agm-tag-blue">默认</span>
+                        <span class="agm-tag agm-tag-credit">＋{{ pickCtx(m).creditCost }}</span>
+                      </div>
+                    </div>
+                    <span v-if="pickerPreview === (m.name || m.model)" class="agm-item-check">✓</span>
                   </div>
                 </div>
+              </div>
+              <!-- 右：二级详情面板 -->
+              <div class="agm-col agm-col-detail">
+                <div class="agm-detail-scroll">
+                  <div class="agm-detail-name">{{ pickerDetail.name }}</div>
+                  <div class="agm-detail-meta" v-if="pickerDetail.creditCost">❤️ 积分：{{ pickerDetail.creditCost }} / 次</div>
+                  <div class="agm-detail-desc">{{ pickerDetail.desc }}</div>
+                  <div class="agm-detail-sec">
+                    <div class="agm-detail-sec-title">⭐ 优势特点</div>
+                    <div class="agm-detail-sec-body">{{ pickerDetail.features || pickerDetail.desc }}</div>
+                  </div>
+                  <div class="agm-detail-sec">
+                    <div class="agm-detail-sec-title">⚗️ 外贸场景优势</div>
+                    <div class="agm-detail-sec-body">{{ pickerDetail.trade || '适用外贸各类场景，选择后立即生效。' }}</div>
+                  </div>
+                  <div class="agm-detail-sec">
+                    <div class="agm-detail-sec-title">������ 可用功能</div>
+                    <div class="agm-detail-tags">
+                      <span v-for="t in pickerDetail.tags" :key="t" class="agm-detail-tag">{{ t }}</span>
+                      <span v-if="!pickerDetail.tags || !pickerDetail.tags.length" class="agm-detail-tag">AI 对话</span>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="agm-use-btn" @click="applyPickerModel">使用此模型</button>
               </div>
             </div>
           </div>
+        </div>
+        <div class="ta-scrollbar-track" ref="scrollbarTrack">
+          <div class="ta-scrollbar-thumb" ref="scrollbarThumb"></div>
         </div>
       </div>
 
@@ -542,6 +595,22 @@
         </div>
       </aside>
 
+      <!-- 移动端底部上拉面板（替代右侧栏） -->
+      <div v-if="taMobileMenuOpen" class="ta-mobile-menu-overlay" @click.self="taMobileMenuOpen = false">
+        <div class="ta-mobile-menu-sheet">
+          <div class="ta-mobile-menu-handle"></div>
+          <button class="ta-mobile-menu-item" @click="taMobileMenuOpen=false; toggleFilePanel()">
+            <span class="ta-mobile-menu-icon">📁</span><span class="ta-mobile-menu-label">工作文件</span>
+          </button>
+          <button class="ta-mobile-menu-item" @click="taMobileMenuOpen=false; toggleTaskPanel()">
+            <span class="ta-mobile-menu-icon">📌</span><span class="ta-mobile-menu-label">任务指派</span>
+          </button>
+          <button v-if="['doc-agent','freight-agent'].includes(currentTradeAgent)" class="ta-mobile-menu-item" @click="taMobileMenuOpen=false; toggleWecomPanel()">
+            <span class="ta-mobile-menu-icon">🏢</span><span class="ta-mobile-menu-label">企业微信设置</span>
+          </button>
+        </div>
+      </div>
+
       <!-- V1.0 客户选择面板 -->
       <div v-if="customerPickerOpen && !['doc-agent','freight-agent'].includes(currentTradeAgent)" class="ta-cust-overlay" @click.self="customerPickerOpen = false">
         <div class="ta-cust-panel">
@@ -597,7 +666,7 @@
 
     <div v-if="activePlatform === 'communication'" class="comm-module" :class="{ 'email-active': activeChannel === 'email', 'drawer-open': isMobile && mobileDrawerOpen, 'in-conv': isMobile && (mobileInConv || mobilePanel) }">
         <!-- 渠道图标切换条：v-for遍历channels，后期加渠道只需在channels数组+channelIcons加一项 -->
-          <div class="ch-switch" v-if="activePlatform==='communication' && !mobileInConv && !mobilePanel && !isMobile">
+          <div class="ch-switch" v-if="false">
             <button
               v-for="ch in channels"
               :key="ch.id"
@@ -608,7 +677,7 @@
             >
               <span v-html="channelIcons[ch.id] || ch.icon"></span>
               <span v-if="ch.id==='whatsapp' && chatStore.followupCounts?.firstResponse > 0" class="ch-sw-badge ch-sw-warn">{{ chatStore.followupCounts.firstResponse }}</span>
-              <span v-if="ch.id==='telegram' && tgUnreadTotal > 0" class="ch-sw-badge" style="background:#2AABEE;color:#fff;">{{ tgUnreadTotal }}</span>
+              <span v-if="ch.id==='telegram' && tgUnreadTotal > 0" class="ch-sw-badge" style="background:#ef4444;color:#fff;">{{ tgUnreadTotal }}</span>
               <span v-if="ch.id==='email' && emailUnreadTotal > 0" class="ch-sw-badge" style="background:#EA4335;color:#fff;">{{ emailUnreadTotal }}</span>
             </button>
           </div>
@@ -662,7 +731,7 @@
                     <div class="acc-name">{{ acc.name }}</div>
                     <div v-if="acc._launching" style="color:#25D366;font-size:11px;margin-top:2px;">正在启动中...</div>
                     <div v-else class="acc-meta" :class="acc.online ? 'online-text' : 'offline-text'">
-                      <template v-if="!acc.online"><span style="color:#ef4444;font-size:11px;">未连接</span> · </template>{{ acc.phone || acc.instanceName }}
+                      <template v-if="!acc.online"><span style="color:#ef4444;font-size:11px;">未连接</span></template>{{ acc.phone ? ' · ' + acc.phone : '' }}
                       <span v-if="acc.proxyIp" class="acc-proxy-tag"> · {{ acc.proxyIp }}</span>
                     </div>
                   </div>
@@ -683,7 +752,7 @@
               </div>
             </div>
             <div v-if="activeChannel === 'telegram'" class="wa-account-list">
-              <!-- TG 新建会话按钮（对齐 WhatsApp）：未添加账号时点击进入登录欢迎页 -->
+                            <!-- TG 新建会话按钮（对齐 WhatsApp）：未添加账号时点击进入登录欢迎页 -->
               <div class="wa-new-session-btn" @click="tgOpenNewSession">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 <span>新建会话</span>
@@ -699,7 +768,7 @@
                     <div class="acc-info">
                       <div class="acc-name">{{ tg.pushName || tg.name || ('@'+tg.telegramBotUsername) }}</div>
                       <div v-if="tg._tgLaunching" style="color:#2AABEE;font-size:11px;margin-top:2px;">正在启动...</div>
-                      <div v-else class="acc-meta online-text">在线</div>
+                      <div v-else class="acc-meta" style="color:var(--accent);font-size:12px;">{{ tg.phone || tg.telegramBotUsername || '在线' }}</div>
                     </div>
                   </div>
                   <!-- Hover actions：启动/配置代理/删除（对齐 WhatsApp） -->
@@ -716,7 +785,19 @@
                   </div>
                 </div>
               </template>
-              <div v-else-if="tgConnecting" class="wa-empty-card">
+              <!-- TG 新建会话：显示待连接新账号卡片（对齐WA新建账号后账号栏出现未连接卡片） -->
+              <div v-if="tgLoginView === 'qr' || tgLoginView === 'phone'" class="wa-account-item active" style="opacity:.85;">
+                <div class="acc-top-row">
+                  <div class="acc-avatar" style="background:#2AABEE;overflow:hidden;">
+                    <span class="acc-avatar-initial" style="font-size:20px;">T</span>
+                  </div>
+                  <div class="acc-info">
+                    <div class="acc-name">Telegram 新账号</div>
+                    <div class="acc-meta" style="color:#2AABEE;font-size:11px;">扫码连接中...</div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="tgConnecting" class="wa-empty-card">
                 <div class="wa-empty-avatar"><span style="font-size:22px;">✈️</span></div>
                 <div class="wa-empty-info">
                   <div class="wa-empty-name">Telegram</div>
@@ -741,42 +822,45 @@
 
           </template>
 
-          <!-- 折叠态：当前渠道显示头像，点击展开 -->
+          <!-- 折叠态：当前渠道账号头像+名称列表(对齐竞品)，点击展开 -->
           <div class="channel-icons" v-else>
-            <!-- WhatsApp -->
-            <div v-if="activeChannel === 'whatsapp'" class="ch-avatar-btn active" @click="accountsCollapsed = false" title="点击展开" :style="{ width: '48px', borderRadius: '50%', height: waAccounts.length > 1 ? 'auto' : '48px', padding: waAccounts.length > 1 ? '4px 2px' : '0' }">
-              <!-- 多账号堆叠头像 -->
-              <div v-if="waAccounts.length > 1" class="ch-avatar-stack">
-                <div v-for="(acc, idx) in waAccounts.slice(0, 3)" :key="acc.id"
-                  class="ch-avatar ch-avatar-stacked" :style="{ background: acc.color, width: '44px', height: '44px', fontSize: '16px', border: '2px solid var(--sidebar-bg,#0b141a)' }">
-                  <img v-if="acc.profilePicUrl" class="ch-avatar-img" :src="acc.profilePicUrl" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+            <!-- WhatsApp 折叠态：账号头像+名称 -->
+            <div v-if="activeChannel === 'whatsapp'" class="ch-collapsed-list" @click="accountsCollapsed = false" title="点击展开">
+              <div v-for="acc in waAccounts" :key="acc.id" class="ch-collapsed-item">
+                <div class="ch-collapsed-avatar" :style="!acc.avatar ? {background: acc.color} : {}">
+                  <img v-if="acc.avatar" class="ch-avatar-img" :src="acc.avatar" @error="onSelfAvatarError" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
                   <span v-else class="ch-avatar-initial">{{ (acc.name || '?')[0] }}</span>
                 </div>
-                <span v-if="waAccounts.length > 3" class="ch-avatar-more" style="width:44px;height:44px;border-radius:50%;background:#555;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;border:2px solid var(--sidebar-bg,#0b141a);">+{{ waAccounts.length - 3 }}</span>
+                
               </div>
-              <!-- 单账号 -->
-              <div v-else class="ch-avatar" :style="!selfAvatarOk ? {background: selfAvatarBg} : {}">
-                <img v-if="chatStore.selfAvatarUrl && selfAvatarOk" class="ch-avatar-img" :src="chatStore.selfAvatarUrl" @error="onSelfAvatarError" alt="" />
-                <span v-else class="ch-avatar-initial">{{ selfInitial }}</span>
+              <div v-if="!waAccounts.length" class="ch-collapsed-empty">WhatsApp</div>
+            </div>
+            <!-- Telegram 折叠态：账号头像+名称 -->
+            <div v-else-if="activeChannel === 'telegram'" class="ch-collapsed-list" @click="accountsCollapsed = false" title="点击展开">
+              <div v-for="tga in tgAccounts" :key="tga.id" class="ch-collapsed-item">
+                <div class="ch-collapsed-avatar" style="background:#2AABEE;overflow:hidden;">
+                  <img v-if="tga.avatarUrl" :src="tga.avatarUrl" @error="$event.target.style.display='none'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                  <img v-else src="/tg_avatar.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+                </div>
+                
               </div>
-              <div class="p-tooltip">{{ waAccounts.length > 1 ? waAccounts.map(a=>a.name).join(',') : (chatStore.pushName || 'WhatsApp') }}</div>
+              <div v-if="!tgAccounts.length" class="ch-collapsed-empty">Telegram</div>
             </div>
-            <!-- Telegram -->
-            <div v-else-if="activeChannel === 'telegram'" class="ch-avatar-btn active" @click="accountsCollapsed = false" title="点击展开" style="background:#2AABEE;">
-              <span style="font-size:20px;">✈️</span>
-              <div class="p-tooltip">Telegram</div>
-            </div>
-            <!-- Email -->
-            <div v-else-if="activeChannel === 'email'" class="ch-avatar-btn active" @click="accountsCollapsed = false" title="点击展开" style="background:#EA4335;">
-              <span style="font-size:20px;">✉️</span>
-              <div class="p-tooltip">邮箱</div>
+            <!-- Email 折叠态 -->
+            <div v-else-if="activeChannel === 'email'" class="ch-collapsed-list" @click="accountsCollapsed = false" title="点击展开">
+              <div class="ch-collapsed-item">
+                <div class="ch-collapsed-avatar" style="background:#EA4335;">
+                  <span style="font-size:18px;">✉️</span>
+                </div>
+                
+              </div>
             </div>
           </div>
         </aside>
 
         <!-- ④ 聊天列表栏 -->
         <aside class="col-chatlist" :class="{ 'm-hidden': isMobile && mobileInConv && (activeConv || tgActiveJid), 'wa-hidden': activeChannel === 'whatsapp' && (chatStore.currentWaAccountId === null || !chatStore.isConnected), 'tg-hidden': activeChannel === 'telegram' && tgAccounts.length === 0 && !tgConnecting }">
-          <div class="col-header" v-if="activeChannel === 'telegram' && !tgActiveJid && !isMobile">
+          <div class="col-header" v-if="activeChannel === 'telegram' && !isMobile">
             <div class="wa-col-brand">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/></svg>
               <span class="wa-col-title">Telegram</span>
@@ -932,6 +1016,7 @@
                     <span v-if="conv.firstResponseWaited" class="conv-fr-dot-inline" :title="'已等待 ' + conv.firstResponseWaited + ' 分钟'">⚡</span>
                     <span v-else-if="conv.followupStatus" class="conv-followup-dot-inline" :class="'fu-dot-' + conv.followupStatus"></span>
                     <span v-if="conv.platform === 'telegram'" class="conv-badge" title="Telegram" style="background:#2AABEE;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:4px;font-weight:600;">TG</span>
+                    <span v-if="conv.platform === 'telegram' && conv.isGroup" class="conv-badge" title="TG群组" style="background:#20b878;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-right:2px;font-weight:600;">群</span>
                     <span v-if="conv.platform === 'whatsapp' && chatStore.accountFilter == null && waAccounts.length > 1 && conv.accountName" class="conv-badge conv-acc-badge" :style="{background: accColor(conv.accountId)}" :title="conv.accountName">{{ conv.accountName }}</span>
                     {{ conv.name }}
                     <span v-if="conv.pinned" class="conv-badge conv-badge-pin" title="已置顶">📌</span>
@@ -984,15 +1069,13 @@
 
           <!-- ====== L2: Business Confirmation Banner ====== -->
           <transition name="biz-confirm-slide">
-            <div v-if="bizConfirmPending.length > 0 && activeChannel === 'whatsapp'" class="biz-confirm-banner">
+            <div v-if="curBizItem && activeChannel === 'whatsapp' && chatStore.activeConversation" class="biz-confirm-banner">
               <div class="biz-confirm-inner">
                 <div class="biz-confirm-icon">🔍</div>
                 <div class="biz-confirm-text">
-                  <span class="biz-confirm-label"><span class="biz-confirm-name">「{{ bizConfirmPending[currentBizConfirmIdx]?.displayName }}<span class="biz-confirm-phone" v-if="bizConfirmPending[currentBizConfirmIdx]?.phone && bizConfirmPending[currentBizConfirmIdx]?.phone !== bizConfirmPending[currentBizConfirmIdx]?.displayName"> · {{ bizConfirmPending[currentBizConfirmIdx]?.phone }}</span>」</span><span class="biz-confirm-q">是业务客户吗？</span></span>
-                  <span class="biz-confirm-counter" v-if="bizConfirmPending.length > 1">{{ currentBizConfirmIdx + 1 }}/{{ bizConfirmPending.length }}</span>
+                  <span class="biz-confirm-label"><span class="biz-confirm-name">「{{ curBizItem.displayName }}<span class="biz-confirm-phone" v-if="curBizItem.phone && curBizItem.phone !== curBizItem.displayName"> · {{ curBizItem.phone }}</span>」</span><span class="biz-confirm-q">是业务客户吗？</span></span>
                 </div>
                 <div class="biz-confirm-actions">
-                  <button class="biz-confirm-btn biz-confirm-view" @click="onViewBizConversation">查看会话</button>
                   <button class="biz-confirm-btn biz-confirm-yes" @click="onConfirmBusiness(true)">✓ 标记为业务客户</button>
                   <button class="biz-confirm-btn biz-confirm-no" @click="onConfirmBusiness(false)">忽略</button>
                 </div>
@@ -1003,7 +1086,7 @@
           <!-- 📧 邮箱渠道嵌入式视图 -->
           <EmailChannelView v-if="activeChannel === 'email'" :embedded="true" @unread-count="onEmailUnread" />
           <template v-else>
-          <!-- TG tab 且未选中会话：TG 登录欢迎页（扫码/手机号） -->
+                    <!-- TG tab 且未选中会话：TG 登录欢迎页（扫码/手机号） -->
           <div v-if="activeChannel === 'telegram' && !tgActiveJid" class="tg-no-session-wrap">
             <div v-if="tgAccounts.length === 0 && tgLoginView === 'welcome'" class="conv-placeholder tg-welcome-page">
               <div class="no-account-empty">
@@ -1088,7 +1171,7 @@
             </div>
             </div>
           </div>
-                    <!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
+<!-- TG tab 且选中了会话：内联TG聊天面板（不经过ChatView，避免WA依赖） -->
           <div v-else-if="activeChannel === 'telegram' && tgActiveJid" class="tg-chat" style="display:flex;flex-direction:column;height:100%;background:var(--chat-bg,#0b141a);">
             <div class="tg-header" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel-header-bg,#202c33);border-bottom:1px solid var(--border-color,#222d34);position:relative;z-index:50;touch-action:manipulation;overflow:visible;">
               <button @click="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" @touchend.stop.prevent="tgActiveJid=null;activeConv=null;chatStore.activeConversation=null;if(isMobile){mobileInConv=false;mobilePanel=null;activeConv=null;}" style="background:none;border:none;color:var(--text-secondary,#8696a0);font-size:20px;cursor:pointer;padding:4px 8px;">←</button>
@@ -1123,6 +1206,13 @@
             </div>
             <div class="tg-msgs" style="flex:1;overflow-y:auto;padding:16px 8%;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1;">
               <div v-for="m in tgMessages" :key="m.id" :style="{alignSelf:m.fromMe?'flex-end':'flex-start',maxWidth:'75%'}">
+                <template v-if="tgActiveConv && tgActiveConv.isGroup && !m.fromMe">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;max-width:100%;">
+                    <span v-if="m.senderAvatar" style="flex-shrink:0;"><img :src="m.senderAvatar" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" @error="$event.target.style.display='none'" alt="" /></span>
+                    <span v-if="!m.senderAvatar" style="width:20px;height:20px;border-radius:50%;background:#2AABEE;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;">{{ (m.senderName || '?')[0].toUpperCase() }}</span>
+                    <span :style="{fontSize:'11px',fontWeight:'600',color:'#2AABEE',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}">{{ m.senderName || '' }}</span>
+                  </div>
+                </template>
                 <div :style="{background:(m.messageType==='image'||m.messageType==='MessageMediaPhoto'||m.mediaType==='MessageMediaPhoto')&&m.mediaUrl&&isMediaPlaceholderText(m.text)?'transparent':(m.fromMe?'#2AABEE':'var(--msg-incoming,#202c33)'),color:m.fromMe?'#fff':'var(--text-primary,#e9edef)',padding:(m.messageType==='image'||m.messageType==='MessageMediaPhoto'||m.mediaType==='MessageMediaPhoto')&&m.mediaUrl&&isMediaPlaceholderText(m.text)?'0':'8px 12px',borderRadius:m.fromMe?'8px 8px 0 8px':'8px 8px 8px 0',fontSize:'14px',lineHeight:1.4,wordBreak:'break-word',overflow:'hidden'}">
                   <!-- 媒体消息：显示图片/视频 -->
                   <template v-if="m.mediaUrl && (m.messageType === 'image' || m.messageType === 'MessageMediaPhoto' || m.mediaType === 'MessageMediaPhoto')">
@@ -1134,6 +1224,13 @@
                   <template v-else-if="m.mediaUrl">
                     <a :href="m.mediaUrl" target="_blank" style="color:inherit;text-decoration:underline;">📎 {{ m.text || '附件' }}</a>
                   </template>
+                  <!-- 引用回复 -->
+                  <template v-if="m.replyToBody">
+                    <div :style="{background:m.fromMe?'rgba(255,255,255,0.15)':'rgba(0,0,0,0.2)',borderLeft:'3px solid '+(m.fromMe?'rgba(255,255,255,0.5)':'#00a884'),borderRadius:'4px',padding:'4px 8px',marginBottom:'6px',fontSize:'12px',lineHeight:1.3,color:'inherit',opacity:0.8,maxWidth:'260px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}">
+                      <span :style="{fontWeight:'600',fontSize:'11px',color:m.fromMe?'rgba(255,255,255,0.7)':'#00a884'}">回复</span>
+                      <span style="margin:0 4px;color:'inherit';opacity:0.6;">{{ m.replyToBody }}</span>
+                    </div>
+                  </template>
                   <!-- 文本消息 -->
                   <template v-if="m.translationObj">
                     <div style="color:inherit;">{{ m._sending ? '...' : (isMediaPlaceholderText(m.text) ? '' : (m.fromMe ? (m.translationObj.translated || m.text) : m.text)) }}</div>
@@ -1141,7 +1238,7 @@
                   </template>
                   <template v-else>{{ m._sending ? '...' : (isMediaPlaceholderText(m.text) ? '' : m.text) }}</template>
                 </div>
-                <div :style="{fontSize:'11px',color:'var(--text-secondary,#8696a0)',textAlign:m.fromMe?'right':'left',marginTop:'2px'}">{{ m.time }}<template v-if="m.fromMe && m.read"> ✓✓</template><template v-else-if="m.fromMe"> ✓</template></div>
+                <div :style="{fontSize:'11px',color:(m.fromMe && m.read)?'#22bb55':'var(--text-secondary,#8696a0)',textAlign:m.fromMe?'right':'left',marginTop:'2px'}">{{ m.time }}<template v-if="m.fromMe && m.read"> ✓✓</template><template v-else-if="m.fromMe"> ✓</template></div>
               </div>
               <div v-if="tgMessages.length === 0" style="text-align:center;color:var(--text-secondary,#8696a0);padding:20px;">暂无消息，在 Telegram 发第一条消息吧</div>
             </div>
@@ -1236,6 +1333,10 @@
                 <span class="ai-title-icon">🔍</span>
                 <span class="ai-title-text">客户背调</span>
               </div>
+              <div class="ai-title" v-else-if="activePanel === 'autoReception'">
+                <span class="ai-title-icon">🤖</span>
+                <span class="ai-title-text">自动接待</span>
+              </div>
               <div class="ai-title" v-else-if="activePanel === 'requirement'">
                 <span class="ai-title-icon">🎯</span>
                 <span class="ai-title-text">客户需求分析</span>
@@ -1243,9 +1344,6 @@
               <div class="ai-title" v-else-if="activePanel === 'company'">
               <span class="ai-title-icon">🏢</span>
               <span>公司资料</span>
-              <div class="cm-add-dropdown" style="position:relative;margin-left:auto">
-                <button class="col-toggle" @click.stop="openCompanyDialog()" title="新增资料（文字/文件）">➕</button>
-              </div>
             </div>
             <div class="ai-title" v-else-if="activePanel === 'documents'">
                 <span class="ai-title-icon">📄</span>
@@ -1643,9 +1741,7 @@
             <!-- 顶部：模型选择 + 模式切换 + 清空 -->
             <div class="aitalk-top-bar aitalk-top-bar-compact">
               <div class="aitalk-top-first-row">
-                <el-select v-model="aitalkModel" class="sub-select aitalk-model-select" popper-class="crm-dark-popper" placeholder="选择模型" size="small" @change="v => localStorage.setItem('crm_aitalk_model', v)">
-                  <el-option v-for="m in aiModels" :key="m.key" :label="m.name + ' (' + (m.creditCost || 150) + '积分)'" :value="m.key" />
-                </el-select>
+                <span class="sub-label aitalk-model-label">大模型选择</span><button type="button" class="mp-trigger mp-trigger-aitalk" @click="openModelPicker('aitalk')"><span class="mp-trigger-label">{{ modelPickerDisplay(aitalkModel) }}</span><span class="mp-chevron">▾</span></button>
                 <el-select v-model="aitalkTargetLang" class="sub-select aitalk-lang-select-compact" popper-class="crm-dark-popper" placeholder="语言" size="small">
                   <el-option label="🌐 自动" value="follow" />
                   <el-option label="العربية" value="ar" />
@@ -1867,7 +1963,6 @@
                     </div>
                     <!-- 底部提示 -->
                     <div class="aitalk-footer-hint">💡 如果需要我帮你润色得更简短或更口语化，请切换到对话模式告诉我</div>
-                    <!-- 优化反馈区 -->
                     <div class="aitalk-refine-block">
                       <div class="aitalk-refine-title">😕 不满意？告诉AI哪里需要改进：</div>
                       <div class="aitalk-refine-chips">
@@ -2086,12 +2181,11 @@
                     </div>
                   </div>
 
-                  <!-- 模型选择 -->
+                  <!-- 字段列表 -->
                   <div class="bg-model-row" style="margin-bottom:10px">
-                    <span class="sub-label">识别模型</span>
+                    <span class="sub-label">大模型选择</span>
                     <button type="button" class="mp-trigger" @click="openModelPicker('extract')"><span class="mp-trigger-label">{{ modelPickerDisplay(extractModel) }}</span><span class="mp-chevron">▾</span></button>
                   </div>
-                  <!-- 字段列表 -->
                   <div class="customer-fields">
                     <template v-for="f in CUSTOMER_FIELDS" :key="f.key">
                       <div class="customer-field" :class="{ warn: f.warnIfEmpty && !customerData[f.key] && !customerEditMode }">
@@ -2223,6 +2317,7 @@
                   </div>
                 </div>
 
+
               </div><!-- /.profile-scroll -->
             </template>
           </div>
@@ -2237,7 +2332,7 @@
               <div class="bgcheck-content">
                 <div class="profile-section-hint">背调客户背景、公司资质与风险评级，一键生成背调报告</div>
                 <div class="bg-model-row">
-                  <span class="sub-label">背调模型</span>
+                  <span class="sub-label">大模型选择</span>
                   <button type="button" class="mp-trigger" @click="openModelPicker('bgcheck')"><span class="mp-trigger-label">{{ modelPickerDisplay(bgcheckModel) }}</span><span class="mp-chevron">▾</span></button>
                 </div>
                 <div class="customer-bg-btn-wrap">
@@ -2269,6 +2364,188 @@
             </template>
           </div>
 
+          <!-- 🤖 指定客户自动接待面板 -->
+          <div v-if="!panelCollapsed && activePanel === 'autoReception'" class="ar-panel-body">
+            <div class="ar-cust-info"><span class="ar-cust-icon">🤖</span><span>该客户自动接待</span></div>
+
+            <div class="ar-row">
+              <span class="ar-label">自动接待</span>
+              <el-switch v-model="arForm.enabled" active-color="#00a884" />
+            </div>
+
+            <div class="ar-row">
+              <span class="ar-label">多少分钟未回复接管</span>
+              <select v-model.number="arForm.timeoutMinutes" class="ar-select">
+                <option :value="1">1 分钟</option>
+                <option :value="3">3 分钟</option>
+                <option :value="5">5 分钟</option>
+                <option :value="10">10 分钟</option>
+              </select>
+            </div>
+
+            <div class="ar-label ar-label-block">把关方式（微信提醒）</div>
+            <div class="ar-radio-group">
+              <label class="ar-radio" :class="{ sel: arForm.confirmMode==='smart' }">
+                <input type="radio" value="smart" v-model="arForm.confirmMode"><span>拿不准的才推微信让我确认（推荐）</span>
+              </label>
+              <label class="ar-radio" :class="{ sel: arForm.confirmMode==='all' }">
+                <input type="radio" value="all" v-model="arForm.confirmMode"><span>每条都推微信确认后再发</span>
+              </label>
+              <label class="ar-radio" :class="{ sel: arForm.confirmMode==='none' }">
+                <input type="radio" value="none" v-model="arForm.confirmMode"><span>全自动直接回复（不推微信）</span>
+              </label>
+            </div>
+
+            <div class="ar-label ar-label-block">接待时段</div>
+            <select v-model="arForm.mode" class="ar-select ar-select-full">
+              <option value="always">全天（随时可接管）</option>
+              <option value="offhours">仅非工作时段</option>
+            </select>
+            <template v-if="arForm.mode==='offhours'">
+              <div class="ar-time-row">
+                <span>开始</span><input type="number" min="0" max="23" v-model.number="arForm.startHour" class="ar-num">
+                <span>时 &nbsp;·&nbsp; 结束</span><input type="number" min="0" max="23" v-model.number="arForm.endHour" class="ar-num">
+                <span>时（{{ arForm.timezone }}）</span>
+              </div>
+            </template>
+
+            <div class="ar-actions">
+              <button class="ar-save-btn" :disabled="arSaving" @click="saveAutoReception">{{ arSaving ? '保存中…' : '保存设置' }}</button>
+            </div>
+            <div class="ar-hint" v-if="arForm.enabled">✅ 已开启：该客户 {{ arForm.timeoutMinutes }} 分钟未回，AI 将自动接待。</div>
+            <div class="ar-hint" v-else>该客户自动接待已关闭。</div>
+          </div>
+
+          <!-- 📌 智能跟进面板 -->
+          <div v-if="!panelCollapsed && activePanel === 'followup'" class="customer-panel-body followup-panel-body">
+            <div v-if="!chatStore.activeJid" class="customer-empty">
+              <div style="font-size:48px;margin-bottom:12px">📌</div>
+              <div style="color:#8696a0;font-size:13px">请先选择一个客户会话</div>
+            </div>
+            <template v-else>
+              <div class="followup-content">
+                <div class="profile-section-hint">结合对话+背调+需求，AI 生成跟进策略与话术，助你推进成交</div>
+
+                <!-- 场景选择 -->
+                <div class="followup-scenario-row">
+                  <span class="sub-label">跟进场景</span>
+                  <select v-model="fuScenario" class="followup-scenario-select">
+                    <option value="auto">🤖 自动识别</option>
+                    <option v-for="sc in fuScenarios" :key="sc.key" :value="sc.key">{{ sc.label }}</option>
+                  </select>
+                </div>
+                <div v-if="fuScenario !== 'auto' && fuScenarioObj" class="followup-scenario-tip">
+                  <div style="font-weight:600;color:var(--text, #333)">{{ fuScenarioObj.label }}</div>
+                  <div style="color:#8696a0;font-size:12px;margin-top:2px">{{ fuScenarioObj.desc }}<br><span style="color:var(--accent, #00a884)">策略方向：{{ fuScenarioObj.focus }}</span></div>
+                </div>
+
+                <!-- 建议场景 chips（自动识别时展示导出的建议） -->
+                <div v-if="fuSuggested.length" class="followup-chips">
+                  <span class="followup-chip-label">建议场景</span>
+                  <span v-for="k in fuSuggested" :key="k" class="followup-chip" :class="{ active: fuScenario === k }" @click="fuPickScenario(k)">{{ fuScenarioName(k) }}</span>
+                </div>
+
+                <div class="profile-tabs" style="margin:10px 0 4px;border-radius:6px;overflow:hidden">
+                  <button class="profile-tab" :class="{active: fuMainTab==='strategy'}" @click="fuMainTab='strategy'">
+                    <span class="profile-tab-ic">📋</span><span class="profile-tab-lb">跟进策略</span>
+                  </button>
+                  <button class="profile-tab" :class="{active: fuMainTab==='speech'}" @click="fuMainTab='speech'">
+                    <span class="profile-tab-ic">💬</span><span class="profile-tab-lb">跟进话术</span>
+                  </button>
+                </div>
+                <!-- 生成策略（跟进策略选项卡下） -->
+                <div v-if="fuMainTab==='strategy'" style="margin-top:8px">
+                  <button class="customer-bg-btn followup-action-btn" @click="fuGenerateStrategy" :disabled="fuLoadingStrategy || !chatStore.activeJid">
+                    {{ fuLoadingStrategy ? '⏳ 策略生成中...' : (fuStrategy ? '🔄 重新生成策略' : '🚀 生成跟进策略') }}
+                  </button>
+                  <div v-if="!fuStrategy" style="padding:12px 0;color:#8696a0;font-size:12.5px">🚀 点击上方按钮生成跟进策略，会结合对话+背调+需求，给出推进建议与话术。</div>
+                  <div v-if="fuStrategy" class="followup-strategy-card">
+                  <div class="followup-card-head">
+                    <span style="color:#00a884;font-weight:700;font-size:14px">📋 跟进策略</span>
+                    <span v-if="fuScenario !== 'auto'"> · {{ fuScenarioName(fuScenario) }}</span>
+                  </div>
+                  <div v-if="fuStrategy.goal" class="fu-line"><b>🎯 目标：</b>{{ fuStrategy.goal }}</div>
+                  <div v-if="fuStrategy.timing" class="fu-line"><b>⏰ 时机：</b>{{ fuStrategy.timing }}</div>
+                  <div v-if="fuStrategy.approach && fuStrategy.approach.length" class="fu-block">
+                    <b>🧭 跟进思路</b>
+                    <ul class="fu-ul">
+                      <li v-for="(p, i) in fuNormArr(fuStrategy.approach)" :key="i">{{ p }}</li>
+                    </ul>
+                  </div>
+                  <div v-if="fuStrategy.concerns && fuStrategy.concerns.length" class="fu-block">
+                    <b>⚠️ 顾虑/风险</b>
+                    <ul class="fu-ul">
+                      <li v-for="(c, i) in fuNormArr(fuStrategy.concerns)" :key="i">{{ c }}</li>
+                    </ul>
+                  </div>
+                  <div v-if="fuStrategy.signals && fuStrategy.signals.length" class="fu-block">
+                    <b>✅ 成交信号</b>
+                    <ul class="fu-ul">
+                      <li v-for="(s, i) in fuNormArr(fuStrategy.signals)" :key="i">{{ s }}</li>
+                    </ul>
+                  </div>
+                </div>
+                </div>
+
+                <!-- 生成话术 -->
+                <template v-if="fuMainTab==='speech'">
+                  <div class="followup-speech-row">
+                    <span class="sub-label">语言</span>
+                    <select v-model="fuLang" class="followup-lang-select">
+                      <option value="auto">🌐 自动匹配</option>
+                      <option value="zh">中文</option>
+                      <option value="en">English</option>
+                      <option value="es">Español</option>
+                      <option value="ar">العربية</option>
+                      <option value="fr">Français</option>
+                      <option value="pt">Português</option>
+                      <option value="ru">Русский</option>
+                      <option value="de">Deutsch</option>
+                      <option value="ja">日本語</option>
+                      <option value="ko">한국어</option>
+                    </select>
+                    <button class="customer-bg-btn followup-speech-btn" @click="fuGenerateSpeech" :disabled="fuLoadingSpeech">
+                      {{ fuLoadingSpeech ? '⏳ 生成中...' : '💬 生成跟进话术' }}
+                    </button>
+                  </div>
+                  <div v-if="fuSpeech" class="followup-speech-card">
+                    <div class="followup-card-head">
+                      <span style="color:#00a884;font-weight:700;font-size:14px">💬 跟进话术</span>
+                      <button class="fu-copy-btn" @click="fuCopySpeech">📋 复制</button>
+                    </div>
+                    <div class="followup-speech-text">{{ fuSpeech }}</div>
+                    <div v-if="fuSpeechZh" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-color,#e0e0e0)">
+                      <div style="font-size:11px;color:#8696a0">中文对照（供参考，发送为原文）</div>
+                      <div style="font-size:12.5px;color:var(--text-secondary,#667781);line-height:1.65;margin-top:4px;white-space:pre-wrap">{{ fuSpeechZh }}</div>
+                    </div>
+                    <div class="followup-hand-send-tip">👆 请自行发送，AI 不会自动外发</div>
+                  </div>
+                </template>
+
+                <!-- 历史记录 -->
+                <div class="followup-history">
+                  <div class="followup-history-head" @click="fuHistoryOpen = !fuHistoryOpen">
+                    <span style="font-weight:600;color:var(--text, #333)">🕘 历史跟进</span>
+                    <span style="color:#8696a0;font-size:12px">{{ fuHistoryOpen ? '▾' : '▸' }}</span>
+                  </div>
+                  <div v-if="fuHistoryOpen" class="followup-history-body">
+                    <div v-if="!fuHistory.length" class="profile-empty" style="padding:12px 0">
+                      <div style="color:var(--text-secondary);font-size:12px">暂无跟进记录</div>
+                    </div>
+                    <div v-for="h in fuHistory" :key="h.id" class="followup-history-item">
+                      <div class="fu-h-head">
+                        <span class="fu-h-scenario">{{ fuScenarioName(h.scenario) }}</span>
+                        <span class="fu-h-time">{{ fuFormatTime(h.createdAt) }}</span>
+                      </div>
+                      <div v-if="h.strategy && h.scenario" class="fu-h-strategy">{{ fuBriefStrategy(h.strategy) }}</div>
+                      <div v-if="h.speech" class="fu-h-speech">{{ h.speech }}</div>
+                      <div v-if="h.language && h.language !== 'zh'" class="fu-h-lang">🌐 {{ h.language }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
           <!-- 🎯 需求总结面板 -->
           <div v-if="!panelCollapsed && activePanel === 'requirement'" class="req-panel-body">
             <div v-if="!chatStore.activeJid" class="customer-empty">
@@ -2281,7 +2558,7 @@
               </div>
               <div class="req-fields">
                 <div class="bg-model-row" style="margin-bottom:10px">
-                  <span class="sub-label">分析模型</span>
+                  <span class="sub-label">大模型选择</span>
                   <button type="button" class="mp-trigger" @click="openModelPicker('req')"><span class="mp-trigger-label">{{ modelPickerDisplay(reqModel) }}</span><span class="mp-chevron">▾</span></button>
                 </div>
                 <div v-if="reqSections.length === 0" class="req-empty-hint">
@@ -2632,12 +2909,7 @@
                 <template v-if="transForm.receiveEnabled">
                   <div class="sub-row">
                     <span class="sub-label">翻译线路</span>
-                    <el-select v-model="transForm.receiveEngine" class="sub-select" popper-class="crm-dark-popper" placeholder="选择翻译线路">
-                      <el-option label="DeepL(推荐)" value="deepl" />
-                      <el-option label="DeepSeek" value="deepseek" />
-                      <el-option label="豆包AI" value="doubao" />
-                      <el-option label="GPT-5.6" value="openai" />
-                    </el-select>
+                    <button type="button" class="mp-trigger" @click="openModelPicker('transReceive')"><span class="mp-trigger-label">{{ translateLineDisplay(transForm.receiveEngine) }}</span><span class="mp-chevron">▾</span></button>
                   </div>
                   <div class="sub-row">
                     <span class="sub-label">源语言</span>
@@ -2665,12 +2937,7 @@
                 <template v-if="transForm.sendEnabled">
                   <div class="sub-row">
                     <span class="sub-label">翻译线路</span>
-                    <el-select v-model="transForm.sendEngine" class="sub-select" popper-class="crm-dark-popper" placeholder="选择翻译线路">
-                      <el-option label="DeepL(推荐)" value="deepl" />
-                      <el-option label="DeepSeek" value="deepseek" />
-                      <el-option label="豆包AI" value="doubao" />
-                      <el-option label="GPT-5.6" value="openai" />
-                    </el-select>
+                    <button type="button" class="mp-trigger" @click="openModelPicker('transSend')"><span class="mp-trigger-label">{{ translateLineDisplay(transForm.sendEngine) }}</span><span class="mp-chevron">▾</span></button>
                   </div>
                   <div class="sub-row">
                     <span class="sub-label">翻译成</span>
@@ -2752,6 +3019,17 @@
 
           <!-- 🏢 公司资料面板 -->
           <div v-if="!panelCollapsed && activePanel === 'company'" class="cm-panel-body">
+            <div class="cm-action-bar">
+              <button class="cm-action-item" @click="openNewProduct">
+                <span class="cma-icon">📦</span><span class="cma-text">新增产品</span>
+              </button>
+              <button class="cm-action-item" @click="openUrlImport">
+                <span class="cma-icon">🌐</span><span class="cma-text">网址提取</span>
+              </button>
+              <button class="cm-action-item" @click="openCompanyDialog()">
+                <span class="cma-icon">➕</span><span class="cma-text">新增资料</span>
+              </button>
+            </div>
             <div class="cm-chips">
               <button class="cm-chip" :class="{active: companyCategory==='all'}" @click="companyCategory='all'; fetchCompanyMaterials()">📚 全部</button>
               <button v-for="c in companyCategories" :key="c.refValue" class="cm-chip" :class="{active: companyCategory===c.refValue}" @click="companyCategory=c.refValue; fetchCompanyMaterials()">{{ c.icon }} {{ c.name }}</button>
@@ -2811,6 +3089,128 @@
               </div>
             </div>
           </div>
+
+          <!-- 📦 新增产品（完整字段，存公司资料产品目录） -->
+          <el-dialog v-model="showNewProduct" title="📦 新增产品" width="720px" class="cm-dialog" :append-to-body="true" @closed="resetNewProduct">
+            <el-form :model="npForm" label-width="96px">
+              <el-row :gutter="10">
+                <el-col :span="12">
+                  <el-form-item label="产品中文名" required><el-input v-model="npForm.productNameCn" placeholder="如：缠绕膜" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="产品英文名" required><el-input v-model="npForm.productNameEn" placeholder="如：Stretch Film" /></el-form-item>
+                </el-col>
+              </el-row>
+              <el-form-item label="产品描述">
+                <el-input v-model="npForm.productDesc" type="textarea" :rows="2" placeholder="产品描述..." />
+              </el-form-item>
+              <el-row :gutter="10">
+                <el-col :span="8">
+                  <el-form-item label="计价单位"><el-input v-model="npForm.pricingUnit" placeholder="如：kg、roll" /></el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="基础价格">
+                    <div style="display:flex;align-items:center;gap:4px;">
+                      <span style="padding:0 6px;flex-shrink:0">$</span>
+                      <el-input-number v-model="npForm.basePrice" :min="0" :precision="2" style="width:100%" placeholder="0.00" />
+                    </div>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="起订量"><el-input v-model="npForm.moq" placeholder="如：1000 pcs" /></el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="10">
+                <el-col :span="12">
+                  <el-form-item label="交期"><el-input v-model="npForm.deliveryDays" placeholder="如：15-20天" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="付款条件"><el-input v-model="npForm.paymentTerms" placeholder="如：30% T/T advance" /></el-form-item>
+                </el-col>
+              </el-row>
+              <el-form-item label="问题清单">
+                <div style="width:100%">
+                  <div style="margin-bottom:8px">
+                    <el-button size="small" @click="npAddQuestion(1)">+ 添加必问</el-button>
+                    <el-button size="small" style="margin-left:8px" @click="npAddQuestion(2)">+ 添加进阶</el-button>
+                  </div>
+                  <div v-if="npForm.questions.filter(q=>q.priority===1).length" style="margin-bottom:8px">
+                    <div style="font-size:13px;font-weight:600;margin-bottom:6px">必问问题</div>
+                    <div v-for="(q,i) in npForm.questions.filter(q=>q.priority===1)" :key="'p1-'+i" style="display:flex;gap:6px;margin-bottom:6px">
+                      <el-input v-model="q.questionCn" placeholder="中文问题" size="small" />
+                      <el-input v-model="q.questionEn" placeholder="English" size="small" style="flex:1" />
+                      <el-button type="danger" link size="small" @click="npForm.questions.splice(npForm.questions.indexOf(q),1)">删</el-button>
+                    </div>
+                  </div>
+                  <div v-if="npForm.questions.filter(q=>q.priority===2).length">
+                    <div style="font-size:13px;font-weight:600;margin-bottom:6px">进阶问题</div>
+                    <div v-for="(q,i) in npForm.questions.filter(q=>q.priority===2)" :key="'p2-'+i" style="display:flex;gap:6px;margin-bottom:6px">
+                      <el-input v-model="q.questionCn" placeholder="中文问题" size="small" />
+                      <el-input v-model="q.questionEn" placeholder="English" size="small" style="flex:1" />
+                      <el-button type="danger" link size="small" @click="npForm.questions.splice(npForm.questions.indexOf(q),1)">删</el-button>
+                    </div>
+                  </div>
+                  <el-empty v-if="!npForm.questions.length" description="暂无问题" :image-size="50" />
+                </div>
+              </el-form-item>
+            </el-form>
+            <template #footer>
+              <el-button @click="showNewProduct=false">取消</el-button>
+              <el-button type="primary" @click="saveNewProduct" :loading="npSaving">创建产品</el-button>
+            </template>
+          </el-dialog>
+
+          <!-- 🌐 网址提取（极简） -->
+                    <!-- ❓ 操作流程说明弹窗 -->
+          <el-dialog v-model="showHelpDialog" title="❓ 操作说明" width="480px" class="cm-dialog" :append-to-body="true">
+            <div class="cm-help-body">
+              <div class="cm-help-sec">
+                <div class="cm-help-sec-title">📦 新增产品</div>
+                <div class="cm-help-step">1. 点「新增产品」，填写产品名称、价格、MOQ、交期等</div>
+                <div class="cm-help-step">2. 保存后自动归入「产品目录」，可直接用于报价</div>
+              </div>
+              <div class="cm-help-sec">
+                <div class="cm-help-sec-title">🌐 网址提取</div>
+                <div class="cm-help-step">1. 粘贴公司官网或产品目录页链接</div>
+                <div class="cm-help-step">2. 系统自动抓取页面并提取出产品列表</div>
+                <div class="cm-help-step">3. 勾选需要的产品，点「保存」存入产品目录</div>
+              </div>
+              <div class="cm-help-sec">
+                <div class="cm-help-sec-title">➕ 新增资料</div>
+                <div class="cm-help-step">上传公司介绍、PDF价目表、图片等通用资料，所有客户共用</div>
+              </div>
+              <div class="cm-help-note">💡 以上内容都会存入「产品目录/公司资料」，自动接待标准报价会据此回复客户询价。</div>
+            </div>
+            <template #footer><el-button type="primary" @click="showHelpDialog=false">知道了</el-button></template>
+          </el-dialog>
+
+<el-dialog v-model="showUrlImport" title="🌐 网址提取" width="560px" class="cm-dialog" :append-to-body="true">
+            <div v-if="urlImportStep === 1" class="cm-import-form">
+              <div class="cm-import-tip">
+                <span>粘贴公司官网或产品目录页链接，自动提取产品与价格</span>
+                <button class="cm-help-btn" @click="showHelpDialog=true" title="操作说明">❓</button>
+              </div>
+              <el-input v-model="urlImportUrl" placeholder="粘贴产品或目录网页链接" size="large" @keyup.enter="runUrlImport" :disabled="urlImportLoading" />
+              <div v-if="urlImportLoading" class="cm-import-loading">⏳ 提取中...</div>
+            </div>
+            <div v-else class="cm-import-result">
+              <div v-if="urlImportProducts.length === 0" class="cm-empty"><div class="cm-empty-icon">😕</div><div>没提出来，换个链接试试</div></div>
+              <div v-else class="cm-import-list">
+                <div v-for="(p,i) in urlImportProducts" :key="i" class="cm-import-item" :class="{checked:p._selected}">
+                  <label class="cm-import-check">
+                    <input type="checkbox" v-model="p._selected" />
+                    <span class="cm-import-name">{{ p.productNameEn || p.productNameCn || '产品'+(i+1) }}</span>
+                    <span v-if="p.basePrice!=null" class="cm-import-price">{{ p.basePrice }}{{ p.pricingUnit||'' }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <template #footer>
+              <el-button @click="showUrlImport=false">取消</el-button>
+              <el-button v-if="urlImportStep===1" type="primary" @click="runUrlImport" :loading="urlImportLoading">提取</el-button>
+              <el-button v-else-if="urlImportProducts.length>0" type="primary" @click="saveUrlImport" :loading="urlImportSaving">保存</el-button>
+            </template>
+          </el-dialog>
 
           <!-- 🏢 公司资料新增/编辑对话框 -->
           <el-dialog v-model="showCompanyDialog" :title="dialogTitle" width="520px" class="cm-dialog" :append-to-body="true" @closed="resetCompanyForm">
@@ -3004,23 +3404,23 @@
                 <div class="cul-two-col">
                   <div class="cul-pick">
                     <label class="cul-pick-label">国籍 (文化归属)</label>
-                    <select v-model="cultureManualNationality" class="cul-pick-select" @change="cultureSaveManual">
-                      <option value="">自动 (按手机号国家码)</option>
-                      <option v-for="c in cultureAllCountries" :key="'n'+c.iso" :value="c.iso">{{ c.flag }} {{ c.name }}</option>
-                    </select>
+                    <el-select v-model="cultureManualNationality" filterable popper-class="crm-dark-popper" placeholder="🔍 搜索国家或区号" @change="cultureSaveManual" style="width:100%">
+                      <el-option label="🌐 自动 (按手机号国家码)" value="" />
+                      <el-option v-for="c in cultureAllCountries" :key="'n'+c.iso" :label="c.flag+' '+c.name" :value="c.iso" />
+                    </el-select>
                   </div>
                   <div class="cul-pick">
                     <label class="cul-pick-label">所在国 (当地时间)</label>
-                    <select v-model="cultureManualResidence" class="cul-pick-select" @change="cultureSaveManual">
-                      <option value="">同国籍</option>
-                      <option v-for="c in cultureAllCountries" :key="'r'+c.iso" :value="c.iso">{{ c.flag }} {{ c.name }}</option>
-                    </select>
+                    <el-select v-model="cultureManualResidence" filterable popper-class="crm-dark-popper" placeholder="🔍 搜索国家或区号" @change="cultureSaveManual" style="width:100%">
+                      <el-option label="🌐 同国籍" value="" />
+                      <el-option v-for="c in cultureAllCountries" :key="'r'+c.iso" :label="c.flag+' '+c.name" :value="c.iso" />
+                    </el-select>
                   </div>
                 </div>
               </div>
             </template>
             <!-- 无选中客户时提示 -->
-            <template v-else-if="chatStore.activeConversation">
+            <template v-else-if="chatStore.activeConversation || tgActiveConv">
               <div class="cul-empty-tip">
                 <div style="font-size:32px;margin-bottom:8px">🌐</div>
                 <div style="color:var(--text-secondary)">未检测到该客户所在国家</div>
@@ -3028,17 +3428,17 @@
                 <div class="cul-two-col" style="margin-top:8px">
                   <div class="cul-pick">
                     <label class="cul-pick-label">国籍 (文化归属)</label>
-                    <select v-model="cultureManualNationality" class="cul-pick-select" @change="cultureSaveManual">
-                      <option value="">自动 (按手机号国家码)</option>
-                      <option v-for="c in cultureAllCountries" :key="'n'+c.iso" :value="c.iso">{{ c.flag }} {{ c.name }}</option>
-                    </select>
+                    <el-select v-model="cultureManualNationality" filterable popper-class="crm-dark-popper" placeholder="🔍 搜索国家或区号" @change="cultureSaveManual" style="width:100%">
+                      <el-option label="🌐 自动 (按手机号国家码)" value="" />
+                      <el-option v-for="c in cultureAllCountries" :key="'n'+c.iso" :label="c.flag+' '+c.name" :value="c.iso" />
+                    </el-select>
                   </div>
                   <div class="cul-pick">
                     <label class="cul-pick-label">所在国 (当地时间)</label>
-                    <select v-model="cultureManualResidence" class="cul-pick-select" @change="cultureSaveManual">
-                      <option value="">同国籍</option>
-                      <option v-for="c in cultureAllCountries" :key="'r'+c.iso" :value="c.iso">{{ c.flag }} {{ c.name }}</option>
-                    </select>
+                    <el-select v-model="cultureManualResidence" filterable popper-class="crm-dark-popper" placeholder="🔍 搜索国家或区号" @change="cultureSaveManual" style="width:100%">
+                      <el-option label="🌐 同国籍" value="" />
+                      <el-option v-for="c in cultureAllCountries" :key="'r'+c.iso" :label="c.flag+' '+c.name" :value="c.iso" />
+                    </el-select>
                   </div>
                 </div>
               </div>
@@ -3248,9 +3648,18 @@
               <span class="ib-icon">💬</span>
               <span class="ib-label">沟通话术</span>
             </button>
+            <button class="ib-item" :class="{ active: activePanel === 'autoReception' }" @click="switchPanel('autoReception')" :title="iconbarCollapsed ? '自动接待' : ''">
+              <span class="ib-icon">🤖</span>
+              <span class="ib-label">自动接待</span>
+              <span class="ib-ar-dot" v-if="arForm.enabled"></span>
+            </button>
             <button class="ib-item" :class="{ active: activePanel === 'bgcheck' }" @click="switchPanel('bgcheck')" :title="iconbarCollapsed ? '客户背调' : ''">
               <span class="ib-icon">🔍</span>
               <span class="ib-label">客户背调</span>
+            </button>
+            <button class="ib-item" :class="{ active: activePanel === 'followup' }" @click="switchPanel('followup')" :title="iconbarCollapsed ? '智能跟进' : ''">
+              <span class="ib-icon">📌</span>
+              <span class="ib-label">智能跟进</span>
             </button>
             <button class="ib-item" :class="{ active: activePanel === 'requirement' }" @click="switchPanel('requirement')" :title="iconbarCollapsed ? '需求总结' : ''">
               <span class="ib-icon">🎯</span>
@@ -3599,13 +4008,22 @@
     <div class="mp-panel">
       <div class="mp-header">
         <div>
-          <div class="mp-title">选择 AI 模型</div>
-          <div class="mp-sub">自动推荐或手动指定本次使用的模型</div>
+          <div class="mp-title">{{ modelPickerIsTrans ? '选择翻译线路' : '选择 AI 模型' }}</div>
+          <div class="mp-sub">{{ modelPickerIsTrans ? '选择消息翻译使用的引擎' : '自动推荐或手动指定本次使用的模型' }}</div>
         </div>
         <button type="button" class="mp-close" @click="modelPickerVisible = false">✕</button>
       </div>
       <div class="mp-body">
         <div class="mp-list">
+          <template v-if="modelPickerIsTrans">
+            <div v-for="t in TRANSLATE_LINES" :key="t.key" class="mp-item" :class="{ active: modelPickerPreview === t.key }" @mouseenter="modelPickerPreview = t.key" @click="applyModelPicker(t.key)">
+              <div class="mp-item-main">
+                <span class="mp-item-name">{{ t.name }}</span>
+                <span v-if="t.recommend" class="mp-item-tag">推荐</span>
+              </div>
+            </div>
+          </template>
+          <template v-else>
           <div class="mp-item" :class="{ active: modelPickerPreview === 'auto' }" @mouseenter="modelPickerPreview = 'auto'" @click="applyModelPicker('auto')">
             <div class="mp-item-main">
               <span class="mp-item-name">⚡ 自动（系统推荐）</span>
@@ -3620,9 +4038,18 @@
             </div>
             <span class="mp-item-credit">{{ m.creditCost || 150 }} 积分</span>
           </div>
+          </template>
         </div>
         <div class="mp-detail">
-          <template v-if="modelPickerDetail">
+          <template v-if="modelPickerIsTrans && modelPickerDetail">
+            <div class="mp-detail-name">{{ modelPickerDetail.name }}</div>
+            <div class="mp-detail-role">{{ modelPickerDetail.desc || '选择消息翻译使用的引擎。' }}</div>
+            <div class="mp-detail-meta">
+              <span v-if="modelPickerDetail.recommend" class="mp-meta-chip">推荐</span>
+            </div>
+            <button type="button" class="mp-use-btn" @click="applyModelPicker(modelPickerPreview)">使用此线路</button>
+          </template>
+          <template v-else-if="modelPickerDetail">
             <div class="mp-detail-name">{{ modelPickerDetail.name }}</div>
             <div class="mp-detail-role">{{ modelPickerDetail.desc || '该模型可用于本功能，选择后立即生效。' }}</div>
             <div class="mp-detail-sec">
@@ -3674,18 +4101,24 @@ const chatStore = useChatStore();
 const bizConfirmPending = ref([]);
 const currentBizConfirmIdx = ref(0);
 const bizConfirmDismissed = ref(new Set());
+// 只绑定当前会话客户：banner 显示的是当前打开的 WA 会话对应客户，而非全局队列任意一项
+const curBizItem = computed(() => {
+  const jid = chatStore.activeJid;
+  if (!jid) return null;
+  const bare = String(jid).replace(/@.*$/, '');
+  return bizConfirmPending.value.find(c => c.jid === jid || (c.phone && String(c.phone) === bare)) || null;
+});
 
 async function loadBizConfirmPending() {
   try {
     const token = localStorage.getItem('token');
-    const resp = await fetch('/api/customers/pending-business-check', {
+    const resp = await fetch(window.__API_BASE__ + '/api/customers/pending-business-check', {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!resp.ok) return;
     const data = await resp.json();
     bizConfirmPending.value = (data.pending || []).filter(
       c => !bizConfirmDismissed.value.has(c.id)
-      && !String(c.jid || '').endsWith('@telegram')
     );
     if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
       currentBizConfirmIdx.value = 0;
@@ -3696,21 +4129,11 @@ async function loadBizConfirmPending() {
 }
 
 async function onConfirmBusiness(isBusiness) {
-  const current = bizConfirmPending.value[currentBizConfirmIdx.value];
+  const current = curBizItem.value;
   if (!current) return;
-  // L2新需求：「标记为业务客户」先弹确认提示，说明按钮含义；「忽略」直接执行
-  if (isBusiness) {
-    try {
-      await ElMessageBox.confirm(
-        `即将为「${current.displayName}」自动建档，建档后将进入客户管理`,
-        '确认业务客户',
-        { confirmButtonText: '确认建档', cancelButtonText: '取消', type: 'warning' }
-      );
-    } catch { return; } // 用户取消，不执行
-  }
   try {
     const token = localStorage.getItem('token');
-    const resp = await fetch('/api/customers/pending-business-check/' + current.id, {
+    const resp = await fetch(window.__API_BASE__ + '/api/customers/pending-business-check/' + current.id, {
       method: 'PUT',
       headers: {
         'Authorization': 'Bearer ' + token,
@@ -3721,11 +4144,8 @@ async function onConfirmBusiness(isBusiness) {
     if (resp.ok) {
       window.dispatchEvent(new CustomEvent('l2-biz-confirmed', { detail: { id: current.id } }));
       bizConfirmDismissed.value.add(current.id);
-      bizConfirmPending.value.splice(currentBizConfirmIdx.value, 1);
-      if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
-        currentBizConfirmIdx.value = 0;
-      }
-      if (isBusiness) ElMessage.success('已自动建档，可在客户管理中查看');
+      const idx = bizConfirmPending.value.findIndex(c => c.id === current.id);
+      if (idx !== -1) bizConfirmPending.value.splice(idx, 1);
     }
   } catch (e) {
     console.warn('[bizConfirm] update error:', e);
@@ -3738,6 +4158,8 @@ function onViewBizConversation() {
   router.push({ path: '/chat', query: { jid: current.jid } });
 }
 
+
+
 // ========== 折叠状态 ==========
 const platformCollapsed = ref(localStorage.getItem('platform-collapsed') === 'true');
 const feedbackOpen = ref(false);
@@ -3748,7 +4170,7 @@ document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'lig
 const accountsCollapsed = ref(localStorage.getItem('accounts-collapsed') === 'true');
 const chatlistCollapsed = ref(false);
 // ── 功能面板状态 ──
-const activePanel = ref(null); // 默认收起面板（右侧导航列显示图标+文字，点击图标再展开）
+const activePanel = ref(null); // 默认收起，点图标再展开
 const lastActivePanel = ref('aitalk');
 const panelWidth = ref((() => {
   const v = parseInt(localStorage.getItem('crm-function-panel-width') || localStorage.getItem('panel-width') || '480');
@@ -3765,7 +4187,157 @@ const aitalkModel = ref(localStorage.getItem('crm_aitalk_model') || '');
 const aitalkAutoGen = ref(localStorage.getItem('crm_script_autogen') !== '0');
 watch(aitalkAutoGen, (v) => localStorage.setItem('crm_script_autogen', v ? '1' : '0'));
 const aiModels = ref([]);
-// 【2026-09-06 staging 三面板模型选择】默认自动，localStorage 记忆
+// 【2026-09-06】面板模型选择：背调 / 需求分析 / 画像AI识别（localStorage 记忆）
+// ── 📌 智能跟进 ──
+const fuScenarios = ref([]);
+const fuScenario = ref('auto');
+const fuScenarioObj = computed(() => fuScenarios.value.find(s => s.key === fuScenario.value) || null);
+const fuSuggested = ref([]);
+const fuStrategy = ref(null);
+const fuSpeech = ref('');
+const fuSpeechZh = ref('');
+const fuMainTab = ref('strategy');
+const fuLang = ref('auto');
+const fuLoadingStrategy = ref(false);
+const fuLoadingSpeech = ref(false);
+const fuHistory = ref([]);
+const fuHistoryOpen = ref(false);
+
+function fuNormArr(v) {
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string' && v && v.trim()) return [v.trim()];
+  return [];
+}
+const FU_KEY_CN = {
+  'first_inquiry_no_reply': '首次询盘后无回复',
+  'new_inquiry_qualification': '首次询盘后无回复',
+  'new_inquiry_qualification_follow_up': '首次询盘后无回复',
+  'inq_first': '首次询盘后无回复',
+  'sample_request_follow_up': '索样/寄样未回访',
+  'sample_sent_no_reply': '索样/寄样未回访',
+  'quotation_sent_no_reply': '已报价未跟进',
+  'quotation_sent': '已报价未跟进',
+  'quotation_delivery_followup': '已报价未跟进',
+  'sent_quote_no_reply': '已报价未跟进',
+  'urgent_close_intent': '逼单(意向已明确)',
+  'closing_high_intent': '逼单(意向已明确)',
+  'closing_intent_confirmed': '逼单(意向已明确)',
+  'urging_order_after_sample_approved': '逼单(意向已明确)',
+  'price_negotiation': '价格异议/压价',
+  'price_objection': '价格异议/压价',
+  'no_reply_3d': '3天未回复',
+  'no_reply_7d': '7天未回复',
+  'long_silent': '长期沉默(30天+)',
+  'revisit': '已成交客户回访',
+  'reorder_reminder': '复购周期提醒'
+};
+function fuScenarioName(k) {
+  if (!k || k === 'auto') return '自动识别';
+  const s = fuScenarios.value.find(x => x.key === k);
+  if (s) return s.label;
+  if (FU_KEY_CN[k]) return FU_KEY_CN[k];
+  return k;
+}
+function fuBriefStrategy(str) {
+  if (!str) return '';
+  try {
+    const o = JSON.parse(str);
+    if (o && o.goal) return '🎯 ' + o.goal;
+  } catch (e) {}
+  return '';
+}
+function fuFormatTime(t) {
+  if (!t) return '';
+  try { return new Date(t).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
+}
+function fuPickScenario(k) {
+  fuScenario.value = k === fuScenario.value ? 'auto' : k;
+}
+async function fuLoadScenarios() {
+  try {
+    const { data } = await api.get('/ai/followup/scenarios');
+    if (data && data.scenarios) fuScenarios.value = data.scenarios;
+  } catch (e) { console.warn('[fu] load scenarios', e); }
+}
+async function fuLoadHistory() {
+  try {
+    const { data } = await api.get('/ai/followup/history?jid=' + encodeURIComponent(chatStore.activeJid));
+    if (data && data.list) fuHistory.value = data.list;
+  } catch (e) { console.warn('[fu] load history', e); }
+}
+async function fuGenerateStrategy() {
+  if (!chatStore.activeJid) return;
+  fuLoadingStrategy.value = true;
+  fuStrategy.value = null;
+  fuSpeech.value = '';
+  try {
+    const { data } = await api.post('/ai/followup/strategy', {
+      jid: chatStore.activeJid,
+      accountId: chatStore.activeConversation?.accountId,
+      scenario: fuScenario.value,
+    });
+    if (data.error) { alert(data.error); return; }
+    fuStrategy.value = data.strategy || null;
+    fuMainTab.value = 'strategy';
+    if (fuStrategy.value && fuStrategy.value.suggestedScenarioKeys && fuStrategy.value.suggestedScenarioKeys.length) {
+      fuSuggested.value = fuStrategy.value.suggestedScenarioKeys.slice(0, 3);
+    }
+    fuLoadHistory();
+  } catch (e) {
+    console.warn('[fu] strategy', e);
+    alert(e?.response?.data?.error || '生成策略失败，请重试');
+  } finally {
+    fuLoadingStrategy.value = false;
+  }
+}
+async function fuGenerateSpeech() {
+  if (!chatStore.activeJid || !fuStrategy.value) return;
+  fuLoadingSpeech.value = true;
+  fuSpeech.value = '';
+  try {
+    const { data } = await api.post('/ai/followup/speech', {
+      jid: chatStore.activeJid,
+      accountId: chatStore.activeConversation?.accountId,
+      strategy: JSON.stringify(fuStrategy.value),
+      scenario: fuScenario.value,
+      lang: fuLang.value,
+    });
+    if (data.error) { alert(data.error); return; }
+    fuSpeech.value = data.speech || '';
+    fuSpeechZh.value = data.speechZh || '';
+    fuMainTab.value = 'speech';
+    fuLoadHistory();
+  } catch (e) {
+    console.warn('[fu] speech', e);
+    alert(e?.response?.data?.error || '生成话术失败，请重试');
+  } finally {
+    fuLoadingSpeech.value = false;
+  }
+}
+async function fuCopySpeech() {
+  if (!fuSpeech.value) return;
+  try {
+    await navigator.clipboard.writeText(fuSpeech.value);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = fuSpeech.value;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  alert('话术已复制，请发送给客户');
+}
+// 打开面板/切换客户时加载场景库与历史
+watch(activePanel, (nv) => {
+  if (nv === 'followup') {
+    fuLoadScenarios();
+    if (chatStore.activeJid) fuLoadHistory();
+  }
+}, { immediate: true });
+watch(() => chatStore.activeJid, () => {
+  if (activePanel.value === 'followup') fuLoadHistory();
+});
 const bgcheckModel = ref(localStorage.getItem('crm_bgcheck_model') || 'auto');
 const reqModel = ref(localStorage.getItem('crm_req_model') || 'auto');
 const extractModel = ref(localStorage.getItem('crm_extract_model') || 'auto');
@@ -3800,24 +4372,19 @@ async function loadAiModels() {
     const { data } = await api.get('/ai/models');
     const list = Array.isArray(data?.models) ? data.models : [];
     aiModels.value = list;
+    // 【2026-09-07】面板模型默认"自动"，localStorage 有记忆且模型仍存在则用记忆
     if (list.length) {
-      // 【2026-09-06】面板模型默认"自动"，localStorage 有记忆且模型仍存在则用记忆
       const savedBg = localStorage.getItem('crm_bgcheck_model');
       const savedReq = localStorage.getItem('crm_req_model');
       const savedExt = localStorage.getItem('crm_extract_model');
       bgcheckModel.value = savedBg && list.some(m => m.key === savedBg) ? savedBg : 'auto';
       reqModel.value = savedReq && list.some(m => m.key === savedReq) ? savedReq : 'auto';
       extractModel.value = savedExt && list.some(m => m.key === savedExt) ? savedExt : 'auto';
-      // 自动模式：跟随系统默认模型（当前首选 GPT-4o）
-      const def = list.find(m => m.isDefault) || list[0];
+    }
+    if (list.length) {
+      // aitalk 面板：支持 auto（系统自动选择），与三面板一致
       const saved = localStorage.getItem('crm_aitalk_model');
-      const exists = list.find(m => m.key === saved);
-      if (!exists || saved !== def.key) {
-        aitalkModel.value = def.key;
-        localStorage.setItem('crm_aitalk_model', def.key);
-      } else {
-        aitalkModel.value = saved;
-      }
+      aitalkModel.value = saved && list.some(m => m.key === saved) ? saved : 'auto';
     }
   } catch (e) {
     aiModels.value = [];
@@ -3825,21 +4392,43 @@ async function loadAiModels() {
 }
 loadAiModels();
 
-// 【2026-09-06】模型二级选择面板（扣子风格：左列表+右详情）
+// 【2026-09-07】模型二级选择面板（扣子风格：左列表+右详情）
 const modelPickerVisible = ref(false);
 const modelPickerFor = ref('bgcheck');
 const modelPickerPreview = ref('auto');
-const MODEL_PICKER_LS = { bgcheck: 'crm_bgcheck_model', req: 'crm_req_model', extract: 'crm_extract_model' };
+const MODEL_PICKER_LS = { bgcheck: 'crm_bgcheck_model', req: 'crm_req_model', extract: 'crm_extract_model', aitalk: 'crm_aitalk_model' };
+// 翻译线路（翻译设置弹窗专用，非 AI 模型）
+const TRANSLATE_LINES = [
+  { key: 'deepl', name: 'DeepL', desc: '专业翻译引擎，翻译质量高，支持多语言。', recommend: true },
+  { key: 'deepseek', name: 'DeepSeek', desc: 'DeepSeek 大模型翻译，性价比高，适合日常消息翻译。' },
+  { key: 'doubao', name: '豆包AI', desc: '豆包 AI 翻译，中文语境优化好。' },
+  { key: 'openai', name: 'GPT-5.6', desc: 'GPT-5.6 通用翻译，语义理解强。' },
+];
+const modelPickerIsTrans = computed(() => modelPickerFor.value === 'transReceive' || modelPickerFor.value === 'transSend');
 function openModelPicker(which) {
   modelPickerFor.value = which;
-  const r = which === 'bgcheck' ? bgcheckModel : which === 'req' ? reqModel : extractModel;
-  modelPickerPreview.value = r.value || 'auto';
+  let r;
+  if (which === 'bgcheck') r = bgcheckModel;
+  else if (which === 'req') r = reqModel;
+  else if (which === 'extract') r = extractModel;
+  else if (which === 'aitalk') r = aitalkModel;
+  else if (which === 'transReceive') r = { value: transForm.receiveEngine };
+  else if (which === 'transSend') r = { value: transForm.sendEngine };
+  modelPickerPreview.value = r.value || (which === 'transReceive' || which === 'transSend' ? 'deepl' : 'auto');
   modelPickerVisible.value = true;
 }
 function applyModelPicker(key) {
-  const r = modelPickerFor.value === 'bgcheck' ? bgcheckModel : modelPickerFor.value === 'req' ? reqModel : extractModel;
+  const f = modelPickerFor.value;
+  if (f === 'transReceive') { transForm.receiveEngine = key; modelPickerVisible.value = false; return; }
+  if (f === 'transSend') { transForm.sendEngine = key; modelPickerVisible.value = false; return; }
+  let r;
+  if (f === 'bgcheck') r = bgcheckModel;
+  else if (f === 'req') r = reqModel;
+  else if (f === 'extract') r = extractModel;
+  else if (f === 'aitalk') r = aitalkModel;
+  if (!r) return;
   r.value = key;
-  localStorage.setItem(MODEL_PICKER_LS[modelPickerFor.value], key);
+  if (MODEL_PICKER_LS[f]) localStorage.setItem(MODEL_PICKER_LS[f], key);
   modelPickerVisible.value = false;
 }
 function modelPickerDisplay(key) {
@@ -3847,7 +4436,14 @@ function modelPickerDisplay(key) {
   const m = aiModels.value.find(x => x.key === key);
   return m ? m.name : '选择模型';
 }
+function translateLineDisplay(key) {
+  const t = TRANSLATE_LINES.find(x => x.key === key);
+  return t ? t.name : '选择翻译线路';
+}
 const modelPickerDetail = computed(() => {
+  if (modelPickerIsTrans.value) {
+    return TRANSLATE_LINES.find(t => t.key === modelPickerPreview.value) || TRANSLATE_LINES[0];
+  }
   if (modelPickerPreview.value === 'auto') {
     return { name: '自动（系统推荐）', desc: '不手动指定，由系统自动选择当前默认模型（DeepSeek V4 Flash）。', features: '无需关注模型差异，系统自动选择当前最适合的默认模型。', trade: '适合大多数日常场景：翻译、话术、分析、背调均可，省心省力。', tags: ['自动', '推荐', '通用'], creditCost: 0, providerType: '系统', isDefault: true };
   }
@@ -3901,7 +4497,7 @@ function renderMarkdown(raw) {
         tbl += '<tr>';
         for (let ci=0; ci<headerCells.length; ci++) {
           const cell = r[ci] !== undefined ? r[ci] : '';
-          tbl += '<td style="padding:7px 9px;border-bottom:1px solid #1f2c33;color:#d1d7db;word-break:break-word;vertical-align:top">' + _mdInline(cell) + '</td>';
+          tbl += '<td style="padding:7px 9px;border-bottom:1px solid var(--border-color,#1f2c33);color:var(--text-primary,#d1d7db);word-break:break-word;vertical-align:top">' + _mdInline(cell) + '</td>';
         }
         tbl += '</tr>';
       }
@@ -4117,17 +4713,25 @@ async function doCopy(text) {
 }
 
 function applyForeignToInput(text) {
-  activePanel.value = null;
-  if (isMobile.value) mobilePanel.value = null; // 同步关闭移动端面板，避免空壳盖住聊天区
+  // 保持面板展开，不自动收起
+  // if (isMobile.value) mobilePanel.value = null; // 移动端也保持面板展开
+  if (!text) return;
+  // TG 聊天为 LayoutView 内联输入框（tgInputText），不走 ChatView 路由；直接填充 TG 输入框
+  if (activeChannel.value === 'telegram') {
+    tgInputText.value = String(text);
+    return;
+  }
   nextTick(() => {
-    let inst = chatViewRef.value;
+    // 统一走 chatStore.insertText 机制（ChatView/ChatWindow 均 watch insertText），TG/WA 多渠道通用
+    chatStore.insertToInput(text);
+    const inst0 = chatViewRef.value;
+    let inst = inst0;
     if (inst && inst.$ && typeof inst.applyAiReply !== 'function') {
       inst = inst.$.exposed || inst;
     }
     if (inst && typeof inst.applyAiReply === 'function') {
+      // 补充聚焦 + 可选译文确认；与 insertText 不冲突（最终 draftMsg 一致）
       inst.applyAiReply(text);
-    } else {
-      console.warn('[aitalk] ChatView applyAiReply not found');
     }
   });
 }
@@ -4275,7 +4879,7 @@ async function _doAnalyze({ feedback, onLoadingReplace, loadingMsg } = {}) {
   const lm = loadingMsg || pushLoadingMsg();
   startProgressTimer(lm);
   if (onLoadingReplace) onLoadingReplace(lm);
-  const model = aitalkModel.value || null;
+  const model = (aitalkModel.value && aitalkModel.value !== 'auto') ? aitalkModel.value : null;
   aitalkLastRequest = { type: 'analyze', jid: chatStore.activeJid, model, feedback };
   try {
     const body = { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang() };
@@ -4364,7 +4968,7 @@ async function sendAitalkChat() {
   const loadingMsg = pushLoadingMsg();
   startProgressTimer(loadingMsg);
   const history = buildHistoryForApi();
-  const model = aitalkModel.value || null;
+  const model = (aitalkModel.value && aitalkModel.value !== 'auto') ? aitalkModel.value : null;
   aitalkLastRequest = { type: 'chat', jid: chatStore.activeJid, model, text };
   try {
     const { data } = await api.post('/ai/chat', { jid: chatStore.activeJid, accountId: chatStore.activeConversation?.accountId || 1, model, targetLang: resolveTargetLang(), messages: history }, { signal: ac.signal, timeout: 180000 }); // 【终止按钮】【超时修复】180s
@@ -4661,11 +5265,6 @@ const mobileChannelBadge = computed(() => {
   return 0;
 });
 function onMhTitleClick() {
-  // TradeAgent/Assistant：无论是否在对话中，都回到欢迎页
-  if (activePlatform.value === 'assistant' || activePlatform.value === 'trade-agent') {
-    goHome();
-    return;
-  }
   if (mobileInConv.value) {
     if (activeChannel.value === 'whatsapp') openMhProfile();
     return;
@@ -4838,7 +5437,7 @@ const transForm = reactive({
   sendSourceLang: 'auto',
   sendTargetLang: 'en',
   groupAutoTranslate: false,
-  blockChinese: true,
+  blockChinese: false,
   translateConfirm: false,
   translationColor: '#8696a0',
   translationSize: '14px',
@@ -4862,7 +5461,7 @@ function syncTransFormFromStore() {
     sendSourceLang: s.sendSourceLang || 'auto',
     sendTargetLang: sendTarget,
     groupAutoTranslate: !!s.groupAutoTranslate,
-    blockChinese: s.blockChinese !== false,
+    blockChinese: s.blockChinese !== undefined ? s.blockChinese : false,
     translateConfirm: !!s.translateConfirm,
     translationColor: s.translationColor || '#8696a0',
     translationSize: s.translationSize || '14px',
@@ -5799,8 +6398,7 @@ async function loadCustomer(jid) {
       if (bgData && bgData.rating) bgRatingMap[jid] = bgData.rating;
     } catch {}
   } catch (e) {
-    // L2: by-jid 404（无消息不建档）属正常态 —— 静默清空档案面板，不弹错误提示
-    if (e?.response?.status !== 404) console.error('loadCustomer error', e);
+    console.error('loadCustomer error', e);
     customerData.value = { ...emptyCustomer(), jid, phone: jid.split('@')[0] };
     bgCheckReport.value = ''; bgMissingInfo.value = []; bgAskReply.value = ''; bgAskInserted.value = false;
     followUpsList.value = [];
@@ -6281,6 +6879,18 @@ function onBgCheckDone(event) {
   }
 }
 
+function onBgAsk(event) {
+  const d = event.detail;
+  if (!d || !d.askReply) return;
+  // 仅当当前正打开该客户会话时自动填入输入框（人工确认后发送），避免误填其它会话
+  const num = (d.jid || '').split('@')[0];
+  const curNum = (chatStore.activeJid || '').split('@')[0];
+  if (curNum && num && curNum === num) {
+    chatStore.insertToInput(d.askReply);
+    ElMessage.success('🔍 首轮背调完成，追问话术已填入输入框，确认后发送');
+  }
+}
+
 async function runBgCheck() {
   if (!chatStore.activeJid) return;
   bgCheckLoading.value = true;
@@ -6331,6 +6941,45 @@ function switchPanel(key) {
 function closePanel() {
   activePanel.value = null;
 }
+
+// ── 指定客户自动接待面板（右侧图标栏，话术与背调之间）──
+let _arLoadSeq = 0;
+const arSaving = ref(false);
+const arForm = reactive({ enabled: false, timeoutMinutes: 3, confirmMode: 'smart', mode: 'always', startHour: 22, endHour: 7, timezone: 'Asia/Shanghai' });
+async function loadAutoReceptionStatus() {
+  const jid = chatStore.activeJid;
+  if (!jid) return;
+  const seq = ++_arLoadSeq;
+  try {
+    const { data } = await api.get(`/auto-reception/customer/${encodeURIComponent(jid)}/status`);
+    if (seq !== _arLoadSeq) return;
+    const d = data || {};
+    arForm.enabled = !!d.enabled;
+    arForm.timeoutMinutes = d.timeoutMinutes || 3;
+    arForm.confirmMode = ['smart', 'all', 'none'].includes(d.confirmMode) ? d.confirmMode : 'smart';
+    arForm.mode = d.mode === 'offhours' ? 'offhours' : 'always';
+    arForm.startHour = d.startHour != null ? d.startHour : 22;
+    arForm.endHour = d.endHour != null ? d.endHour : 7;
+    arForm.timezone = d.timezone || 'Asia/Shanghai';
+  } catch (e) { /* 非致命 */ }
+}
+async function saveAutoReception() {
+  const jid = chatStore.activeJid;
+  if (!jid) { ElMessage.warning('未选中会话客户'); return; }
+  arSaving.value = true;
+  try {
+    await api.post(`/auto-reception/customer/${encodeURIComponent(jid)}`, {
+      on: arForm.enabled, mode: arForm.mode, timeoutMinutes: arForm.timeoutMinutes,
+      confirmMode: arForm.confirmMode, startHour: arForm.startHour, endHour: arForm.endHour, timezone: arForm.timezone,
+    });
+    arSaving.value = false;
+    ElMessage.success(arForm.enabled ? '已开启该客户自动接待' : '已关闭该客户自动接待');
+  } catch (e) {
+    arSaving.value = false;
+    ElMessage.error('保存失败：' + ((e.response && e.response.data && e.response.data.error) || e.message));
+  }
+}
+watch(() => chatStore.activeJid, () => { loadAutoReceptionStatus(); });
 function onOpenTranslatePanel() { if (isMobile.value) { openMobilePanel('translate'); return; } switchPanel('translate'); }
 
 function togglePlatform() { platformCollapsed.value = !platformCollapsed.value; }
@@ -6344,6 +6993,33 @@ function handleDocClick(e) {
 // 切换会话时重置AI话术生成语言为"跟随翻译设置"
 watch(() => chatStore.activeJid, () => {
   aitalkTargetLang.value = 'follow';
+});
+
+
+// L2: Poll for pending business confirmations every 30 seconds
+function onBizConfirmedElsewhere(e) {
+  const cid = e.detail && e.detail.id;
+  if (cid == null) return;
+  const idx = bizConfirmPending.value.findIndex(c => c.id === cid);
+  if (idx !== -1) {
+    bizConfirmDismissed.value.add(cid);
+    bizConfirmPending.value.splice(idx, 1);
+    if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
+      currentBizConfirmIdx.value = 0;
+    }
+  }
+}
+
+onMounted(() => {
+  loadBizConfirmPending();
+  const bizConfirmTimer = setInterval(loadBizConfirmPending, 30000);
+  window.__bizConfirmTimer = bizConfirmTimer;
+  window.addEventListener('l2-biz-confirmed', onBizConfirmedElsewhere);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('l2-biz-confirmed', onBizConfirmedElsewhere);
+  if (window.__bizConfirmTimer) clearInterval(window.__bizConfirmTimer);
 });
 
 onMounted(async () => {
@@ -6405,9 +7081,8 @@ onMounted(async () => {
 
   // Background check done event
   window.addEventListener('customer:bgcheck:done', onBgCheckDone);
+  window.addEventListener('whatsapp:bg-ask', onBgAsk);
   window.addEventListener('wa:add-account', onAddAccount);
-  // 指派任务加载 + 指派跳转自动选中（客户-Agent 双向指派 V1.0）
-  loadAgentTasks().then(() => handleAssignQuery());
 
   // TG兜底轮询（仅在TG tab激活时，10秒刷新会话列表；消息靠socket实时推送）
   tgPollTimer = setInterval(() => {
@@ -6519,12 +7194,13 @@ onUnmounted(() => {
     window.removeEventListener('tg:translation', onTgTranslationUpdate);
   window.removeEventListener('tg:conv-update', onTgSocketConvUpdate);
   window.removeEventListener('customer:bgcheck:done', onBgCheckDone);
+  window.removeEventListener('whatsapp:bg-ask', onBgAsk);
   window.removeEventListener('wa:add-account', onAddAccount);
   if (tgPollTimer) clearInterval(tgPollTimer);
 });
 
 // ========== 平台导航 ==========
-const activePlatform = ref('assistant');
+const activePlatform = ref(typeof window !== 'undefined' && localStorage.getItem('active_platform') || 'assistant');
 // 外贸Agent子模块
 const tradeAgents = [
   { key: 'sales-champion', label: '外贸销冠', icon: '🏆', desc: 'AI话术、客户分层、报价优化' },
@@ -6534,13 +7210,28 @@ const tradeAgents = [
   { key: 'freight-agent', label: '货代对接', icon: '🚢', desc: '海运方案、空运方案、报关报检' },
   { key: 'legal-agent', label: '外贸法务', icon: '⚖️', desc: '合同审查、纠纷处理、合规检查' },
 ];
-const currentTradeAgent = ref('sales-champion');
+const currentTradeAgent = ref(typeof window !== 'undefined' && localStorage.getItem('current_trade_agent') || 'sales-champion');
 
 // Agent聊天界面状态
 const agentInput = ref('');
-const pendingFiles = ref([]); // [{ name, type, content, size, mimeType }]
-const canSend = computed(() => agentInput.value.trim().length > 0 || pendingFiles.value.length > 0);
+const pendingFile = ref(null); // { name, type, content, size }
 // 从 localStorage 加载聊天记录
+// 自定义滚动条同步
+const syncCustomScrollbar = () => {
+  const el = chatMessagesEl.value;
+  const track = scrollbarTrack.value;
+  const thumb = scrollbarThumb.value;
+  if (!el || !track || !thumb) return;
+  const { scrollTop, scrollHeight, clientHeight } = el;
+  const trackH = track.clientHeight;
+  const thumbH = Math.max(30, trackH * (clientHeight / scrollHeight));
+  const maxScroll = scrollHeight - clientHeight;
+  const scrollPct = maxScroll > 0 ? scrollTop / maxScroll : 0;
+  const maxThumbTop = trackH - thumbH;
+  thumb.style.height = thumbH + 'px';
+  thumb.style.top = (scrollPct * maxThumbTop) + 'px';
+};
+
 const loadAgentChatHistory = () => {
   try {
     const saved = localStorage.getItem('crm_agent_chat_history');
@@ -6560,7 +7251,17 @@ const saveAgentChatHistory = () => {
   }
 };
 const selectedModel = ref('Auto');
+const selectedAutoMode = ref(true);
+// 恢复智能选择状态
+const savedAutoMode = localStorage.getItem('crm_auto_model');
+if (savedAutoMode === '0') {
+  selectedAutoMode.value = false;
+  const savedModel = localStorage.getItem('crm_aitalk_model');
+  if (savedModel && savedModel !== 'Auto') selectedModel.value = savedModel;
+}
 const showModelSelector = ref(false);
+const agentInputFocused = ref(false);
+function hideAgentActions() { setTimeout(() => { agentInputFocused.value = false; }, 150); }
 const showAttachMenu = ref(false);
 const filePanelOpen = ref(false);
 const taskPanelOpen = ref(false);
@@ -6572,14 +7273,17 @@ const wecomForm = ref({ corpId: '', corpSecret: '', agentId: '' });
 const testing = ref(false);
 const testResult = ref(null);
 const syncing = ref(false);
-// modelTab removed: 语言/多模态分类对外贸销售太技术化，模型平铺即可
+const modelTab = ref('language');
 const sidebarExpanded = ref(true);
 const chatMessagesEl = ref(null);
+const scrollbarTrack = ref(null);
+const scrollbarThumb = ref(null);
 const agentTextarea = ref(null);
 const fileInput = ref(null);
 const showAddModel = ref(false);
 
 // ===== V1.0 客户-Agent 双向指派：客户选择 + 会话隔离 =====
+const taMobileMenuOpen = ref(false)
 const customerPickerOpen = ref(false);
 const customerList = ref([]);
 const customerSearch = ref('');
@@ -6613,7 +7317,7 @@ async function loadCustomers() {
     const params = { page: '1', pageSize: '100' };
     if (customerSearch.value && customerSearch.value.trim()) params.search = customerSearch.value.trim();
     const qs = new URLSearchParams(params).toString();
-    const resp = await fetch('/api/customers?' + qs, { headers: { 'Authorization': 'Bearer ' + token } });
+    const resp = await fetch(window.__API_BASE__ + '/api/customers?' + qs, { headers: { 'Authorization': 'Bearer ' + token } });
     if (resp.ok) {
       const data = await resp.json();
       customerList.value = data.items || [];
@@ -6626,7 +7330,7 @@ function onCustomerSearch() { loadCustomers(); }
 async function loadAgentTasks() {
   try {
     const token = localStorage.getItem('token');
-    const resp = await fetch(`/api/agent/tasks?agentType=${encodeURIComponent(currentTradeAgent.value)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+    const resp = await fetch(window.__API_BASE__ + `/api/agent/tasks?agentType=${encodeURIComponent(currentTradeAgent.value)}`, { headers: { 'Authorization': 'Bearer ' + token } });
     if (resp.ok) {
       const data = await resp.json();
       agentTasks.value = (data.tasks || []).filter(t => ['CREATED', 'ACTIVE'].includes(t.status));
@@ -6651,7 +7355,7 @@ async function terminateTask(task) {
   } catch (e) { return; }
   try {
     const token = localStorage.getItem('token');
-    const resp = await fetch(`/api/agent/tasks/${task.id}/complete`, {
+    const resp = await fetch(window.__API_BASE__ + `/api/agent/tasks/${task.id}/complete`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -6673,7 +7377,7 @@ async function terminateTask(task) {
 async function loadProviders() {
   try {
     const token = localStorage.getItem('token');
-    const resp = await fetch('/api/assistant/providers', { headers: { 'Authorization': 'Bearer ' + token } });
+    const resp = await fetch(window.__API_BASE__ + '/api/assistant/providers', { headers: { 'Authorization': 'Bearer ' + token } });
     if (resp.ok) providerList.value = await resp.json();
   } catch (e) {}
 }
@@ -6689,7 +7393,7 @@ function matchProviderId(modelName) {
 async function loadAgentSessions() {
   try {
     const token = localStorage.getItem('token');
-    const resp = await fetch(`/api/assistant/sessions?agentType=${encodeURIComponent(currentTradeAgent.value)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+    const resp = await fetch(window.__API_BASE__ + `/api/assistant/sessions?agentType=${encodeURIComponent(currentTradeAgent.value)}`, { headers: { 'Authorization': 'Bearer ' + token } });
     if (resp.ok) {
       const data = await resp.json();
       agentSessions.value = data.sessions || [];
@@ -6704,7 +7408,7 @@ async function loadAgentMessages() {
     const params = new URLSearchParams({ agentType: currentTradeAgent.value, limit: '200' });
     if (activeSessionId.value) params.set('sessionId', activeSessionId.value);
     else params.set('scope', 'general');
-    const resp = await fetch('/api/assistant/conversations?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
+    const resp = await fetch(window.__API_BASE__ + '/api/assistant/conversations?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
     if (resp.ok) {
       activeMessages.value = await resp.json() || [];
     } else {
@@ -6714,7 +7418,7 @@ async function loadAgentMessages() {
     console.warn('loadAgentMessages failed:', e.message);
     activeMessages.value = [];
   }
-  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; });
+  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; syncCustomScrollbar(); });
 }
 
 // 选中客户 → 绑定客户会话
@@ -6745,12 +7449,24 @@ function selectGeneralChat() {
 }
 function clearCustomer() { selectGeneralChat(); }
 
-// 打开客户选择面板时：加载客户列表 + 模型列表
 // 模型选择器打开时：同步智能选择状态
 watch(showModelSelector, (v) => { if (v) loadProviders(); });
+// 打开客户选择面板时：加载客户列表 + 模型列表
 watch(customerPickerOpen, (v) => { if (v) { loadCustomers(); loadProviders(); } });
 
-const selectedAutoMode = ref(true);
+const availableModels = ref([
+  { id: 'auto', name: 'Auto', tag: '', tagType: '' },
+  { id: 'glm52', name: 'GLM-5.2', tag: '', tagType: '' },
+  { id: 'glm51', name: 'GLM-5.1', tag: '', tagType: '' },
+  { id: 'kimi-k3', name: 'Kimi K3', tag: '', tagType: '' },
+  { id: 'kimi-k27-code', name: 'Kimi K2.7 Code', tag: '', tagType: '' },
+  { id: 'ds-v4-flash', name: 'Deepseek-V4-Flash', tag: 'NEW', tagType: 'new-tag' },
+  { id: 'ds-v4-pro', name: 'Deepseek-V4-Pro', tag: '', tagType: '' },
+  { id: 'doubao-seed-21-pro', name: 'Doubao-Seed-2.1-pro', tag: '', tagType: '' },
+  { id: 'doubao-seed-21-turbo', name: 'Doubao-Seed-2.1-turbo', tag: '', tagType: '' },
+  { id: 'qwen35-max', name: 'Qwen3.5 Max', tag: '', tagType: '' },
+]);
+
 // 模型业务说明：告诉销售每个模型擅长干什么活（数据以后端 /assistant/providers 为准）
 const MODEL_META = [
   { match: 'gpt-5.6-terra', icon: '🧠', tag: '最专业', tagType: 'new-tag', desc: '查客户背景、公司背调、写专业报告，能力最强' },
@@ -6767,13 +7483,6 @@ function modelMetaOf(p) {
   return hit || { icon: '🤖', tag: '', tagType: '', desc: '智能助手，帮你处理各类工作' };
 }
 
-// 恢复智能选择状态
-const savedAutoMode = localStorage.getItem('crm_auto_model');
-if (savedAutoMode === '0') {
-  selectedAutoMode.value = false;
-  const savedModel = localStorage.getItem('crm_aitalk_model');
-  if (savedModel && savedModel !== 'Auto') selectedModel.value = savedModel;
-}
 // 计算当前Agent对象
 const currentAgentObj = computed(() => {
   return tradeAgents.find(a => a.key === currentTradeAgent.value);
@@ -6813,7 +7522,7 @@ const filteredModels = computed(() => {
     .filter(p => p.active !== false)
     .map(p => {
       const meta = modelMetaOf(p);
-      return { name: p.name || p.model, model: p.model, icon: meta.icon, tag: meta.tag, tagType: meta.tagType, desc: meta.desc };
+      return { name: p.name || p.model, model: p.model, key: p.id, icon: meta.icon, tag: meta.tag, tagType: meta.tagType, desc: meta.desc };
     });
 });
 
@@ -6821,6 +7530,7 @@ function toggleAutoMode() {
   selectedAutoMode.value = !selectedAutoMode.value;
   if (selectedAutoMode.value) {
     selectedModel.value = 'Auto';
+    pickerPreview.value = 'Auto';
   }
   localStorage.setItem('crm_auto_model', selectedAutoMode.value ? '1' : '0');
 }
@@ -6830,33 +7540,62 @@ function selectModel(name) {
   showModelSelector.value = false;
   localStorage.setItem('crm_auto_model', '0');
 }
-
-function isImageOnlyMsg(msg) {
-  if (!msg || !msg.attachments || !msg.attachments.length) return false;
-  const hasNonImage = msg.attachments.some(a => a.type !== 'image');
-  if (hasNonImage) return false;
-  const textWithoutImageTags = (msg.content || '').replace(/\[图片:.*?\]/g, '').trim();
-  return textWithoutImageTags.length === 0;
-}
-function renderMsgContent(msg) {
-  if (!msg.content) return '';
-  let html = escapeHtml(msg.content);
-  // Render [图片: xxx] as <img> if msg has attachments with dataURLs
-  if (msg.attachments && msg.attachments.length) {
-    for (const att of msg.attachments) {
-      if (att.type === 'image' && att.dataUrl) {
-        const tag = `[图片: ${escapeHtml(att.name)}]`;
-        const imgTag = `<img src="${att.dataUrl}" class="ta-msg-img" style="max-width:200px;border-radius:8px;cursor:pointer" onclick="window.open(this.src)"/>`;
-        html = html.replace(tag, imgTag);
-      }
-    }
+// ===== 扣子式二级模型选择：预选 + 详情 + 使用此模型 =====
+const pickerPreview = ref('Auto');
+const pickerModels = ref([]);
+const pickerDetail = computed(() => {
+  if (pickerPreview.value === 'Auto') {
+    return { name: '智能选择', desc: '不用自己选，系统根据任务自动匹配最优模型，省心省积分。', features: '自动匹配任务与模型，无需手动介入。', trade: '日常外贸对话默认选择，适用普通咨询与对话场景。', tags: ['自动匹配', '省心'], creditCost: 0 }
   }
-  return html;
+    const mm = findPickerExact(pickerPreview.value);
+  if (mm) return mm;
+  const fm = filteredModels.value.find(v => (v.name || v.model) === pickerPreview.value);
+  return { name: pickerPreview.value, desc: fm ? fm.desc : '', features: '', trade: '', tags: ['对话' ], creditCost: 0 };
+});
+function _pickKey(s){ return String(s||'').toLowerCase().replace(/[\s-]/g,''); }
+function findPickerExact(k){
+  const kk=_pickKey(k); if(!kk) return null;
+  const ms=pickerModels.value||[];
+  const byId=ms.find(x=>_pickKey(x.id)===kk||_pickKey(x.key)===kk||_pickKey(x.model)===kk);
+  if(byId) return byId;
+  return ms.find(x=>_pickKey(x.name)===kk)||null;
 }
+function pickCtx(m) {
+  const mm = findPickerExact(m.key ? String(m.key) : (m.model || m.name || ''));
+  if (mm) return mm;
+  return { credits: m.creditCost || 0, creditCost: (m.creditCost||0), isDefault: !!m.isDefault, tags: m.tags || [], desc: m.desc || '' };
+}
+function openAgentModelPicker() {
+  if (showModelSelector.value) { showModelSelector.value = false; return; }
+  pickerPreview.value = selectedModel.value || 'Auto';
+  loadPickerModels();
+  showModelSelector.value = true;
+}
+async function loadPickerModels() {
+  try {
+    const token = localStorage.getItem('token');
+    const resp = await fetch(window.__API_BASE__ + '/api/ai/models', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (resp.ok) { const data = await resp.json(); pickerModels.value = Array.isArray(data && data.models) ? data.models : []; }
+  } catch (e) {}
+}
+function pickerSelect(name) { pickerPreview.value = name; }
+function applyPickerModel() {
+  if (pickerPreview.value === 'Auto') {
+    selectedAutoMode.value = true; selectedModel.value = 'Auto';
+    localStorage.setItem('crm_auto_model', '1');
+  } else {
+    selectedAutoMode.value = false; selectedModel.value = pickerPreview.value;
+    localStorage.setItem('crm_auto_model', '0');
+  }
+  localStorage.setItem('crm_aitalk_model', selectedModel.value);
+  showModelSelector.value = false;
+}
+function closeModelSelector() { showModelSelector.value = false; }
+
 async function sendAgentMessage() {
   const text = agentInput.value.trim();
-  const files = pendingFiles.value.slice();
-  if (!text && !files.length) return;
+  const file = pendingFile.value;
+  if (!text && !file) return;
   agentSteps.value = [];
   agentSending.value = true;
   // 确保当前Agent的历史数组存在
@@ -6864,38 +7603,25 @@ async function sendAgentMessage() {
     agentChatHistory.value[currentTradeAgent.value] = [];
   }
   // 追加用户消息到对应Agent的历史
-  // Build message with optional attachments
+  // Build message with optional file content
   let fullMessage = text;
-  const attachParts = [];
-  for (const file of files) {
+  if (file) {
     if (file.type === 'image') {
-      attachParts.push(`[图片: ${file.name}]`);
+      fullMessage = text ? `${text}\n\n [图片: ${file.name}]` : ` [图片: ${file.name}]`;
     } else {
       const textContent = typeof file.content === 'string' ? file.content.substring(0, 3000) : '';
       if (textContent) {
-        attachParts.push(`📎 [文件: ${file.name}]\n\`\`\`\n${textContent}\n\`\`\``);
+        fullMessage = text ? `${text}\n\n📎 [文件: ${file.name}]\n\`\`\`\n${textContent}\n\`\`\`` : `📎 [文件: ${file.name}]\n\`\`\`\n${textContent}\n\`\`\``;
       } else {
-        attachParts.push(`📎 [文件: ${file.name} (${(file.size/1024).toFixed(1)}KB)]`);
+        fullMessage = text ? `${text}\n\n📎 [文件: ${file.name} (${(file.size/1024).toFixed(1)}KB)]` : `📎 [文件: ${file.name} (${(file.size/1024).toFixed(1)}KB)]`;
       }
     }
+    pendingFile.value = null;
   }
-  if (attachParts.length) {
-    fullMessage = text ? `${text}\n\n` + attachParts.join('\n\n') : attachParts.join('\n\n');
-  }
-  // 构建附件数据（图片 dataURL 用于前端渲染）
-  const msgAttachments = [];
-  for (const file of files) {
-    if (file.type === 'image' && file.content) {
-      msgAttachments.push({ type: 'image', name: file.name, dataUrl: file.content });
-    }
-  }
-  pendingFiles.value = [];
-  const userMsg = { role: 'user', content: fullMessage };
-  if (msgAttachments.length) userMsg.attachments = msgAttachments;
-  activeMessages.value.push(userMsg);
-  agentChatHistory.value[currentTradeAgent.value].push(userMsg);
+  activeMessages.value.push({ role: 'user', content: fullMessage });
+  agentChatHistory.value[currentTradeAgent.value].push({ role: 'user', content: fullMessage });
   agentInput.value = '';
-  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; });
+  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; syncCustomScrollbar(); });
   try {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -6905,36 +7631,19 @@ async function sendAgentMessage() {
       return;
     }
     // V1.0：接入 assistant 体系（customerId/全景注入/会话隔离）
+    const payload = {
+      message: fullMessage,
+      agentType: currentTradeAgent.value,
+      sessionId: activeSessionId.value,
+      customerId: selectedCustomer.value ? selectedCustomer.value.id : null
+    };
     const pid = matchProviderId(selectedModel.value);
-    let resp;
-    if (files.length > 0) {
-      // 有附件：用 FormData 真实上传文件，后端 vision 链路才能拿到图片
-      const fd = new FormData();
-      fd.append('message', text || '');
-      fd.append('agentType', currentTradeAgent.value);
-      if (activeSessionId.value) fd.append('sessionId', activeSessionId.value);
-      if (selectedCustomer.value) fd.append('customerId', String(selectedCustomer.value.id));
-      if (pid) fd.append('providerId', pid);
-      for (const f of files) { if (f.raw) fd.append('files', f.raw); }
-      resp = await fetch('/api/assistant/chat', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token },
-        body: fd
-      });
-    } else {
-      const payload = {
-        message: fullMessage,
-        agentType: currentTradeAgent.value,
-        sessionId: activeSessionId.value,
-        customerId: selectedCustomer.value ? selectedCustomer.value.id : null
-      };
-      if (pid) payload.providerId = pid;
-      resp = await fetch('/api/assistant/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify(payload)
-      });
-    }
+    if (pid) payload.providerId = pid;
+    const resp = await fetch(window.__API_BASE__ + '/api/assistant/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload)
+    });
     const pushAi = (content) => {
       const m = { role: 'ai', content };
       activeMessages.value.push(m);
@@ -6967,51 +7676,36 @@ async function sendAgentMessage() {
     saveAgentChatHistory();
   }
   agentSending.value = false;
-  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; });
+  nextTick(() => { if (chatMessagesEl.value) chatMessagesEl.value.scrollTop = chatMessagesEl.value.scrollHeight; syncCustomScrollbar(); });
 }
 
 function triggerFileUpload() { showAttachMenu.value = false; fileInput.value?.click(); }
 function triggerImageUpload() { showAttachMenu.value = false; fileInput.value?.click(); }
 function handleFileUpload(e) {
   showAttachMenu.value = false;
-  const fileList = Array.from(e.target.files || []);
-  if (!fileList.length) return;
-  for (const file of fileList) {
-    const isImage = file.type.startsWith('image/');
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target.result;
-      // 纯 base64（不含 data:xxx;base64, 前缀）——后端 vision 链路需要
-      let pureBase64 = null;
-      if (isImage && typeof result === 'string' && result.startsWith('data:')) {
-        const comma = result.indexOf(',');
-        pureBase64 = comma >= 0 ? result.substring(comma + 1) : result;
-      }
-      pendingFiles.value.push({
-        name: file.name,
-        type: isImage ? 'image' : 'file',
-        mimeType: file.type,
-        size: file.size,
-        content: result,
-        pureBase64: pureBase64,
-        raw: file
-      });
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  const isImage = file.type.startsWith('image/');
+  reader.onload = (ev) => {
+    pendingFile.value = {
+      name: file.name,
+      type: isImage ? 'image' : 'file',
+      mimeType: file.type,
+      size: file.size,
+      content: ev.target.result
     };
-    if (isImage) {
-      reader.readAsDataURL(file);
-    } else {
-      reader.readAsText(file);
-    }
+  };
+  if (isImage) {
+    reader.readAsDataURL(file);
+  } else {
+    reader.readAsText(file);
   }
   e.target.value = '';
 }
 
-function removePendingFile(idx) {
-  if (typeof idx === 'number') {
-    pendingFiles.value.splice(idx, 1);
-  } else {
-    pendingFiles.value = [];
-  }
+function removePendingFile() {
+  pendingFile.value = null;
 }
 
 
@@ -7063,11 +7757,11 @@ function toggleTaskPanel() {
 }
 function toggleFilePanel() {
   filePanelOpen.value = !filePanelOpen.value;
-  if (filePanelOpen.value) wecomPanelOpen.value = false;
+  if (filePanelOpen.value) { taskPanelOpen.value = false; wecomPanelOpen.value = false; }
 }
 function toggleWecomPanel() {
   wecomPanelOpen.value = !wecomPanelOpen.value;
-  if (wecomPanelOpen.value) filePanelOpen.value = false;
+  if (wecomPanelOpen.value) { filePanelOpen.value = false; taskPanelOpen.value = false; }
 }
 
 function selectTradeAgent(agentKey) {
@@ -7093,6 +7787,19 @@ function selectTradeAgent(agentKey) {
   }
   loadAgentSessions();
   loadAgentMessages();
+  // 同步 URL 以便刷新后恢复
+  const agentRouteMap = {
+    'sales-champion': '/sales-champion',
+    'background-report': '/background-report',
+    'customs-agent': '/customs-agent',
+    'doc-agent': '/doc-agent',
+    'freight-agent': '/freight-agent',
+    'legal-agent': '/legal-agent',
+  };
+  const targetRoute = agentRouteMap[agentKey];
+  if (targetRoute && route.path !== targetRoute) {
+    router.push(targetRoute);
+  }
 }
 
 const showSettings = ref(false);
@@ -7147,23 +7854,23 @@ watch(showSettings, (v) => {
   if (v) { loadUnattended(); loadCreditsBalance(); }
 });
 
-const platformItems = [  { key: 'trade-agent', label: '外贸Agent', icon: '🤖', children: [
+const platformItems = [
+  { key: 'trade-agent', label: 'AGENTS', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 9V7c0-1.1-.9-2-2-2h-3V3c0-.55-.45-1-1-1s-1 .45-1 1v2H9V3c0-.55-.45-1-1-1s-1 .45-1 1v2H4c-1.1 0-2 .9-2 2v2c-1.66 0-3 1.34-3 3s1.34 3 3 3v4c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-4c1.66 0 3-1.34 3-3s-1.34-3-3-3zM7.5 11.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5S9.83 13 9 13s-1.5-.67-1.5-1.5zm9 0c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5zM5 17v-3.5c0-.28.22-.5.5-.5h13c.28 0 .5.22.5.5V17c0 .28-.22.5-.5.5h-13c-.28 0-.5-.22-.5-.5z"/></svg>', category: 'agent', children: [
     { key: 'sales-champion', label: '外贸销冠', icon: '🏆' },
     { key: 'background-report', label: '客户背调', icon: '🔍' },
     { key: 'customs-agent', label: '外贸单证', icon: '📋' },
     { key: 'doc-agent', label: '工厂对接', icon: '🏭' },
     { key: 'freight-agent', label: '货代对接', icon: '🚢' },
     { key: 'legal-agent', label: '外贸法务', icon: '⚖️' },
+    { key: 'work-group', label: '工作群组', icon: '👥' },
   ] },
-  { key: 'work-group', label: '工作群组', icon: '👥' },
-  { key: 'communication', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
-  { key: 'customers', label: '客户管理', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
-  { key: 'pipeline', label: '销售看板', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h2v8H3v-8zm4-4h2v12H7V9zm4-4h2v16h-2V5zm4 6h2v10h-2V11zm4-4h2v14h-2V7z"/></svg>' },
-  { key: 'product-knowledge', label: '产品知识', icon: '📦' },
-  { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
-  { key: 'my-stats', label: '我的业绩', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>' },
-  { key: 'trade-shows', label: '全球展会', icon: '🗓️' },
-  { key: 'skills', label: '技能商店', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>' },
+  { key: 'communication', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>', category: 'communication', children: [
+    { key: 'whatsapp', label: 'WhatsApp', channelId: 'whatsapp' },
+    { key: 'telegram', label: 'Telegram', channelId: 'telegram' },
+    { key: 'email', label: '邮箱', channelId: 'email' },
+  ] },
+  { key: 'workbench', label: '工作台', icon: '🏠', category: 'workbench' },
+  { key: 'skills', label: '技能商店', icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg>', category: 'skills' },
 ];
 
 const settingsTabs = [
@@ -7229,24 +7936,8 @@ function toggleMhMenu(key) {
   mhMenuOpen.value = mhMenuOpen.value === key ? null : key;
 }
 
-// 移动端栏目抽屉菜单
-const mobileDrawerItems = [
-  { key: 'trade-agent', label: '外贸Agent', icon: '🤖', children: [
-    { key: 'sales-champion', label: '外贸销冠', icon: '🏆' },
-    { key: 'background-report', label: '客户背调', icon: '🔍' },
-    { key: 'customs-agent', label: '外贸单证', icon: '📋' },
-    { key: 'doc-agent', label: '工厂对接', icon: '🏭' },
-    { key: 'freight-agent', label: '货代对接', icon: '🚢' },
-    { key: 'legal-agent', label: '外贸法务', icon: '⚖️' },
-  ] },
-  { key: 'chatlist', label: '客户沟通', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>' },
-  { key: 'customers', label: '客户管理', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
-  { key: 'pipeline', label: '销售看板', icon: '📊' },
-  { key: 'product-knowledge', label: '产品知识', icon: '📦' },
-  { key: 'dashboard', label: '数据概览', icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
-  { key: 'trade-shows', label: '全球展会', icon: '🗓️' },
-  { key: 'skills', label: '技能商店', icon: '🧩' },
-];
+// 移动端栏目抽屉菜单：与桌面侧栏共用同一份菜单（保持手机/PC 一致）
+const mobileDrawerItems = platformItems;
 const mobileHeaderTitle = computed(() => {
   if (mobileInConv.value && activeChannel.value === 'telegram' && tgActiveJid.value) { const c = tgConversations.value.find(x => x.jid === tgActiveJid.value); return c?.name || 'Telegram'; }
   if (mobileInConv.value && activeChannel.value === 'email') return '邮箱';
@@ -7267,6 +7958,8 @@ const mobileHeaderTitle = computed(() => {
 });
 function isDrawerActive(key) {
   if (key === 'chatlist') return activePlatform.value === 'communication' && !mobileInConv.value;
+  if (key === 'whatsapp' || key === 'telegram' || key === 'email')
+    return activePlatform.value === 'communication' && activeChannel.value === key;
   if (key === 'translate_set') return false;
   if (['sales-champion','background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(key)) return activePlatform.value === 'trade-agent' && currentTradeAgent.value === key;
   if (key === 'trade-agent') return false;
@@ -7281,6 +7974,11 @@ function closeAllMobileOverlays() {
 }
 function onDrawerItemClick(item) {
   closeAllMobileOverlays();
+  // 客户沟通渠道子项（WhatsApp/Telegram/邮箱）→ 走桌面同一个渠道切换逻辑
+  if (item.channelId) {
+    onChannelChildClick(item);
+    return;
+  }
   if (item.key === 'chatlist') {
     activePlatform.value = 'communication';
     if (route.path !== '/chat') router.push('/chat');
@@ -7330,10 +8028,24 @@ function isChildActive(child) {
 }
 function isParentActive(item) {
   if (item.key === 'trade-agent') return false;
+  if (item.category === 'communication') return activePlatform.value === 'communication';
   return activePlatform.value === item.key;
 }
 
 function toggleExpand(key) { expandedKeys.value[key] = !expandedKeys.value[key]; }
+function onChannelChildClick(ch) {
+  if (activePlatform.value !== 'communication') {
+    activePlatform.value = 'communication';
+    if (route.path !== '/chat') router.push('/chat');
+  }
+  selectChannel(ch.channelId);
+}
+
+function getChannelStatus(chId) {
+  const ch = channels.find(c => c.id === chId);
+  return ch ? ch.status : 'offline';
+}
+
 function onChildClick(child) {
   // Trade agent sub-items → stay in chat interface, just switch agent
   if (['sales-champion','background-report','customs-agent','doc-agent','freight-agent','legal-agent'].includes(child.key)) {
@@ -7372,7 +8084,7 @@ function switchPlatform(item) {
   const routeMap = {
     dashboard: '/dashboard',
     assistant: '/assistant',
-    'trade-agent': '/assistant',
+    'trade-agent': '/sales-champion',
     communication: '/chat',
     customers: '/customers',
     pipeline: '/pipeline',
@@ -7392,6 +8104,7 @@ function switchPlatform(item) {
     'freight-agent': '/freight-agent',
     'legal-agent': '/legal-agent',
     'work-group': '/work-group',
+    workbench: '/workbench',
   };
   const target = routeMap[item.key] || '/';
   if (route.path !== target) router.push(target);
@@ -7403,7 +8116,7 @@ function openMobilePanel(key) {
       if (key === 'assign-agent') { chatViewRef.value?.openAssignDialog?.(); return; }
       // 点击已激活的顶部快捷按钮 → 关闭
       if (mobilePanel.value === key) { mobilePanel.value = null; activePanel.value = null; return; }
-      if (!chatStore.activeJid && (key === 'aitalk' || key === 'bgcheck' || key === 'customer' || key === 'translate' || key === 'worldclock' || key === 'tracking' || key === 'speechlib')) {
+      if (!chatStore.activeJid && (key === 'aitalk' || key === 'bgcheck' || key === 'customer' || key === 'translate' || key === 'worldclock' || key === 'tracking' || key === 'speechlib' || key === 'autoReception')) {
         ElMessage.warning('请先选择一个会话'); return;
       }
       activePanel.value = key;
@@ -7465,7 +8178,7 @@ function handleMobileTab(tab) {
 
 watch(() => route.path, (p) => {
   if (p === '/' || p === '/dashboard') activePlatform.value = 'dashboard';
-  else if (p.startsWith('/assistant') && !route.query._t) activePlatform.value = 'assistant';
+  else if (p.startsWith('/assistant')) activePlatform.value = 'assistant';
   else if (p.startsWith('/chat')) activePlatform.value = 'communication';
   else if (p.startsWith('/emails')) activePlatform.value = 'emails';
   else if (p.startsWith('/customers')) activePlatform.value = 'customers';
@@ -7489,7 +8202,7 @@ watch(() => route.path, (p) => {
     const restRemain = ref('');
     async function fetchCooldownStatus() {
       try {
-        const r = await fetch('/api/whatsapp/status');
+        const r = await fetch(window.__API_BASE__ + '/api/whatsapp/status');
         const d = await r.json();
         if (d.cooldownUntil) {
           const t = new Date(d.cooldownUntil).getTime();
@@ -7523,9 +8236,11 @@ const totalUnread = computed(() => {
   for (const c of chatStore.sortedConversations) n += (c.unreadCount || 0);
   return n > 0 ? n : '';
 });
-watch(totalUnread, (v) => { platformItems[1].badge = v; }, { immediate: true });
+watch(totalUnread, (v) => { platformItems[0].badge = v; }, { immediate: true });
 // Persist activeChannel to localStorage
 watch(activeChannel, (val) => { try { localStorage.setItem('active_channel', val || 'whatsapp'); } catch(e) {} });
+watch(activePlatform, (val) => { try { localStorage.setItem('active_platform', val || 'assistant'); } catch(e) {} });
+watch(currentTradeAgent, (val) => { try { localStorage.setItem('current_trade_agent', val || 'sales-champion'); } catch(e) {} });
 
 function avatarColor(name) {
   if (!name) return '#00a884';
@@ -7607,6 +8322,7 @@ const tgHeaderAvatar = computed(() => {
 });
 watch(tgActiveJid, () => { tgHeaderAvatarFailed.value = false; });
 const tgMessages = ref([]);
+let tgTempIdCounter = 0;
 function isMediaPlaceholderText(t) {
   if (!t) return true;
   const s = String(t).trim();
@@ -7671,8 +8387,11 @@ onUnmounted(() => { document.removeEventListener('click', tgCloseAttachMenu); })
 async function loadTgMessages(jid) {
   try {
     let data = null;
-    if (jid && jid.endsWith('@telegram')) {
-      // TG 历史消息：从 TG API 实时拉取（数据库未入库）
+    // 优先读数据库（WAMessage 含翻译、timestamp desc 已修复）；数据库为空（新会话未入库）才从 TG 实时拉取兜底
+    const _dbResp = await api.get('/whatsapp/messages', { params: { jid } });
+    const _dbMsgs = _dbResp.data || [];
+    if (jid && jid.endsWith('@telegram') && (!_dbMsgs || _dbMsgs.length === 0)) {
+      // TG 历史消息兜底：从 TG API 实时拉取（数据库未入库的新会话）
       const peerId = jid.replace('@telegram', '');
       const hist = await api.get('/tg-userbot/history', { params: { peerId, limit: 50 } });
       const msgs = (hist.data && hist.data.messages) || [];
@@ -7687,8 +8406,7 @@ async function loadTgMessages(jid) {
         platform: 'telegram',
       }));
     } else {
-      const resp = await api.get('/whatsapp/messages', { params: { jid } });
-      data = resp.data || [];
+      data = _dbMsgs;
     }
     tgMessages.value = (data || []).slice().reverse().map(m => {
       let transObj = null;
@@ -7759,7 +8477,7 @@ async function sendTgMessage() {
     return;
   }
   // 乐观消息：立即显示，不等API返回
-  const tempId = 'tmp-tg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const tempId = 'tmp-tg-' + (++tgTempIdCounter) + '-' + Date.now();
   tgMessages.value.push({
     id: tempId,
     fromMe: true,
@@ -7791,16 +8509,19 @@ async function sendTgMessage() {
     }
     const idx = tgMessages.value.findIndex(m => m._tempId === tempId);
     if (idx >= 0) {
-      tgMessages.value[idx] = {
-        ...tgMessages.value[idx],
-        id: data?.savedId || tgMessages.value[idx].id,
-        waMessageId: data?.waMessageId || '',
-        text: localTrans?.translated || tgMessages.value[idx].text,
-        body: localTrans?.translated || tgMessages.value[idx].body,
-        translationObj: localTrans,
-        _tempId: tempId,
-        _sending: false,
-      };
+      const updated = { ...tgMessages.value[idx] };
+      if (data?.savedId) updated.id = data.savedId;
+      updated.waMessageId = data?.waMessageId || updated.waMessageId;
+      if (localTrans?.translated) {
+        updated.text = localTrans.translated;
+        updated.body = localTrans.translated;
+      }
+      updated.translationObj = localTrans || updated.translationObj;
+      updated._sending = false;
+      tgMessages.value.splice(idx, 1, updated);
+    } else {
+      // tempId 未匹配到乐观消息，可能已过期或已被替换，重新加载
+      loadTgMessages(tgActiveJid.value);
     }
     loadTgConversations();
   } catch(e) {
@@ -8042,7 +8763,6 @@ function doConnectWA() {
 }
 // ========== WA 账号体验（对标竞品：新建会话/启动/配置/删除） ==========
 const configPanelOpen = ref(false);
-const configTargetPlatform = ref('whatsapp'); // whatsapp | telegram
 const configAccountId = ref(null);
 const configAccountName = ref('');
 const configProxyProtocol = ref('socks5');
@@ -8092,22 +8812,16 @@ async function saveProxyConfig() {
   if (!configProxyHost.value.trim()) { alert('请输入代理地址'); return; }
   try {
     const body = { enabled: true, host: configProxyHost.value.trim(), port: Number(configProxyPort.value), protocol: configProxyProtocol.value, username: configProxyUser.value.trim() || undefined, password: configProxyPass.value.trim() || undefined };
-    if (configTargetPlatform.value === 'telegram') {
-      await api.post(`/accounts/telegram/${configAccountId.value}/proxy`, body);
-      alert('代理设置已保存');
-      await loadTgAccounts();
-    } else {
-      await api.post(`/accounts/wa/${configAccountId.value}/proxy`, body);
-      alert('代理设置已保存');
-      await loadWaAccounts();
-    }
+    await api.post(`/accounts/wa/${configAccountId.value}/proxy`, body);
+    alert('代理设置已保存');
+    await loadWaAccounts();
   } catch(e) { alert('保存失败: ' + (e.response?.data?.error || e.message)); }
 }
 
 async function testProxy() {
   configTesting.value = true; configTestResult.value = '';
   try {
-    const { data } = await api.post(`${configTargetPlatform.value === 'telegram' ? '/accounts/telegram' : '/accounts/wa'}/${configAccountId.value}/proxy/test`);
+    const { data } = await api.post(`/accounts/wa/${configAccountId.value}/proxy/test`);
     configTestResult.value = data?.success ? '✅ 代理连接正常' : ('❌ ' + (data?.error || '连接失败'));
   } catch(e) { configTestResult.value = '❌ 测试失败: ' + (e.response?.data?.error || e.message); }
   finally { configTesting.value = false; }
@@ -8201,7 +8915,7 @@ const channels = [
 
 /* 渠道图标SVG映射：新增渠道在此加一项即可自动显示（优先使用这里的大图标，fallback到ch.icon） */
 const channelIcons = {
-  whatsapp: '<svg viewBox="0 0 32 32" width="22" height="22"><circle cx="16" cy="16" r="14" fill="#00a884"/><path d="M16.003 6.5C10.76 6.5 6.5 10.76 6.5 16.003c0 1.91.57 3.69 1.55 5.17L6.5 24.5l3.43-1.48a9.44 9.44 0 006.07 2.18c5.24 0 9.5-4.26 9.5-9.5S21.24 6.5 16.003 6.5z" fill="#fff"/><path d="M12.85 11.96c-.21-.48-.44-.49-.65-.5l-.55-.01c-.19 0-.5.07-.76.36-.26.29-1 1-1 2.38s1.02 2.75 1.16 2.94 1.99 3.1 4.86 4.3c2.42 1 2.91.8 3.44.75.52-.06 1.69-.69 1.93-1.36.24-.67.24-1.24.17-1.36-.07-.12-.26-.19-.55-.33-.29-.14-1.69-.83-1.95-.93-.26-.1-.45-.14-.65.14-.2.28-.74.93-.91 1.11-.17.19-.33.22-.62.07-.29-.14-1.21-.45-2.3-1.42-.85-.76-1.43-1.69-1.59-1.98-.17-.28-.02-.44.12-.58.13-.13.29-.33.43-.5.14-.17.19-.28.29-.47.1-.19.05-.36-.02-.5-.08-.14-.64-1.56-.88-2.14z" fill="#00a884"/></svg>',
+  whatsapp: '<svg viewBox="0 0 448 512" width="20" height="20" fill="#25D366"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>',
   email: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>',
   telegram: '<svg viewBox="0 0 24 24" width="22" height="22" fill="#2AABEE"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295l.213-3.053 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.94z"/></svg>',
   facebook: '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
@@ -8306,6 +9020,7 @@ const tgCountryFiltered = computed(() => {
   if (!kw) return tgCountries;
   return tgCountries.filter(c => c.name.toLowerCase().indexOf(kw) > -1 || c.code.indexOf(kw) > -1);
 });
+
 // ─── Telegram Bot 连接 ───
 const tgAccounts = ref([]);
 const tgConnecting = ref(false);
@@ -8519,8 +9234,9 @@ function tgSwitchLoginView(v){ tgLoginView.value = v; tgCountryOpen.value = fals
         // 同步会话（联系人+对话），刷新客户列表
         try { await api.post('/tg-userbot/sync-dialogs', { limit: 200 }); } catch(e) { console.warn('tg sync-dialogs err', e); }
         await loadTgConversations();
-        // 头像同步（后台触发，不阻塞登录流程）
-        try { api.post('/tg-userbot/sync-avatars'); } catch(e) { console.warn('tg sync-avatars err', e); }
+        // 头像同步：等待全部下载完成后刷新列表，让头像即时显示
+        try { await api.post('/tg-userbot/sync-avatars'); } catch(e) { console.warn('tg sync-avatars err', e); }
+        await loadTgConversations();
         return;
       }
       if (data.status === 'password_needed') {
@@ -8590,8 +9306,9 @@ function tgSwitchLoginView(v){ tgLoginView.value = v; tgCountryOpen.value = fals
         await loadTgAccounts();
         try { await api.post('/tg-userbot/sync-dialogs', { limit: 200 }); } catch(e) { console.warn('tg sync-dialogs err', e); }
         await loadTgConversations();
-        // 头像同步（后台触发，不阻塞登录流程）
-        try { api.post('/tg-userbot/sync-avatars'); } catch(e) { console.warn('tg sync-avatars err', e); }
+        // 头像同步：等待全部下载完成后刷新列表，让头像即时显示
+        try { await api.post('/tg-userbot/sync-avatars'); } catch(e) { console.warn('tg sync-avatars err', e); }
+        await loadTgConversations();
         return;
       }
       if (!data || data.status !== 'pending' || !data.token) {
@@ -9437,6 +10154,16 @@ const companyLoading = ref(false);
 const cmExpanded = reactive({});
 const cmAddMenuOpen = ref(false);
 const showCompanyDialog = ref(false);
+const showUrlImport = ref(false);
+const showHelpDialog = ref(false);
+const showNewProduct = ref(false);
+const npSaving = ref(false);
+const npForm = reactive({ productNameCn:'', productNameEn:'', productDesc:'', pricingUnit:'', basePrice:null, moq:'', deliveryDays:'', paymentTerms:'', questions:[] });
+const urlImportStep = ref(1);
+const urlImportLoading = ref(false);
+const urlImportSaving = ref(false);
+const urlImportUrl = ref('');
+const urlImportProducts = ref([]);
 const editingFileInfo = ref(''); // 编辑时当前附件名
 const editingCompanyId = ref(null);
 const cmSaving = ref(false);
@@ -9478,6 +10205,105 @@ async function fetchCompanyMaterials() {
     companyMaterials.value = [];
   } finally {
     companyLoading.value = false;
+  }
+}
+
+function resetNewProduct() {
+  npForm.productNameCn=''; npForm.productNameEn=''; npForm.productDesc='';
+  npForm.pricingUnit=''; npForm.basePrice=null; npForm.moq=''; npForm.deliveryDays=''; npForm.paymentTerms='';
+  npForm.questions=[];
+}
+function openNewProduct() { resetNewProduct(); showNewProduct.value = true; }
+function npAddQuestion(priority) {
+  npForm.questions.push({ questionCn:'', questionEn:'', questionType:'text', priority, optionsJson:null });
+}
+async function saveNewProduct() {
+  if (!npForm.productNameEn.trim() && !npForm.productNameCn.trim()) { ElMessage.warning('请输入产品名称'); return; }
+  npSaving.value = true;
+  try {
+    const unit = npForm.pricingUnit || '';
+    let line = '- ' + (npForm.productNameEn.trim() || npForm.productNameCn.trim());
+    if (npForm.productDesc) line += '：' + npForm.productDesc.trim();
+    if (npForm.basePrice != null) line += '，参考价 ' + npForm.basePrice + unit;
+    if (npForm.moq) line += '，MOQ ' + npForm.moq.trim();
+    if (npForm.deliveryDays) line += '，交期约 ' + npForm.deliveryDays.trim();
+    if (npForm.paymentTerms) line += '，付款 ' + npForm.paymentTerms.trim();
+    let content = line;
+    const qs = npForm.questions.filter(q => q.questionCn && q.questionEn);
+    if (qs.length) {
+      content += '\n\n询盘问题：';
+      qs.forEach(q => { content += '\n' + (q.priority===1?'【必问】':'【进阶】') + q.questionCn + ' / ' + q.questionEn; });
+    }
+    const title = npForm.productNameEn.trim() || npForm.productNameCn.trim();
+    await api.post('/company-materials', { category: 'product', title, content, lang: 'en', sortOrder: 0 });
+    ElMessage.success('已新增产品');
+    showNewProduct.value = false;
+    if (companyCategory.value !== 'product' && companyCategory.value !== 'all') companyCategory.value = 'product';
+    await fetchCompanyMaterials();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e.response?.data?.error || '保存失败');
+  } finally {
+    npSaving.value = false;
+  }
+}
+
+async function openUrlImport() {
+  urlImportStep.value = 1;
+  urlImportUrl.value = '';
+  urlImportProducts.value = [];
+  showUrlImport.value = true;
+}
+async function runUrlImport() {
+  const url = urlImportUrl.value.trim();
+  if (!url || !/^https?:\/\//i.test(url)) { ElMessage.warning('请输入 http/https 开头的链接'); return; }
+  urlImportLoading.value = true;
+  try {
+    const resp = await api.post('/company-materials/import/url', { url }, { timeout: 300000 });
+    const d = resp.data || {};
+    if (d.success) {
+      urlImportProducts.value = (d.data || []).map(p => ({ ...p, _selected: true }));
+      urlImportStep.value = 2;
+      if (!urlImportProducts.value.length) ElMessage.warning('未识别到产品');
+    } else {
+      throw new Error(d.error || '提取失败');
+    }
+  } catch (e) {
+    console.error('[company] url import error', e);
+    ElMessage.error('提取失败: ' + (e.response?.data?.error || e.message || ''));
+  } finally {
+    urlImportLoading.value = false;
+  }
+}
+async function saveUrlImport() {
+  const sel = urlImportProducts.value.filter(p => p._selected);
+  if (!sel.length) { ElMessage.warning('请至少勾选一个'); return; }
+  urlImportSaving.value = true;
+  try {
+    const lines = sel.map(p => {
+      let line = '- ' + (p.productNameEn || p.productNameCn || '产品');
+      let spec = '';
+      try { const o = (typeof p.specs==='string')?JSON.parse(p.specs):p.specs; if (o&&typeof o==='object') spec = Object.entries(o).map(([k,v])=>k+' '+v).join('，'); } catch {}
+      const desc = p.productDesc || spec;
+      if (desc) line += '：' + desc;
+      if (p.basePrice!=null) line += '，参考价 ' + p.basePrice + (p.pricingUnit||'');
+      if (p.moq) line += '，MOQ ' + p.moq;
+      if (p.deliveryDays) line += '，交期约 ' + p.deliveryDays;
+      if (p.paymentTerms) line += '，付款 ' + p.paymentTerms;
+      return line;
+    });
+    const title = '产品目录';
+    const content = '来源：' + urlImportUrl.value.trim() + '\n\n' + lines.join('\n');
+    await api.post('/company-materials', { category: 'product', title, content, lang: 'en', sortOrder: 0 });
+    ElMessage.success('已保存');
+    showUrlImport.value = false;
+    companyCategory.value = 'product';
+    await fetchCompanyMaterials();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e.response?.data?.error || '保存失败');
+  } finally {
+    urlImportSaving.value = false;
   }
 }
 
@@ -10298,6 +11124,20 @@ const CULTURE_DATA = {
     dress:'商务休闲到正装，较随性',
     gifts:'一般不送礼，简约实用风格',
   },
+  UA: {
+    flag:'🇺🇦', name:'乌克兰', nameEn:'Ukraine', tz:'Europe/Kyiv',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'UAH（格里夫纳）', language:'乌克兰语（官方），俄语通用', englishLevel:'中等，年轻一代商务英语较好',
+    timePerception:'商务场合较守时，习惯事先预约；对价格和付款周期较敏感',
+    greeting:'握手问候+"Добрий день"，正式场合用姓名或先生/女士',
+    etiquette:['商务正装为主','用头衔或姓称呼，熟识后再直呼名字','讲究层级与礼节，尊重权威','会议先寒暄再进入正题'],
+    negotiationTips:['价格敏感，重视性价比与付款条件','重长期关系，需先建立信任','决策偏慢，需多次跟进促成','重视书面合同与流程规范','订单重视质量与交付稳定性'],
+    taboos:['避免谈论政治与领土等敏感话题','避免苏联时期负面怀旧话题','不要催促过紧，给对方决策空间'],
+    holidays:'圣诞、新年、复活节、独立日8/24、宪法日6/28',
+    dress:'商务正装',
+    gifts:'鲜花（不送偶数朵、不送黄玫瑰）、巧克力；避免带政治含义的礼品',
+  },
+
   RU: {
     flag:'🇷🇺', name:'俄罗斯', nameEn:'Russia', tz:'Europe/Moscow',
     weekend:['Saturday','Sunday'], workHours:{start:10,end:19},
@@ -11029,6 +11869,2256 @@ const CULTURE_DATA = {
     ],
     holidays:'春节（1-2月）、国庆（10.1）、中秋、端午、清明、劳动节（5.1）'
   },
+
+  AZ: {
+    flag:'🇦🇿', name:'阿塞拜疆', nameEn:'Azerbaijan', tz:'Asia/Baku',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AZN（马纳特）', language:'阿塞拜疆语，俄语通用', englishLevel:'商务圈偏低，常用俄语',
+    timePerception:'相对宽松，准时为佳',
+    greeting:'握手，男性间可贴面礼，Salam',
+    etiquette:['突厥文化','俄语商务圈','男性握手女性颔首','石油天然气产业发达'],
+    negotiationTips:['油气/农产品/建材有需求','关系人脉重要','付款灵活但需合同明确','对中国商品接受度高'],
+    taboos:['避免亚美尼亚/纳卡冲突话题','部分客户清真饮食','避免宗教贬损','着装保守'],
+    holidays:'诺鲁孜节3/20-21、独立日5/28、胜利日11/8、国旗日11/9',
+    dress:'正式商务装（男西装/女保守）',
+    gifts:'茶、坚果等小礼品（避免宗教符号）',
+  },
+  BT: {
+    flag:'🇧🇹', name:'不丹', nameEn:'Bhutan', tz:'Asia/Thimphu',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:17},
+    currency:'BTN（努扎姆）', language:'宗卡语，商务通用英语', englishLevel:'商务圈英语可用',
+    timePerception:'节奏慢，耐心沟通',
+    greeting:'握手或鞠躬，正式场合多礼',
+    etiquette:['藏传佛教文化','低碳环保国','尊重僧人','水电/旅游/手工艺'],
+    negotiationTips:['市场规模小','决策谨慎缓慢','主要依托印度贸易','价格与长期合作并重'],
+    taboos:['尊重宗教圣物与寺庙','避免宗教贬损','国内禁售烟草','避免环保敏感话题'],
+    holidays:'国庆12/17、宗卡历新年、佛诞节',
+    dress:'传统Gho/Kira，商务偏正式',
+    gifts:'茶、干果（避免宗教/动物制品）',
+  },
+  AD: {
+    flag:'🇦🇩', name:'安道尔', nameEn:'Andorra', tz:'Europe/Andorra',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'加泰罗尼亚语/法语/西班牙语', englishLevel:'商业圈可用英/法/西语交流，英语普及度一般',
+    timePerception:'商务守时，山地小国节奏较慢，会前先礼貌寒暄',
+    greeting:'握手问候，"Bonjour/Hola"均可用，称呼先生/女士+姓',
+    etiquette:['国际商务礼节规范，握手/寒暄开场','商务名片法语为佳，双手递接','安道尔是避税低税国，跨境/零售贸易活跃','当地商人不急，谈事从容不催促'],
+    negotiationTips:['小国市场但国际游客多，零售/免税品贸易是重点','直接谈价格和物流，效率导向','安道尔亲法西，可借法国/西班牙标准背书','样品和品质证明有说服力'],
+    taboos:['不评论税收优惠政策敏感处','注意区分法/西语场合，不要用错语言','避免宗教政治敏感话题'],
+    holidays:'圣乔治节4/23、宪法日3/14、圣母升天节8/15、圣诞节',
+    dress:'商务正装，欧洲标准',
+    gifts:'红酒、巧克力、高品质计时/滑雪用品是安道尔特色礼品',
+  },
+  AF: {
+    flag:'🇦🇫', name:'阿富汗', nameEn:'Afghanistan', tz:'Asia/Kabul',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'AFN（阿富汗尼）', language:'普什图语/达里语', englishLevel:'英语普及低，需翻译',
+    timePerception:'时间观念较弹性，美索不达米亚-波斯式慢节奏，需耐心',
+    greeting:'"As-salamu alaykum"伊斯兰问候，男士间握手',
+    etiquette:['严格遵守伊斯兰礼仪，男女商务往来需谨慎','用右手递接，左手被视为不洁','先建立信任再谈业务，关系导向极强','着装保守，覆盖手臂腿部'],
+    negotiationTips:['安全环境复杂，多通过中间人/代理接触','面对面信任比价格更重要','伊斯兰客户议价文化重，留空间','带翻译+尊重宗教时间（祈祷/斋月）'],
+    taboos:['绝对回避政治/战争/教派话题','不送酒、猪肉及狗/裸露人像礼品','斋月白天不在对方面前吃喝'],
+    holidays:'开斋节、宰牲节、阿富汗独立日8/19',
+    dress:'保守长袍/西装，尊重伊斯兰着装规范',
+    gifts:'茶、坚果、地毯等当地特产礼品',
+  },
+  AG: {
+    flag:'🇦🇬', name:'安提瓜和巴布达', nameEn:'Antigua and Barbuda', tz:'America/Antigua',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'官方英语，通用',
+    timePerception:'加勒比海岛式悠闲节奏，迟到被宽容，随和友好',
+    greeting:'"Hello"握手问候，带姓氏称呼',
+    etiquette:['英语母语商务，沟通无障碍','关系友好随和，先寒暄再进业务','海岛旅游/离岸金融产业为主','商务着装偏休闲夏装'],
+    negotiationTips:['直接谈订单，效率导向','海岛市场小而专：旅游、房产、离岸','旺季（旅游季）采购活跃，提前备货','运输出口环节要清晰'],
+    taboos:['避免谈论当地殖民史/政治','不要对本国标准表述轻慢','着装得体避免过度休闲'],
+    holidays:'嘉年华8月、独立日11/1、圣诞节',
+    dress:'商务休闲，热带夏装',
+    gifts:'朗姆酒、当地手工艺品',
+  },
+  AL: {
+    flag:'🇦🇱', name:'阿尔巴尼亚', nameEn:'Albania', tz:'Europe/Tirane',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ALL（阿尔巴尼亚列克）', language:'阿尔巴尼亚语', englishLevel:'年轻一代英语渐普及，商务通用性中等',
+    timePerception:'准时被视为尊重，但发展节奏较快、熟人关系重要',
+    greeting:'"Tungjatjeta"问好，握手并适度眼神接触',
+    etiquette:['先建立个人关系再谈生意，关系导向','商务名片以本国语/英文双语为佳','阿尔巴尼亚裔在巴尔干经贸活跃','尊重年长决策者'],
+    negotiationTips:['价格敏感市场，性价比是核心卖点','引入分销或本地代理更易推进','巴尔干区域转口/建筑/矿业有需求','强调质量+售后'],
+    taboos:['不评论科索沃等敏感政治历史','避免提及宗教隔阂议题','礼轻情意重，别炫富'],
+    holidays:'独立日11/28、开斋节、宰牲节、新年',
+    dress:'商务正装',
+    gifts:'咖啡、茶叶、高档酒类',
+  },
+  AM: {
+    flag:'🇦🇲', name:'亚美尼亚', nameEn:'Armenia', tz:'Asia/Yerevan',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AMD（亚美尼亚德拉姆）', language:'亚美尼亚语/俄语', englishLevel:'俄语商业通用，英语普及度上升',
+    timePerception:'商务守时，重视人情与长期关系，间接受俄式风格影响',
+    greeting:'"Barev"问候，握手并稍用力',
+    etiquette:['关系与信任优先，先熟人引荐','老一代俄语沟通，年轻一代英语可对接','尊重家庭与年长决策者','直接高效但不失礼貌'],
+    negotiationTips:['IT/软件外包、贵金属首饰是亚美尼亚优势','对技术型产品兴趣高','价格合理即可，重长期合作','提供稳定供货保障'],
+    taboos:['避免讨论与土耳其/阿塞拜疆宿怨','不触及宗教历史上敏感点','点餐回绝显得失礼，尽量接受款待'],
+    holidays:'复活节、独立日9/21、新年',
+    dress:'商务正装',
+    gifts:'白兰地、巧克力、优质酒',
+  },
+  AO: {
+    flag:'🇦🇴', name:'安哥拉', nameEn:'Angola', tz:'Africa/Luanda',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AOA（安哥拉宽扎）', language:'葡萄牙语', englishLevel:'葡语官方，英语商用程度有限',
+    timePerception:'葡式慢节奏+非洲弹性，须耐心多次跟进',
+    greeting:'"Bom dia"葡语问候，握手，熟络后亲近',
+    etiquette:['以葡语沟通加分，英语辅助','安哥拉石油/矿产资源丰富，建材机械需求大','先建立信任和交情','尊重层级，决策常在高管'],
+    negotiationTips:['石油财富驱动采购力，预算充裕','重品牌与质量，也重价格','需本地代理/清关稳妥渠道','合同签定后付款周期长，注意支付条款'],
+    taboos:['避免谈论内战和政治','不轻诺不能兑现的交付','着装得体，商务正装'],
+    holidays:'独立日11/11、和平日4/4、新年、圣母节',
+    dress:'商务正装（炎热）',
+    gifts:'优质酒、手表、电子产品',
+  },
+  AT: {
+    flag:'🇦🇹', name:'奥地利', nameEn:'Austria', tz:'Europe/Vienna',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'德语', englishLevel:'商务英语普遍，德语为佳',
+    timePerception:'高度守时与规范，流程清晰、决策审慎',
+    greeting:'"Guten Tag"问候，正规握手',
+    etiquette:['德国式严谨，准时是基本功','称呼加头衔（Herr/Frau），礼数周到','会前充分准备，数据与细节支撑','决策经过多重评估，勿催促'],
+    negotiationTips:['重品质、工艺与长期信誉','报价透明合理，避免虚高','技术标准严格，认证要齐全','奥地利于中欧转口物流枢纽'],
+    taboos:['不调侃其与德国关系','避免轻率谈论宗教政治','B2C/B2B都要务实守信'],
+    holidays:'国庆日10/26、圣诞夜12/24、新年、复活节',
+    dress:'商务正装，精致得体',
+    gifts:'高质量红酒、巧克力、莫扎特糖球',
+  },
+  AW: {
+    flag:'🇦🇼', name:'阿鲁巴', nameEn:'Aruba', tz:'America/Aruba',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AWG（阿鲁巴弗罗林）', language:'荷兰语/帕皮阿门托语/英语', englishLevel:'官方英/荷/帕皮阿语，英语通用',
+    timePerception:'加勒比悠闲节奏，守时但不紧绷',
+    greeting:'"Bon dia"或"Hello"，友好握手',
+    etiquette:['旅游业/离岸金融发达，英语沟通顺畅','友好轻松，先寒暄再谈事','尊重荷兰殖民地文化背景','休闲商务着装'],
+    negotiationTips:['直接、务实，效率导向','旅游相关采购旺盛','大宗采购走正规合同','价格与品质并重'],
+    taboos:['避免种族肤色敏感','不轻慢当地文化','着装避免过度暴露'],
+    holidays:'女王/国王日4/27、嘉年华、新年',
+    dress:'商务休闲夏装（炎热）',
+    gifts:'咖啡、巧克力、朗姆酒',
+  },
+  AX: {
+    flag:'🇦🇽', name:'奥兰群岛', nameEn:'Åland Islands', tz:'Europe/Mariehamn',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'瑞典语', englishLevel:'北欧式英语极佳',
+    timePerception:'高度守时、信任导向、简约务实',
+    greeting:'"Hej"问候，轻松握手',
+    etiquette:['北欧极简务实，直奔主题','英语沟通无障碍','决策清晰高效，重诚信','海洋/航运相关产业为主'],
+    negotiationTips:['北欧高品质标准，重可持续','价格合理透明','航运、渔业、邮轮采购','长期供货合作意愿高'],
+    taboos:['避免冗长寒暄浪费时间','不夸大宣传','尊重环保理念'],
+    holidays:'仲夏节、独立日12/6（芬）、新年',
+    dress:'商务正装（凉爽）',
+    gifts:'设计感礼物、芬兰特产',
+  },
+  BA: {
+    flag:'🇧🇦', name:'波黑', nameEn:'Bosnia and Herzegovina', tz:'Europe/Sarajevo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BAM（波黑可兑换马克）', language:'波斯尼亚语/塞尔维亚语/克罗地亚语', englishLevel:'英语普及度一般，年轻一代较好',
+    timePerception:'巴尔干热情风格，守时但会议易拖长，重人情',
+    greeting:'"Dobar dan"问候，握手，熟人拥抱',
+    etiquette:['关系和个人引荐重要','咖啡文化浓厚，先喝咖啡谈天气','尊重多元族群背景','决策多维度并行'],
+    negotiationTips:['价格敏感但需求实在','重建与建材商机多','本地代理法更稳妥','耐心多次磋商'],
+    taboos:['避开种族/战争伤痕话题','不轻率评论宗教差异','委婉拒礼显得不友好'],
+    holidays:'独立日3/1、元旦、新年、复活节',
+    dress:'商务正装',
+    gifts:'咖啡、甜点、酒',
+  },
+  BB: {
+    flag:'🇧🇧', name:'巴巴多斯', nameEn:'Barbados', tz:'America/Barbados',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BBD（巴巴多斯元）', language:'英语', englishLevel:'英语母语，商务顺畅',
+    timePerception:'加勒比海岛节奏偏缓，友好守约',
+    greeting:'"Good morning"握手，礼貌自信',
+    etiquette:['英语沟通无障碍','关系友好随和','金融/旅游/蔗糖产业为主','商务着装整洁得体'],
+    negotiationTips:['直接谈合作条款','离岸金融与旅游采购','正规合同规避风险','价格理性、信誉优先'],
+    taboos:['不评论种族/殖民史','避免过度休闲着装','诚信履约很重要'],
+    holidays:'独立日11/30、嘉年华8月、新年、复活节',
+    dress:'商务正装（热带）',
+    gifts:'朗姆酒、热带水果礼盒',
+  },
+  BE: {
+    flag:'🇧🇪', name:'比利时', nameEn:'Belgium', tz:'Europe/Brussels',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'荷兰语/法语/德语', englishLevel:'英语商用普遍，多语环境',
+    timePerception:'高度守时、务实、重流程与共识',
+    greeting:'"Bonjour/Goedendag"按语区问候，握手',
+    etiquette:['尊重佛兰德斯/瓦隆双语区，用对语言','会前充分准备，书面材料','决策分层级，需耐心','布鲁塞尔是欧盟中枢，国际化'],
+    negotiationTips:['重品质、合规与逻辑','多语服务是加分项','报价清晰务实不虚高','物流枢纽，转口欧洲便利'],
+    taboos:['不混淆荷兰语/法语使用场合','避免草率政治玩笑','尊重环保合规标准'],
+    holidays:'国庆日7/21、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'巧克力、啤酒、花束',
+  },
+  BF: {
+    flag:'🇧🇫', name:'布基纳法索', nameEn:'Burkina Faso', tz:'Africa/Ouagadougou',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语官方，英语商用有限',
+    timePerception:'西非弹性时间，慢节奏、重人情',
+    greeting:'"Bonjour"握手，可稍久握手以示热络',
+    etiquette:['先建立信任和交情','法语沟通为佳','关系网络和引荐关键','黄金、农牧业资源为支柱'],
+    negotiationTips:['价格敏感，采购务实','金矿机械/农资需求大','本地中间商作用大','付款条件需明确'],
+    taboos:['避免政治军事话题','不轻诺','尊重伊斯兰/传统习俗'],
+    holidays:'独立日8/5、开斋节、宰牲节、新年',
+    dress:'商务着装（炎热，庄重）',
+    gifts:'茶叶、绿咖啡、香料',
+  },
+  BG: {
+    flag:'🇧🇬', name:'保加利亚', nameEn:'Bulgaria', tz:'Europe/Sofia',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BGN（保加利亚列弗）', language:'保加利亚语', englishLevel:'英语熟练度上升，中青年可对接',
+    timePerception:'守时为主，节奏适中，关系信任重要',
+    greeting:'"Zdravei"问候，握手',
+    etiquette:['点头文化（保加利亚摇头表同意，注意）','先寒暄建立关系','IT外包/玫瑰制品/农产品产业','尊重家庭与年长'],
+    negotiationTips:['价格敏感兼重性价比','IT外包与制造业合作机会多','可入欧元区门户（近期）','耐心磋商重长期'],
+    taboos:['避免误解点头/摇头习惯','不谈奥斯曼历史敏感','不要催促太急'],
+    holidays:'解放日3/3、复活节、圣西里尔日5/24',
+    dress:'商务正装',
+    gifts:'玫瑰油制品、优质酒',
+  },
+  BH: {
+    flag:'🇧🇭', name:'巴林', nameEn:'Bahrain', tz:'Asia/Bahrain',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'BHD（巴林第纳尔）', language:'阿拉伯语，英语通用', englishLevel:'极高，金融中心英语为工作语言',
+    timePerception:'商务守时，海湾金融中心效率高',
+    greeting:'"As-salamu alaykum"，握手，尊重礼仪',
+    etiquette:['海湾金融/自由区枢纽，商机多','英语无障碍，国际化','先确立信任关系再谈','尊重伊斯兰习俗，着装保守'],
+    negotiationTips:['金融、转口贸易、石化','对总部/自由区政策敏感','直接高效，契约意识强','质量与价格并重'],
+    taboos:['斋月公共场合不进食','不送酒/猪肉/狗形象礼品','同性话题避免'],
+    holidays:'开斋节、宰牲节、国庆日12/16',
+    dress:'商务正装（保守）',
+    gifts:'椰枣、高品质甜点、寄送的礼品',
+  },
+  BI: {
+    flag:'🇧🇮', name:'布隆迪', nameEn:'Burundi', tz:'Africa/Bujumbura',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BIF（布隆迪法郎）', language:'基隆迪语/法语', englishLevel:'法语官方，英语有限',
+    timePerception:'东非弹性时间，重人情与耐心',
+    greeting:'"Bonjour"或"Amahoro"问候，握手',
+    etiquette:['先建立信任与友谊','法语为商务主要语言','农业/咖啡/茶叶为支柱','尊重长者与权威'],
+    negotiationTips:['市场小但务实','价格与品质平衡','本地人脉推进更顺','付款条件谨慎设置'],
+    taboos:['避免政治族群矛盾话题','不轻诺','着装庄重'],
+    holidays:'独立日7/1、开斋节、宰牲节、新年',
+    dress:'商务着装（温和）',
+    gifts:'茶叶、咖啡、蜂蜜',
+  },
+  BJ: {
+    flag:'🇧🇯', name:'贝宁', nameEn:'Benin', tz:'Africa/Porto-Novo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语官方，英语有限',
+    timePerception:'西非弹性节奏，热情重关系',
+    greeting:'"Bonjour"握手，可稍久以示热络',
+    etiquette:['关系信任优先','法语沟通','纺织/棉业、转口贸易活跃','热情欢迎彬彬有礼'],
+    negotiationTips:['价格敏感但采购务实','贝宁为西非转口门户','农机/纺织设备需求','明确付款条款'],
+    taboos:['避免政治敏感','不轻诺','尊重宗教民俗'],
+    holidays:'独立日8/1、开斋节、复活节、传统天后节',
+    dress:'商务着装（炎热庄重）',
+    gifts:'香料、可可、工艺礼品',
+  },
+  BL: {
+    flag:'🇧🇱', name:'圣巴泰勒米', nameEn:'Saint Barthélemy', tz:'America/St_Barthelemy',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语', englishLevel:'法语为主，旅游业英语可用',
+    timePerception:'法属加勒比悠闲节奏，守时但不紧绷',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属海外领地，遵循法国商务礼仪','高端奢华旅游为支柱','法语为佳，英语辅助','休闲商务着装'],
+    negotiationTips:['高端奢侈旅游/零售采购','直接高效谈条款','通过法国标准背书','品质至上'],
+    taboos:['避免政治敏感','着装度假但仍得体','诚信履约'],
+    holidays:'法国国庆7/14、圣年节、新年',
+    dress:'休闲商务（热带）',
+    gifts:'香槟、法式甜点',
+  },
+  BM: {
+    flag:'🇧🇲', name:'百慕大', nameEn:'Bermuda', tz:'Atlantic/Bermuda',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BMD（百慕大元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'北美式守时，金融岛效率高',
+    greeting:'"Good morning"握手自信',
+    etiquette:['离岸金融/保险/再保险中心，商务正规','北美商务风格，直接','正式西装着装','守约重信誉'],
+    negotiationTips:['金融客户重专业与合规','直接谈合作与价值','高端金融/保险采购','报价专业有据'],
+    taboos:['避免闲聊冗长','着装务必正式','合规敏感'],
+    holidays:'百慕大日5月、国王日、圣诞节',
+    dress:'商务正装（正式）',
+    gifts:'高档品牌礼品',
+  },
+  BN: {
+    flag:'🇧🇳', name:'文莱', nameEn:'Brunei', tz:'Asia/Brunei',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'BND（文莱元）', language:'马来语', englishLevel:'英语较普及（教育）',
+    timePerception:'守时温和，伊斯兰文明儒雅',
+    greeting:'"Selamat datang"问候，握手（异性免）',
+    etiquette:['伊斯兰君主制国家，礼仪庄重','英语商务可沟通','与新加坡/马来西亚相邻，经贸活跃','尊重王室与宗教规则'],
+    negotiationTips:['富裕石油国，采购力强','重品质与品牌','清真合规产品有优势','直接高效'],
+    taboos:['斋月白天不进食','不送酒/猪肉/狗形象','遵奉伊斯兰禁忌'],
+    holidays:'苏丹生日、开斋节、宰牲节、元旦',
+    dress:'商务着装（保守庄重）',
+    gifts:'椰枣、高档甜点、工艺品',
+  },
+  BO: {
+    flag:'🇧🇴', name:'玻利维亚', nameEn:'Bolivia', tz:'America/La_Paz',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BOB（玻利维亚诺）', language:'西班牙语', englishLevel:'英语商用有限，西语为佳',
+    timePerception:'拉美弹性时间，热情重关系',
+    greeting:'"Buenos días"问候，握手或贴面（熟人）',
+    etiquette:['先建立人情与信任','西语为商务必备','矿业/锂资源/农产品为支柱','尊重原住民文化多样性'],
+    negotiationTips:['价格敏感但需求实在','矿业机械/锂电产业链采购','中国基建需求高','耐心磋商，付款条款明确'],
+    taboos:['不评论原住民政治','避免政治敏感话题','着装正式庄重'],
+    holidays:'独立日8/6、狂欢节（2-3月）、圣诞、新年',
+    dress:'商务西装',
+    gifts:'手工织物、咖啡、酒',
+  },
+  BS: {
+    flag:'🇧🇸', name:'巴哈马', nameEn:'Bahamas', tz:'America/Nassau',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BSD（巴哈马元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约，友好',
+    greeting:'"Good morning"握手热情',
+    etiquette:['英语畅通','旅游/离岸金融/船务为主','友好热情重信用','商务休闲到正式'],
+    negotiationTips:['直接谈条款','旅游采购与离岸金融商机','诚信至上','价格合理'],
+    taboos:['避免政治评论','着装得体','严守承诺'],
+    holidays:'独立日7/10、嘉年华、圣诞',
+    dress:'商务正装（热带）',
+    gifts:'朗姆酒、椰艺礼品',
+  },
+  BW: {
+    flag:'🇧🇼', name:'博茨瓦纳', nameEn:'Botswana', tz:'Africa/Gaborone',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BWP（博茨瓦纳普拉）', language:'英语/茨瓦纳语', englishLevel:'英语官方，商用良好',
+    timePerception:'非洲南部守时较佳，稳重务本',
+    greeting:'"Dumelang"问候，握手',
+    etiquette:['稳定民主、矿业（钻石）为主','英语商务顺畅','尊重传统礼俗','关系与信任并重'],
+    negotiationTips:['钻石/矿业/畜牧采购力强','重规范与长期合作','价格合理透明','走正规流程'],
+    taboos:['避免政治敏感','不轻诺','着装庄重'],
+    holidays:'独立日9/30、元旦、圣诞',
+    dress:'商务正装（温和）',
+    gifts:'优质酒、工艺品',
+  },
+  BY: {
+    flag:'🇧🇾', name:'白俄罗斯', nameEn:'Belarus', tz:'Europe/Minsk',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BYN（白俄罗斯卢布）', language:'白俄罗斯语/俄语', englishLevel:'俄语商用，英语有限',
+    timePerception:'守时严谨，俄式风格',
+    greeting:'"Здравствуйте"握手',
+    etiquette:['俄语为主要商务语言','重视技术细节与规格','国企/大企业主导，流程较长','尊重层级'],
+    negotiationTips:['工业/机械/农业机械需求大','技术规格要对齐','俄国背景贸易需注意合规','价格务实，重长期'],
+    taboos:['避免西方/政治敏感话题','支付与合规风险需评估','守时专注'],
+    holidays:'独立日7/3、俄历新年、胜利日5/9',
+    dress:'商务正装',
+    gifts:'巧克力、酒、伏特加',
+  },
+  BZ: {
+    flag:'🇧🇿', name:'伯利兹', nameEn:'Belize', tz:'America/Belize',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'BZD（伯利兹元）', language:'英语', englishLevel:'英语官方',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/农业/离岸为中心','友好随和重信用','休闲商务着装'],
+    negotiationTips:['直接谈条款','旅游与农渔采购','诚信','价格合理'],
+    taboos:['避免政治敏感','着装得体','诚信履约'],
+    holidays:'独立日9/21、嘉年华、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  CD: {
+    flag:'🇨🇩', name:'刚果（金）', nameEn:'Congo (Kinshasa)', tz:'Africa/Kinshasa',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CDF（刚果法郎）', language:'法语', englishLevel:'法语公用，英语有限',
+    timePerception:'中非弹性慢节奏，重人情',
+    greeting:'"Bonjour"握手（可稍久）',
+    etiquette:['先建立关系信任','法语为商务语言','刚果（金）富矿（铜/钴）','尊重地方与宗教习俗'],
+    negotiationTips:['矿业/资源采购力大','价格敏感但预算实在','本地代理清关关键','付款条件明确'],
+    taboos:['避免政治与冲突话题','不轻诺','着装庄重'],
+    holidays:'独立日6/30、新年、圣诞',
+    dress:'商务着装（炎热庄重）',
+    gifts:'茶叶、咖啡、实用礼品',
+  },
+  CF: {
+    flag:'🇨🇫', name:'中非', nameEn:'Central African Republic', tz:'Africa/Bangui',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XAF（中非法郎）', language:'法语/桑戈语', englishLevel:'法语公用，英语极少',
+    timePerception:'中非弹性慢节奏，重关系',
+    greeting:'"Bonjour"握手',
+    etiquette:['信任与关系第一位','法语沟通','农业/钻石/木材为支柱','尊重当地习俗'],
+    negotiationTips:['市场小、采购务实','价格敏感','本地合作方关键','付款条款谨慎'],
+    taboos:['政治安全话题回避','不轻诺','着装庄重'],
+    holidays:'独立日8/13、新年、圣诞',
+    dress:'商务着装',
+    gifts:'茶叶、咖啡、农产品礼盒',
+  },
+  CG: {
+    flag:'🇨🇬', name:'刚果（布）', nameEn:'Congo (Brazzaville)', tz:'Africa/Brazzaville',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XAF（中非法郎）', language:'法语', englishLevel:'法语公用，英语有限',
+    timePerception:'中非节奏较缓，重关系',
+    greeting:'"Bonjour"握手',
+    etiquette:['关系与信任优先','法语商务','石油/木材产业为主','尊重礼俗'],
+    negotiationTips:['石油财富驱动采购力','重品质与关系','本地渠道关键','付款条款明确'],
+    taboos:['避免政治敏感','不轻诺','着装庄重'],
+    holidays:'独立日8/15、新年、圣母升天节',
+    dress:'商务着装',
+    gifts:'茶叶、优质酒、工艺品',
+  },
+  CH: {
+    flag:'🇨🇭', name:'瑞士', nameEn:'Switzerland', tz:'Europe/Zurich',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CHF（瑞士法郎）', language:'德语/法语/意大利语/罗曼语', englishLevel:'英语商用良好',
+    timePerception:'极致守时、严谨高效、规范',
+    greeting:'"Grüezi/Bonjour"按语区，握手',
+    etiquette:['准时和准备是基本要求','尊重多语区与联邦文化','高端制造/金融/精密行业','决策审慎重质量'],
+    negotiationTips:['重品质、精确与瑞士标准','价格可高但要有价值','长期稳定的合作关系','不催促、专业对专业'],
+    taboos:['不谈语言/地区敏感','不轻浮草率','着装正式得体'],
+    holidays:'国庆日8/1、圣诞夜、新年',
+    dress:'精致商务正装',
+    gifts:'手表、瑞士军刀、高品质巧克力',
+  },
+  CI: {
+    flag:'🇨🇮', name:'科特迪瓦', nameEn:'Côte d\'Ivoire', tz:'Africa/Abidjan',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语官方，英语有限',
+    timePerception:'西非热情弹性节奏，重人情',
+    greeting:'"Bonjour"握手（稍久）',
+    etiquette:['先建立信任交情','法语为佳','可可/咖啡/棕榈油为支柱','热情礼貌'],
+    negotiationTips:['西非法语区门户市场','可可农业/基础建设需求','本地代理推进更顺','价格与付款明确'],
+    taboos:['避免政治竞选敏感','不轻诺','尊重宗教民俗'],
+    holidays:'独立日8/7、开斋节、复活节、节礼',
+    dress:'商务着装（炎热庄重）',
+    gifts:'可可礼盒、咖啡、工艺',
+  },
+  CM: {
+    flag:'🇨🇲', name:'喀麦隆', nameEn:'Cameroon', tz:'Africa/Douala',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XAF（中非法郎）', language:'法语/英语（双语）', englishLevel:'法/英文语双语官方',
+    timePerception:'西非弹性节奏，重关系与礼数',
+    greeting:'"Bonjour/Hello"握手',
+    etiquette:['喀麦隆中非枢纽国','法/英双语可用','农业/油气/矿产资源丰富','尊重酋长与宗教传统'],
+    negotiationTips:['中非区域门户市场','农械/基建/能源需求','本地网络关键','价格与付款明确'],
+    taboos:['政治/区域分离话题回避','不轻诺','着装庄重'],
+    holidays:'国庆5/20、开斋节、复活节、新年',
+    dress:'商务着装',
+    gifts:'可可/咖啡/工艺品',
+  },
+  CR: {
+    flag:'🇨🇷', name:'哥斯达黎加', nameEn:'Costa Rica', tz:'America/Costa_Rica',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CRC（哥斯达黎加科朗）', language:'西班牙语', englishLevel:'英语商用日益普及（旅游/IT）',
+    timePerception:'拉美友好弹性，Pura vida理念',
+    greeting:'"Buenos días"握手',
+    etiquette:['"Pura vida"式的轻松善意','旅游/咖啡/IT外包产业','先寒暄建关系','环保与可持续发展重视'],
+    negotiationTips:['IT外包与环保产业机会','价格合理+品质','直接友好谈合作','长期伙伴'],
+    taboos:['不谈政治极化','环保话题保持正面','着装得体'],
+    holidays:'独立日9/15、圣诞、新年、复活节',
+    dress:'商务休闲（热带）',
+    gifts:'咖啡、手工品',
+  },
+  CU: {
+    flag:'🇨🇺', name:'古巴', nameEn:'Cuba', tz:'America/Havana',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CUP（古巴比索）', language:'西班牙语', englishLevel:'英语商用有限',
+    timePerception:'拉美弹性，国有经济节奏较慢',
+    greeting:'"Buenos días"握手',
+    etiquette:['国家经济体制，需走官方/授权渠道','西语沟通','烟草/糖/镍/旅游产业','耐心有礼'],
+    negotiationTips:['国营贸易需对政府部门','医疗/生物科技合作多','价格务实','合规与审批较严格'],
+    taboos:['不评论政治与美国关系','尊重革命文化','着装庄重'],
+    holidays:'革命日1/1、五一、7/26纪念日',
+    dress:'商务着装（炎热）',
+    gifts:'朗姆酒、雪茄（合规考量）、手工艺',
+  },
+  CV: {
+    flag:'🇨🇻', name:'佛得角', nameEn:'Cape Verde', tz:'Atlantic/Cape_Verde',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CVE（佛得角埃斯库多）', language:'葡萄牙语', englishLevel:'英语有限，葡语为佳',
+    timePerception:'海岛悠闲守约',
+    greeting:'"Bom dia"握手',
+    etiquette:['葡语沟通','旅游/渔业/劳务经济','友好随和','尊重当地文化'],
+    negotiationTips:['旅游与渔业采购','直接谈条款','关系推进','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日7/5、嘉年华、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地手工艺',
+  },
+  CW: {
+    flag:'🇨🇼', name:'库拉索', nameEn:'Curaçao', tz:'America/Curacao',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ANG（荷属安的列斯荷盾）', language:'帕皮阿门托语/荷兰语/英语', englishLevel:'英语/荷兰语通用',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Bon dia"或"Hello"握手',
+    etiquette:['离岸金融与旅游产业','英语/荷兰语沟通','友好重信用','休闲商务'],
+    negotiationTips:['旅游与金融采购','直接高效','规范合同','价格合理'],
+    taboos:['避免敏感话题','着装得体','守信'],
+    holidays:'国庆10/10、嘉年华、新年',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  CY: {
+    flag:'🇨🇾', name:'塞浦路斯', nameEn:'Cyprus', tz:'Asia/Nicosia',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'希腊语/土耳其语', englishLevel:'英语商用良好（英式教育）',
+    timePerception:'守时，地中海亲和节奏',
+    greeting:'"Kalimera"握手',
+    etiquette:['塞浦路斯一度为英属地，英语商务顺畅','希腊语区/土耳其语区之分','航运/旅游/离岸金融产业','先寒暄再进正题'],
+    negotiationTips:['航运与离岸优势','直接高效谈条款','欧盟成员国有税务优势','募物资质规范'],
+    taboos:['避免南北/族群政治议题','不作轻率评论','着装正式'],
+    holidays:'国庆10/1、复活节、新年、圣诞',
+    dress:'商务正装（地中海）',
+    gifts:'葡萄酒、橄榄油、哈尔瓦甜点',
+  },
+  CZ: {
+    flag:'🇨🇿', name:'捷克', nameEn:'Czechia', tz:'Europe/Prague',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CZK（捷克克朗）', language:'捷克语', englishLevel:'年轻人英语好，商务可用',
+    timePerception:'守时，中欧认真严谨',
+    greeting:'"Dobrý den"握手，看一眼对方',
+    etiquette:['准时与会前准备','称呼用学术/职业头衔','德国式务实作风','重视长期信誉'],
+    negotiationTips:['工业/机械/汽车制造产业','重品质与可靠','价格理性透明','技术标准要高'],
+    taboos:['不谈二战/苏东历史伤痛','不轻浮','尊重严谨态度'],
+    holidays:'建国日10/28、圣诞夜12/24、复活节',
+    dress:'商务正装',
+    gifts:'啤酒、水晶制品、水松工艺',
+  },
+  DJ: {
+    flag:'🇩🇯', name:'吉布提', nameEn:'Djibouti', tz:'Africa/Djibouti',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'DJF（吉布提法郎）', language:'法语/阿拉伯语/索马里语', englishLevel:'法语公用，英语有限',
+    timePerception:'非洲东北角弹性，热港节奏',
+    greeting:'"Bonjour"握手',
+    etiquette:['法语商务沟通','战略港口/物流/军事基地经济','尊重伊斯兰习俗','先建信任'],
+    negotiationTips:['物流枢纽地位，中非洲贸易门户','基建与港口配套采购','中国投资活跃','付款明确'],
+    taboos:['回避地缘政治敏感','不送酒（伊斯兰）','着装庄重'],
+    holidays:'独立日6/27、开斋节、宰牲节、新年',
+    dress:'商务着装（炎热）',
+    gifts:'茶叶、咖啡、实用礼品',
+  },
+  DK: {
+    flag:'🇩🇰', name:'丹麦', nameEn:'Denmark', tz:'Europe/Copenhagen',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'DKK（丹麦克朗）', language:'丹麦语', englishLevel:'英语极佳',
+    timePerception:'高度守时、平等务实、信任导向',
+    greeting:'"Hej"握手，平等轻松',
+    etiquette:['北欧扁平管理，直奔主题','英语无障碍','环保可持续高度重视','诚信可靠'],
+    negotiationTips:['重品质与可持续','价格透明合理','北欧采购务实直接','长期合作信任'],
+    taboos:['避免冗长寒暄','要环保合规','低调不炫耀'],
+    holidays:'宪法日6/5、仲夏节、圣诞前夜、新年',
+    dress:'商务正装（简洁）',
+    gifts:'设计品、乐高、丹麦甜点',
+  },
+  DM: {
+    flag:'🇩🇲', name:'多米尼克', nameEn:'Dominica', tz:'America/Dominica',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','生态旅游/农业(香蕉)/离岸金融','友好随和','休闲商务'],
+    negotiationTips:['直接谈条款','旅游生态采购','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日11/3、嘉年华、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  DO: {
+    flag:'🇩🇴', name:'多米尼加', nameEn:'Dominican Republic', tz:'America/Santo_Domingo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'DOP（多米尼加比索）', language:'西班牙语', englishLevel:'英语旅游/年轻一代可，西语为主',
+    timePerception:'拉美弹性热情，重关系',
+    greeting:'"Buenos días"握手',
+    etiquette:['先寒暄建人情','西语为佳','旅游/出口加工/雪茄/朗姆','尊重家庭观念'],
+    negotiationTips:['加勒比大国市场大','出口加工区采购','价格敏感','关系+价格并重'],
+    taboos:['不评论政治','着装得体','守约'],
+    holidays:'独立日2/27、嘉年华、圣诞',
+    dress:'商务正装（热带）',
+    gifts:'朗姆酒、雪茄（合规）、咖啡',
+  },
+  DZ: {
+    flag:'🇩🇿', name:'阿尔及利亚', nameEn:'Algeria', tz:'Africa/Algiers',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'DZD（阿尔及利亚第纳尔）', language:'阿拉伯语/法语', englishLevel:'法语商用，英语上升',
+    timePerception:'北非弹性守时，重人情',
+    greeting:'"As-salamu alaykum"伊斯兰问候，握手',
+    etiquette:['法语商务便利','石油/天然气为支柱','尊重伊斯兰与家庭','先建立信任'],
+    negotiationTips:['油气财富驱动基建/机械采购','重品质与品牌','本地法规/代理关键','付款条款明确'],
+    taboos:['斋月白天不进食','不送酒/猪肉','避免政治话题'],
+    holidays:'革命日11/1、开斋节、宰牲节、独立日7/5',
+    dress:'商务着装（保守）',
+    gifts:'椰枣、高档甜点、寄赠',
+  },
+  EC: {
+    flag:'🇪🇨', name:'厄瓜多尔', nameEn:'Ecuador', tz:'America/Guayaquil',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'西班牙语', englishLevel:'英语商用有限，西语为主',
+    timePerception:'拉美弹性，热情重关系',
+    greeting:'"Buenos días"握手',
+    etiquette:['先建立信任人情','西语必备','石油/香蕉/虾/厄瓜多尔玫瑰','尊重家庭权威'],
+    negotiationTips:['农产品与石油相关采购','直接务实谈价格','价格敏感','付款条款明确'],
+    taboos:['不评论政治','着装得体','守约'],
+    holidays:'独立日8/10、狂欢节、圣诞',
+    dress:'商务正装',
+    gifts:'咖啡、可可、手工艺',
+  },
+  EE: {
+    flag:'🇪🇪', name:'爱沙尼亚', nameEn:'Estonia', tz:'Europe/Tallinn',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'爱沙尼亚语', englishLevel:'英语极佳，IT强国',
+    timePerception:'北欧式守时高效，数字化程度高',
+    greeting:'"Tere"握手',
+    etiquette:['北欧务实，直奔主题','英语无障碍','IT/数字化/电子圣国','环保与创新并重'],
+    negotiationTips:['IT外包与数字化合作机会多','重创新与效率','价格理性','长期伙伴'],
+    taboos:['不冗长寒暄','低调专业','守时'],
+    holidays:'独立日2/24、仲夏节、圣诞节',
+    dress:'商务正装（简洁）',
+    gifts:'设计品、琥珀饰品',
+  },
+  ER: {
+    flag:'🇪🇷', name:'厄立特里亚', nameEn:'Eritrea', tz:'Africa/Asmara',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ERN（厄立特里亚纳克法）', language:'提格里尼亚语/阿拉伯语', englishLevel:'英语有限，需翻译',
+    timePerception:'非洲弹性慢节奏，国家管控经济',
+    greeting:'握手问候（伊斯兰问候語）',
+    etiquette:['国家/合作经济体制，需官方渠道','阿拉伯/英/提格里尼亚语环境','矿产/港口/纺织产业','耐心有礼'],
+    negotiationTips:['矿业与基建项目','官方对接为主','价格务实','合规审批较长'],
+    taboos:['避免敏感政治与冲突','尊重习俗','着装庄重'],
+    holidays:'独立日5/24、开斋节、宰牲节',
+    dress:'商务着装（温和）',
+    gifts:'咖啡、茶叶、实用礼品',
+  },
+  FI: {
+    flag:'🇫🇮', name:'芬兰', nameEn:'Finland', tz:'Europe/Helsinki',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'芬兰语/瑞典语', englishLevel:'英语极佳',
+    timePerception:'高度守时、坦诚直接',
+    greeting:'"Hei"握手眼神接触',
+    etiquette:['北欧扁平直接','英语无障碍','科技/林业/设计产业','诚信务实'],
+    negotiationTips:['重研发品质','价格透明','寒暄简短直进正题','长期信任'],
+    taboos:['不过度寒暄','尊重个人空间','低调不炫耀'],
+    holidays:'独立日12/6、仲夏节、圣诞节、新年',
+    dress:'商务正装（简洁）',
+    gifts:'设计品、芬兰巧克力、桑拿相关',
+  },
+  FJ: {
+    flag:'🇫🇯', name:'斐济', nameEn:'Fiji', tz:'Pacific/Fiji',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'FJD（斐济元）', language:'英语/斐济语/印地语', englishLevel:'英语官方，通用',
+    timePerception:'南太平洋岛国松弛守约，Bula精神',
+    greeting:'"Bula"热情问候，握手',
+    etiquette:['"Bula"式热情友善','英语沟通顺畅','旅游/糖/水产产业','先建友好关系'],
+    negotiationTips:['旅游与农业采购','关系+价格并重','诚实守约','长期合作'],
+    taboos:['不评论族群/政变历史','尊重当地习俗','着装休闲得体'],
+    holidays:'独立日10/10、斐济日、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'传统纺织品、Kava饮品(善意)、手工艺',
+  },
+  FM: {
+    flag:'🇫🇲', name:'密克罗尼西亚', nameEn:'Micronesia', tz:'Pacific/Chuuk',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'英语', englishLevel:'英语官方',
+    timePerception:'密克罗尼西亚自治，平和且守约',
+    greeting:'"Hello"友好握手',
+    etiquette:['英语通用','太平洋岛国（联邦）','渔业/援助经济','友善尊重传统'],
+    negotiationTips:['市场小、渔业采购','直接务实','诚信号召','价格合理'],
+    taboos:['尊重酋长传统','不轻慢当地文化','着装庄重'],
+    holidays:'宪法日11/3、元旦、圣诞',
+    dress:'商务休闲',
+    gifts:'当地手工艺、传统食品',
+  },
+  GA: {
+    flag:'🇬🇦', name:'加蓬', nameEn:'Gabon', tz:'Africa/Libreville',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XAF（中非法郎）', language:'法语', englishLevel:'法语公用，英语有限',
+    timePerception:'中非弹性慢节奏，重关系',
+    greeting:'"Bonjour"握手',
+    etiquette:['法语商务沟通','先建信任关系','石油/木材/锰为支柱','尊重礼俗'],
+    negotiationTips:['石油财富采购力强','重品质+关系','本地渠道关键','付款明确'],
+    taboos:['避免政治敏感','不轻诺','着装庄重'],
+    holidays:'独立日8/17、新年、圣母升天节',
+    dress:'商务着装',
+    gifts:'茶叶、优质酒、工艺',
+  },
+  GD: {
+    flag:'🇬🇩', name:'格林纳达', nameEn:'Grenada', tz:'America/Grenada',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/香料/离岸金融','友好随和','休闲商务'],
+    negotiationTips:['直接谈条款','旅游与香料采购','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日2/7、嘉年华、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'香料礼盒、朗姆酒',
+  },
+  GE: {
+    flag:'🇬🇪', name:'格鲁吉亚', nameEn:'Georgia', tz:'Asia/Tbilisi',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GEL（格鲁吉亚拉里）', language:'格鲁吉亚语', englishLevel:'年轻一代英语/俄语，俄语商用多',
+    timePerception:'高加索热情守时，重人情',
+    greeting:'"Gamarjoba"问候，握手',
+    etiquette:['热情好客，先寒暄','俄语/格鲁吉亚语为主','葡萄酒/旅游业富饶','尊重长辈'],
+    negotiationTips:['葡萄酒/物流转口商机','价格理性','关系驱动','长期合作'],
+    taboos:['不谈俄/阿布哈兹/南奥塞梯敏感','着装庄重','不轻率'],
+    holidays:'独立日5/26、新年、复活节、圣诞(东正教)',
+    dress:'商务正装',
+    gifts:'格鲁吉亚葡萄酒、恰恰酒',
+  },
+  GG: {
+    flag:'🇬🇬', name:'根西岛', nameEn:'Guernsey', tz:'Europe/Guernsey',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GBP（英镑）', language:'英语', englishLevel:'英语母语',
+    timePerception:'英式守时、规范',
+    greeting:'"Good morning"握手',
+    etiquette:['离岸金融/保险中心','英式商务礼仪','英语畅通','正式守约'],
+    negotiationTips:['金融客户重合规专业','投资/保险采购','效率直接','规范合同'],
+    taboos:['避免政治评论','着装正式','守信'],
+    holidays:'解放日5/9、国王生日、圣诞、新年',
+    dress:'商务正装',
+    gifts:'高档酒、品牌礼品',
+  },
+  GI: {
+    flag:'🇬🇮', name:'直布罗陀', nameEn:'Gibraltar', tz:'Europe/Gibraltar',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GIP（直布罗陀镑）', language:'英语', englishLevel:'英语母语',
+    timePerception:'英式守时，地中海轻松',
+    greeting:'"Good morning"握手',
+    etiquette:['英式商务礼仪','离岸金融/海事/博彩产业','英语畅通','守约专业'],
+    negotiationTips:['金融海事采购','直接高效','规范合同','价格合理'],
+    taboos:['英西关系敏感','着装正式','守信'],
+    holidays:'国庆9/10、圣诞、新年',
+    dress:'商务正装',
+    gifts:'品牌礼品、酒',
+  },
+  GL: {
+    flag:'🇬🇱', name:'格陵兰', nameEn:'Greenland', tz:'America/Nuuk',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'DKK（丹麦克朗）', language:'格陵兰语/丹麦语', englishLevel:'英语年轻一代有限，丹麦语可',
+    timePerception:'北极慢节奏，守约友好',
+    greeting:'"Aluu"问候，握手',
+    etiquette:['渔业/矿业/旅游经济','丹麦语/格陵兰语/英语混用','尊重原住民文化','友善耐心'],
+    negotiationTips:['渔业与矿业设备采购','务实理性','季节性（极昼极夜）注意','长期合作'],
+    taboos:['尊重传统狩猎捕鲸文化','不轻慢','着装保暖专业'],
+    holidays:'国旗日6/21、丹麦国庆6/5、圣诞、新年',
+    dress:'保暖商务着装',
+    gifts:'工艺品、精致礼物',
+  },
+  GM: {
+    flag:'🇬🇲', name:'冈比亚', nameEn:'Gambia', tz:'Africa/Banjul',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GMD（冈比亚达拉西）', language:'英语', englishLevel:'英语官方',
+    timePerception:'西非热情弹性',
+    greeting:'"Hello"或"Maleku"(曼丁哥语)握手',
+    etiquette:['英语沟通','农业/旅游/转口','友好热情','尊重礼俗'],
+    negotiationTips:['市场小、转口贸易','直接务实','关系驱动','价格合理'],
+    taboos:['政治敏感回避','不轻诺','着装庄重'],
+    holidays:'独立日2/18、开斋节、宰牲节',
+    dress:'商务着装',
+    gifts:'茶叶、咖啡、工艺品',
+  },
+  GN: {
+    flag:'🇬🇳', name:'几内亚', nameEn:'Guinea', tz:'Africa/Conakry',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GNF（几内亚法郎）', language:'法语', englishLevel:'法语公用，英语有限',
+    timePerception:'西非弹性慢节奏，重关系',
+    greeting:'"Bonjour"握手',
+    etiquette:['法语商务','矿业（铝土/黄金）富饶','先建信任','尊重伊斯兰习俗'],
+    negotiationTips:['矿机/基建采购力强','重关系与品质','本地代理关键','付款明确'],
+    taboos:['离政治远离','不送酒','着装庄重'],
+    holidays:'独立日10/2、开斋节、宰牲节',
+    dress:'商务着装（炎热）',
+    gifts:'咖啡、茶叶、工艺',
+  },
+  GP: {
+    flag:'🇬🇵', name:'瓜德罗普', nameEn:'Guadeloupe', tz:'America/Guadeloupe',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语', englishLevel:'法语为主，旅游业英语可',
+    timePerception:'法属加勒比悠闲',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国商务礼仪','旅游/蔗糖/香蕉经济','法语为佳','休闲商务'],
+    negotiationTips:['旅游农产品采购','直接高效','品质至上','价格合理'],
+    taboos:['避免政治敏感','着装得体','守信'],
+    holidays:'法国国庆7/14、嘉年华、新年',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、法式甜点',
+  },
+  GQ: {
+    flag:'🇬🇶', name:'赤道几内亚', nameEn:'Equatorial Guinea', tz:'Africa/Malabo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XAF（中非法郎）', language:'西班牙语/法语', englishLevel:'西/法语公用，英语有限',
+    timePerception:'中非弹性慢节奏',
+    greeting:'"Buenos días/Bonjour"握手',
+    etiquette:['西班牙语/法语沟通','石油经济富裕','尊重礼俗','先建信任'],
+    negotiationTips:['油气财富设备采购','重品质+关系','本地合作关键','付款明确'],
+    taboos:['政治敏感回避','不轻诺','着装庄重'],
+    holidays:'独立日10/12、新年、圣诞',
+    dress:'商务着装（炎热）',
+    gifts:'茶叶、咖啡、工艺',
+  },
+  GR: {
+    flag:'🇬🇷', name:'希腊', nameEn:'Greece', tz:'Europe/Athens',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'希腊语', englishLevel:'年轻一代英语较好，商务可',
+    timePerception:'地中海守时偏缓，热情重关系',
+    greeting:'"Kalimera"握手',
+    etiquette:['热情好客，先寒暄','航运业世界第一','尊重家庭观念','商务决策较人情'],
+    negotiationTips:['航运/农产品/旅游采购','关系+价格并重','耐心磋商','履约守信'],
+    taboos:['不谈欧盟债务/塞浦路斯政治','不轻易指责','着装正式'],
+    holidays:'国庆3/25、东正教复活节、圣诞(1/7东正)',
+    dress:'商务正装',
+    gifts:'橄榄油、乌佐酒、甜点',
+  },
+  GT: {
+    flag:'🇬🇹', name:'危地马拉', nameEn:'Guatemala', tz:'America/Guatemala',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GTQ（危地马拉格查尔）', language:'西班牙语', englishLevel:'英语商用有限，西语为主',
+    timePerception:'拉美弹性，热情重关系',
+    greeting:'"Buenos días"握手',
+    etiquette:['先寒暄建人情','西语必备','咖啡/蔗糖/纺织品/旅游','尊重原住民玛雅文化'],
+    negotiationTips:['农产品与轻工采购','价格敏感','关系+价格并重','付款明确'],
+    taboos:['避免政治敏感','着装得体','守约'],
+    holidays:'独立日9/15、圣周、圣诞',
+    dress:'商务正装',
+    gifts:'咖啡、传统织物',
+  },
+  GU: {
+    flag:'🇬🇺', name:'关岛', nameEn:'Guam', tz:'Pacific/Guam',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'英语/查莫罗语', englishLevel:'英语通用（美属）',
+    timePerception:'美式+太平洋兼顾，务实友好',
+    greeting:'"Hello"或"Kao Hafa Adai"问候',
+    etiquette:['美属领地，英语畅通','军事基地/旅游/转口经济','友好务实','休闲商务'],
+    negotiationTips:['直接谈条款','旅游军事采购','效率导向','价格合理'],
+    taboos:['尊重查莫罗文化','着装得体','守信'],
+    holidays:'自由纪念日7/21、元旦、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'当地手工艺、海岛特产',
+  },
+  GW: {
+    flag:'🇬🇼', name:'几内亚比绍', nameEn:'Guinea-Bissau', tz:'Africa/Bissau',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'葡萄牙语', englishLevel:'葡语公用，英语极少',
+    timePerception:'西非弹性慢节奏',
+    greeting:'"Bom dia"握手',
+    etiquette:['葡语沟通','农业/腰果/渔业','先建信任','尊重礼俗'],
+    negotiationTips:['腰果/农渔采购','直接务实价格','关系驱动','付款明确'],
+    taboos:['政治敏感回避','不轻诺','着装庄重'],
+    holidays:'独立日9/24、开斋节、宰牲节、新年',
+    dress:'商务着装',
+    gifts:'腰果礼盒、工艺',
+  },
+  GY: {
+    flag:'🇬🇾', name:'圭亚那', nameEn:'Guyana', tz:'America/Guyana',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GYD（圭亚那元）', language:'英语', englishLevel:'英语官方',
+    timePerception:'南美+加勒比融合，守约友好',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','油气新发现/矿业/农业','友好多元（印裔/非裔/土著）','先建关系'],
+    negotiationTips:['油气基建与矿业采购','务实理性','价格+关系并重','长期合作'],
+    taboos:['避免族群政治评论','着装得体','守信'],
+    holidays:'共和日2/23、独立日5/26、嘉年华',
+    dress:'商务休闲',
+    gifts:'朗姆酒、当地特产',
+  },
+  HK: {
+    flag:'🇭🇰', name:'中国香港', nameEn:'Hong Kong', tz:'Asia/Hong_Kong',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'HKD（港元）', language:'中文（粤语/普通话）/英语', englishLevel:'英语商用良好，国际化',
+    timePerception:'高度守时高效，雷厉风行',
+    greeting:'"你好"或"Hello"，握手',
+    etiquette:['国际金融都会，效率至上','中英文皆可，名片双语','先谈正事，兼顾礼貌','风水面相等文化角落'],
+    negotiationTips:['金融/贸易/物流中心','直接高效谈条款','重品牌品质','长期信任'],
+    taboos:['避免敏感政治（反修例等）','不着装过度休闲','守时守信'],
+    holidays:'春节、中秋、国庆10/1、元旦',
+    dress:'商务正装',
+    gifts:'优质茶叶、名牌小礼品',
+  },
+  HN: {
+    flag:'🇭🇳', name:'洪都拉斯', nameEn:'Honduras', tz:'America/Tegucigalpa',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'HNL（洪都拉斯伦皮拉）', language:'西班牙语', englishLevel:'英语商用有限，西语为主',
+    timePerception:'拉美弹性，热情重关系',
+    greeting:'"Buenos días"握手',
+    etiquette:['先建人情','西语必备','农业/香蕉/咖啡/纺织','尊重家庭'],
+    negotiationTips:['农产品与纺织采购','价格敏感','关系驱动','付款明确'],
+    taboos:['政治敏感回避','着装得体','守约'],
+    holidays:'独立日9/15、圣诞、新年',
+    dress:'商务正装（热带）',
+    gifts:'咖啡、雪茄（合规）、传统织物',
+  },
+  HR: {
+    flag:'🇭🇷', name:'克罗地亚', nameEn:'Croatia', tz:'Europe/Zagreb',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'克罗地亚语', englishLevel:'年轻一代英语较好',
+    timePerception:'中欧+地中海并存，守时偏缓',
+    greeting:'"Dobar dan"握手',
+    etiquette:['礼貌先寒暄','旅游/造船/IT产业','尊重层级','关系重要'],
+    negotiationTips:['旅游与造船采购','重品质+关系','耐心磋商','长期合作'],
+    taboos:['不谈巴尔干战争/族群史','着装正式','守信'],
+    holidays:'国庆6/25、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'橄榄油、葡萄酒、薰衣草',
+  },
+  HT: {
+    flag:'🇭🇹', name:'海地', nameEn:'Haiti', tz:'America/Port-au-Prince',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'HTG（海地古德）', language:'海地克里奥尔语/法语', englishLevel:'谙英语有限，法语/克里奥尔语',
+    timePerception:'加勒比弹性慢节奏',
+    greeting:'"Bonjou"握手',
+    etiquette:['法语/克里奥尔语','纺织服装/农业经济','先建信任','尊重礼俗'],
+    negotiationTips:['纺织代工成本优势','价格敏感','本地渠道关键','付款谨慎'],
+    taboos:['避免政治动荡评论','不轻诺','着装庄重'],
+    holidays:'独立日1/1、统一日5/18、卡特米斯特',
+    dress:'商务着装（热带）',
+    gifts:'朗姆酒、手工品',
+  },
+  HU: {
+    flag:'🇭🇺', name:'匈牙利', nameEn:'Hungary', tz:'Europe/Budapest',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'HUF（匈牙利福林）', language:'匈牙利语', englishLevel:'年轻/商务英语可用',
+    timePerception:'中欧守时认真',
+    greeting:'"Jó napot"握手',
+    etiquette:['准时与会前准备','称呼头衔','汽车/电子/制药产业','务实'],
+    negotiationTips:['重品质性价比','价格务实透明','技术规格对齐','长期合作'],
+    taboos:['不谈一战/特兰西瓦尼亚敏感','着装正式','守信'],
+    holidays:'建国日8/20、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'贵腐酒、手工品',
+  },
+  IM: {
+    flag:'🇮🇲', name:'马恩岛', nameEn:'Isle of Man', tz:'Europe/Isle_of_Man',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GBP（英镑）', language:'英语', englishLevel:'英语母语',
+    timePerception:'英式守时规范',
+    greeting:'"Good morning"握手',
+    etiquette:['离岸金融/保险','英式商务礼仪','英语畅通','正式'],
+    negotiationTips:['金融客户重合规专业','效率直接','规范合同','价格合理'],
+    taboos:['避免政治评论','着装正式','守信'],
+    holidays:'提恩瓦德日7/5、圣诞、新年',
+    dress:'商务正装',
+    gifts:'高档品牌礼品、酒',
+  },
+  IR: {
+    flag:'🇮🇷', name:'伊朗', nameEn:'Iran', tz:'Asia/Tehran',
+    weekend:['Thursday','Friday'], workHours:{start:9,end:18},
+    currency:'IRR（伊朗里亚尔）', language:'波斯语', englishLevel:'英语商用有限，波斯语为佳',
+    timePerception:'波斯文化重人情，谈判慢而细',
+    greeting:'"Salaam"问候，握手（同性）',
+    etiquette:['波斯礼仪与深邃文化','关系与信任第一','石油/石化/地毯/藏红花','尊重宗教与家庭'],
+    negotiationTips:['制裁背景注意合规（仔细评估）','重人脉与长期','议价文化重','技术+报价并重'],
+    taboos:['严守伊朗法规与出口管制','不送酒/猪肉','谨慎在异性间握手'],
+    holidays:'伊斯兰革命纪念日、诺鲁孜节(3月春分)、开斋节',
+    dress:'保守商务着装',
+    gifts:'藏红花、坚果、工艺品（合规评估）',
+  },
+  IS: {
+    flag:'🇮🇸', name:'冰岛', nameEn:'Iceland', tz:'Atlantic/Reykjavik',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ISK（冰岛克朗）', language:'冰岛语', englishLevel:'英语极佳',
+    timePerception:'北欧高守时、平等直接',
+    greeting:'"Góðan dag"握手',
+    etiquette:['扁平直接','英语无障碍','渔业/地热/铝业/旅游','诚信务实'],
+    negotiationTips:['渔业技术/地热设备','重品质专业','价格透明','长期信任'],
+    taboos:['环保高度受关注','不过度寒暄','低调'],
+    holidays:'国庆6/17、仲夏节、圣诞、新年',
+    dress:'商务正装（保暖）',
+    gifts:'设计品、冰岛特产毛织',
+  },
+  JE: {
+    flag:'🇯🇪', name:'泽西岛', nameEn:'Jersey', tz:'Europe/Jersey',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'GBP（英镑）', language:'英语', englishLevel:'英语母语',
+    timePerception:'英式守时规范',
+    greeting:'"Good morning"握手',
+    etiquette:['离岸金融/信托中心','英式礼仪','英语畅通','正式守约'],
+    negotiationTips:['金融客户重合规','效率直接','规范合同','价格合理'],
+    taboos:['避免政治评论','着装正式','守信'],
+    holidays:'解放日5/9、国王生日、圣诞、新年',
+    dress:'商务正装',
+    gifts:'品牌礼品、酒',
+  },
+  JM: {
+    flag:'🇯🇲', name:'牙买加', nameEn:'Jamaica', tz:'America/Jamaica',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'JMD（牙买加元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比热情守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/铝土/朗姆/加勒比文化','友好热情','休闲商务'],
+    negotiationTips:['旅游与农产品采购','直接谈条款','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日8/6、圣诞、新年',
+    dress:'商务正装（热带）',
+    gifts:'蓝山咖啡、朗姆酒、雷鬼相关',
+  },
+  KG: {
+    flag:'🇰🇬', name:'吉尔吉斯斯坦', nameEn:'Kyrgyzstan', tz:'Asia/Bishkek',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'KGS（吉尔吉斯斯坦索姆）', language:'吉尔吉斯语/俄语', englishLevel:'俄语商用，英语有限',
+    timePerception:'中亚热情，重人情与耐心',
+    greeting:'"Салам"问候，握手',
+    etiquette:['俄语为商务语言','先寒暄建关系','畜牧/矿业/转口贸易','尊重长者'],
+    negotiationTips:['中亚转口枢纽','价格敏感务实','关系驱动','付款明确'],
+    taboos:['不抢话，多倾听','避谈政治边界','着装庄重'],
+    holidays:'独立日8/31、开斋节、宰牲节、诺鲁孜节',
+    dress:'商务正装（尊重当地）',
+    gifts:'传统帽饰、坚果、蜂蜜',
+  },
+  KH: {
+    flag:'🇰🇭', name:'柬埔寨', nameEn:'Cambodia', tz:'Asia/Phnom_Penh',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'KHR（柬埔寨瑞尔）', language:'高棉语', englishLevel:'英语年轻一代渐普及',
+    timePerception:'东南亚慢节奏，温和重关系',
+    greeting:'"Chum reap suor"合十礼或握手',
+    etiquette:['合十礼或用语','年轻一代英语可','纺织服装/农业/旅游','尊重王室与佛教'],
+    negotiationTips:['成衣代工成本优势','价格敏感','关系+价格','考虑中国人脉（在柬华人多）'],
+    taboos:['不谈红色高棉历史','尊重佛教戒律','着装得体'],
+    holidays:'独立日11/9、柬新年(4月)、泼水节、佛教节日',
+    dress:'商务正装（轻）',
+    gifts:'丝织品、银器、热带水果',
+  },
+  KI: {
+    flag:'🇰🇮', name:'基里巴斯', nameEn:'Kiribati', tz:'Pacific/Tarawa',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AUD（澳大利亚元）', language:'吉尔伯特语/英语', englishLevel:'英语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Hello"友好握手',
+    etiquette:['英语通用','渔业/椰子/援助经济','友善尊重首领传统','休闲'],
+    negotiationTips:['渔业采购','直接务实','诚实','价格合理'],
+    taboos:['尊重传统习俗','着装庄重','守信'],
+    holidays:'独立日7/12、圣诞、元旦',
+    dress:'商务休闲',
+    gifts:'当地手工艺、卡瓦',
+  },
+  KM: {
+    flag:'🇰🇲', name:'科摩罗', nameEn:'Comoros', tz:'Indian/Comoro',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'KMF（科摩罗法郎）', language:'科摩罗语/法语/阿拉伯语', englishLevel:'法语公用，英语极少',
+    timePerception:'伊斯兰海岛慢节奏',
+    greeting:'"As-salamu"握手',
+    etiquette:['伊斯兰文化国家','法语/科摩罗语','农业/香草/渔业','先建信任'],
+    negotiationTips:['香精香草贸易','价格敏感','关系驱动','付款明确'],
+    taboos:['斋月尊重','不送酒','着装保守'],
+    holidays:'独立日7/6、开斋节、宰牲节',
+    dress:'商务着装（保守）',
+    gifts:'香草、香料礼盒（合规）',
+  },
+  KN: {
+    flag:'🇰🇳', name:'圣基茨和尼维斯', nameEn:'Saint Kitts and Nevis', tz:'America/St_Kitts',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/离岸金融/蔗糖','友好','休闲商务'],
+    negotiationTips:['投资移民与旅游采购','直接谈条款','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日9/19、卡尼瓦尔、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  KP: {
+    flag:'🇰🇵', name:'朝鲜', nameEn:'North Korea', tz:'Asia/Pyongyang',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'KPW（朝鲜圆）', language:'朝鲜语', englishLevel:'英语有限，需官方渠道',
+    timePerception:'国家管控经济，节奏较慢',
+    greeting:'官方引荐下握手',
+    etiquette:['需经官方/使馆/授权渠道','朝鲜语工作','矿业/纺织/基建','严守当地规范'],
+    negotiationTips:['对华贸易为主','官方采购项目','价格务实','合规与审批极为重要'],
+    taboos:['严守国际制裁与出口管制（高度审慎）','不谈政治','严守当地礼规'],
+    holidays:'建国日9/9、太阳节4/15、新年',
+    dress:'庄重正装',
+    gifts:'谨慎，遵循国际合规',
+  },
+  KY: {
+    flag:'🇰🇾', name:'开曼群岛', nameEn:'Cayman Islands', tz:'America/Cayman',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'KYD（开曼元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'离岸金融岛，高效守时',
+    greeting:'"Good morning"握手',
+    etiquette:['世界级离岸/金融中心','英式+北美商务礼仪','英语畅通','正式专业'],
+    negotiationTips:['金融与旅游采购','重合规专业','效率直接','价格合理'],
+    taboos:['避免金融监管敏感','着装正式','守信'],
+    holidays:'元旦、国家英雄日(5月)、宪法日、圣诞',
+    dress:'商务正装',
+    gifts:'品牌礼品',
+  },
+  KZ: {
+    flag:'🇰🇿', name:'哈萨克斯坦', nameEn:'Kazakhstan', tz:'Asia/Almaty',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'KZT（哈萨克斯坦坚戈）', language:'哈萨克语/俄语', englishLevel:'俄语商用普遍，英语上升',
+    timePerception:'中亚守时与热情并重，重人情',
+    greeting:'"Салеметсіз"握手中等力度',
+    etiquette:['俄语/哈语为主','能源/矿产/农业资源大国','先建关系信任','尊重月局长辈'],
+    negotiationTips:['能源机械/基建采购力强','中哈经贸密切','价格+关系并重','付款条款明确'],
+    taboos:['避谈政治宗教敏感','着装庄重气派','守约'],
+    holidays:'独立日12/16、纳乌热斯节(3月)、新年',
+    dress:'商务正装',
+    gifts:'马奶酒礼盒、工艺品（注意物流）',
+  },
+  LA: {
+    flag:'🇱🇦', name:'老挝', nameEn:'Laos', tz:'Asia/Vientiane',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'LAK（老挝基普）', language:'老挝语', englishLevel:'英语/华人圈，英语上升有限',
+    timePerception:'东南亚慢节奏，温和',
+    greeting:'"Sabaidee"合十礼',
+    etiquette:['合十礼或握手','年轻一代/华人圈英语','水电/农林业发展','尊重佛教'],
+    negotiationTips:['水电基建与农业采购','中老关系密切','价格+关系','耐心'],
+    taboos:['尊重佛教戒律','不在佛像前失礼','着装庄重'],
+    holidays:'国庆12/2、老挝新年(4月)、佛诞节',
+    dress:'商务正装（轻）',
+    gifts:'丝绸、茶、传统工艺品',
+  },
+  LC: {
+    flag:'🇱🇨', name:'圣卢西亚', nameEn:'Saint Lucia', tz:'America/St_Lucia',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/离岸金融','友好','休闲商务'],
+    negotiationTips:['直接谈条款','旅游采购','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日2/22、嘉年华、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  LI: {
+    flag:'🇱🇮', name:'列支敦士登', nameEn:'Liechtenstein', tz:'Europe/Vaduz',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'CHF（瑞士法郎）', language:'德语', englishLevel:'德语为主，英语商用可',
+    timePerception:'极致守时严谨',
+    greeting:'"Guten Tag"握手',
+    etiquette:['富裕公国，工业/金融','德语商务','严谨照章办事','尊重多语邻邦'],
+    negotiationTips:['高品质精密制造','重品质与信誉','价格合理','长期稳定'],
+    taboos:['不谈王室/税收敏感','着装正式','守信'],
+    holidays:'国庆8/15、圣诞、新年',
+    dress:'商务正装',
+    gifts:'公务腕表、高品质巧克力',
+  },
+  LR: {
+    flag:'🇱🇷', name:'利比里亚', nameEn:'Liberia', tz:'Africa/Monrovia',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'LRD（利比里亚元）', language:'英语', englishLevel:'英语官方',
+    timePerception:'西非弹性慢节奏',
+    greeting:'握手问候"Hello"',
+    etiquette:['英语沟通','矿业/橡胶/海运（方便旗）','先建信任','尊重礼俗'],
+    negotiationTips:['矿机/橡胶采购','价格敏感','关系驱动','付款谨慎'],
+    taboos:['政治敏感回避','不轻诺','着装庄重'],
+    holidays:'独立日7/26、节礼、新年',
+    dress:'商务着装',
+    gifts:'咖啡、可可、工艺',
+  },
+  LS: {
+    flag:'🇱🇸', name:'莱索托', nameEn:'Lesotho', tz:'Africa/Maseru',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'LSL（莱索托洛蒂）', language:'索托语/英语', englishLevel:'英语官方',
+    timePerception:'南部非洲友好守约',
+    greeting:'"Lumela"握手',
+    etiquette:['英语可沟通','纺织服装业（面向南非）','尊重传统首长','友善耐心'],
+    negotiationTips:['纺织代工/水钻产业','成本敏感','关系+价格','务实'],
+    taboos:['尊重传统习俗','着装庄重','守信'],
+    holidays:'独立日10/4、圣诞、新年',
+    dress:'商务正装（温和）',
+    gifts:'手工毛毯、工艺',
+  },
+  LT: {
+    flag:'🇱🇹', name:'立陶宛', nameEn:'Lithuania', tz:'Europe/Vilnius',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'立陶宛语', englishLevel:'年轻/商务英语好',
+    timePerception:'北欧波罗的海守时高效',
+    greeting:'"Labas"握手',
+    etiquette:['硅谷波罗的海，IT科技','英语无障碍','开明直接','务实创新'],
+    negotiationTips:['IT/LASER/科技采购','重品质创新','价格理性','长期合作'],
+    taboos:['不谈苏联时期伤痛','着装专业','守信'],
+    holidays:'建国日2/16、独立日3/11、仲夏节、圣诞',
+    dress:'商务正装',
+    gifts:'琥珀饰品、设计品',
+  },
+  LU: {
+    flag:'🇱🇺', name:'卢森堡', nameEn:'Luxembourg', tz:'Europe/Luxembourg',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'卢森堡语/法语/德语', englishLevel:'英法德多语，商务英语佳',
+    timePerception:'高度守时，高端金融枢纽',
+    greeting:'"Bonjour/Moien"握手',
+    etiquette:['多语金融中心','钢铁(Arcelor)/金融/物流','专业正式','尊重多语环境'],
+    negotiationTips:['金融机构高端采购','重合规专业','效率直接','价格合理有据'],
+    taboos:['语言场合谨慎','着装顶级正式','守信'],
+    holidays:'国庆6/23、圣诞、新年',
+    dress:'商务正装',
+    gifts:'高端品牌礼品、葡萄酒',
+  },
+  LV: {
+    flag:'🇱🇻', name:'拉脱维亚', nameEn:'Latvia', tz:'Europe/Riga',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'拉脱维亚语', englishLevel:'年轻/商务英语好',
+    timePerception:'波罗的海守时高效',
+    greeting:'"Sveiki"握手',
+    etiquette:['IT/物流/农业','英语无障碍','务实直接','尊重层级'],
+    negotiationTips:['IT与物流采购','重品质性价比','价格理性','长期合作'],
+    taboos:['不谈苏联时期','着装专业','守信'],
+    holidays:'独立日11/18、仲夏节、圣诞、新年',
+    dress:'商务正装',
+    gifts:'琥珀、设计品',
+  },
+  LY: {
+    flag:'🇱🇾', name:'利比亚', nameEn:'Libya', tz:'Africa/Tripoli',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'LYD（利比亚第纳尔）', language:'阿拉伯语', englishLevel:'英语有限，需阿语/翻译',
+    timePerception:'北非弹性，政经重建期，重人情',
+    greeting:'"As-salamu"握手',
+    etiquette:['阿拉伯语沟通','石油/重建需求大','先建信任','尊重伊斯兰'],
+    negotiationTips:['油气与重建采购潜力大','安全合规考量','重关系','契约需审慎（政局波动）'],
+    taboos:['严守国际制裁与合规（务必审慎评估）','不送酒','着装保守'],
+    holidays:'开斋节、宰牲节、革命日2/17',
+    dress:'保守商务着装',
+    gifts:'谨慎，遵循合规',
+  },
+  MC: {
+    flag:'🇲🇨', name:'摩纳哥', nameEn:'Monaco', tz:'Europe/Monaco',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语', englishLevel:'英法双语商务',
+    timePerception:'高度守时，奢华精致',
+    greeting:'"Bonjour"握手',
+    etiquette:['免税天堂，高端金融/博彩/旅游','法语为主，英语可','顶级精致礼仪','正式专业'],
+    negotiationTips:['高端品牌与金融采购','重品质与私密','慢谈细谈','合规谨慎'],
+    taboos:['不打听私人财富','着装名贵得体','守密守信'],
+    holidays:'国庆11/19、圣诞、新年',
+    dress:'精致商务正装',
+    gifts:'顶级品牌礼品',
+  },
+  MD: {
+    flag:'🇲🇩', name:'摩尔多瓦', nameEn:'Moldova', tz:'Europe/Chisinau',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MDL（摩尔多瓦列伊）', language:'罗马尼亚语/俄语', englishLevel:'俄语/罗语，英语有限',
+    timePerception:'东欧守时偏缓，重人情',
+    greeting:'"Bună ziua"握手',
+    etiquette:['葡萄酒出口大国','罗语/俄语/英语混合','先建关系','尊重家庭'],
+    negotiationTips:['葡萄酒/农产品采购','价格敏感','关系驱动','付款明确'],
+    taboos:['不谈德左地区政治','着装庄重','守信'],
+    holidays:'独立日8/27、新年、复活节、圣诞',
+    dress:'商务正装',
+    gifts:'葡萄酒、果仁、甜点',
+  },
+  ME: {
+    flag:'🇲🇪', name:'黑山', nameEn:'Montenegro', tz:'Europe/Podgorica',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'黑山语/塞尔维亚语', englishLevel:'英语年轻一代较好',
+    timePerception:'巴尔干热情守时偏缓',
+    greeting:'"Dobro jutro"握手',
+    etiquette:['旅游/海事/能源','南斯拉夫多语言背景','先寒暄','尊重自然'],
+    negotiationTips:['旅游与海事采购','关系+价格','耐心磋商','长期合作'],
+    taboos:['不谈南斯拉夫解体历史','着装庄重','守信'],
+    holidays:'独立日5/21、新年、东正教复活节、圣诞',
+    dress:'商务正装',
+    gifts:'葡萄酒、优质橄榄油',
+  },
+  MF: {
+    flag:'🇲🇫', name:'法属圣马丁', nameEn:'Saint Martin (French)', tz:'America/Marigot',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语/英语', englishLevel:'法语/英语双语（旅游地）',
+    timePerception:'法属加勒比轻松',
+    greeting:'"Bonjour/Hello"握手',
+    etiquette:['法属领地，法国礼仪','旅游/零售经济','双语可用','休闲商务'],
+    negotiationTips:['旅游零售采购','直接高效','品质至上','价格合理'],
+    taboos:['避免政治敏感','着装得体','守信'],
+    holidays:'法国国庆7/14、嘉年华、新年',
+    dress:'商务休闲（热带）',
+    gifts:'法式甜点、朗姆酒',
+  },
+  MG: {
+    flag:'🇲🇬', name:'马达加斯加', nameEn:'Madagascar', tz:'Indian/Antananarivo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MGA（马达加斯加阿里亚里）', language:'马达加斯加语/法语', englishLevel:'法语通用，英语有限',
+    timePerception:'海岛慢节奏，重人情',
+    greeting:'"Salama"握手',
+    etiquette:['法语/马达加斯加语','香草/钴/旅游业','先建信任','尊重传统礼俗'],
+    negotiationTips:['香草/资源和矿业采购','价格敏感','关系驱动','付款明确'],
+    taboos:['不谈政治动荡','尊重游牧传统','着装庄重'],
+    holidays:'独立日6/26、新年、复活节',
+    dress:'商务着装（热带）',
+    gifts:'香草、手工艺品',
+  },
+  MH: {
+    flag:'🇲🇭', name:'马绍尔群岛', nameEn:'Marshall Islands', tz:'Pacific/Majuro',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'马绍尔语/英语', englishLevel:'英语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Hello"友好握手',
+    etiquette:['英语通用','渔业/美军基地(自由协定)/椰子','友善','休闲'],
+    negotiationTips:['渔业与海事采购','直接务实','诚实','价格合理'],
+    taboos:['尊重酋长传统','着装庄重','守信'],
+    holidays:'宪法日5/1、独立日11/17、圣诞',
+    dress:'商务休闲',
+    gifts:'当地手工艺、传统织品',
+  },
+  MK: {
+    flag:'🇲🇰', name:'北马其顿', nameEn:'North Macedonia', tz:'Europe/Skopje',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MKD（马其顿第纳尔）', language:'马其顿语/阿尔巴尼亚语', englishLevel:'英语年轻一代可',
+    timePerception:'巴尔干守时偏缓，热情',
+    greeting:'"Добро утро"握手',
+    etiquette:['制造业/纺织/汽车零件','先寒暄建关系','尊重多民族（马/阿族）','务实'],
+    negotiationTips:['汽车/纺织采购','价格敏感','关系+价格','长期合作'],
+    taboos:['回避国名/族群敏感','着装庄重','守信'],
+    holidays:'独立日9/8、新年、东正教复活节',
+    dress:'商务正装',
+    gifts:'葡萄酒、奶酪、传统织物',
+  },
+  ML: {
+    flag:'🇲🇱', name:'马里', nameEn:'Mali', tz:'Africa/Bamako',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语公用，英语极少',
+    timePerception:'西非弹性慢节奏',
+    greeting:'"Bonjour"握手（可稍久）',
+    etiquette:['法语商务','棉花/黄金/畜牧','先建信任','尊重伊斯兰传统'],
+    negotiationTips:['棉花/矿业采购','价格敏感','本地代理关键','付款明确'],
+    taboos:['政治安全敏感回避','不送酒','着装庄重'],
+    holidays:'独立日9/22、开斋节、宰牲节',
+    dress:'商务着装（炎热）',
+    gifts:'茶、手工铜器',
+  },
+  MM: {
+    flag:'🇲🇲', name:'缅甸', nameEn:'Myanmar', tz:'Asia/Yangon',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MMK（缅甸缅元）', language:'缅甸语', englishLevel:'英语有限，年轻一代渐增',
+    timePerception:'东南亚慢节奏，政治转型期，重人情',
+    greeting:'"Mingalaba"合十礼或问候',
+    etiquette:['合十礼或握手','英语年轻一代/商务有限','农业/资源/制造业发展','尊重佛教'],
+    negotiationTips:['中缅关系密切','纺织/农业/基建采购','价格敏感+关系','耐心且注意局势'],
+    taboos:['不谈政治军事冲突','尊重佛教戒律','着装庄重'],
+    holidays:'独立日1/4、泼水节(4月)、佛诞节',
+    dress:'商务正装（轻）',
+    gifts:'翡翠/工艺品（合规评估）、茶',
+  },
+  MN: {
+    flag:'🇲🇳', name:'蒙古', nameEn:'Mongolia', tz:'Asia/Ulaanbaatar',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MNT（蒙古图格里克）', language:'蒙古语', englishLevel:'年轻一代/商务英语上升',
+    timePerception:'游牧+现代节奏，重信任',
+    greeting:'"Sain baina uu"握手',
+    etiquette:['草原文化热情','矿业/畜牧资源丰富','先建朋友关系','尊重传统（哈达礼）'],
+    negotiationTips:['矿产/畜牧出口采购','价格+关系并重','中蒙经贸紧密','务实长期'],
+    taboos:['尊重游牧礼俗','不谈政治边界','着装庄重'],
+    holidays:'建国日7/11、查干萨日(春节)、新年',
+    dress:'商务正装（冬寒）',
+    gifts:'羊绒制品、银器',
+  },
+  MO: {
+    flag:'🇲🇴', name:'中国澳门', nameEn:'Macau', tz:'Asia/Macau',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MOP（澳门元）', language:'中文（粤语）', englishLevel:'粤语为主，英语/英语旅游业可用',
+    timePerception:'守时高效，博彩旅游导向',
+    greeting:'"你好"握手',
+    etiquette:['国际博彩/旅游/会展中心','粤语/普通话/英语','快速高效','营商气氛热络'],
+    negotiationTips:['旅游娱乐/会展采购','直接高效','重品牌品质','价格合理'],
+    taboos:['避免博彩相关敏感细分','着装休闲商务得体','守信'],
+    holidays:'春节、中秋、回归纪念日12/20、元旦',
+    dress:'商务正装',
+    gifts:'优质糕点、名茶',
+  },
+  MQ: {
+    flag:'🇲🇶', name:'马提尼克', nameEn:'Martinique', tz:'America/Martinique',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语', englishLevel:'法语为主，英语有限',
+    timePerception:'法属加勒比悠闲',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国礼仪','旅游/菠萝/朗姆酒','法语为佳','休闲商务'],
+    negotiationTips:['旅游农产品采购','直接高效','品质至上','价格合理'],
+    taboos:['避免政治敏感','着装得体','守信'],
+    holidays:'法国国庆7/14、嘉年华、新年',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、法式甜点',
+  },
+  MR: {
+    flag:'🇲🇷', name:'毛里塔尼亚', nameEn:'Mauritania', tz:'Africa/Nouakchott',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'MRU（毛里塔尼亚乌吉亚）', language:'阿拉伯语/法语', englishLevel:'法语公用，英语极少',
+    timePerception:'撒哈拉边缘慢节奏，重人情',
+    greeting:'"As-salamu"握手',
+    etiquette:['伊斯兰文化','渔业/铁矿/农牧','先建信任','着装保守'],
+    negotiationTips:['铁矿/渔业采购','价格敏感','本地代理关键','付款明确'],
+    taboos:['斋月尊重','不送酒','着装保守庄重'],
+    holidays:'独立日11/28、开斋节、宰牲节',
+    dress:'保守商务着装',
+    gifts:'茶、椰枣、工艺',
+  },
+  MS: {
+    flag:'🇲🇸', name:'蒙特塞拉特', nameEn:'Montserrat', tz:'America/Montserrat',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游(火山岛)/离岸金融','友好','休闲商务'],
+    negotiationTips:['直接谈条款','旅游采购','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'圣帕特里克节3/17（特色）、圣诞、新年',
+    dress:'商务休闲（热带）',
+    gifts:'当地特产、朗姆酒',
+  },
+  MT: {
+    flag:'🇲🇹', name:'马耳他', nameEn:'Malta', tz:'Europe/Malta',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'马耳他语/英语', englishLevel:'英语官方，通用',
+    timePerception:'地中海守时，高效多元',
+    greeting:'"Bonġu"或"Good morning"握手',
+    etiquette:['英式+地中海礼仪','英语畅通','金融/博彩/旅游/造船','务实开放'],
+    negotiationTips:['金融/博彩/海事采购','直接高效','重合规专业','价格合理'],
+    taboos:['避免宗教过于敏感话题','着装正式','守信'],
+    holidays:'独立日9/21、复活节、圣诞、新年',
+    dress:'商务正装',
+    gifts:'马耳他瓷器、葡萄酒',
+  },
+  MU: {
+    flag:'🇲🇺', name:'毛里求斯', nameEn:'Mauritius', tz:'Indian/Mauritius',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MUR（毛里求斯卢比）', language:'英语/法语/克里奥尔语', englishLevel:'英语官方，法语商务强',
+    timePerception:'守时，多语国际化',
+    greeting:'"Bonjour/Hello"握手',
+    etiquette:['多元文化（印/非/华/欧裔）','金融/旅游/纺织/BPO','英语法语皆可','务实高效'],
+    negotiationTips:['BPO/金融服务/旅游采购','直接高效','重品质','长期合作'],
+    taboos:['尊重多元宗教（印度教/穆斯林）','着装得体','守信'],
+    holidays:'独立日3/12、排灯节、开斋节、圣诞',
+    dress:'商务正装（热带）',
+    gifts:'红茶、朗姆酒、工艺品',
+  },
+  MV: {
+    flag:'🇲🇻', name:'马尔代夫', nameEn:'Maldives', tz:'Indian/Maldives',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'MVR（马尔代夫拉菲亚）', language:'迪维希语', englishLevel:'英语旅游/商务通用',
+    timePerception:'海岛与旅游节奏，守约',
+    greeting:'"Kihineh"问候，握手',
+    etiquette:['全穆斯林国家','旅游岛经济为主','英文通用','尊重伊斯兰'],
+    negotiationTips:['旅游度假村/用品采购','直接高效（酒店集团决策）','价格+品质并重','长协稳定直供'],
+    taboos:['斋月尊重','不送酒/猪肉','着装在海岛仍要得体'],
+    holidays:'独立日7/26、开斋节、宰牲节、新年',
+    dress:'商务休闲（热带）',
+    gifts:'办理合规（不送酒）、木雕工艺品',
+  },
+  MW: {
+    flag:'🇲🇼', name:'马拉维', nameEn:'Malawi', tz:'Africa/Blantyre',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MWK（马拉维克瓦查）', language:'英语/齐切瓦语', englishLevel:'英语官方',
+    timePerception:'南部非洲友好守约',
+    greeting:'"Moni"握手',
+    etiquette:['英语沟通','烟草/农业（马拉维湖鱼）','友善耐心','尊重传统'],
+    negotiationTips:['烟草/农产品采购','价格敏感','关系+价格','务实'],
+    taboos:['尊重传统习俗','着装庄重','守信'],
+    holidays:'独立日7/6、元旦、圣诞',
+    dress:'商务正装',
+    gifts:'咖啡、木雕工艺',
+  },
+  MZ: {
+    flag:'🇲🇿', name:'莫桑比克', nameEn:'Mozambique', tz:'Africa/Maputo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'MZN（莫桑比克梅蒂卡尔）', language:'葡萄牙语', englishLevel:'葡语官方，英语有限',
+    timePerception:'东南非弹性慢节奏，友善',
+    greeting:'"Bom dia"握手',
+    etiquette:['葡语沟通','煤炭/气田/农业','先建关系','尊重礼俗'],
+    negotiationTips:['矿产能源基建采购','价格敏感','本地代理关键','付款明确'],
+    taboos:['政治敏感回避','不轻诺','着装庄重'],
+    holidays:'独立日6/25、新年、复活节',
+    dress:'商务着装',
+    gifts:'茶叶、咖喱、工艺品',
+  },
+  NA: {
+    flag:'🇳🇦', name:'纳米比亚', nameEn:'Namibia', tz:'Africa/Windhoek',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'NAD（纳米比亚元）', language:'英语', englishLevel:'英语官方',
+    timePerception:'南部非洲守时较佳，稳重',
+    greeting:'"Good morning"握手',
+    etiquette:['英语沟通','矿业（钻石/铀）/旅游','务实守规','尊重文化多元'],
+    negotiationTips:['矿业旅游采购','重规范','价格合理','长期合作'],
+    taboos:['尊重原住民文化','着装庄重','守信'],
+    holidays:'独立日3/21、元旦、圣诞',
+    dress:'商务正装',
+    gifts:'工艺品、优质酒',
+  },
+  NC: {
+    flag:'🇳🇨', name:'新喀里多尼亚', nameEn:'New Caledonia', tz:'Pacific/Noumea',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XPF（太平洋法郎）', language:'法语', englishLevel:'法语为主，英语有限',
+    timePerception:'法属太平洋岛屿，悠闲守约',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国礼仪','镍矿业/旅游','法语为佳','休闲商务'],
+    negotiationTips:['采矿/旅游采购','直接务实','品质','价格合理'],
+    taboos:['尊重卡纳克原住民文化','着装得体','守信'],
+    holidays:'法国国庆7/14、新年、圣诞',
+    dress:'商务休闲',
+    gifts:'当地手工艺、咖啡',
+  },
+  NE: {
+    flag:'🇳🇪', name:'尼日尔', nameEn:'Niger', tz:'Africa/Niamey',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语公用，英语极少',
+    timePerception:'西非弹性慢节奏',
+    greeting:'"Bonjour"握手',
+    etiquette:['法语商务','铀矿/农业/畜牧','先建信任','尊重伊斯兰/传统'],
+    negotiationTips:['矿业与农畜采购','价格敏感','本地代理','付款明确'],
+    taboos:['政治安全敏感回避','不送酒','着装庄重'],
+    holidays:'独立日8/3、开斋节、宰牲节',
+    dress:'商务着装（炎热）',
+    gifts:'茶、布袋工艺',
+  },
+  NI: {
+    flag:'🇳🇮', name:'尼加拉瓜', nameEn:'Nicaragua', tz:'America/Managua',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'NIO（尼加拉瓜科多巴）', language:'西班牙语', englishLevel:'英语有限，西语为主',
+    timePerception:'中美洲弹性热情',
+    greeting:'"Buenos días"握手',
+    etiquette:['西语必备','农业/咖啡/纺织','先建人情','尊重家庭'],
+    negotiationTips:['农业轻工采购','价格敏感','关系驱动','付款明确'],
+    taboos:['避免政治评论','着装得体','守约'],
+    holidays:'独立日9/15、圣诞、新年、圣周',
+    dress:'商务正装（热带）',
+    gifts:'咖啡、手工织物',
+  },
+  NO: {
+    flag:'🇳🇴', name:'挪威', nameEn:'Norway', tz:'Europe/Oslo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'NOK（挪威克朗）', language:'挪威语', englishLevel:'英语极佳',
+    timePerception:'高度守时、平等直接',
+    greeting:'"Hei"握手',
+    etiquette:['北欧扁平直接','英语无障碍','石油/海事/渔业/航运','环保与品质'],
+    negotiationTips:['石油海事技术采购','重专业品质','价格透明','长期信任'],
+    taboos:['不过度寒暄','环保要求高','低调专业'],
+    holidays:'宪法日5/17、仲夏节、圣诞前夜、新年',
+    dress:'商务正装（保暖）',
+    gifts:'设计品、烟熏鲑鱼',
+  },
+  NP: {
+    flag:'🇳🇵', name:'尼泊尔', nameEn:'Nepal', tz:'Asia/Kathmandu',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'NPR（尼泊尔卢比）', language:'尼泊尔语', englishLevel:'英语教育普及，商务可用',
+    timePerception:'南亚友好，慢节奏重人情',
+    greeting:'"Namaste"合十礼',
+    etiquette:['合十礼问候','英语较普及','水电/旅游/农业','尊重佛教/印度教'],
+    negotiationTips:['水电基建/旅游采购','价格+关系并重','耐心','务实际长'],
+    taboos:['不乱跨圣物/寺庙','尊重宗教戒律','着装庄重'],
+    holidays:'独立日等、德赛节(10月)、唐格拉舞节、新年',
+    dress:'商务正装（轻）',
+    gifts:'披肩、面具工艺品、茶叶',
+  },
+  NR: {
+    flag:'🇳🇷', name:'瑙鲁', nameEn:'Nauru', tz:'Pacific/Nauru',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AUD（澳大利亚元）', language:'瑙鲁语/英语', englishLevel:'英语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Hello"友好握手',
+    etiquette:['英语通用','磷酸盐/援助经济','友善','休闲'],
+    negotiationTips:['涉外采购','直接务实','诚实','价格合理'],
+    taboos:['尊重当地文化','着装庄重','守信'],
+    holidays:'独立日1/31、宪法日5/17、圣诞',
+    dress:'商务休闲',
+    gifts:'当地手工艺',
+  },
+  OM: {
+    flag:'🇴🇲', name:'阿曼', nameEn:'Oman', tz:'Asia/Muscat',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'OMR（阿曼里亚尔）', language:'阿拉伯语', englishLevel:'英语商用良好（阿曼教育）',
+    timePerception:'海湾守时，礼数和善',
+    greeting:'"As-salamu"握手',
+    etiquette:['礼数周全，先寒暄','英语/阿语','石油/天然气/港口/旅游','尊重伊斯兰'],
+    negotiationTips:['能源基建采购','重品质+关系','海湾贸易门户（苏哈尔）','耐心建立信任'],
+    taboos:['斋月白天不进食','不送酒','着装保守正式'],
+    holidays:'复兴日7/23、国庆11/18、开斋节、宰牲节',
+    dress:'商务正装（保守）',
+    gifts:'乳香、椰枣、寄赠礼品',
+  },
+  PA: {
+    flag:'🇵🇦', name:'巴拿马', nameEn:'Panama', tz:'America/Panama',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'PAB（巴拿马巴波亚）', language:'西班牙语', englishLevel:'英语（自贸区/跨国）渐普及',
+    timePerception:'美洲美洲枢纽，繁忙务实',
+    greeting:'"Buenos días"握手',
+    etiquette:['巴拿马运河/科隆自贸区枢纽','西语为主、英语商人可','国际商贸节奏快','务实高效'],
+    negotiationTips:['转口自贸区（科隆）采购','价格竞争激烈','物流与清关优势','付款条款明确'],
+    taboos:['避免涉美巴政治','着装正式商务','守信'],
+    holidays:'独立日11/3、感恩节、圣周、新年',
+    dress:'商务正装（热带）',
+    gifts:'咖啡、手工艺品',
+  },
+  PG: {
+    flag:'🇵🇬', name:'巴布亚新几内亚', nameEn:'Papua New Guinea', tz:'Pacific/Port_Moresby',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'PGK（巴布亚新几内亚基那）', language:'英语/皮金语', englishLevel:'英语官方，商务有限',
+    timePerception:'太平洋-美拉尼西亚慢节奏，重视礼数',
+    greeting:'"Hello"或"Mi laikim yu"握手',
+    etiquette:['英语/皮金语','矿业/油气/农业资源','尊重部族礼数','先建信任'],
+    negotiationTips:['矿油气基建采购','价格+关系','本地合作方关键','付款明确'],
+    taboos:['尊重部族传统','不在公共场合失礼','着装庄重专业'],
+    holidays:'独立日9/16、圣诞、新年',
+    dress:'商务着装（热带专业）',
+    gifts:'羽毛工艺品（合规）、咖啡',
+  },
+  PM: {
+    flag:'🇵🇲', name:'圣皮埃尔和密克隆', nameEn:'Saint Pierre and Miquelon', tz:'America/Miquelon',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语', englishLevel:'法语为主，英语有限',
+    timePerception:'法属北大西洋岛屿，朴实守约',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国礼仪','渔业/边境小社区','法语为佳','友善实用'],
+    negotiationTips:['渔业相关采购','直接务实','务实价格','长期稳定'],
+    taboos:['尊重法系规范','着装得体','守信'],
+    holidays:'法国国庆7/14、新年、圣诞',
+    dress:'商务休闲（凉爽）',
+    gifts:'法式甜点、酒',
+  },
+  PR: {
+    flag:'🇵🇷', name:'波多黎各', nameEn:'Puerto Rico', tz:'America/Puerto_Rico',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'西班牙语/英语', englishLevel:'西/英双语官方',
+    timePerception:'美式+拉美融合，务实友好',
+    greeting:'"Buenos días/Hello"握手',
+    etiquette:['美属领地，英语/西语','制造业/制药/旅游','美国标准','务实高效'],
+    negotiationTips:['美国市场门户','直接谈条款','重规范质检','价格合理'],
+    taboos:['避免政治(州地位)敏感','着装得体','守信'],
+    holidays:'感恩节、三王节1/6、独立日国庆、圣诞',
+    dress:'商务正装',
+    gifts:'当地咖啡、朗姆酒',
+  },
+  PS: {
+    flag:'🇵🇸', name:'巴勒斯坦', nameEn:'Palestine', tz:'Asia/Gaza',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'ILS（以色列新谢克尔）+货币综合', language:'阿拉伯语', englishLevel:'英语有限，商贸多元化',
+    timePerception:'中东复杂环境，重人情耐心',
+    greeting:'"As-salamu"握手',
+    etiquette:['尊重巴勒斯坦商贸文化与伊斯兰','先建信任','农业/纺织/转口贸易','耐心'],
+    negotiationTips:['人道与民生商品采购','价格敏感','关系+信任','合规与物流审慎（关注局势）'],
+    taboos:['严守国际合规（局势敏感）','不送酒','着装保守'],
+    holidays:'开斋节、宰牲节、独立日(11/15)、圣日',
+    dress:'保守商务着装',
+    gifts:'谨慎，遵循就近法规',
+  },
+  PT: {
+    flag:'🇵🇹', name:'葡萄牙', nameEn:'Portugal', tz:'Europe/Lisbon',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'葡萄牙语', englishLevel:'英语年轻一代好',
+    timePerception:'伊比利亚守时偏缓，人情友好',
+    greeting:'"Bom dia"握手',
+    etiquette:['先寒暄问候','葡语/英语','旅游/软木/葡语区门户','尊重家庭'],
+    negotiationTips:['葡语区转口（巴西/非洲）','价格+关系并重','耐心磋商','长期合作'],
+    taboos:['不谈殖民史敏感','着装得体','守信'],
+    holidays:'国庆6/10、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'波特酒、软木制品',
+  },
+  PW: {
+    flag:'🇵🇼', name:'帕劳', nameEn:'Palau', tz:'Pacific/Palau',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'帕劳语/英语', englishLevel:'英语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Hello"友好握手',
+    etiquette:['英语通用','旅游/渔业/援助','友善','休闲'],
+    negotiationTips:['旅游渔业采购','直接务实','诚实','价格合理'],
+    taboos:['尊重海洋/传统文化','着装庄重','守信'],
+    holidays:'宪法日7/9、独立日10/1、圣诞',
+    dress:'商务休闲',
+    gifts:'当地手工艺',
+  },
+  PY: {
+    flag:'🇵🇾', name:'巴拉圭', nameEn:'Paraguay', tz:'America/Asuncion',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'PYG（巴拉圭瓜拉尼）', language:'西班牙语/瓜拉尼语', englishLevel:'英语有限，西语为主',
+    timePerception:'拉美弹性，热情务实',
+    greeting:'"Buenos días"握手',
+    etiquette:['西语必备','农业/大豆/纺织/走私链路(注意合规)','先建人情','尊重家庭'],
+    negotiationTips:['农产品与轻工采购','价格敏感','关系+价格','付款明确'],
+    taboos:['严守合规（边境贸易）','着装得当','守约'],
+    holidays:'独立日5/14、圣诞、新年、圣周',
+    dress:'商务正装',
+    gifts:'茶叶（马黛茶）、手工艺',
+  },
+  RE: {
+    flag:'🇷🇪', name:'留尼汪', nameEn:'Réunion', tz:'Indian/Reunion',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语', englishLevel:'法语为主，英语有限',
+    timePerception:'法属印度洋岛屿，悠闲守约',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国礼仪','旅游/制糖/香草','法语为佳','休闲商务'],
+    negotiationTips:['旅游制糖采购','直接高效','品质','价格合理'],
+    taboos:['避免政治敏感','着装得体','守信'],
+    holidays:'法国国庆7/14、新年、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'香草、朗姆酒、法式甜点',
+  },
+  RO: {
+    flag:'🇷🇴', name:'罗马尼亚', nameEn:'Romania', tz:'Europe/Bucharest',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'RON（罗马尼亚列伊）', language:'罗马尼亚语', englishLevel:'英语年轻/商务可',
+    timePerception:'东欧守时，务实',
+    greeting:'"Bună ziua"握手',
+    etiquette:['IT/汽车零部件/农业','先寒暄','尊重层级','务实'],
+    negotiationTips:['IT外包/汽车/农业采购','重品质性价比','价格务实','长期合作'],
+    taboos:['不谈敏感历史','着装正式','守信'],
+    holidays:'国庆12/1、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'葡萄酒、果仁糕',
+  },
+  RS: {
+    flag:'🇷🇸', name:'塞尔维亚', nameEn:'Serbia', tz:'Europe/Belgrade',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'RSD（塞尔维亚第纳尔）', language:'塞尔维亚语', englishLevel:'英语年轻一代可',
+    timePerception:'巴尔干热情守时偏缓',
+    greeting:'"Dobar dan"握手',
+    etiquette:['先寒暄建立关系','咖啡文化','汽车/IT/农业','尊重长辈'],
+    negotiationTips:['制造业/IT采购','价格+关系','耐心磋商','长期合作'],
+    taboos:['不谈科索沃等政治','着装庄重','守信'],
+    holidays:'国庆2/15、元旦、东正教复活节、圣诞',
+    dress:'商务正装',
+    gifts:'葡萄酒、果仁、手工皮具',
+  },
+  RW: {
+    flag:'🇷🇼', name:'卢旺达', nameEn:'Rwanda', tz:'Africa/Kigali',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'RWF（卢旺达法郎）', language:'英语/法语/基尼亚卢旺达语', englishLevel:'英语官方（新一代），治理好',
+    timePerception:'非洲东部守时较佳（Kigali先进发展）',
+    greeting:'"Muraho"握手',
+    etiquette:['英语/基尼亚卢旺达语','咖啡/茶/IT中心','务实守序','尊重礼俗'],
+    negotiationTips:['咖啡茶出口/IT采购','重品质','卢旺达经商环境好','长期合作'],
+    taboos:['避免种族历史敏感','着装庄重','守信'],
+    holidays:'独立日7/1、解放日7/4、元旦',
+    dress:'商务正装（气候温和）',
+    gifts:'咖啡、茶、手工艺',
+  },
+  SB: {
+    flag:'🇸🇧', name:'所罗门群岛', nameEn:'Solomon Islands', tz:'Pacific/Guadalcanal',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SBD（所罗门群岛元）', language:'英语（皮金语）', englishLevel:'英语官方，商务有限',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Hello"友好握手',
+    etiquette:['英语通用','渔业/林业/矿业','友善','休闲'],
+    negotiationTips:['渔业林业采购','直接务实','诚实','价格合理'],
+    taboos:['尊重岛屿部落传统','着装庄重','守信'],
+    holidays:'独立日7/7、圣诞、新年',
+    dress:'商务休闲',
+    gifts:'当地手工艺',
+  },
+  SC: {
+    flag:'🇸🇨', name:'塞舌尔', nameEn:'Seychelles', tz:'Indian/Mahe',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SCR（塞舌尔卢比）', language:'塞舌尔克里奥尔语/英语/法语', englishLevel:'英语可商务，多语',
+    timePerception:'印度洋岛国悠闲守约',
+    greeting:'"Hello/Bonjour"握手',
+    etiquette:['旅游/离岸金融','英法克里奥尔语','友好','休闲商务'],
+    negotiationTips:['旅游度假村采购','直接高效','品质+价格','长期直供'],
+    taboos:['尊重环境生态','着装得体','守信'],
+    holidays:'独立日6/29、国庆6/5、圣诞、新年',
+    dress:'商务休闲（热带）',
+    gifts:'当地香草、木工品',
+  },
+  SD: {
+    flag:'🇸🇩', name:'苏丹', nameEn:'Sudan', tz:'Africa/Khartoum',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'SDG（苏丹镑）', language:'阿拉伯语', englishLevel:'英语有限，阿语为主',
+    timePerception:'北非弹性，政经重建需耐心',
+    greeting:'"As-salamu"握手',
+    etiquette:['伊斯兰文化，尊重礼数','阿语为主','农业/畜牧/转口','先建信任'],
+    negotiationTips:['农业转口采购','价格敏感','合规审慎（局势）','付款谨慎'],
+    taboos:['严守国际合规（冲突地区审慎评估）','不送酒','着装保守'],
+    holidays:'独立日1/1、开斋节、宰牲节',
+    dress:'保守商务着装',
+    gifts:'谨慎，遵循合规',
+  },
+  SE: {
+    flag:'🇸🇪', name:'瑞典', nameEn:'Sweden', tz:'Europe/Stockholm',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SEK（瑞典克朗）', language:'瑞典语', englishLevel:'英语极佳',
+    timePerception:'高度守时、平等务实、诚信',
+    greeting:'"Hej"握手',
+    etiquette:['北欧扁平直接','英语无障碍','创新/工程/环保','诚信可靠'],
+    negotiationTips:['工程与创新采购','重品质可持续','价格透明','长期信任'],
+    taboos:['不过度寒暄','环保要求高','低调专业'],
+    holidays:'仲夏节、国庆6/6、圣诞前夜、新年',
+    dress:'商务正装（简洁）',
+    gifts:'设计品、瑞典水晶',
+  },
+  SI: {
+    flag:'🇸🇮', name:'斯洛文尼亚', nameEn:'Slovenia', tz:'Europe/Ljubljana',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'斯洛文尼亚语', englishLevel:'英语年轻/商务可',
+    timePerception:'中欧守时，务实高效',
+    greeting:'"Dober dan"握手',
+    etiquette:['先进制造业（汽车/家电）','先寒暄','英语商务可','务实'],
+    negotiationTips:['汽车零件/机械采购','重品质','价格务实','长期合作'],
+    taboos:['不谈巴尔干历史','着装正式','守信'],
+    holidays:'国庆6/25、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'葡萄酒、水晶、蜂蜜',
+  },
+  SK: {
+    flag:'🇸🇰', name:'斯洛伐克', nameEn:'Slovakia', tz:'Europe/Bratislava',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'斯洛伐克语', englishLevel:'英语年轻/商务可',
+    timePerception:'中欧守时',
+    greeting:'"Dobrý deň"握手',
+    etiquette:['汽车工业强国','先寒暄','英语商务可','务实'],
+    negotiationTips:['汽车/电子采购','重品质','价格务实','长期合作'],
+    taboos:['不谈二战/苏东史','着装正式','守信'],
+    holidays:'建国日1/1、宪法日9/1、圣诞、复活节',
+    dress:'商务正装',
+    gifts:'葡萄酒、手工艺',
+  },
+  SL: {
+    flag:'🇸🇱', name:'塞拉利昂', nameEn:'Sierra Leone', tz:'Africa/Freetown',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SLL（塞拉利昂利昂）', language:'英语', englishLevel:'英语官方',
+    timePerception:'西非弹性慢节奏',
+    greeting:'"Hello"握手',
+    etiquette:['英语沟通','矿业（钻石）/农业/渔业','先建信任','尊重礼俗'],
+    negotiationTips:['矿业农业采购','价格敏感','关系驱动','付款谨慎'],
+    taboos:['避免政治/疾病史敏感评论','不轻诺','着装庄重'],
+    holidays:'独立日4/27、新年、圣诞',
+    dress:'商务着装',
+    gifts:'咖啡、可可、手工艺',
+  },
+  SM: {
+    flag:'🇸🇲', name:'圣马力诺', nameEn:'San Marino', tz:'Europe/San_Marino',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'意大利语', englishLevel:'意语为主，英语有限',
+    timePerception:'欧洲微型国，守时和善',
+    greeting:'"Buongiorno"握手',
+    etiquette:['意式商务礼仪','邮票/陶瓷/旅游/轻工','先寒暄','务实体面'],
+    negotiationTips:['轻工/礼品/邮票采购','价格务实','官方认证重视','长期稳定'],
+    taboos:['尊重正式礼数','着装得体','守信'],
+    holidays:'国庆9/3、圣诞、新年、复活节',
+    dress:'商务正装',
+    gifts:'陶瓷、邮票、酒',
+  },
+  SN: {
+    flag:'🇸🇳', name:'塞内加尔', nameEn:'Senegal', tz:'Africa/Dakar',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语通用，英语有限',
+    timePerception:'西法门户，热闹重人情',
+    greeting:'"Bonjour"握手（可稍久）',
+    etiquette:['法语商务','达喀尔是西非门户','先建信任与交情','尊重伊斯兰'],
+    negotiationTips:['达喀尔门户贸易/渔业','价格+关系','本地代理','付款明确'],
+    taboos:['斋月尊重','不送酒','着装庄重'],
+    holidays:'独立日4/4、开斋节、宰牲节、马加尔节',
+    dress:'商务着装（炎热）',
+    gifts:'布基纳布艺、茶叶、咖啡',
+  },
+  SO: {
+    flag:'🇸🇴', name:'索马里', nameEn:'Somalia', tz:'Africa/Mogadishu',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'SOS（索马里先令）', language:'索马里语/阿拉伯语', englishLevel:'英语有限',
+    timePerception:'复杂局势，海贸转口，重家族信任',
+    greeting:'"As-salamu"握手',
+    etiquette:['伊斯兰文化','海贸/转口/渔业','家族与部落信任','耐心'],
+    negotiationTips:['转口贸易/渔业采购','价格敏感','本地代理关键','合规与物流审慎（局势）'],
+    taboos:['严守国际合规（局势敏感）','不送酒','着装保守'],
+    holidays:'开斋节、宰牲节、独立日7/1',
+    dress:'保守商务着装',
+    gifts:'谨慎，遵循就近合规',
+  },
+  SR: {
+    flag:'🇸🇷', name:'苏里南', nameEn:'Suriname', tz:'America/Paramaribo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SRD（苏里南元）', language:'荷兰语', englishLevel:'荷兰语官方，英语/葡语混用',
+    timePerception:'南美+加勒比融合，悠闲守约',
+    greeting:'"Goede morgen"握手',
+    etiquette:['荷兰语/多语','矿业（铝土/金）/林业','友好多元','休闲商务'],
+    negotiationTips:['矿业采购','务实价格+关系','长期合作','付款明确'],
+    taboos:['尊重多元文化','着装得体','守信'],
+    holidays:'独立日11/25、嘉年华、新年',
+    dress:'商务休闲（热带）',
+    gifts:'当地水果酒、手工艺',
+  },
+  SS: {
+    flag:'🇸🇸', name:'南苏丹', nameEn:'South Sudan', tz:'Africa/Juba',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SSP（南苏丹镑）', language:'英语/阿拉伯语', englishLevel:'英语（新独立国）有限',
+    timePerception:'后冲突重建期，慢节奏重耐心',
+    greeting:'"Hello"握手',
+    etiquette:['英语官方（阿语通用）','重建基建需求大','先建信任','尊重部族礼数'],
+    negotiationTips:['基建/人道物资采购','国际援助项目','合规与物流审慎','付款谨慎'],
+    taboos:['严守国际合规（局势敏感）','不轻诺','着装庄重'],
+    holidays:'独立日7/9、新年、圣诞',
+    dress:'商务着装',
+    gifts:'谨慎，遵循援助合规',
+  },
+  ST: {
+    flag:'🇸🇹', name:'圣多美和普林西比', nameEn:'Sao Tome and Principe', tz:'Africa/Sao_Tome',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'STN（圣多美普林西比多布拉）', language:'葡萄牙语', englishLevel:'葡语官方，英语有限',
+    timePerception:'海岛悠闲守约',
+    greeting:'"Bom dia"握手',
+    etiquette:['葡语沟通','旅游/可可/渔业','友善','休闲商务'],
+    negotiationTips:['可可旅游采购','直接务实','务实价格','长期'],
+    taboos:['尊重环境','着装得体','守信'],
+    holidays:'独立日7/12、新年、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'可可、咖啡、手工艺',
+  },
+  SV: {
+    flag:'🇸🇻', name:'萨尔瓦多', nameEn:'El Salvador', tz:'America/El_Salvador',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'西班牙语', englishLevel:'英语有限，西语为主',
+    timePerception:'中美洲弹性强，热情',
+    greeting:'"Buenos días"握手',
+    etiquette:['西语必备','纺织/咖啡/离岸','先建人情','尊重家庭'],
+    negotiationTips:['纺织轻工采购','价格敏感','关系+价格','付款明确'],
+    taboos:['避免政治两极话题','着装得体','守约'],
+    holidays:'独立日9/15、圣诞、新年、圣周',
+    dress:'商务正装（热带）',
+    gifts:'咖啡、手工品',
+  },
+  SX: {
+    flag:'🇸🇽', name:'荷属圣马丁', nameEn:'Sint Maarten', tz:'America/Lower_Princes',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ANG（荷属安的列斯荷盾）', language:'荷兰语/英语', englishLevel:'英语（旅游）通用',
+    timePerception:'加勒比轻松守约',
+    greeting:'"Hello"或"Bon dia"握手',
+    etiquette:['荷属领地（荷兰/英语）','旅游/离岸金融','轻松友好','休闲商务'],
+    negotiationTips:['旅游采购','直接高效','品质+价格','长期'],
+    taboos:['避免政治敏感','着装得体','守信'],
+    holidays:'撒拉瓦节(10月)、嘉年华、新年',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  SZ: {
+    flag:'🇸🇿', name:'斯威士兰', nameEn:'Eswatini', tz:'Africa/Mbabane',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'SZL（斯威士兰里兰吉尼）', language:'斯瓦蒂语/英语', englishLevel:'英语官方',
+    timePerception:'南部非洲友好守约',
+    greeting:'"Sawubona"握手',
+    etiquette:['英语沟通','制糖/纺织/旅游','尊重君主制礼数','友善'],
+    negotiationTips:['制糖纺织采购','价格敏感','关系+价格','务实'],
+    taboos:['尊重王室礼数','着装庄重','守信'],
+    holidays:'独立日9/6、芦苇舞节、圣诞',
+    dress:'商务正装',
+    gifts:'手工艺、皮具',
+  },
+  TC: {
+    flag:'🇹🇨', name:'特克斯和凯科斯群岛', nameEn:'Turks and Caicos Islands', tz:'America/Grand_Turk',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/离岸金融','友好','休闲商务'],
+    negotiationTips:['旅游度假村采购','直接高效','品质+价格','长期直供'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'国庆节、元旦、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'当地特产、海盐',
+  },
+  TD: {
+    flag:'🇹🇩', name:'乍得', nameEn:'Chad', tz:'Africa/Ndjamena',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'XAF（中非法郎）', language:'法语/阿拉伯语', englishLevel:'法语公用，英语极少',
+    timePerception:'中非-撒哈拉慢节奏',
+    greeting:'"Bonjour"握手',
+    etiquette:['法语/阿语沟通','油气/农牧业','先建信任','尊重伊斯兰/传统'],
+    negotiationTips:['油气农牧采购','价格敏感','本地代理','付款明确'],
+    taboos:['政治安全敏感回避','不送酒','着装庄重'],
+    holidays:'独立日8/11、开斋节、宰牲节',
+    dress:'保守商务着装',
+    gifts:'茶、手工品',
+  },
+  TG: {
+    flag:'🇹🇬', name:'多哥', nameEn:'Togo', tz:'Africa/Lome',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XOF（西非法郎）', language:'法语', englishLevel:'法语公用，英语有限',
+    timePerception:'西非弹性慢节奏，重人情',
+    greeting:'"Bonjour"握手',
+    etiquette:['法语沟通','洛美自贸区/转口','先建信任','尊重礼俗'],
+    negotiationTips:['转口自贸区贸易','价格敏感','本地渠道','付款明确'],
+    taboos:['政治敏感回避','不轻诺','着装庄重'],
+    holidays:'独立日4/27、开斋节、复活节、伏都节1/10',
+    dress:'商务着装',
+    gifts:'茶叶、手工织物、咖啡',
+  },
+  TJ: {
+    flag:'🇹🇯', name:'塔吉克斯坦', nameEn:'Tajikistan', tz:'Asia/Dushanbe',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'TJS（塔吉克斯坦索莫尼）', language:'塔吉克语/俄语', englishLevel:'俄语商用，英语有限',
+    timePerception:'中亚热情，重人情耐心',
+    greeting:'"Salam"握手',
+    etiquette:['塔吉克语/俄语','水力/铝业/棉纺','先建关系','尊重礼俗'],
+    negotiationTips:['水电/铝业采购','价格敏感','关系驱动','付款明确'],
+    taboos:['避谈政治边界','着装庄重','守约'],
+    holidays:'独立日9/9、开斋节、宰牲节、纳乌热斯节(3月)',
+    dress:'商务正装',
+    gifts:'坚果、水果干、手工地毯',
+  },
+  TL: {
+    flag:'🇹🇱', name:'东帝汶', nameEn:'Timor-Leste', tz:'Asia/Dili',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'德顿语/葡萄牙语', englishLevel:'英语有限，葡语/德顿语',
+    timePerception:'南太平洋岛国悠然',
+    greeting:'"Bondia"或"Hello"握手',
+    etiquette:['葡语/德顿语','油气/咖啡/旅游','友善耐心','先建信任'],
+    negotiationTips:['咖啡/油气采购','价格敏感','关系驱动','务实'],
+    taboos:['不谈历史冲突','尊重传统','着装庄重'],
+    holidays:'独立日5/20、圣诞、新年',
+    dress:'商务休闲（热带）',
+    gifts:'咖啡、传统织物',
+  },
+  TM: {
+    flag:'🇹🇲', name:'土库曼斯坦', nameEn:'Turkmenistan', tz:'Asia/Ashgabat',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'TMT（土库曼斯坦马纳特）', language:'土库曼语/俄语', englishLevel:'俄语商用，英语有限',
+    timePerception:'中亚自治，办事严谨，重人情',
+    greeting:'"Salam"握手',
+    etiquette:['俄语/土库曼语','天然气大国','先建关系','尊重礼俗'],
+    negotiationTips:['能源/基建采购','国家主导需官方','价格务实','付款条款明确'],
+    taboos:['避谈政治','着装庄重','守约'],
+    holidays:'独立日10/27、独立节、开斋节、新年',
+    dress:'商务正装',
+    gifts:'地毯、果干、茶',
+  },
+  TN: {
+    flag:'🇹🇳', name:'突尼斯', nameEn:'Tunisia', tz:'Africa/Tunis',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'TND（突尼斯第纳尔）', language:'阿拉伯语/法语', englishLevel:'法语商用普遍，英语上升',
+    timePerception:'北非守时较佳，礼貌重人情',
+    greeting:'"As-salamu"握手',
+    etiquette:['法语商务便利','橄榄油/纺织/旅游','先寒暄','尊重伊斯兰'],
+    negotiationTips:['橄榄油/纺织/汽车零件','重品质','价格务实','务实长期'],
+    taboos:['斋月尊重','不送酒','着装端庄得体'],
+    holidays:'革命日1/14、开斋节、宰牲节、独立日3/20',
+    dress:'商务着装（端正）',
+    gifts:'橄榄油、椰枣、陶瓷',
+  },
+  TO: {
+    flag:'🇹🇴', name:'汤加', nameEn:'Tonga', tz:'Pacific/Tongatapu',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'TOP（汤加潘加）', language:'汤加语/英语', englishLevel:'英语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Malo e lelei"问候，握手',
+    etiquette:['英语/汤加语','皇家传统礼仪','渔业/农业/侨汇','友善尊重'],
+    negotiationTips:['渔业农业采购','直接务实','诚实','价格合理'],
+    taboos:['尊重王室礼数','着装庄重','守信'],
+    holidays:'宪法日11/4、国王生日、圣诞、新年',
+    dress:'商务休闲',
+    gifts:'传统塔帕布艺、手工艺',
+  },
+  TT: {
+    flag:'🇹🇹', name:'特立尼达和多巴哥', nameEn:'Trinidad and Tobago', tz:'America/Port_of_Spain',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'TTD（特立尼达和多巴哥元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比热情守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','油气/石化/旅游','热情友好','休闲商务'],
+    negotiationTips:['能源石化采购','重专业规范','务实谈条款','长期合作'],
+    taboos:['避免族群政治评论','着装得体','守信'],
+    holidays:'独立日8/31、狂欢节、圣诞、排灯节',
+    dress:'商务正装（热带）',
+    gifts:'朗姆酒、当地美食礼盒',
+  },
+  TV: {
+    flag:'🇹🇻', name:'图瓦卢', nameEn:'Tuvalu', tz:'Pacific/Funafuti',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'AUD（澳大利亚元）', language:'图瓦卢语/英语', englishLevel:'英语官方',
+    timePerception:'南太平洋最微岛国，平和守约',
+    greeting:'"Hello"或"Talofa"握手',
+    etiquette:['英语官方（图瓦卢语）','渔业/援助经济','友善','休闲'],
+    negotiationTips:['渔业援助采购','直接务实','诚实','价格合理'],
+    taboos:['尊重传统','着装庄重','守信'],
+    holidays:'独立日10/1、圣诞、新年',
+    dress:'商务休闲',
+    gifts:'当地编织手工艺',
+  },
+  TW: {
+    flag:'🇹🇼', name:'中国台湾', nameEn:'Taiwan', tz:'Asia/Taipei',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'TWD（新台币）', language:'中文（普通话/闽南语）', englishLevel:'英语商业环境可，中文为主',
+    timePerception:'高度守时高效，华人商业文化',
+    greeting:'"你好"或"幸會"，握手',
+    etiquette:['汉字文化圈，讲求诚信与体面','中小企业发达，电子/半导体强','先寒暄再谈正事','名片交换讲究'],
+    negotiationTips:['电子/半导体/机械/化工采购','重品质与技术规格','价格+品质+交期平衡','长期合作信任'],
+    taboos:['避免闽粤政治敏感话题','着装整洁正式','守信重承诺'],
+    holidays:'春节、端午、中秋、国庆10/10、元旦',
+    dress:'商务正装',
+    gifts:'凤梨酥、高山茶、名表等',
+  },
+  UG: {
+    flag:'🇺🇬', name:'乌干达', nameEn:'Uganda', tz:'Africa/Kampala',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'UGX（乌干达先令）', language:'英语/斯瓦希里语', englishLevel:'英语官方',
+    timePerception:'东非温和弹性，重人情',
+    greeting:'"Hello"或"Mulibota"问候，握手',
+    etiquette:['英语可沟通','咖啡/茶叶/农业/新兴IT','先建信任','尊重礼俗'],
+    negotiationTips:['咖啡农业/IT采购','价格敏感','关系驱动','务实'],
+    taboos:['避免政治敏感（含LGBT议题）','着装庄重','守信'],
+    holidays:'独立日10/9、新年、圣诞、开斋节',
+    dress:'商务着装（温和）',
+    gifts:'咖啡、茶叶、手工艺',
+  },
+  UY: {
+    flag:'🇺🇾', name:'乌拉圭', nameEn:'Uruguay', tz:'America/Montevideo',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'UYU（乌拉圭比索）', language:'西班牙语', englishLevel:'英语商务渐增，西语为主',
+    timePerception:'南美稳定民主，守时较佳',
+    greeting:'"Buenos días"握手',
+    etiquette:['西语必备','农牧业/乳业/肉类','温和务实','尊重家庭'],
+    negotiationTips:['肉类/乳品/羊毛采购','重品质','价格合理','长期稳定'],
+    taboos:['谨慎政治评论','着装得体','守约'],
+    holidays:'独立日8/25、狂欢节、圣诞',
+    dress:'商务正装',
+    gifts:'乌拉圭牛肉礼盒（合规）、酒、马黛茶',
+  },
+  UZ: {
+    flag:'🇺🇿', name:'乌兹别克斯坦', nameEn:'Uzbekistan', tz:'Asia/Tashkent',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'UZS（乌兹别克斯坦苏姆）', language:'乌兹别克语/俄语', englishLevel:'俄语商用，英语上升',
+    timePerception:'中亚热情守时，重人情',
+    greeting:'"Assalomu alaykum"握手',
+    etiquette:['乌兹别克语/俄语','棉纺/汽车/能源','先建关系','尊重长者'],
+    negotiationTips:['中乌经贸密切','机械/基建/纺织采购','价格+关系','长期合作'],
+    taboos:['避谈政治宗教敏感','着装庄重','守约'],
+    holidays:'独立日9/1、纳乌热斯节(3月)、开斋节',
+    dress:'商务正装',
+    gifts:'苏扎尼手工刺绣、果干、茶',
+  },
+  VA: {
+    flag:'🇻🇦', name:'梵蒂冈', nameEn:'Vatican City', tz:'Europe/Vatican',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'意大利语/拉丁语/法语', englishLevel:'意语为主，国际圣座资源',
+    timePerception:'圣座机构，正式庄重',
+    greeting:'"Buongiorno"问好',
+    etiquette:['梵蒂冈/圣座相关贸易（宗教用品/艺术）','庄重正式礼数','意大利语/法语/拉丁语','专业稽准'],
+    negotiationTips:['宗教文创/艺术拍卖','重品质与礼仪','价格得体','阿谀敬重'],
+    taboos:['不得轻慢宗教圣物','着装极庄重（禁短装）','恪守礼仪'],
+    holidays:'圣彼得节6/29、圣诞、新年',
+    dress:'极庄重礼服装束',
+    gifts:'宗教艺术收藏（合规考量）',
+  },
+  VC: {
+    flag:'🇻🇨', name:'圣文森特', nameEn:'Saint Vincent and the Grenadines', tz:'America/St_Vincent',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XCD（东加勒比元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'加勒比悠闲守约',
+    greeting:'"Good morning"握手',
+    etiquette:['英语畅通','旅游/香蕉/离岸','友好','休闲商务'],
+    negotiationTips:['旅游农业采购','直接谈条款','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'独立日10/27、嘉年华、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  VE: {
+    flag:'🇻🇪', name:'委内瑞拉', nameEn:'Venezuela', tz:'America/Caracas',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'VES（委内瑞拉玻利瓦尔）', language:'西班牙语', englishLevel:'英语有限，西语为主',
+    timePerception:'拉美弹性，政经特殊时期，人情重',
+    greeting:'"Buenos días"握手',
+    etiquette:['西语必备','石油经济（复杂环境）','先建人情','尊重礼俗'],
+    negotiationTips:['石油/日用品采购','价格敏感','合规与收款审慎','本地代理关键'],
+    taboos:['严守国际制裁合规（务必评估）','谨慎政治','着装庄重'],
+    holidays:'独立日7/5、圣诞、新年、圣周',
+    dress:'商务着装',
+    gifts:'谨慎，遵循合规',
+  },
+  VG: {
+    flag:'🇻🇬', name:'英属维尔京群岛', nameEn:'British Virgin Islands', tz:'America/Tortola',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'英属群岛离岸金融，守时',
+    greeting:'"Good morning"握手',
+    etiquette:['全球离岸公司注册中心','英式+北美商务礼仪','英语畅通','正式'],
+    negotiationTips:['金融/旅游度假采购','重合规专业','效率直接','价格合理'],
+    taboos:['避免金融合规敏感','着装正式','守信'],
+    holidays:'领土日(6月)、元旦、圣诞',
+    dress:'商务正装（热带专业）',
+    gifts:'品牌礼品、当地特产',
+  },
+  VI: {
+    flag:'🇻🇮', name:'美属维尔京群岛', nameEn:'U.S. Virgin Islands', tz:'America/St_Thomas',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'USD（美元）', language:'英语', englishLevel:'英语母语',
+    timePerception:'美属加勒比轻松守约',
+    greeting:'"Good morning"握手',
+    etiquette:['美属领地，英语','旅游/离岸','美式友好','休闲商务'],
+    negotiationTips:['旅游采购','直接谈条款','诚信','价格合理'],
+    taboos:['避免政治评论','着装得体','守信'],
+    holidays:'感恩节、转移日3/31、圣诞、新年',
+    dress:'商务休闲（热带）',
+    gifts:'朗姆酒、当地特产',
+  },
+  VU: {
+    flag:'🇻🇺', name:'瓦努阿图', nameEn:'Vanuatu', tz:'Pacific/Efate',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'VUV（瓦努阿图瓦图）', language:'比斯拉马语/英语/法语', englishLevel:'英语/法语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Hello"或"Tumaruo"问候，握手',
+    etiquette:['英语/法语/比斯拉马语','离岸金融/旅游/农业','友善','休闲'],
+    negotiationTips:['离岸/旅游采购','直接务实','诚实','价格合理'],
+    taboos:['尊重北美尼西亚传统','着装庄重','守信'],
+    holidays:'独立日7/30、宪法日10/5、圣诞',
+    dress:'商务休闲（热带）',
+    gifts:'卡瓦（合规）、木雕手工艺',
+  },
+  WF: {
+    flag:'🇼🇫', name:'瓦利斯和富图纳', nameEn:'Wallis and Futuna', tz:'Pacific/Wallis',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'XPF（太平洋法郎）', language:'瓦利斯语/法语', englishLevel:'法语为主，英语有限',
+    timePerception:'法属太平洋，悠闲守约',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国礼仪','渔业/农业','法语为佳','友善'],
+    negotiationTips:['渔业采购','直接务实','务实价格','长期稳定'],
+    taboos:['尊重波利尼西亚传统','着装得体','守信'],
+    holidays:'法国国庆7/14、新年、圣诞',
+    dress:'商务休闲',
+    gifts:'当地手工艺、咖啡',
+  },
+  WS: {
+    flag:'🇼🇸', name:'萨摩亚', nameEn:'Samoa', tz:'Pacific/Apia',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'WST（萨摩亚塔拉）', language:'萨摩亚语/英语', englishLevel:'英语官方',
+    timePerception:'太平洋岛国平和守约',
+    greeting:'"Talofa"问候，握手',
+    etiquette:['英语/萨摩亚语','渔业/农业/旅游','友善尊重传统','休闲'],
+    negotiationTips:['渔业农业采购','直接务实','诚实','价格合理'],
+    taboos:['尊重酋长与家庭传统','着装庄重','守信'],
+    holidays:'独立日6/1、元旦、圣诞',
+    dress:'商务休闲',
+    gifts:'塔帕布、当地手工艺',
+  },
+  YE: {
+    flag:'🇾🇪', name:'也门', nameEn:'Yemen', tz:'Asia/Aden',
+    weekend:['Friday','Saturday'], workHours:{start:9,end:18},
+    currency:'YER（也门里亚尔）', language:'阿拉伯语', englishLevel:'英语有限，阿语为主',
+    timePerception:'动荡地区，重部落信任与耐心',
+    greeting:'"As-salamu"握手',
+    etiquette:['伊斯兰文化','咖啡(摩卡)/渔业','家族部落信任','耐心'],
+    negotiationTips:['咖啡/转口采购','价格敏感','本地代理','合规与物流审慎（局势）'],
+    taboos:['严守国际合规（局势敏感）','不送酒','着装保守'],
+    holidays:'开斋节、宰牲节、统一日5/22',
+    dress:'保守商务着装',
+    gifts:'谨慎，遵循就近合规',
+  },
+  YT: {
+    flag:'🇾🇹', name:'马约特', nameEn:'Mayotte', tz:'Indian/Mayotte',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'EUR（欧元）', language:'法语/马霍莱语', englishLevel:'法语为主，英语有限',
+    timePerception:'法属印度洋岛屿，悠闲守约',
+    greeting:'"Bonjour"握手',
+    etiquette:['法属领地，法国礼仪','渔业/农业（香草/依兰）','法语为佳','休闲商务'],
+    negotiationTips:['渔业香草采购','直接务实','务实价格','长期稳定'],
+    taboos:['尊重伊斯兰习俗','着装得体','守信'],
+    holidays:'法国国庆7/14、开斋节、宰牲节、新年',
+    dress:'商务休闲（热带端庄）',
+    gifts:'香草、依兰油（合规）、手工艺',
+  },
+  ZM: {
+    flag:'🇿🇲', name:'赞比亚', nameEn:'Zambia', tz:'Africa/Lusaka',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ZMW（赞比亚克瓦查）', language:'英语', englishLevel:'英语官方',
+    timePerception:'南部非洲友好守约',
+    greeting:'"Muli bwanji"问候，握手',
+    etiquette:['英语沟通','铜矿/农业','先建信任','尊重礼俗'],
+    negotiationTips:['铜矿设备/农业采购','价格敏感','关系+价格','务实'],
+    taboos:['避免政治敏感','着装庄重','守信'],
+    holidays:'独立日10/24、统一日7月、圣诞节',
+    dress:'商务正装（温和）',
+    gifts:'铜艺、木雕、咖啡（区域）',
+  },
+  ZW: {
+    flag:'🇿🇼', name:'津巴布韦', nameEn:'Zimbabwe', tz:'Africa/Harare',
+    weekend:['Saturday','Sunday'], workHours:{start:9,end:18},
+    currency:'ZWL（津巴布韦元）', language:'英语', englishLevel:'英语官方',
+    timePerception:'南部非洲弹性慢节奏，重耐心',
+    greeting:'"Hello"或"Mhoro"握手',
+    etiquette:['英语沟通','烟草/矿业/农业','先建信任','尊重礼俗'],
+    negotiationTips:['烟草矿农采购','价格敏感','本地代理','付款谨慎（币值环境）'],
+    taboos:['避免政治敏感','着装庄重','守信'],
+    holidays:'独立日4/18、统一日12/22、圣诞、新年',
+    dress:'商务着装（温和）',
+    gifts:'木雕、宝石（合规）、手工艺',
+  },
 };
 
 // 电话国家码 → ISO alpha-2
@@ -11198,8 +14288,239 @@ const cultureShowCustom = ref(false);
 const cultureTick = ref(Date.now());
 let cultureTimer = null;
 
+const FULL_COUNTRIES = [
+  {iso:'AD', name:'安道尔', nameEn:'Andorra', flag:'🇦🇩'},
+  {iso:'AE', name:'阿联酋', nameEn:'United Arab Emirates', flag:'🇦🇪'},
+  {iso:'AF', name:'阿富汗', nameEn:'Afghanistan', flag:'🇦🇫'},
+  {iso:'AG', name:'安提瓜和巴布达', nameEn:'Antigua and Barbuda', flag:'🇦🇬'},
+  {iso:'AL', name:'阿尔巴尼亚', nameEn:'Albania', flag:'🇦🇱'},
+  {iso:'AM', name:'亚美尼亚', nameEn:'Armenia', flag:'🇦🇲'},
+  {iso:'AO', name:'安哥拉', nameEn:'Angola', flag:'🇦🇴'},
+  {iso:'AR', name:'阿根廷', nameEn:'Argentina', flag:'🇦🇷'},
+  {iso:'AT', name:'奥地利', nameEn:'Austria', flag:'🇦🇹'},
+  {iso:'AU', name:'澳大利亚', nameEn:'Australia', flag:'🇦🇺'},
+  {iso:'AW', name:'阿鲁巴', nameEn:'Aruba', flag:'🇦🇼'},
+  {iso:'AX', name:'奥兰群岛', nameEn:'Åland Islands', flag:'🇦🇽'},
+  {iso:'AZ', name:'阿塞拜疆', nameEn:'Azerbaijan', flag:'🇦🇿'},
+  {iso:'BA', name:'波黑', nameEn:'Bosnia and Herzegovina', flag:'🇧🇦'},
+  {iso:'BB', name:'巴巴多斯', nameEn:'Barbados', flag:'🇧🇧'},
+  {iso:'BD', name:'孟加拉国', nameEn:'Bangladesh', flag:'🇧🇩'},
+  {iso:'BE', name:'比利时', nameEn:'Belgium', flag:'🇧🇪'},
+  {iso:'BF', name:'布基纳法索', nameEn:'Burkina Faso', flag:'🇧🇫'},
+  {iso:'BG', name:'保加利亚', nameEn:'Bulgaria', flag:'🇧🇬'},
+  {iso:'BH', name:'巴林', nameEn:'Bahrain', flag:'🇧🇭'},
+  {iso:'BI', name:'布隆迪', nameEn:'Burundi', flag:'🇧🇮'},
+  {iso:'BJ', name:'贝宁', nameEn:'Benin', flag:'🇧🇯'},
+  {iso:'BL', name:'圣巴泰勒米', nameEn:'Saint Barthélemy', flag:'🇧🇱'},
+  {iso:'BM', name:'百慕大', nameEn:'Bermuda', flag:'🇧🇲'},
+  {iso:'BN', name:'文莱', nameEn:'Brunei', flag:'🇧🇳'},
+  {iso:'BO', name:'玻利维亚', nameEn:'Bolivia', flag:'🇧🇴'},
+  {iso:'BR', name:'巴西', nameEn:'Brazil', flag:'🇧🇷'},
+  {iso:'BS', name:'巴哈马', nameEn:'Bahamas', flag:'🇧🇸'},
+  {iso:'BT', name:'不丹', nameEn:'Bhutan', flag:'🇧🇹'},
+  {iso:'BW', name:'博茨瓦纳', nameEn:'Botswana', flag:'🇧🇼'},
+  {iso:'BY', name:'白俄罗斯', nameEn:'Belarus', flag:'🇧🇾'},
+  {iso:'BZ', name:'伯利兹', nameEn:'Belize', flag:'🇧🇿'},
+  {iso:'CA', name:'加拿大', nameEn:'Canada', flag:'🇨🇦'},
+  {iso:'CD', name:'刚果（金）', nameEn:'Congo (Kinshasa)', flag:'🇨🇩'},
+  {iso:'CF', name:'中非', nameEn:'Central African Republic', flag:'🇨🇫'},
+  {iso:'CG', name:'刚果（布）', nameEn:'Congo (Brazzaville)', flag:'🇨🇬'},
+  {iso:'CH', name:'瑞士', nameEn:'Switzerland', flag:'🇨🇭'},
+  {iso:'CI', name:'科特迪瓦', nameEn:'Côte d\'Ivoire', flag:'🇨🇮'},
+  {iso:'CL', name:'智利', nameEn:'Chile', flag:'🇨🇱'},
+  {iso:'CM', name:'喀麦隆', nameEn:'Cameroon', flag:'🇨🇲'},
+  {iso:'CN', name:'中国', nameEn:'China', flag:'🇨🇳'},
+  {iso:'CO', name:'哥伦比亚', nameEn:'Colombia', flag:'🇨🇴'},
+  {iso:'CR', name:'哥斯达黎加', nameEn:'Costa Rica', flag:'🇨🇷'},
+  {iso:'CU', name:'古巴', nameEn:'Cuba', flag:'🇨🇺'},
+  {iso:'CV', name:'佛得角', nameEn:'Cape Verde', flag:'🇨🇻'},
+  {iso:'CW', name:'库拉索', nameEn:'Curaçao', flag:'🇨🇼'},
+  {iso:'CY', name:'塞浦路斯', nameEn:'Cyprus', flag:'🇨🇾'},
+  {iso:'CZ', name:'捷克', nameEn:'Czechia', flag:'🇨🇿'},
+  {iso:'DE', name:'德国', nameEn:'Germany', flag:'🇩🇪'},
+  {iso:'DJ', name:'吉布提', nameEn:'Djibouti', flag:'🇩🇯'},
+  {iso:'DK', name:'丹麦', nameEn:'Denmark', flag:'🇩🇰'},
+  {iso:'DM', name:'多米尼克', nameEn:'Dominica', flag:'🇩🇲'},
+  {iso:'DO', name:'多米尼加', nameEn:'Dominican Republic', flag:'🇩🇴'},
+  {iso:'DZ', name:'阿尔及利亚', nameEn:'Algeria', flag:'🇩🇿'},
+  {iso:'EC', name:'厄瓜多尔', nameEn:'Ecuador', flag:'🇪🇨'},
+  {iso:'EE', name:'爱沙尼亚', nameEn:'Estonia', flag:'🇪🇪'},
+  {iso:'EG', name:'埃及', nameEn:'Egypt', flag:'🇪🇬'},
+  {iso:'ER', name:'厄立特里亚', nameEn:'Eritrea', flag:'🇪🇷'},
+  {iso:'ES', name:'西班牙', nameEn:'Spain', flag:'🇪🇸'},
+  {iso:'ET', name:'埃塞俄比亚', nameEn:'Ethiopia', flag:'🇪🇹'},
+  {iso:'FI', name:'芬兰', nameEn:'Finland', flag:'🇫🇮'},
+  {iso:'FJ', name:'斐济', nameEn:'Fiji', flag:'🇫🇯'},
+  {iso:'FM', name:'密克罗尼西亚', nameEn:'Micronesia', flag:'🇫🇲'},
+  {iso:'FR', name:'法国', nameEn:'France', flag:'🇫🇷'},
+  {iso:'GA', name:'加蓬', nameEn:'Gabon', flag:'🇬🇦'},
+  {iso:'GB', name:'英国', nameEn:'United Kingdom', flag:'🇬🇧'},
+  {iso:'GD', name:'格林纳达', nameEn:'Grenada', flag:'🇬🇩'},
+  {iso:'GE', name:'格鲁吉亚', nameEn:'Georgia', flag:'🇬🇪'},
+  {iso:'GG', name:'根西岛', nameEn:'Guernsey', flag:'🇬🇬'},
+  {iso:'GH', name:'加纳', nameEn:'Ghana', flag:'🇬🇭'},
+  {iso:'GI', name:'直布罗陀', nameEn:'Gibraltar', flag:'🇬🇮'},
+  {iso:'GL', name:'格陵兰', nameEn:'Greenland', flag:'🇬🇱'},
+  {iso:'GM', name:'冈比亚', nameEn:'Gambia', flag:'🇬🇲'},
+  {iso:'GN', name:'几内亚', nameEn:'Guinea', flag:'🇬🇳'},
+  {iso:'GP', name:'瓜德罗普', nameEn:'Guadeloupe', flag:'🇬🇵'},
+  {iso:'GQ', name:'赤道几内亚', nameEn:'Equatorial Guinea', flag:'🇬🇶'},
+  {iso:'GR', name:'希腊', nameEn:'Greece', flag:'🇬🇷'},
+  {iso:'GT', name:'危地马拉', nameEn:'Guatemala', flag:'🇬🇹'},
+  {iso:'GU', name:'关岛', nameEn:'Guam', flag:'🇬🇺'},
+  {iso:'GW', name:'几内亚比绍', nameEn:'Guinea-Bissau', flag:'🇬🇼'},
+  {iso:'GY', name:'圭亚那', nameEn:'Guyana', flag:'🇬🇾'},
+  {iso:'HK', name:'中国香港', nameEn:'Hong Kong', flag:'🇭🇰'},
+  {iso:'HN', name:'洪都拉斯', nameEn:'Honduras', flag:'🇭🇳'},
+  {iso:'HR', name:'克罗地亚', nameEn:'Croatia', flag:'🇭🇷'},
+  {iso:'HT', name:'海地', nameEn:'Haiti', flag:'🇭🇹'},
+  {iso:'HU', name:'匈牙利', nameEn:'Hungary', flag:'🇭🇺'},
+  {iso:'ID', name:'印度尼西亚', nameEn:'Indonesia', flag:'🇮🇩'},
+  {iso:'IE', name:'爱尔兰', nameEn:'Ireland', flag:'🇮🇪'},
+  {iso:'IL', name:'以色列', nameEn:'Israel', flag:'🇮🇱'},
+  {iso:'IM', name:'马恩岛', nameEn:'Isle of Man', flag:'🇮🇲'},
+  {iso:'IN', name:'印度', nameEn:'India', flag:'🇮🇳'},
+  {iso:'IQ', name:'伊拉克', nameEn:'Iraq', flag:'🇮🇶'},
+  {iso:'IR', name:'伊朗', nameEn:'Iran', flag:'🇮🇷'},
+  {iso:'IS', name:'冰岛', nameEn:'Iceland', flag:'🇮🇸'},
+  {iso:'IT', name:'意大利', nameEn:'Italy', flag:'🇮🇹'},
+  {iso:'JE', name:'泽西岛', nameEn:'Jersey', flag:'🇯🇪'},
+  {iso:'JM', name:'牙买加', nameEn:'Jamaica', flag:'🇯🇲'},
+  {iso:'JO', name:'约旦', nameEn:'Jordan', flag:'🇯🇴'},
+  {iso:'JP', name:'日本', nameEn:'Japan', flag:'🇯🇵'},
+  {iso:'KE', name:'肯尼亚', nameEn:'Kenya', flag:'🇰🇪'},
+  {iso:'KG', name:'吉尔吉斯斯坦', nameEn:'Kyrgyzstan', flag:'🇰🇬'},
+  {iso:'KH', name:'柬埔寨', nameEn:'Cambodia', flag:'🇰🇭'},
+  {iso:'KI', name:'基里巴斯', nameEn:'Kiribati', flag:'🇰🇮'},
+  {iso:'KM', name:'科摩罗', nameEn:'Comoros', flag:'🇰🇲'},
+  {iso:'KN', name:'圣基茨和尼维斯', nameEn:'Saint Kitts and Nevis', flag:'🇰🇳'},
+  {iso:'KP', name:'朝鲜', nameEn:'North Korea', flag:'🇰🇵'},
+  {iso:'KR', name:'韩国', nameEn:'South Korea', flag:'🇰🇷'},
+  {iso:'KW', name:'科威特', nameEn:'Kuwait', flag:'🇰🇼'},
+  {iso:'KY', name:'开曼群岛', nameEn:'Cayman Islands', flag:'🇰🇾'},
+  {iso:'KZ', name:'哈萨克斯坦', nameEn:'Kazakhstan', flag:'🇰🇿'},
+  {iso:'LA', name:'老挝', nameEn:'Laos', flag:'🇱🇦'},
+  {iso:'LB', name:'黎巴嫩', nameEn:'Lebanon', flag:'🇱🇧'},
+  {iso:'LC', name:'圣卢西亚', nameEn:'Saint Lucia', flag:'🇱🇨'},
+  {iso:'LI', name:'列支敦士登', nameEn:'Liechtenstein', flag:'🇱🇮'},
+  {iso:'LK', name:'斯里兰卡', nameEn:'Sri Lanka', flag:'🇱🇰'},
+  {iso:'LR', name:'利比里亚', nameEn:'Liberia', flag:'🇱🇷'},
+  {iso:'LS', name:'莱索托', nameEn:'Lesotho', flag:'🇱🇸'},
+  {iso:'LT', name:'立陶宛', nameEn:'Lithuania', flag:'🇱🇹'},
+  {iso:'LU', name:'卢森堡', nameEn:'Luxembourg', flag:'🇱🇺'},
+  {iso:'LV', name:'拉脱维亚', nameEn:'Latvia', flag:'🇱🇻'},
+  {iso:'LY', name:'利比亚', nameEn:'Libya', flag:'🇱🇾'},
+  {iso:'MA', name:'摩洛哥', nameEn:'Morocco', flag:'🇲🇦'},
+  {iso:'MC', name:'摩纳哥', nameEn:'Monaco', flag:'🇲🇨'},
+  {iso:'MD', name:'摩尔多瓦', nameEn:'Moldova', flag:'🇲🇩'},
+  {iso:'ME', name:'黑山', nameEn:'Montenegro', flag:'🇲🇪'},
+  {iso:'MF', name:'法属圣马丁', nameEn:'Saint Martin (French)', flag:'🇲🇫'},
+  {iso:'MG', name:'马达加斯加', nameEn:'Madagascar', flag:'🇲🇬'},
+  {iso:'MH', name:'马绍尔群岛', nameEn:'Marshall Islands', flag:'🇲🇭'},
+  {iso:'MK', name:'北马其顿', nameEn:'North Macedonia', flag:'🇲🇰'},
+  {iso:'ML', name:'马里', nameEn:'Mali', flag:'🇲🇱'},
+  {iso:'MM', name:'缅甸', nameEn:'Myanmar', flag:'🇲🇲'},
+  {iso:'MN', name:'蒙古', nameEn:'Mongolia', flag:'🇲🇳'},
+  {iso:'MO', name:'中国澳门', nameEn:'Macau', flag:'🇲🇴'},
+  {iso:'MQ', name:'马提尼克', nameEn:'Martinique', flag:'🇲🇶'},
+  {iso:'MR', name:'毛里塔尼亚', nameEn:'Mauritania', flag:'🇲🇷'},
+  {iso:'MS', name:'蒙特塞拉特', nameEn:'Montserrat', flag:'🇲🇸'},
+  {iso:'MT', name:'马耳他', nameEn:'Malta', flag:'🇲🇹'},
+  {iso:'MU', name:'毛里求斯', nameEn:'Mauritius', flag:'🇲🇺'},
+  {iso:'MV', name:'马尔代夫', nameEn:'Maldives', flag:'🇲🇻'},
+  {iso:'MW', name:'马拉维', nameEn:'Malawi', flag:'🇲🇼'},
+  {iso:'MX', name:'墨西哥', nameEn:'Mexico', flag:'🇲🇽'},
+  {iso:'MY', name:'马来西亚', nameEn:'Malaysia', flag:'🇲🇾'},
+  {iso:'MZ', name:'莫桑比克', nameEn:'Mozambique', flag:'🇲🇿'},
+  {iso:'NA', name:'纳米比亚', nameEn:'Namibia', flag:'🇳🇦'},
+  {iso:'NC', name:'新喀里多尼亚', nameEn:'New Caledonia', flag:'🇳🇨'},
+  {iso:'NE', name:'尼日尔', nameEn:'Niger', flag:'🇳🇪'},
+  {iso:'NG', name:'尼日利亚', nameEn:'Nigeria', flag:'🇳🇬'},
+  {iso:'NI', name:'尼加拉瓜', nameEn:'Nicaragua', flag:'🇳🇮'},
+  {iso:'NL', name:'荷兰', nameEn:'Netherlands', flag:'🇳🇱'},
+  {iso:'NO', name:'挪威', nameEn:'Norway', flag:'🇳🇴'},
+  {iso:'NP', name:'尼泊尔', nameEn:'Nepal', flag:'🇳🇵'},
+  {iso:'NR', name:'瑙鲁', nameEn:'Nauru', flag:'🇳🇷'},
+  {iso:'NZ', name:'新西兰', nameEn:'New Zealand', flag:'🇳🇿'},
+  {iso:'OM', name:'阿曼', nameEn:'Oman', flag:'🇴🇲'},
+  {iso:'PA', name:'巴拿马', nameEn:'Panama', flag:'🇵🇦'},
+  {iso:'PE', name:'秘鲁', nameEn:'Peru', flag:'🇵🇪'},
+  {iso:'PG', name:'巴布亚新几内亚', nameEn:'Papua New Guinea', flag:'🇵🇬'},
+  {iso:'PH', name:'菲律宾', nameEn:'Philippines', flag:'🇵🇭'},
+  {iso:'PK', name:'巴基斯坦', nameEn:'Pakistan', flag:'🇵🇰'},
+  {iso:'PL', name:'波兰', nameEn:'Poland', flag:'🇵🇱'},
+  {iso:'PM', name:'圣皮埃尔和密克隆', nameEn:'Saint Pierre and Miquelon', flag:'🇵🇲'},
+  {iso:'PR', name:'波多黎各', nameEn:'Puerto Rico', flag:'🇵🇷'},
+  {iso:'PS', name:'巴勒斯坦', nameEn:'Palestine', flag:'🇵🇸'},
+  {iso:'PT', name:'葡萄牙', nameEn:'Portugal', flag:'🇵🇹'},
+  {iso:'PW', name:'帕劳', nameEn:'Palau', flag:'🇵🇼'},
+  {iso:'PY', name:'巴拉圭', nameEn:'Paraguay', flag:'🇵🇾'},
+  {iso:'QA', name:'卡塔尔', nameEn:'Qatar', flag:'🇶🇦'},
+  {iso:'RE', name:'留尼汪', nameEn:'Réunion', flag:'🇷🇪'},
+  {iso:'RO', name:'罗马尼亚', nameEn:'Romania', flag:'🇷🇴'},
+  {iso:'RS', name:'塞尔维亚', nameEn:'Serbia', flag:'🇷🇸'},
+  {iso:'RU', name:'俄罗斯', nameEn:'Russia', flag:'🇷🇺'},
+  {iso:'RW', name:'卢旺达', nameEn:'Rwanda', flag:'🇷🇼'},
+  {iso:'SA', name:'沙特阿拉伯', nameEn:'Saudi Arabia', flag:'🇸🇦'},
+  {iso:'SB', name:'所罗门群岛', nameEn:'Solomon Islands', flag:'🇸🇧'},
+  {iso:'SC', name:'塞舌尔', nameEn:'Seychelles', flag:'🇸🇨'},
+  {iso:'SD', name:'苏丹', nameEn:'Sudan', flag:'🇸🇩'},
+  {iso:'SE', name:'瑞典', nameEn:'Sweden', flag:'🇸🇪'},
+  {iso:'SG', name:'新加坡', nameEn:'Singapore', flag:'🇸🇬'},
+  {iso:'SI', name:'斯洛文尼亚', nameEn:'Slovenia', flag:'🇸🇮'},
+  {iso:'SK', name:'斯洛伐克', nameEn:'Slovakia', flag:'🇸🇰'},
+  {iso:'SL', name:'塞拉利昂', nameEn:'Sierra Leone', flag:'🇸🇱'},
+  {iso:'SM', name:'圣马力诺', nameEn:'San Marino', flag:'🇸🇲'},
+  {iso:'SN', name:'塞内加尔', nameEn:'Senegal', flag:'🇸🇳'},
+  {iso:'SO', name:'索马里', nameEn:'Somalia', flag:'🇸🇴'},
+  {iso:'SR', name:'苏里南', nameEn:'Suriname', flag:'🇸🇷'},
+  {iso:'SS', name:'南苏丹', nameEn:'South Sudan', flag:'🇸🇸'},
+  {iso:'ST', name:'圣多美和普林西比', nameEn:'Sao Tome and Principe', flag:'🇸🇹'},
+  {iso:'SV', name:'萨尔瓦多', nameEn:'El Salvador', flag:'🇸🇻'},
+  {iso:'SX', name:'荷属圣马丁', nameEn:'Sint Maarten', flag:'🇸🇽'},
+  {iso:'SY', name:'叙利亚', nameEn:'Syria', flag:'🇸🇾'},
+  {iso:'SZ', name:'斯威士兰', nameEn:'Eswatini', flag:'🇸🇿'},
+  {iso:'TC', name:'特克斯和凯科斯群岛', nameEn:'Turks and Caicos Islands', flag:'🇹🇨'},
+  {iso:'TD', name:'乍得', nameEn:'Chad', flag:'🇹🇩'},
+  {iso:'TG', name:'多哥', nameEn:'Togo', flag:'🇹🇬'},
+  {iso:'TH', name:'泰国', nameEn:'Thailand', flag:'🇹🇭'},
+  {iso:'TJ', name:'塔吉克斯坦', nameEn:'Tajikistan', flag:'🇹🇯'},
+  {iso:'TL', name:'东帝汶', nameEn:'Timor-Leste', flag:'🇹🇱'},
+  {iso:'TM', name:'土库曼斯坦', nameEn:'Turkmenistan', flag:'🇹🇲'},
+  {iso:'TN', name:'突尼斯', nameEn:'Tunisia', flag:'🇹🇳'},
+  {iso:'TO', name:'汤加', nameEn:'Tonga', flag:'🇹🇴'},
+  {iso:'TR', name:'土耳其', nameEn:'Turkey', flag:'🇹🇷'},
+  {iso:'TT', name:'特立尼达和多巴哥', nameEn:'Trinidad and Tobago', flag:'🇹🇹'},
+  {iso:'TV', name:'图瓦卢', nameEn:'Tuvalu', flag:'🇹🇻'},
+  {iso:'TW', name:'中国台湾', nameEn:'Taiwan', flag:'🇹🇼'},
+  {iso:'TZ', name:'坦桑尼亚', nameEn:'Tanzania', flag:'🇹🇿'},
+  {iso:'UA', name:'乌克兰', nameEn:'Ukraine', flag:'🇺🇦'},
+  {iso:'UG', name:'乌干达', nameEn:'Uganda', flag:'🇺🇬'},
+  {iso:'US', name:'美国', nameEn:'United States', flag:'🇺🇸'},
+  {iso:'UY', name:'乌拉圭', nameEn:'Uruguay', flag:'🇺🇾'},
+  {iso:'UZ', name:'乌兹别克斯坦', nameEn:'Uzbekistan', flag:'🇺🇿'},
+  {iso:'VA', name:'梵蒂冈', nameEn:'Vatican City', flag:'🇻🇦'},
+  {iso:'VC', name:'圣文森特', nameEn:'Saint Vincent and the Grenadines', flag:'🇻🇨'},
+  {iso:'VE', name:'委内瑞拉', nameEn:'Venezuela', flag:'🇻🇪'},
+  {iso:'VG', name:'英属维尔京群岛', nameEn:'British Virgin Islands', flag:'🇻🇬'},
+  {iso:'VI', name:'美属维尔京群岛', nameEn:'U.S. Virgin Islands', flag:'🇻🇮'},
+  {iso:'VN', name:'越南', nameEn:'Vietnam', flag:'🇻🇳'},
+  {iso:'VU', name:'瓦努阿图', nameEn:'Vanuatu', flag:'🇻🇺'},
+  {iso:'WF', name:'瓦利斯和富图纳', nameEn:'Wallis and Futuna', flag:'🇼🇫'},
+  {iso:'WS', name:'萨摩亚', nameEn:'Samoa', flag:'🇼🇸'},
+  {iso:'YE', name:'也门', nameEn:'Yemen', flag:'🇾🇪'},
+  {iso:'YT', name:'马约特', nameEn:'Mayotte', flag:'🇾🇹'},
+  {iso:'ZA', name:'南非', nameEn:'South Africa', flag:'🇿🇦'},
+  {iso:'ZM', name:'赞比亚', nameEn:'Zambia', flag:'🇿🇲'},
+  {iso:'ZW', name:'津巴布韦', nameEn:'Zimbabwe', flag:'🇿🇼'}
+]
+
 const cultureAllCountries = computed(() => {
-  return Object.entries(CULTURE_DATA).map(([iso, d]) => ({ iso, ...d }));
+  // 全量国家表（200+），有文化数据库的国家合并文化字段，国籍/所在国可选全部国家
+  return FULL_COUNTRIES.map(c => {
+    const d = CULTURE_DATA[c.iso];
+    return d ? { iso: c.iso, flag: d.flag || c.flag, name: d.name || c.name, nameEn: d.nameEn || c.nameEn } : c;
+  });
 });
 
 // 从localStorage读取手动修正
@@ -11214,18 +14535,18 @@ function cultureLoadManual() {
     const entry = map[jid] || {};
     cultureManualNationality.value = entry.nationality || '';
     cultureManualResidence.value = entry.residence || '';
-    cultureUseResidence.value = entry.useResidence === true;
+    cultureUseResidence.value = entry.useResidence === true || entry.useResidence === 1;
   } catch(e) {}
   // 从后端API加载最新值（覆盖localStorage缓存）
   const token = localStorage.getItem('token');
   if (!token) return;
-  fetch('/api/culture-settings/' + encodeURIComponent(jid), {
+  fetch(window.__API_BASE__ + '/api/culture-settings/' + encodeURIComponent(jid), {
     headers: { 'Authorization': 'Bearer ' + token }
   }).then(r => r.ok ? r.json() : null).then(data => {
     if (data && (data.nationality || data.residence)) {
       cultureManualNationality.value = data.nationality || '';
       cultureManualResidence.value = data.residence || '';
-      cultureUseResidence.value = data.useResidence === true;
+      cultureUseResidence.value = data.useResidence === true || data.useResidence === 1;
       // 同步到localStorage缓存
       try {
         const raw = localStorage.getItem('culture_manual_map');
@@ -11250,16 +14571,26 @@ function cultureSaveManual() {
   } catch(e) {}
   // 保存到后端API（永久存储）
   const token = localStorage.getItem('token');
-  if (!token) return;
-  fetch('/api/culture-settings/' + encodeURIComponent(jid), {
+  if (!token) {
+    cultureSavedTip.value = '已保存（仅本机）';
+    setTimeout(() => { cultureSavedTip.value = ''; }, 2200);
+    return;
+  }
+  fetch(window.__API_BASE__ + '/api/culture-settings/' + encodeURIComponent(jid), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
     body: JSON.stringify({
       nationality: cultureManualNationality.value || null,
       residence: cultureManualResidence.value || null,
-      useResidence: cultureUseResidence.value,
+      useResidence: cultureUseResidence.value ? 1 : 0,
     })
-  }).catch(() => {});
+  }).then(r => {
+    cultureSavedTip.value = (r && r.ok) ? '已保存 ✓' : '保存失败，请重试';
+    setTimeout(() => { cultureSavedTip.value = ''; }, 2200);
+  }).catch(() => {
+    cultureSavedTip.value = '保存失败，请重试';
+    setTimeout(() => { cultureSavedTip.value = ''; }, 2200);
+  });
 }
 
 // Auto-save whenever manual values change (more reliable than @change on mobile)
@@ -11327,8 +14658,9 @@ function cultureGetAutoIso(jid, conv) {
 }
 
 const cultureNationalityIso = computed(() => {
-  const jid = chatStore.activeJid;
-  const conv = chatStore.activeConversation;
+  // TG 会话用 tgActiveJid（TG 不写 chatStore.activeJid 时 culture 读取也要生效），否则回退 WA chatStore.activeJid
+  const jid = tgActiveJid.value || chatStore.activeJid;
+  const conv = tgActiveJid.value ? tgActiveConv.value : chatStore.activeConversation;
   if (!jid) return null;
   return cultureGetAutoIso(jid, conv);
 });
@@ -11494,7 +14826,26 @@ const WC_PRESET_CITIES = [
   { flag: '🇧🇩', name: '达卡', tz: 'Asia/Dhaka', tz_label: 'UTC+6' },
   { flag: '🇨🇳', name: '台北', tz: 'Asia/Taipei', tz_label: 'UTC+8' },
 ];
+// 切换会话时重新加载手动修正（WA + TG）
+watch(() => chatStore.activeJid, (newJid, oldJid) => {
+  if (newJid && newJid !== oldJid) {
+    cultureLoadManual();
+  }
+});
+watch(tgActiveJid, (newJid, oldJid) => {
+  if (newJid && newJid !== oldJid) {
+    cultureLoadManual();
+  }
+});
 
+// provide给子组件（ChatWindow等）使用
+provide('cultureInfo', cultureInfo);
+provide('cultureWorkStatus', cultureWorkStatus);
+provide('cultureIso', cultureIso);
+
+
+
+// ========== 🕐 世界时钟 ==========
 const wcClocks = ref([]);
 const wcSelectedCity = ref('');
 const wcTick = ref(Date.now());
@@ -12560,33 +15911,6 @@ const frRangeText = computed(() => frCurrentRoute.value?.range || '');
 
 // 首次进入时拉取（挂在onMounted里已有worldclock的，追加即可）
 
-
-// L2: Poll for pending business confirmations every 30 seconds
-function onBizConfirmedElsewhere(e) {
-  const cid = e.detail && e.detail.id;
-  if (cid == null) return;
-  const idx = bizConfirmPending.value.findIndex(c => c.id === cid);
-  if (idx !== -1) {
-    bizConfirmDismissed.value.add(cid);
-    bizConfirmPending.value.splice(idx, 1);
-    if (currentBizConfirmIdx.value >= bizConfirmPending.value.length) {
-      currentBizConfirmIdx.value = 0;
-    }
-  }
-}
-
-onMounted(() => {
-  loadBizConfirmPending();
-  const bizConfirmTimer = setInterval(loadBizConfirmPending, 30000);
-  window.__bizConfirmTimer = bizConfirmTimer;
-  window.addEventListener('l2-biz-confirmed', onBizConfirmedElsewhere);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('l2-biz-confirmed', onBizConfirmedElsewhere);
-  if (window.__bizConfirmTimer) clearInterval(window.__bizConfirmTimer);
-});
-
 </script>
 
 <style scoped>
@@ -12604,7 +15928,7 @@ onUnmounted(() => {
 
 /* ========== ① 平台导航栏 ========== */
 .platform-nav {
-  width: 160px;
+  width: 185px;
   background: var(--panel-bg);
   display: flex;
   flex-direction: column;
@@ -12634,7 +15958,48 @@ onUnmounted(() => {
 .logo-text { font-size: 15px; font-weight: 700; white-space: nowrap; color: var(--accent); }
 
 .platform-menu { flex: 1; padding: 4px 8px; overflow-y: auto; }
-.platform-item-wrap { position: relative; }
+
+/* ===== Category layout ===== */
+.platform-category-sep {
+  height: 16px;
+  flex-shrink: 0;
+}
+.platform-category-header {
+  display: flex;
+  align-items: center;
+  padding: 9px 8px;
+  margin: 2px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  position: relative;
+  gap: 10px;
+  user-select: none;
+}
+.platform-category-header:hover {
+  background: var(--panel-header-bg);
+  color: var(--text-primary);
+}
+.platform-category-header.active {
+  background: transparent;
+  color: var(--accent);
+}
+.p-cat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: visible;
+  
+  flex: 1;
+}
+.platform-category-header:hover .p-cat-label {
+  color: var(--text-primary);
+}
+.platform-category-header.active .p-cat-label {
+  color: var(--accent);
+}
+
 .platform-item {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 8px; margin: 2px 0;
@@ -12731,7 +16096,7 @@ onUnmounted(() => {
 
 /* tooltip */
 .p-tooltip {
-  position: absolute; left: calc(100% + 8px); top: 50%;
+  position: relative; left: calc(100% + 8px); top: 50%;
   transform: translateY(-50%);
   background: #233138; color: var(--text-primary);
   padding: 5px 10px; border-radius: 6px; font-size: 12px;
@@ -12770,7 +16135,7 @@ onUnmounted(() => {
   display: flex; flex-direction: column;
   flex-shrink: 0; transition: width 0.2s; overflow: hidden;
 }
-.col-accounts.collapsed { width: 54px; }
+.col-accounts.collapsed { width: 64px; }
 
 .col-header {
   height: 56px; display: flex; align-items: center;
@@ -12836,7 +16201,7 @@ onUnmounted(() => {
 }
 
 .ch-dropdown {
-  position: absolute; top: calc(100% - 4px); left: 10px; right: 10px;
+  position: relative; top: calc(100% - 4px); left: 10px; right: 10px;
   background: var(--panel-header-bg); border: 1px solid var(--sidebar-active);
   border-radius: 10px; padding: 6px;
   z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
@@ -12898,7 +16263,7 @@ onUnmounted(() => {
   flex-shrink: 0; position: relative;
 }
 .acc-online-dot {
-  position: absolute; right: 0; bottom: 0;
+  position: relative; right: 0; bottom: 0;
   width: 12px; height: 12px; border-radius: 50%;
   background: var(--accent); border: 2px solid var(--panel-bg);
 }
@@ -12988,7 +16353,7 @@ onUnmounted(() => {
 .ch-icon-btn.active { background: #00a88430; color: var(--accent); }
 .ch-icon-btn.online { box-shadow: inset 0 -3px 0 var(--accent); }
 .ch-icon-badge {
-  position: absolute; top: -3px; right: -3px;
+  position: relative; top: -3px; right: -3px;
   background: var(--accent); color: #fff;
   font-size: 9px; padding: 1px 4px; border-radius: 8px; font-weight: 600;
 }
@@ -13078,11 +16443,12 @@ onUnmounted(() => {
 .col-chatlist.collapsed .col-header { justify-content: center; padding: 0 6px; }
 .search-box {
   flex: 1; display: flex; align-items: center; gap: 8px;
-  background: var(--panel-header-bg); padding: 6px 12px; border-radius: 8px;
+  background: var(--panel-header-bg); padding: 8px 16px; border-radius: 22px;
+  height: 38px;
 }
 .search-box input {
   flex: 1; background: transparent; border: none;
-  color: var(--text-primary); font-size: 13px; outline: none;
+  color: var(--text-primary); font-size: 14px; outline: none;
 }
 .search-box svg { color: var(--text-secondary); flex-shrink: 0; }
 .chat-filters {
@@ -13147,13 +16513,13 @@ onUnmounted(() => {
   color: #fff; font-weight: 600; flex-shrink: 0; position: relative;
 }
 .conv-status-dot {
-  position: absolute; right: 0; bottom: 0;
+  position: relative; right: 0; bottom: 0;
   width: 12px; height: 12px; border-radius: 50%;
   background: var(--accent); border: 2px solid var(--panel-bg);
 }
 .conv-status-dot.offline { background: var(--text-muted); }
 .conv-followup-dot {
-  position: absolute; left: 0; top: 2px;
+  position: relative; left: 0; top: 2px;
   width: 10px; height: 10px; border-radius: 50%;
   border: 2px solid var(--panel-bg);
 }
@@ -13189,7 +16555,7 @@ onUnmounted(() => {
 }
 .first-response-bar::before {
   content: '';
-  position: absolute;
+  position: relative;
   top: 0; left: -100%;
   width: 100%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
@@ -13280,7 +16646,7 @@ onUnmounted(() => {
   50% { background: rgba(241, 92, 109, 0.15); }
 }
 .conv-fr-badge {
-  position: absolute;
+  position: relative;
   top: -2px; left: -4px;
   background: var(--danger);
   color: #fff;
@@ -13374,7 +16740,7 @@ onUnmounted(() => {
 .col-aipanel.collapsed .col-header { padding: 10px 6px; justify-content: center; }
 .col-aipanel.mini { width: 260px; }
 .ai-resize-handle {
-  position: absolute; left: -2px; top: 0; bottom: 0;
+  position: relative; left: -2px; top: 0; bottom: 0;
   width: 4px; cursor: col-resize; z-index: 20; background: transparent;
   transition: background .1s ease;
 }
@@ -13467,7 +16833,7 @@ onUnmounted(() => {
 .ai-result-header {
   display: flex; align-items: center; gap: 6px;
   font-size: 12px; padding-bottom: 4px;
-  border-bottom: 1px solid #1f2c33;
+  border-bottom: 1px solid var(--border-color, #1f2c33);
 }
 .arh-title { font-weight: 600; color: var(--accent); font-size: 12px; }
 .arh-ts { margin-left: auto; font-size: 11px; color: var(--text-muted); }
@@ -13512,7 +16878,7 @@ onUnmounted(() => {
 .ai-reply-card.flashed { background: var(--accent); border-color: var(--accent); }
 .ai-reply-card.flashed .arc-text { color: #fff; }
 .arc-idx {
-  position: absolute; top: 10px; left: 10px;
+  position: relative; top: 10px; left: 10px;
   font-size: 11px; color: var(--accent); font-weight: 600;
 }
 .ai-reply-card.flashed .arc-idx { color: #fff; }
@@ -13552,7 +16918,7 @@ onUnmounted(() => {
 /* ── Result footer ── */
 .ai-result-footer {
   display: flex; align-items: center; gap: 10px; padding-top: 6px;
-  border-top: 1px solid #1f2c33; margin-top: 2px;
+  border-top: 1px solid var(--border-color, #1f2c33); margin-top: 2px;
 }
 .arf-btn {
   background: transparent; border: 1px solid var(--text-muted);
@@ -13608,7 +16974,7 @@ onUnmounted(() => {
 .col-function-panel.translating .panel-col-header .col-toggle { color: var(--text-secondary); }
 .col-function-panel.translating .panel-col-header .col-toggle:hover { background: var(--sidebar-active); color: var(--text-primary); }
 .col-function-panel .ai-resize-handle {
-  position: absolute; left: -3px; top: 0; bottom: 0;
+  position: relative; left: -3px; top: 0; bottom: 0;
   width: 6px; cursor: col-resize; z-index: 10;
 }
 .col-function-panel .ai-resize-handle:hover { background: rgba(0,168,132,0.3); }
@@ -13648,17 +17014,18 @@ onUnmounted(() => {
 .mp-trigger { display:flex; align-items:center; justify-content:space-between; gap:8px; flex:1; min-width:0; padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background:var(--input-bg, rgba(255,255,255,0.06)); color:var(--text-primary,#e9edef); font-size:13px; cursor:pointer; }
 .mp-trigger:hover { border-color:rgba(37,211,102,0.5); }
 .mp-trigger-label { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mp-trigger-aitalk { max-width:200px; flex:0 0 auto; }
 .mp-chevron { font-size:11px; color:var(--text-secondary,#8696a0); flex-shrink:0; }
 .mp-overlay { position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; padding:20px; }
-.mp-panel { width:680px; max-width:96vw; max-height:82vh; overflow:hidden; background:var(--mgmt-card-bg,#1e252b); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.5); display:flex; flex-direction:column; }
+.mp-panel { width:920px; max-width:96vw; max-height:82vh; overflow:hidden; background:var(--mgmt-card-bg,#1e252b); border:1px solid rgba(255,255,255,0.1); border-radius:16px; box-shadow:0 12px 48px rgba(0,0,0,0.5); display:flex; flex-direction:column; }
 .mp-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.08); }
 .mp-title { font-size:16px; font-weight:600; color:var(--text-primary,#e9edef); }
 .mp-sub { font-size:12px; color:var(--text-secondary,#8696a0); margin-top:2px; }
 .mp-close { width:28px; height:28px; border-radius:8px; border:none; background:rgba(255,255,255,0.08); color:var(--text-secondary,#8696a0); cursor:pointer; font-size:14px; }
 .mp-close:hover { background:rgba(255,255,255,0.15); color:#fff; }
 .mp-body { display:flex; min-height:300px; }
-.mp-list { width:260px; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); overflow-y:auto; padding:8px; }
-.mp-item { padding:10px 12px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; transition:background 0.15s; }
+.mp-list { width:320px; flex-shrink:0; border-right:1px solid rgba(255,255,255,0.08); overflow-y:auto; padding:8px; }
+.mp-item { padding:10px 12px; border-radius:10px; cursor:pointer; display:flex; flex-wrap:nowrap; align-items:center; justify-content:space-between; gap:8px; transition:background 0.15s; }
 .mp-item:hover { background:rgba(255,255,255,0.06); }
 .mp-item.active { background:rgba(37,211,102,0.12); border:1px solid rgba(37,211,102,0.25); }
 .mp-item-main { display:flex; align-items:center; gap:6px; min-width:0; }
@@ -13678,6 +17045,17 @@ onUnmounted(() => {
 .mp-use-btn { margin-top:auto; padding:10px 0; border:none; border-radius:10px; background:#25D366; color:#06120a; font-size:14px; font-weight:600; cursor:pointer; }
 .mp-use-btn:hover { opacity:0.9; }
 .mp-detail-empty { font-size:13px; color:var(--text-secondary,#8696a0); text-align:center; margin:auto; }
+/* 手机端：底部弹出 + 上下布局 */
+@media (max-width: 768px) {
+  .mp-overlay { padding: 0; align-items: flex-end; }
+  .mp-panel { width: 100vw; max-width: 100vw; max-height: 92vh; border-radius: 16px 16px 0 0; }
+  .mp-header { padding: 14px 16px; }
+  .mp-body { flex-direction: column; min-height: 0; }
+  .mp-list { width: 100%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); max-height: 46vh; padding: 6px; }
+  .mp-item { padding: 10px 10px; }
+  .mp-detail { max-height: 46vh; padding: 16px; }
+  .mp-use-btn { margin-top: 4px; }
+}
 
 .sub-select { flex: 1; }
 .sub-help { color: var(--text-secondary); font-size: 14px; margin-right: 6px; cursor: help; transition: color .15s; }
@@ -13714,6 +17092,8 @@ onUnmounted(() => {
 .ib-toggle { margin-top: auto; align-self: center; width: 28px; height: 28px; border: none; background: var(--sidebar-active); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); margin-bottom: 12px; padding: 0; transition: background .15s, color .15s, transform .28s cubic-bezier(.4,0,.2,1); }
 .ib-toggle:hover { background: var(--text-muted); color: var(--text-primary); }
 .ib-toggle.expanded { transform: rotate(180deg); }
+[data-theme='light'] .ib-toggle { background: #c0c4c8; }
+[data-theme='light'] .ib-toggle:hover { background: #a0a5aa; color: #1f2937; }
 .col-iconbar.collapsed .ib-item { padding: 8px 4px; justify-content: center; }
 .ib-item { transition: padding .28s cubic-bezier(.4,0,.2,1), justify-content .28s cubic-bezier(.4,0,.2,1); }
 
@@ -14070,7 +17450,7 @@ onUnmounted(() => {
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
   .channel-popup-arrow {
-    position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
+    position: relative; bottom: -6px; left: 50%; transform: translateX(-50%);
     width: 12px; height: 12px;
     background: var(--panel-header-bg);
     border-right: 1px solid var(--border-color);
@@ -14280,7 +17660,7 @@ onUnmounted(() => {
 }
 .wa-account-item .acc-meta.online-text { color: var(--accent); }
 .wa-account-item .acc-online-dot {
-  position: absolute;
+  position: relative;
   right: 0;
   bottom: 0;
   width: 12px;
@@ -14683,8 +18063,8 @@ onUnmounted(() => {
 .aitalk-typing { display: inline-flex; align-items: center; gap: 4px; padding: 12px 16px; }
 .aitalk-progress { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
 .aitalk-progress-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.aitalk-progress-stage { font-size: 13px; color: var(--crm-text-primary, #e6e6e6); white-space: nowrap; }
-.aitalk-progress-time { font-size: 12px; color: var(--crm-text-secondary, #9aa0aa); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.aitalk-progress-stage { font-size: 13px; color: var(--text-primary, #e6e6e6); white-space: nowrap; }
+.aitalk-progress-time { font-size: 12px; color: var(--text-secondary, #9aa0aa); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .aitalk-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary);
   animation: aitalk-bounce 1.2s infinite ease-in-out; display: inline-block;
@@ -14715,9 +18095,9 @@ onUnmounted(() => {
   background: var(--panel-header-bg); border-radius: 8px; padding: 12px; margin-bottom: 8px;
   max-width: 100%; position: relative; transition: background .2s ease;
 }
-.aitalk-reply-card-v2:hover { background: #26353d; }
+.aitalk-reply-card-v2:hover { background: var(--sidebar-hover, #2a3942); }
 .aitalk-reply-num {
-  position: absolute; top: 8px; right: 10px; color: var(--accent); font-weight: 700;
+  position: relative; top: 8px; right: 10px; color: var(--accent); font-weight: 700;
   font-size: 12px; background: rgba(0,168,132,.12); width: 22px; height: 22px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
@@ -14758,7 +18138,7 @@ onUnmounted(() => {
 .aitalk-edit-input:focus { outline: none; border-color: var(--accent); }
 /* ── 场景分析 ── */
 .aitalk-scene-card {
-  display: flex; gap: 10px; background: #1a262d; border: 1px solid #233138;
+  display: flex; gap: 10px; background: var(--sidebar-active, #1a262d); border: 1px solid var(--border-color, #233138);
   border-radius: 8px; padding: 12px; margin-bottom: 10px;
 }
 .aitalk-scene-icon { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
@@ -14794,7 +18174,7 @@ onUnmounted(() => {
 /* ── 话术设计思路表格 ── */
 .aitalk-design-block { margin-top: 4px; }
 .aitalk-design-table {
-  background: #1a262d; border: 1px solid #233138; border-radius: 8px; overflow: hidden;
+  background: var(--sidebar-active, #1a262d); border: 1px solid var(--border-color, #233138); border-radius: 8px; overflow: hidden;
 }
 .aitalk-design-row {
   display: flex; align-items: flex-start; padding: 8px 12px;
@@ -14812,7 +18192,7 @@ onUnmounted(() => {
 .aitalk-suggest-block { margin-top: 4px; }
 .aitalk-suggest-list {
   list-style: none; margin: 0; padding: 0;
-  background: #1a262d; border: 1px solid #233138; border-radius: 8px; padding: 8px 12px;
+  background: var(--sidebar-active, #1a262d); border: 1px solid var(--border-color, #233138); border-radius: 8px; padding: 8px 12px;
 }
 .aitalk-suggest-list li {
   color: var(--text-primary); font-size: 13px; line-height: 1.7; padding: 3px 0;
@@ -14827,7 +18207,7 @@ onUnmounted(() => {
 }
 /* ── 优化反馈区 ── */
 .aitalk-refine-block {
-  margin-top: 10px; background: #1a262d; border: 1px solid #233138;
+  margin-top: 10px; background: var(--sidebar-active, #1a262d); border: 1px solid var(--border-color, #233138);
   border-radius: 8px; padding: 10px 12px;
 }
 .aitalk-refine-title { color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
@@ -14923,7 +18303,10 @@ onUnmounted(() => {
 /* ── 紧凑顶栏 ── */
 .aitalk-top-bar-compact { padding: 8px 10px 6px !important; gap: 4px !important; }
 .aitalk-top-bar-compact .aitalk-top-first-row { gap: 6px; }
+.aitalk-top-bar-compact .aitalk-top-first-row { flex-wrap: wrap; }
+.aitalk-top-bar-compact .aitalk-top-actions { flex-basis: 100%; justify-content: flex-start; margin-left: 0; margin-top: 2px; }
 .aitalk-top-bar-compact .aitalk-model-select { max-width: 120px; flex: 0 0 auto; }
+.aitalk-top-bar-compact .aitalk-model-label { width: auto; font-size: 13px; margin-right: 2px; }
 .aitalk-lang-select-compact { max-width: 90px; flex: 0 0 auto; }
 .aitalk-lang-select-compact .el-select__placeholder, .aitalk-lang-select-compact .el-select__selected-item { color: var(--text-primary) !important; font-size: 12px; }
 
@@ -14955,7 +18338,7 @@ onUnmounted(() => {
 }
 
 .aitalk-scroll-down {
-  position: absolute; right: 16px; bottom: 8px; width: 32px; height: 32px;
+  position: relative; right: 16px; bottom: 8px; width: 32px; height: 32px;
   border-radius: 50%; background: var(--panel-header-bg); border: 1px solid var(--text-muted); color: var(--accent);
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.4); z-index: 5;
@@ -15050,6 +18433,9 @@ onUnmounted(() => {
 .profile-scroll::-webkit-scrollbar { width: 5px; }
 .profile-scroll::-webkit-scrollbar-thumb { background: var(--sidebar-active); border-radius: 3px; }
 .profile-tab-pane { padding: 10px 12px; }
+.bg-model-row { display:flex; align-items:center; gap:8px; margin:8px 0; }
+.bg-model-row .sub-label { font-size:12px; color:var(--text-secondary); white-space:nowrap; flex-shrink:0; }
+.bg-model-row .sub-select { flex:1; }
 .profile-section-hint { font-size: 12px; color: var(--text-secondary); padding: 4px 2px 10px; }
 .profile-empty { text-align: center; padding: 30px 12px; color: var(--text-secondary); }
 .profile-loading { text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; }
@@ -15117,7 +18503,7 @@ onUnmounted(() => {
 
 /* Background check rating badges */
 .conv-bg-rating {
-  position: absolute;
+  position: relative;
   bottom: -2px;
   right: -2px;
   width: 18px;
@@ -15159,7 +18545,7 @@ onUnmounted(() => {
 
 /* ── BANT Score Styles ── */
 .conv-bant-level {
-  position: absolute; top: -2px; right: -2px;
+  position: relative; top: -2px; right: -2px;
   width: 18px; height: 18px; border-radius: 50%;
   color: #fff; font-size: 9px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
@@ -15761,7 +19147,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   .col-chatlist .search-box {
     flex: 1;
     min-height: 36px;
-    border-radius: 18px;
+    border-radius: 22px;
     padding: 0 12px;
     position: relative;
   }
@@ -15792,7 +19178,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   .col-new-chat:active, .col-filter-btn:active { background: var(--sidebar-active, #f0f2f5); }
   body.dark .col-new-chat:active, body.dark .col-filter-btn:active { background: #2a3942; }
   .filter-active-dot {
-    position: absolute;
+    position: relative;
     top: 7px;
     right: 7px;
     width: 8px;
@@ -15803,7 +19189,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
   /* 搜索框内待跟进徽章 */
   .search-fu-badge {
-    position: absolute;
+    position: relative;
     right: 6px;
     top: 50%;
     transform: translateY(-50%);
@@ -15825,7 +19211,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
   /* 三点下拉菜单 */
   .mobile-filter-menu {
-    position: absolute;
+    position: relative;
     top: 48px;
     right: 10px;
     min-width: 200px;
@@ -16081,66 +19467,83 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .tg-attach-item:hover { background: var(--sidebar-active, #374045) !important; }
 
 /* File preview chips */
-/* 附件预览条：输入框上方横排缩略图 */
-.ta-attach-bar {
+.pending-file-preview {
+  padding: 8px 12px;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 4px 4px 6px;
-  margin-bottom: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.ta-attach-chip {
-  position: relative;
-  flex-shrink: 0;
-  display: flex;
+.pending-file-info {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(59,130,246,0.12);
-  border: 1px solid rgba(59,130,246,0.28);
-  border-radius: 10px;
-  padding: 4px 8px 4px 4px;
-}
-.ta-attach-thumb {
-  width: 52px;
-  height: 52px;
-  object-fit: cover;
+  gap: 8px;
+  background: rgba(59,130,246,0.15);
+  border: 1px solid rgba(59,130,246,0.3);
   border-radius: 8px;
-  display: block;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #e5e7eb;
 }
-.ta-attach-fileicon { font-size: 22px; }
-.ta-attach-filename {
-  max-width: 140px;
+.pending-file-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.pending-file-icon {
+  font-size: 20px;
+}
+.pending-file-name {
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.pending-file-size {
+  color: #9ca3af;
   font-size: 12px;
-  color: var(--text-primary, #e9edef);
 }
-.ta-attach-remove {
-  position: absolute;
-  top: -6px; right: -6px;
-  width: 20px; height: 20px;
-  border-radius: 50%;
+.pending-file-remove {
+  background: none;
   border: none;
-  background: rgba(0,0,0,0.65);
-  color: #fff;
-  font-size: 14px;
-  line-height: 1;
+  color: #9ca3af;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  box-sizing: border-box;
+  font-size: 16px;
+  padding: 0 2px;
+  line-height: 1;
 }
-.ta-attach-remove:hover { background: #ef4444; }
+.pending-file-remove:hover {
+  color: #ef4444;
+}
+
+/* 智能选择移动端适配 */
 @media (max-width: 768px) {
-  .ta-attach-thumb { width: 64px; height: 64px; }
-  .ta-attach-remove { width: 24px; height: 24px; font-size: 16px; }
+  .ta-model-auto-row { margin: 10px 12px 6px; padding: 12px 14px; }
+  .ta-model-auto-title { font-size: 14px; }
+  .ta-model-auto-desc { font-size: 12px; }
 }
+
+.ib-ar-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#28c76f;box-shadow:0 0 4px rgba(40,199,111,.8)}
+.col-iconbar .ib-item{position:relative}
+.ar-panel-body{padding:16px;display:flex;flex-direction:column;gap:14px;color:var(--text-primary)}
+.ar-cust-info{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.ar-cust-icon{font-size:20px}
+.ar-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--text-primary)}
+.ar-label{font-size:13px;color:var(--text-secondary)}
+.ar-label-block{margin-top:2px}
+.ar-select{background:var(--bg-input,#2a3942);color:var(--text-primary);border:1px solid var(--border,#39464f);border-radius:6px;padding:5px 8px;font-size:13px;max-width:150px}
+.ar-select-full{width:100%;max-width:none}
+.ar-radio-group{display:flex;flex-direction:column;gap:8px}
+.ar-radio{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-primary);cursor:pointer;padding:6px 8px;border:1px solid transparent;border-radius:6px}
+.ar-radio.sel{background:var(--sidebar-active);border-color:var(--accent)}
+.ar-time-row{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-primary);flex-wrap:wrap}
+.ar-num{width:48px;background:var(--bg-input,#2a3942);color:var(--text-primary);border:1px solid var(--border,#39464f);border-radius:6px;padding:4px 6px}
+.ar-tz{color:var(--text-secondary);font-size:12px}
+.ar-actions{margin-top:2px}
+.ar-save-btn{width:100%;background:var(--accent,#00a884);color:#fff;border:none;border-radius:8px;padding:9px 0;font-size:14px;cursor:pointer}
+.ar-save-btn:disabled{opacity:.6;cursor:not-allowed}
+.ar-hint{font-size:12px;color:var(--text-secondary)}
 </style>
 
 <style>
@@ -16239,6 +19642,41 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   color: var(--text-primary) !important;
 }
 
+
+/* ========== 📌 智能跟进样式 ========== */
+.col-function-panel .followup-panel-body { padding: 14px 16px 16px; }
+.col-function-panel .followup-panel-body .followup-content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 4px; }
+.col-function-panel .followup-panel-body .profile-section-hint { padding: 0; color: var(--text-secondary); font-size: 12px; }
+.followup-scenario-row { display: flex; align-items: center; gap: 8px; }
+.followup-scenario-select, .followup-lang-select { flex: 1; height: 34px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg, #fff); color: var(--text-primary); font-size: 13px; padding: 0 8px; }
+.followup-scenario-tip { border: 1px solid var(--border-color); border-radius: 8px; background: var(--panel-bg, #fff); padding: 8px 10px; font-size: 12px; color: #8696a0; }
+.followup-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.followup-chip-label { font-size: 12px; color: var(--text-secondary); }
+.followup-chip { font-size: 12px; padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; background: var(--panel-bg, #fff); }
+.followup-chip.active { background: var(--accent, #00a884); color: #fff; border-color: var(--accent, #00a884); }
+.followup-action-btn { width: 100%; height: 40px; border-radius: 8px; }
+.followup-strategy-card, .followup-speech-card { border: 1px solid var(--border-color); border-radius: 8px; background: var(--panel-bg, #fff); padding: 10px 12px; }
+.followup-card-head { display: flex; align-items: center; justify-content: space-between; padding: 0 0 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); }
+.fu-line { font-size: 13px; margin-bottom: 6px; color: var(--text-primary); }
+.fu-block { margin-top: 8px; font-size: 13px; color: var(--text-primary); }
+.fu-ul { margin: 6px 0 0; padding-left: 18px; }
+.fu-ul li { font-size: 12.5px; color: var(--text-primary); margin-bottom: 4px; line-height: 1.5; }
+.followup-speech-row { display: flex; align-items: center; gap: 8px; }
+.followup-speech-btn { height: 34px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+.fu-copy-btn { border: 1px solid var(--border-color); background: transparent; color: var(--accent, #00a884); border-radius: 6px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
+.followup-speech-text { font-size: 13px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; }
+.followup-hand-send-tip { margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(0,168,132,0.08); color: var(--accent, #00a884); font-size: 12px; text-align: center; }
+.followup-history { border: 1px solid var(--border-color); border-radius: 8px; background: var(--panel-bg, #fff); overflow: hidden; }
+.followup-history-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; cursor: pointer; font-size: 13px; }
+.followup-history-body { max-height: 240px; overflow-y: auto; border-top: 1px solid var(--border-color); padding: 6px 12px; }
+.followup-history-item { padding: 8px 0; border-bottom: 1px dashed var(--border-color); }
+.followup-history-item:last-child { border-bottom: none; }
+.fu-h-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fu-h-scenario { font-size: 12px; font-weight: 600; color: var(--accent, #00a884); }
+.fu-h-time { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.fu-h-strategy { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+.fu-h-speech { font-size: 12.5px; color: var(--text-primary); margin-top: 3px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.fu-h-lang { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
 
 /* ── 🎯 需求总结面板 ── */
 .req-panel-body { padding: 0; height: 100%; overflow-y: auto; }
@@ -16465,7 +19903,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 .doc-type-chip.active .doc-type-chip-icon { filter: drop-shadow(0 0 4px #7c3aed80); }
 
-.doc-mode-bar { display: flex; gap: 6px; padding: 6px 12px 8px; border-bottom: 1px solid #1f2c33; }
+.doc-mode-bar { display: flex; gap: 6px; padding: 6px 12px 8px; border-bottom: 1px solid var(--border-color, #1f2c33); }
 .doc-mode-btn {
   flex: 1; background: var(--panel-header-bg); color: var(--text-secondary); border: 1px solid var(--sidebar-active);
   border-radius: 8px; padding: 7px 10px; font-size: 12.5px; cursor: pointer;
@@ -16505,7 +19943,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .doc-result-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 10px 12px; border-bottom: 1px solid var(--sidebar-active);
-  background: linear-gradient(135deg, var(--panel-header-bg), #1a262d);
+  background: linear-gradient(135deg, var(--panel-header-bg), var(--sidebar-active, #1a262d));
 }
 .doc-result-type-tag {
   background: var(--text-muted); color: var(--text-secondary); font-size: 11px; font-weight: 600;
@@ -16516,7 +19954,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .doc-result-body-wrap { position: relative; padding: 4px 0; max-height: 2000px; transition: max-height .3s ease; overflow:hidden; }
 .doc-result-body-wrap.doc-collapsed { max-height: 300px; }
 .doc-fade-mask {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+  position: relative; bottom: 0; left: 0; right: 0; height: 80px;
   background: linear-gradient(to bottom, rgba(32,44,51,0), var(--panel-header-bg) 80%);
   pointer-events: none;
 }
@@ -16525,14 +19963,14 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   color: #c4b5fd; font-size: 12px; padding: 8px; cursor: pointer; font-family: inherit;
   transition: background .15s;
 }
-.doc-expand-btn:hover { background: #26353d; }
+.doc-expand-btn:hover { background: var(--sidebar-hover, #26353d); }
 
 .doc-result-body { padding: 10px 12px; color: var(--text-primary); font-size: 13px; line-height: 1.6; word-break: break-word; }
 .doc-doc-title { color: #fff; font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--sidebar-active); }
 
 /* Section cards inside doc */
 .doc-section-card {
-  background: #1a262d; border: 1px solid #233138; border-radius: 8px;
+  background: var(--sidebar-active, #1a262d); border: 1px solid var(--border-color, #233138); border-radius: 8px;
   padding: 10px 12px; margin-bottom: 8px;
 }
 .doc-section-card:last-child { margin-bottom: 0; }
@@ -16541,8 +19979,8 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .doc-section-title { color: #c4b5fd; font-size: 13px; font-weight: 700; letter-spacing: .2px; }
 .doc-section-body { color: var(--text-primary); font-size: 12.5px; line-height: 1.65; }
 .doc-section-body table { width:100%; border-collapse:collapse; background:var(--panel-bg); border-radius:6px; overflow:hidden; margin:6px 0; font-size:12px; }
-.doc-section-body th { background:#0f1920; color:var(--accent); font-weight:600; padding:6px 7px; text-align:left; border-bottom:1px solid var(--sidebar-active); white-space:nowrap; font-size:11.5px; }
-.doc-section-body td { padding:6px 7px; border-bottom:1px solid #1f2c33; color:var(--text-primary); vertical-align:top; font-size:11.5px; }
+.doc-section-body th { background:var(--sidebar-active, #0f1920); color:var(--accent); font-weight:600; padding:6px 7px; text-align:left; border-bottom:1px solid var(--sidebar-active); white-space:nowrap; font-size:11.5px; }
+.doc-section-body td { padding:6px 7px; border-bottom:1px solid var(--border-color, #1f2c33); color:var(--text-primary); vertical-align:top; font-size:11.5px; }
 .doc-section-body p { margin: 3px 0; }
 .doc-section-body b,.doc-section-body strong { color:var(--text-primary); font-weight:700 }
 .doc-section-body ul,.doc-section-body ol { padding-left:18px; margin:4px 0; }
@@ -16550,8 +19988,8 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 
 /* Tables (fallback for markdown-body outside sections) */
 .markdown-body table { width:100%; border-collapse:collapse; background:var(--panel-bg); border-radius:6px; overflow:hidden; margin:8px 0; }
-.markdown-body th { background:#1a262d; color:var(--accent); font-weight:600; padding:7px 9px; text-align:left; border-bottom:1px solid var(--sidebar-active); font-size:12px; white-space:nowrap; }
-.markdown-body td { padding:7px 9px; border-bottom:1px solid #1f2c33; color:var(--text-primary); font-size:12px; vertical-align:top; }
+.markdown-body th { background:var(--sidebar-active, #1a262d); color:var(--accent); font-weight:600; padding:7px 9px; text-align:left; border-bottom:1px solid var(--sidebar-active); font-size:12px; white-space:nowrap; }
+.markdown-body td { padding:7px 9px; border-bottom:1px solid var(--border-color, #1f2c33); color:var(--text-primary); font-size:12px; vertical-align:top; }
 .markdown-body h1 { color:#fff;font-size:17px;font-weight:700;margin:8px 0 12px;text-align:center }
 .markdown-body h2 { color:var(--text-primary);font-size:15px;font-weight:700;margin:14px 0 8px }
 .markdown-body h3 { color:var(--text-primary);font-size:13.5px;font-weight:700;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--sidebar-active) }
@@ -16578,7 +20016,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 }
 .doc-result-bottom-actions {
   display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--sidebar-active);
-  background: #1a262d;
+  background: var(--sidebar-active, #1a262d);
 }
 .doc-act-sec {
   flex: 1; background: var(--sidebar-active); color: var(--text-primary); border: none; border-radius: 8px;
@@ -16638,7 +20076,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .doc-compact-act-danger:hover { background: #2a2025; color: #f87171; border-color: #f87171; }
 .doc-compact-spacer { flex: 1; }
 .doc-lang-picker {
-  position: absolute; z-index: 30; top: 96px; left: 12px; right: 12px;
+  position: relative; z-index: 30; top: 96px; left: 12px; right: 12px;
   background: var(--panel-header-bg); border: 1px solid var(--text-muted); border-radius: 10px;
   max-height: 260px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.4);
   padding: 4px 0;
@@ -16836,7 +20274,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
     gap: 12px;
     padding: 10px 16px;
     flex-wrap: wrap;
-    position: absolute;
+    position: relative;
     top: 0;
     left: 0;
     right: 0;
@@ -17032,6 +20470,29 @@ body.dark .mh-dd-item:active { background:#2a3942; }
   color: var(--text-primary, #e9edef) !important;
   -webkit-text-fill-color: var(--text-primary, #e9edef) !important;
 }
+.cm-action-bar{display:flex;gap:8px;padding:10px 0 6px;border-bottom:1px solid #f0f0f0;margin-bottom:10px}
+.cm-action-item{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #e5e5e5;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;color:#333;transition:all .15s}
+.cm-action-item:hover{border-color:var(--primary-color,#4a90d9);color:var(--primary-color,#4a90d9);background:#f6faff}
+.cma-icon{font-size:16px;line-height:1}
+.cma-text{font-weight:500}
+.cm-import-tip{display:flex;align-items:center;gap:8px;font-size:13px;color:#888;font-weight:500}
+.cm-help-btn{border:none;background:none;cursor:pointer;font-size:14px;padding:0;color:var(--primary-color,#4a90d9);line-height:1}
+.cm-import-tip .cm-help-btn:hover{opacity:.8}
+.cm-help-body{display:flex;flex-direction:column;gap:14px;max-height:60vh;overflow:auto}
+.cm-help-sec{display:flex;flex-direction:column;gap:6px}
+.cm-help-sec-title{font-weight:600;font-size:14px;color:#333}
+.cm-help-step{font-size:13px;color:#555;line-height:1.6}
+.cm-help-note{margin-top:6px;font-size:13px;color:var(--primary-color,#4a90d9);background:#f6faff;border-radius:6px;padding:8px 10px}
+.cm-import-form{display:flex;flex-direction:column;gap:12px;padding:8px 0}
+.cm-import-loading{text-align:center;color:#888;font-size:14px;padding:20px 0}
+.cm-import-result{padding:4px 0}
+.cm-import-list{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.cm-import-item{display:flex;align-items:center;padding:8px 10px;border:1px solid #eee;border-radius:6px;background:#fafafa;flex-direction:column;align-items:stretch;gap:2px}
+.cm-import-item.checked{border-color:var(--primary-color,#4a90d9);background:#f0f7ff}
+.cm-import-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.cm-import-check input{width:15px;height:15px;accent-color:var(--primary-color,#4a90d9)}
+.cm-import-name{font-weight:500;font-size:14px}
+.cm-import-price{margin-left:auto;color:var(--primary-color,#4a90d9);font-weight:600;font-size:13px}
 .cm-dialog .el-input__inner::placeholder,
 .cm-dialog .el-textarea__inner::placeholder,
 .cm-cat-dialog .el-input__inner::placeholder,
@@ -17187,7 +20648,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .nc-title { flex: 1; font-size: 16px; font-weight: 600; color: #fff; text-align: center; }
 .nc-spacer { width: 40px; }
 .nc-close {
-  position: absolute; right: 14px; top: 12px;
+  position: relative; right: 14px; top: 12px;
   background: none; border: none; color: #8696a0; font-size: 18px;
   cursor: pointer; padding: 4px 8px; border-radius: 4px;
 }
@@ -17208,7 +20669,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .nc-cc { font-size: 14px; color: #e9edef; font-weight: 500; }
 .nc-caret { font-size: 10px; color: #8696a0; margin-left: 2px; }
 .nc-country-list {
-  position: absolute; top: calc(100% + 4px); left: 0;
+  position: relative; top: calc(100% + 4px); left: 0;
   background: #202329; border: 1px solid #2f3338; border-radius: 6px;
   max-height: 240px; overflow-y: auto; width: 220px; z-index: 10;
   box-shadow: 0 6px 20px rgba(0,0,0,.4);
@@ -17283,7 +20744,7 @@ body.dark .mh-dd-item:active { background:#2a3942; }
 .conv-badge-star { opacity:0.95; }
 .conv-item { position: relative; }
 .conv-chevron {
-  position: absolute;
+  position: relative;
   top: 50%;
   right: 10px;
   transform: translateY(-50%);
@@ -17427,7 +20888,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .wc-flag { font-size: 20px; }
 .wc-city-name { font-weight: 600; font-size: 15px; color: var(--text-primary); }
 .wc-tz-diff { font-size: 11px; color: var(--text-secondary); background: var(--tag-bg, rgba(0,168,132,.1)); padding: 2px 6px; border-radius: 4px; color: var(--accent-color, #00a884); }
-.wc-del-btn { background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.wc-del-btn { background: none; border: none; color: var(--text-secondary); font-size: 14px; cursor: pointer; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .wc-del-btn:hover { background: rgba(231,76,60,.15); color: #e74c3c; }
 
 /* ─── 🕰️ 时间与文化面板 ─── */
@@ -17497,6 +20958,10 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   width: 100%; padding: 6px 8px; border-radius: 6px;
   border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);
   font-size: 12px; outline: none;
+}
+/* 下拉框原生选项层：跟随主题（默认深色，light 时浅色），避免夜间白底看不清 */
+.cul-pick-select option {
+  background: var(--bg-primary); color: var(--text-primary);
 }
 .cul-pick-select:focus { border-color: var(--accent-color, #3b82f6); }
 .cul-empty-tip { text-align: center; padding: 24px 16px 16px; }
@@ -17666,7 +21131,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   .col-chatlist .search-box {
     flex: 1;
     min-height: 36px;
-    border-radius: 18px;
+    border-radius: 22px;
     padding: 0 12px;
     position: relative;
   }
@@ -17697,7 +21162,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   .col-new-chat:active, .col-filter-btn:active { background: var(--sidebar-active, #f0f2f5); }
   body.dark .col-new-chat:active, body.dark .col-filter-btn:active { background: #2a3942; }
   .filter-active-dot {
-    position: absolute;
+    position: relative;
     top: 7px;
     right: 7px;
     width: 8px;
@@ -17708,7 +21173,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
   /* 搜索框内待跟进徽章 */
   .search-fu-badge {
-    position: absolute;
+    position: relative;
     right: 6px;
     top: 50%;
     transform: translateY(-50%);
@@ -17730,7 +21195,7 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 
   /* 三点下拉菜单 */
   .mobile-filter-menu {
-    position: absolute;
+    position: relative;
     top: 48px;
     right: 10px;
     min-width: 200px;
@@ -18191,15 +21656,6 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   overflow: hidden;
   background: rgba(255,255,255,0.03);
 }
-.platform-collapsed .platform-children {
-  position: absolute; left: calc(100% + 8px); top: 0;
-  min-width: 170px; background: var(--panel-bg);
-  border: 1px solid var(--border-color); border-radius: 8px;
-  padding: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.22);
-  z-index: 1000; overflow: visible;
-}
-.platform-collapsed .platform-child { padding: 8px 14px; }
-.platform-collapsed .platform-child .p-child-label { white-space: nowrap; }
 .platform-child {
   display: flex;
   align-items: center;
@@ -18221,6 +21677,10 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   border-left-color: var(--accent, #00a884);
   font-weight: 600;
 }
+.p-child-icon.ch-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; }
+.p-child-icon.ch-icon svg { width: 18px; height: 18px; }
+.platform-child.disabled { opacity: 0.4; cursor: not-allowed; }
+.ch-ch-badge { min-width: 16px; height: 16px; border-radius: 8px; font-size: 10px; font-weight: 600; color: #fff; display: flex; align-items: center; justify-content: center; padding: 0 4px; margin-left: auto; }
 .p-child-icon {
   font-size: 16px;
   width: 20px;
@@ -18407,7 +21867,10 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 }
 .ta-expand-btn:hover { color: var(--text-primary, #e9edef); }
 /* 中间：聊天区 */
-.ta-chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--chat-bg, #0b141a); border-right: 1px solid rgba(255,255,255,0.06); }
+.ta-chat-main { position: relative; flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--chat-bg, #0b141a); border-right: 1px solid rgba(255,255,255,0.06); }
+.ta-scrollbar-track { position: absolute; right: 2px; top: 0; bottom: 0; width: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; z-index: 10; }
+.ta-scrollbar-thumb { position: absolute; right: 1px; width: 6px; min-height: 30px; background: rgba(255,255,255,0.3); border-radius: 3px; cursor: pointer; }
+.ta-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
 .ta-chat-header {
   display: flex; align-items: center; gap: 12px; padding: 16px 20px;
   border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--mgmt-card-bg, #1e252b);
@@ -18420,7 +21883,8 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .ta-header-name { font-size: 15px; font-weight: 600; color: var(--text-primary, #e9edef); }
 .ta-header-status { font-size: 12px; color: #25d366; }
 /* 消息区 */
-.ta-chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.ta-chat-messages { flex: 1; overflow-y: auto; padding: 20px 15%; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; width: 100%; scrollbar-gutter: stable; scrollbar-width: none; }
+.ta-chat-messages::-webkit-scrollbar { display: none; }
 /* 欢迎区 */
 .ta-welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; flex: 1; }
 .ta-welcome-icon { font-size: 48px; margin-bottom: 16px; }
@@ -18436,22 +21900,18 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .ta-message { display: flex; gap: 10px; max-width: 80%; }
 .ta-message.ai { align-self: flex-start; }
 .ta-message.user { align-self: flex-end; flex-direction: row-reverse; }
-.ta-msg-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center;
-  font-size: 16px; flex-shrink: 0;
-}
+.ta-msg-avatar { display: none !important; }
 .ta-msg-avatar.user-avatar { background: rgba(37,211,102,0.15); }
 .ta-msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; white-space: pre-wrap; }
-.ta-msg-bubble.ai { background: var(--mgmt-card-bg, #1e252b); color: var(--text-primary, #e9edef); }
-.ta-msg-bubble.user { background: #25d366; color: #fff; }
-.ta-msg-bubble.user.ta-img-only { background: transparent !important; padding: 2px !important; }
-.ta-msg-bubble.ta-img-only .ta-msg-img { border-radius: 8px; display: block; }
+.ta-msg-bubble.ai { background: var(--mgmt-card-bg, #1e252b); border: 1px solid rgba(255,255,255,0.12); color: var(--text-primary, #e9edef); }
+.ta-msg-bubble.user { background: #e6e8ea; color: #111b21; }
+[data-theme="dark"] .ta-msg-bubble.user { background: #2a363d; color: #fff; }
 /* 胶囊快捷指令（输入框上方常驻） */
 .ta-capsule-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  justify-content: center;
   padding: 8px 16px 2px;
   background: var(--chat-bg, #0b141a);
 }
@@ -18491,28 +21951,25 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 /* 底部输入区 */
 .ta-input-area { padding: 12px 16px 16px; position: relative; background: var(--chat-bg, #0b141a); }
 .ta-input-row {
-  display: flex; flex-direction: column;
-  background: var(--mgmt-card-bg, #1e252b); border-radius: 16px; padding: 6px 12px 6px;
+  display: flex; align-items: flex-end; gap: 8px; width: 70%; margin: 0 auto;
+  background: var(--mgmt-card-bg, #1e252b); border-radius: 16px; padding: 10px 12px;
   border: 1px solid rgba(255,255,255,0.08); transition: border-color 0.2s;
-}
-.ta-input-inner {
-  display: flex; align-items: flex-end; gap: 8px;
 }
 .ta-input-row:focus-within { border-color: rgba(59,130,246,0.4); }
 .ta-input-plus {
-  width: 34px; height: 34px; min-width: 34px; min-height: 34px; border-radius: 50%; border: none;
-  background: rgba(59,130,246,0.12); color: #60a5fa; font-size: 22px; line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s;
-  padding: 0; -webkit-appearance: none; appearance: none; box-sizing: border-box;
+  width: 32px; height: 32px; min-width: 32px; min-height: 32px; aspect-ratio: 1/1; border-radius: 50%; border: none;
+  background: rgba(59,130,246,0.12); color: #60a5fa; font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; align-self: center; transition: all 0.2s;
 }
 .ta-input-plus:hover { background: rgba(59,130,246,0.25); }
 .ta-input-textarea {
   flex: 1; border: none; background: transparent; color: var(--text-primary, #e9edef);
   font-size: 14px; resize: none; outline: none; max-height: 120px; line-height: 1.5;
-  padding: 6px 0; font-family: inherit;
+  min-height: 48px; padding: 8px 0; font-family: inherit;
 }
 .ta-input-textarea::placeholder { color: var(--text-secondary, #8696a0); }
 .ta-input-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ta-input-actions.agent-actions-idle { display: none !important; }
 .ta-model-btn {
   padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12);
   background: transparent; color: var(--text-primary, #e9edef); font-size: 13px; cursor: pointer;
@@ -18532,17 +21989,103 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 }
 .ta-send-btn:hover { background: #20bd5a; transform: scale(1.05); }
 .ta-send-btn:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); cursor: not-allowed; transform: none; }
+/* 桌面端隐藏三点菜单按钮 */
+.ta-header-more-btn { display: none; }
 
 /* 移动端输入区精简：隐藏死按钮、防挤压溢出 */
 @media (max-width: 900px) {
-  .ta-input-row { gap: 6px; padding: 6px 10px; }
-  .ta-input-textarea { min-width: 0; }
+  /* 移动端：隐藏右侧图标栏 */
+  .ta-iconbar { display: none !important; }
+
+  /* 移动端：右侧面板改为从底部上拉 */
+  .ta-file-panel, .ta-task-panel, .ta-wecom-panel {
+    display: none !important;
+  }
+  .ta-file-panel.open, .ta-task-panel.open, .ta-wecom-panel.open {
+    display: flex !important;
+    position: fixed !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    max-height: 70vh !important;
+    z-index: 9999 !important;
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  /* 三点菜单按钮 */
+  .ta-header-more-btn {
+    display: flex;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary, #8696a0);
+    cursor: pointer;
+    padding: 4px 12px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .ta-header-more-btn:hover { color: var(--text-primary, #e9edef); }
+
+  /* 底部上拉面板样式 */
+  .ta-mobile-menu-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .ta-mobile-menu-sheet {
+    background: var(--chat-bg, #1a2a3a);
+    border-radius: 16px 16px 0 0;
+    padding: 12px 0 30px;
+    width: 100%;
+    max-width: 500px;
+    animation: slideUp 0.25s ease-out;
+  }
+  .ta-mobile-menu-handle {
+    width: 36px;
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .ta-mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 16px 24px;
+    background: none;
+    border: none;
+    color: var(--text-primary, #e9edef);
+    font-size: 16px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .ta-mobile-menu-item:active { background: rgba(255,255,255,0.08); }
+  .ta-mobile-menu-icon { font-size: 22px; }
+  .ta-mobile-menu-label { flex: 1; }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .ta-input-area { padding: 8px 8px 10px; }
+  .ta-input-row { gap: 6px; padding: 8px 10px; width: 100%; margin: 0; border-radius: 18px; align-items: center; }
+  .ta-input-textarea { min-width: 0; min-height: 0; padding: 0; }
   .ta-file-btn, .ta-mic-btn { display: none; }
   .ta-model-btn { padding: 5px 8px; font-size: 12px; flex-shrink: 0; }
 }
 /* 附件菜单 */
 .ta-attach-menu {
-  position: absolute; bottom: 100%; right: 24px;
+  position: relative; bottom: 100%; left: 24px;
   background: var(--mgmt-card-bg, #1e252b); border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.1); padding: 6px;
   display: flex; flex-direction: column; gap: 2px;
@@ -18631,22 +22174,51 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 .ta-file-panel-footer { padding: 10px 16px; font-size: 12px; color: var(--text-secondary, #8696a0); border-top: 1px solid rgba(255,255,255,0.06); }
 /* 模型选择弹窗 */
 .ta-model-overlay {
-  position: absolute; bottom: 100%; left: 0; right: 0;
-  z-index: 1000;
+  position: absolute; bottom: 100%; right: 16px; z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: flex-end; padding-bottom: 8px;
   pointer-events: none;
-}
-.ta-model-backdrop {
-  position: fixed; inset: 0; z-index: 2000;
-  background: transparent; pointer-events: auto;
+  left: 0; right: 0;
 }
 .ta-model-overlay .ta-model-popup {
   pointer-events: auto;
 }
-.ta-model-popup {
-  background: var(--mgmt-card-bg, #1e252b); border-radius: 0;
-  border: none; border-top: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 -4px 24px rgba(0,0,0,0.3);
-  width: 100%; max-height: 420px; overflow: hidden; display: flex; flex-direction: column;
+.ta-model-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; background: rgba(0, 0, 0, 0.28); pointer-events: auto; }
+/* ===== Agent 模型选择二级菜单（扣子式）===== */
+.ta-model-popup { display: flex; flex-direction: row; align-items: stretch; width: 620px; max-width: calc(100vw - 24px); border-radius: 12px; background: var(--panel-bg, #111b21); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 16px 56px rgba(0,0,0,0.45); pointer-events: auto; position: relative; z-index: 20; overflow: hidden; }
+.agm-col { min-height: 0; }
+.agm-col-list { flex: 1.1; min-width: 0; max-width: 300px; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.08); }
+.agm-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 8px 12px; }
+.agm-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: 10px; cursor: pointer; transition: background .15s; }
+.agm-item:hover { background: rgba(255,255,255,0.06); }
+.agm-item.active { background: rgba(37,211,102,0.12); box-shadow: inset 2px 0 0 #25d366; }
+.agm-item-icon { font-size: 20px; flex-shrink: 0; }
+.agm-item-body { flex: 1; min-width: 0; }
+.agm-item-name { font-size: 13px; color: var(--text-primary,#e9edef); font-weight: 600; }
+.agm-item-tagrow { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+.agm-tag { font-size: 10px; padding: 1px 6px; border-radius: 999px; font-weight: 600; }
+.agm-tag-default { background: rgba(37,211,102,0.18); color: #25d366; }
+.agm-tag-blue { background: rgba(59,130,246,0.18); color: #60a5fa; }
+.agm-tag-credit { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.agm-item-check { color: #25d366; font-size: 15px; font-weight: bold; flex-shrink: 0; }
+.agm-col-detail { flex: 1.35; min-width: 0; display: flex; flex-direction: column; padding: 14px 16px 12px; }
+.agm-detail-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.agm-detail-name { font-size: 17px; font-weight: 700; color: var(--text-primary,#e9edef); }
+.agm-detail-meta { font-size: 12px; color: #fbbf24; margin-top: 4px; }
+.agm-detail-desc { font-size: 12px; color: var(--text-secondary,#8696a0); line-height: 1.5; margin-top: 6px; }
+.agm-detail-sec { margin-top: 14px; }
+.agm-detail-sec-title { font-size: 13px; font-weight: 600; color: var(--text-primary,#e9edef); margin-bottom: 4px; }
+.agm-detail-sec-body { font-size: 12px; color: var(--text-secondary,#8696a0); line-height: 1.55; }
+.agm-detail-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.agm-detail-tag { font-size: 11px; padding: 3px 10px; border-radius: 6px; background: rgba(59,130,246,0.14); color: #93c5fd; }
+.agm-use-btn { flex-shrink: 0; margin-top: 12px; width: 100%; background: #25d366; color: #03200f; border: none; border-radius: 8px; padding: 10px 0; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .2s; }
+.agm-use-btn:hover { background: #2eea73; }
+@media (max-width: 768px) {
+  .ta-model-overlay { position: fixed; inset: 0; align-items: center; justify-content: center; padding: 12px; bottom: 0; right: 0; }
+  .ta-model-popup { flex-direction: column; width: 100%; max-width: 100%; max-height: 90vh; border-radius: 16px; }
+  .agm-col-list { max-width: none; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .agm-list { max-height: 34vh; }
+  .agm-col-detail { }
+  .agm-use-btn { padding: 12px 0; }
 }
 /* 智能选择行 */
 .ta-model-auto-row {
@@ -18673,13 +22245,14 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   box-shadow: 0 2px 4px rgba(0,0,0,0.25); box-sizing: border-box;
 }
 .ta-model-toggle.on .ta-model-toggle-knob { transform: translateX(20px); }
-/* 模型描述 */
-.ta-model-item-content { flex: 1; min-width: 0; }
-.ta-model-item-header { display: flex; align-items: center; gap: 6px; }
-.ta-model-desc { font-size: 11px; color: var(--text-secondary, #8696a0); margin-top: 2px; line-height: 1.3; }
-.ta-model-tabs { display: none; }
+.ta-model-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.ta-model-tabs button {
+  flex: 1; padding: 12px; border: none; background: transparent;
+  color: var(--text-secondary, #8696a0); font-size: 14px; cursor: pointer; transition: all 0.2s;
+}
+.ta-model-tabs button.active { color: #60a5fa; border-bottom: 2px solid #3b82f6; }
 .ta-model-group-title { padding: 12px 16px 4px; font-size: 12px; color: var(--text-secondary, #8696a0); }
-.ta-model-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 4px; }
+.ta-model-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
 .ta-model-item {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px;
   border-radius: 10px; cursor: pointer; transition: background 0.15s;
@@ -18697,33 +22270,6 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
   text-align: center; color: #60a5fa; font-size: 13px; cursor: pointer; transition: background 0.2s;
 }
 .ta-model-add:hover { background: rgba(59,130,246,0.08); }
-
-/* ===== 移动端：模型弹窗底部抽屉化 ===== */
-@media (max-width: 768px) {
-  .ta-model-popup {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    width: 100%; max-width: 100%; max-height: 72vh;
-    border-radius: 16px 16px 0 0;
-    border-top: 1px solid rgba(255,255,255,0.1);
-    z-index: 2001;
-    animation: taModelSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  .ta-model-auto-row { margin: 10px 12px 6px; padding: 12px 14px; }
-  .ta-model-auto-title { font-size: 14px; }
-  .ta-model-auto-desc { font-size: 12px; }
-  .ta-model-name { font-size: 15px; }
-  .ta-model-desc { font-size: 12px; }
-  .ta-model-item { padding: 12px 14px; }
-  .ta-model-list { padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
-  .ta-model-toggle { width: 50px; height: 30px; min-width: 50px; padding: 3px; }
-  .ta-model-toggle-knob { width: 24px; height: 24px; }
-  .ta-model-toggle.on .ta-model-toggle-knob { transform: translateX(22px); }
-}
-@keyframes taModelSlideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
 
 
 /* ===== V1.0 客户选择面板 ===== */
@@ -18914,6 +22460,209 @@ html.dark .wc-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.3); }
 }
 .no-account-cta:hover { background: #1fb855; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,211,102,0.3); }
 .no-account-cta:active { transform: translateY(0); }
+
+/* ===== 登录/欢迎态隐藏客户列表栏（Bug4/Bug5） ===== */
+.col-chatlist.wa-hidden { display: none; }
+
+
+/* ====== L2: Business Confirmation Banner ====== */
+.biz-confirm-banner {
+  position: relative;
+  z-index: 100;
+  background: linear-gradient(135deg, #1a2332 0%, #0d1b2a 100%);
+  border-bottom: 1px solid rgba(37, 211, 102, 0.3);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  animation: bizConfirmSlideDown 0.3s ease-out;
+  flex-shrink: 0;
+}
+
+@keyframes bizConfirmSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.biz-confirm-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  max-width: 100%;
+}
+
+.biz-confirm-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 211, 102, 0.15);
+  border-radius: 50%;
+}
+
+.biz-confirm-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.biz-confirm-label {
+  font-size: 13px;
+  color: #e9edef;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.biz-confirm-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.biz-confirm-q {
+  flex-shrink: 0;
+}
+
+.biz-confirm-counter {
+  font-size: 11px;
+  color: #8696a0;
+  background: rgba(255,255,255,0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.biz-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.biz-confirm-btn {
+  padding: 6px 14px;
+  border-radius: 18px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.biz-confirm-phone {
+  font-size: 12px;
+  color: #9fb3c8;
+  font-weight: 400;
+}
+
+.biz-confirm-view {
+  background: rgba(255,255,255,0.08);
+  color: #e9edef;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.biz-confirm-view:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+.biz-confirm-yes {
+  background: #25D366;
+  color: #0b141a;
+}
+
+.biz-confirm-yes:hover {
+  background: #1fa855;
+  transform: scale(1.02);
+}
+
+.biz-confirm-no {
+  background: rgba(255,255,255,0.08);
+  color: #8696a0;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.biz-confirm-no:hover {
+  background: rgba(255,255,255,0.12);
+  color: #e9edef;
+}
+
+.biz-confirm-slide-enter-active {
+  animation: bizConfirmSlideDown 0.3s ease-out;
+}
+.biz-confirm-slide-leave-active {
+  animation: bizConfirmSlideDown 0.3s ease-out reverse;
+}
+
+@media (max-width: 768px) {
+  .biz-confirm-inner {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .biz-confirm-text {
+    flex-basis: calc(100% - 48px);
+  }
+  .biz-confirm-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .biz-confirm-btn {
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+}
+
+
+.ta-task-panel {
+  width: 0; min-width: 0; background: var(--mgmt-card-bg, #1e252b);
+  border-left: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
+  overflow: hidden; transition: width 0.3s ease, min-width 0.3s ease;
+}
+.ta-task-panel.open { width: 280px; min-width: 280px; }
+.ta-task-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; font-size: 14px; font-weight: 600;
+  color: var(--text-primary, #e9edef); border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.ta-task-panel-close {
+  width: 24px; height: 24px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.06); color: var(--text-secondary, #8696a0);
+  font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.ta-task-panel-close:hover { background: rgba(255,255,255,0.12); }
+.ta-task-panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+.ta-task-card {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 14px;
+}
+.ta-task-card-name { font-size: 15px; font-weight: 600; color: var(--text-primary, #e9edef); margin-bottom: 10px; }
+.ta-task-card-status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #4ade80; background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.25); padding: 3px 10px; border-radius: 999px;
+  margin-bottom: 12px;
+}
+.ta-task-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+.ta-task-card-label { font-size: 11px; color: var(--text-secondary, #8696a0); margin-bottom: 4px; }
+.ta-task-card-instr {
+  font-size: 13px; color: var(--text-primary, #e9edef); line-height: 1.6;
+  background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 12px; word-break: break-all;
+}
+.ta-task-empty { display: flex; flex-direction: column; align-items: center; padding: 40px 0; color: var(--text-secondary, #8696a0); }
+.ta-task-empty p { margin: 4px 0; }
+.ta-task-terminate {
+  display: block; width: 100%; margin-top: 14px; padding: 9px 12px;
+  border-radius: 8px; border: 1px solid rgba(244,63,94,0.35);
+  background: rgba(244,63,94,0.12); color: #f87171;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.ta-task-terminate:hover { background: rgba(244,63,94,0.22); color: #fca5a5; }
 
 /* ===== TG 欢迎页（无账号时） ===== */
 .tg-welcome-icon-wrap { background: linear-gradient(135deg, rgba(42,171,238,0.08) 0%, rgba(42,171,238,0.15) 100%); }
@@ -19342,4 +23091,10 @@ html[data-theme="dark"] .tg-next-btn {
 }
 html[data-theme="dark"] .tg-next-btn:hover { background: #2f86db; }
 
+
+/* 账号栏收起态：头像+名称列表(对齐竞品) */
+.ch-collapsed-list{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0;cursor:pointer;}
+.ch-collapsed-item{display:flex;align-items:center;justify-content:center;padding:2px 0;}
+.ch-collapsed-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:16px;overflow:hidden;flex-shrink:0;border:2px solid var(--border-color,#2a3942);}
+.ch-collapsed-empty{font-size:12px;color:var(--text-secondary,#8696a0);padding:6px 8px;}
 </style>

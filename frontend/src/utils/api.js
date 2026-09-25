@@ -2,7 +2,9 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/auth.js';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() !== 'web')
+    ? 'http://45.76.223.251:3002/api'
+    : '/api',
   timeout: 60000,
 });
 

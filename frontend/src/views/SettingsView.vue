@@ -214,13 +214,19 @@
         <div class="stg-group">
           <div v-if="creditsTxLoading" class="stg-row stg-row-static"><span class="stg-row-title stg-text-dim">加载中...</span></div>
           <template v-else-if="creditsTx.length > 0">
-            <div v-for="tx in creditsTx" :key="tx.id" class="stg-row stg-row-static stg-tx-row">
-              <span class="stg-tx-icon" :class="tx.amount >= 0 ? 'in' : 'out'">{{ tx.amount >= 0 ? '＋' : '－' }}</span>
-              <span class="stg-tx-main">
-                <span class="stg-tx-title">{{ tx.reason || txTypeLabel(tx.type) }}</span>
-                <span class="stg-tx-time">{{ fmtTxTime(tx.createdAt) }}</span>
+        <div class="stg-tx-tbl-hd">
+              <span class="c-model">模型名称</span><span class="c-purpose">用途</span><span class="c-type">类型</span><span class="c-time">时间</span><span class="c-amt">积分消耗</span><span class="c-op">操作</span>
+            </div>
+            <div v-for="tx in creditsTx" :key="tx.id" class="stg-tx-tbl-row">
+              <span class="c-model stg-tx-model">{{ tx.model || '-' }}</span>
+              <span class="c-purpose stg-tx-purpose">{{ txPurpose(tx) }}</span>
+              <span class="c-type"><span :class="['stg-tx-type', tx.amount >= 0 ? 'in' : 'out']">{{ txTypeLabel(tx.type) }}</span></span>
+              <span class="c-time stg-tx-time-sm">{{ fmtTxTime(tx.createdAt) }}</span>
+              <span class="c-amt stg-tx-amount" :class="tx.amount >= 0 ? 'in' : 'out'">{{ tx.amount >= 0 ? '+' : '' }}{{ tx.amount }}</span>
+              <span class="c-op">
+                <router-link v-if="tx.type === 'recharge'" class="stg-tx-op-link" to="/credits">去充值</router-link>
+                <span v-else class="stg-tx-op-none">-</span>
               </span>
-              <span class="stg-tx-amount" :class="tx.amount >= 0 ? 'in' : 'out'">{{ tx.amount >= 0 ? '+' : '' }}{{ tx.amount }}</span>
             </div>
           </template>
           <div v-else class="stg-row stg-row-static"><span class="stg-row-title stg-text-dim">暂无积分明细</span></div>
@@ -970,6 +976,18 @@ async function loadCreditsTx() {
 function txTypeLabel(t) {
   return { recharge: '充值', consume: '消耗', gift: '赠送', compensate: '补偿', freeze: '冻结', unfreeze: '解冻', deduct: '扣减' }[t] || t;
 }
+function txPurpose(tx) {
+  const r = (tx && tx.reason) || '';
+  if (r.includes('翻译')) return 'AI 翻译';
+  if (r.includes('话术')) return '话术生成';
+  if (r.includes('背调')) return '客户背调';
+  if (r.includes('文档')) return '文档生成';
+  if (r.includes('学习')) return '话术学习';
+  if (r.includes('充值')) return '充值';
+  if (r.includes('赠送') || r.includes('补偿')) return txTypeLabel(tx && tx.type);
+  if (r && r !== 'AI 调用消耗' && r !== 'AI 调用消耗（按模型分级）') return r;
+  return 'AI 调用';
+}
 function fmtTxTime(s) {
   if (!s) return '-';
   const d = new Date(s);
@@ -1209,12 +1227,12 @@ async function saveUnattended() {
 
 const fetchTgStatus = async () => {
   try {
-    const res = await fetch('/api/tg-userbot/state');
+    const res = await fetch(window.__API_BASE__ + '/api/tg-userbot/state');
     if (res.ok) {
       tgStatus.value = await res.json();
     }
     if (tgStatus.value.connected) {
-      const contactsRes = await fetch('/api/tg-userbot/contacts').then(r => r.json());
+      const contactsRes = await fetch(window.__API_BASE__ + '/api/tg-userbot/contacts').then(r => r.json());
       tgContactCount.value = contactsRes.contacts?.length || 0;
     }
   } catch (e) {
@@ -1228,7 +1246,7 @@ const syncTgContacts = async () => {
   tgSyncing.value = true;
   tgSyncResult.value = null;
   try {
-    const res = await fetch('/api/tg-userbot/sync-contacts', { method: 'POST' });
+    const res = await fetch(window.__API_BASE__ + '/api/tg-userbot/sync-contacts', { method: 'POST' });
     if (res.ok) {
       tgSyncResult.value = await res.json();
       tgContactCount.value = tgSyncResult.value.total;
@@ -1534,7 +1552,7 @@ const syncTgContacts = async () => {
         proxyStatus.value = null;
         proxyForm.value = { protocol: 'socks5', host: '', port: '', username: '', password: '', hasProxy: false };
         showProxyModal.value = true;
-        fetch(`/api/accounts/wa/${acct.id}/proxy`)
+        fetch(window.__API_BASE__ + `/api/accounts/wa/${acct.id}/proxy`)
           .then(r => r.json())
           .then(data => {
             if (data.proxy) {
@@ -1564,7 +1582,7 @@ const syncTgContacts = async () => {
         }
         proxyStatus.value = { type: 'info', msg: '保存中...' };
         try {
-          const res = await fetch(`/api/accounts/wa/${proxyAccount.value.id}/proxy`, {
+          const res = await fetch(window.__API_BASE__ + `/api/accounts/wa/${proxyAccount.value.id}/proxy`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1592,7 +1610,7 @@ const syncTgContacts = async () => {
         if (!proxyAccount.value) return;
         proxyStatus.value = { type: 'info', msg: '删除中...' };
         try {
-          const res = await fetch(`/api/accounts/wa/${proxyAccount.value.id}/proxy`, {
+          const res = await fetch(window.__API_BASE__ + `/api/accounts/wa/${proxyAccount.value.id}/proxy`, {
             method: 'DELETE',
           });
           if (res.ok) {
@@ -3600,6 +3618,25 @@ button.stg-row:active { background: var(--stg-sep); }
 
 /* 积分明细行 */
 .stg-tx-row { gap: 12px; }
+.stg-tx-tbl-hd, .stg-tx-tbl-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; }
+.stg-tx-tbl-hd { font-size: 12px; color: var(--stg-text-2); border-bottom: 1px solid var(--stg-border, rgba(0,0,0,0.06)); font-weight: 600; }
+.stg-tx-tbl-hd .c-model, .stg-tx-tbl-row .c-model { flex: 1.9; min-width: 0; text-align: center; }
+.stg-tx-tbl-hd .c-purpose, .stg-tx-tbl-row .c-purpose { flex: 1.2; min-width: 0; text-align: center; }
+.stg-tx-tbl-hd .c-type, .stg-tx-tbl-row .c-type { flex: 0.9; text-align: center; }
+.stg-tx-tbl-hd .c-time, .stg-tx-tbl-row .c-time { flex: 1.6; text-align: center; }
+.stg-tx-tbl-hd .c-amt, .stg-tx-tbl-row .c-amt { flex: 1; text-align: center; }
+.stg-tx-tbl-hd .c-op, .stg-tx-tbl-row .c-op { flex: 0.8; text-align: center; }
+.stg-tx-tbl-hd .c-time, .stg-tx-tbl-row .c-time { flex: 1.8; text-align: center; }
+.stg-tx-tbl-hd .c-amt, .stg-tx-tbl-row .c-amt { flex: 1.2; text-align: center; }
+.stg-tx-tbl-hd .c-op, .stg-tx-tbl-row .c-op { flex: 0.8; text-align: center; }
+.stg-tx-model { font-size: 13px; color: var(--stg-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stg-tx-purpose { font-size: 13px; color: var(--stg-text-2, #8696a0); font-weight: 400; }
+.stg-tx-type { font-size: 12px; padding: 1px 8px; border-radius: 4px; }
+.stg-tx-type.in { background: rgba(52, 199, 89, 0.14); color: var(--stg-green); }
+.stg-tx-type.out { background: rgba(255, 69, 58, 0.12); color: var(--stg-red); }
+.stg-tx-time-sm { font-size: 12px; color: var(--stg-text-2); }
+.stg-tx-op-none { color: var(--stg-text-3, #9aa3ad); }
+.stg-tx-op-link { color: #409eff; font-size: 13px; text-decoration: none; }
 .stg-tx-icon {
   width: 30px;
   height: 30px;

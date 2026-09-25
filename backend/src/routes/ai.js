@@ -28,6 +28,28 @@ import { chatComplete as rawChatComplete, getActiveProvider } from '../services/
 import { generateClosingReply } from '../services/closing-reply.js';
 import { PrismaClient } from '@prisma/client';
 
+// 【P0修复 2026-09-20】统一 accountId 解析：前端 activeConversation 缺失/未匹配时
+// accountId 会落回 1 或 userId，导致 getRecentMessages 解析到错误 sessionId →
+// "该会话暂无消息记录"（Dilip 等真实询盘报错）。此处若前端未传有效 accountId，
+// 则按 jid 从 Contact 表反查真实归属账号兜底。
+let __acctIdHelperInstalled = false;
+async function resolveAcctId(accountId, userId, jid) {
+  let acctId = accountId ? parseInt(accountId) : userId;
+  if (jid && acctId) {
+    try {
+      const probe = await prisma.contact.findFirst({ where: { jid }, select: { accountId: true } });
+      if (probe && probe.accountId) {
+        const probed = typeof probe.accountId === 'number' ? probe.accountId : parseInt(probe.accountId);
+        if (!Number.isNaN(probed) && probed > 0 && probed !== acctId) {
+          acctId = probed;
+        }
+      }
+    } catch (_e) { /* 兜底查询失败则保持原值 */ }
+  }
+  return acctId;
+}
+
+
 const prisma = new PrismaClient();
 
 // Helpers for building conversation context (single-account model: accountId == userId, sessionId = user_${userId})
@@ -118,7 +140,7 @@ router.post('/reply', auth, chargeCredits(), async (req, res) => {
   const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { accountId, jid, style, model, messages, length, includeContext, extraPrompt } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     // Support either direct messages array or jid to fetch from DB
     if (!messages?.length && !jid) {
       return res.status(400).json({ error: 'Provide jid or messages array' });
@@ -149,7 +171,7 @@ router.post('/reply', auth, chargeCredits(), async (req, res) => {
 router.post('/reply/all-lengths', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, style, model, messages, includeContext } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     if (!messages?.length && !jid) {
       return res.status(400).json({ error: 'Provide jid or messages array' });
     }
@@ -188,7 +210,7 @@ router.post('/closing-reply', auth, chargeCredits(), async (req, res) => {
     if (!jid) {
       return res.status(400).json({ error: 'jid is required' });
     }
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     const result = await generateClosingReply({
       userId: req.userId,
       accountId: acctId,
@@ -206,7 +228,7 @@ router.post('/analyze', auth, chargeCredits(), async (req, res) => {
   const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { accountId, jid, model, messages, targetLang, feedback } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     console.log('[AI Analyze req]', JSON.stringify({ jid: jid || null, directMsgs: Array.isArray(messages) ? messages.length : 0, t: new Date().toISOString() }));
     if (!messages?.length && !jid) {
       return res.status(400).json({ success: false, error: 'Provide jid or messages array' });
@@ -239,7 +261,7 @@ router.post('/analyze', auth, chargeCredits(), async (req, res) => {
 router.post('/summarize', auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, messages } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     if (!messages?.length && !jid) {
       return res.status(400).json({ error: 'Provide jid or messages array' });
     }
@@ -298,7 +320,7 @@ router.post('/summarize-need', auth, chargeCredits(), async (req, res) => {
 router.post("/extract-info", auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, messages } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     if (!messages?.length && !jid) {
       return res.status(400).json({ error: "Provide jid or messages array" });
     }
@@ -320,7 +342,7 @@ router.post("/extract-info", auth, chargeCredits(), async (req, res) => {
 router.post("/generate-document", auth, chargeCredits(), async (req, res) => {
   try {
     const { accountId, jid, messages, docType, customerInfo } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
     if (!messages?.length && !jid) {
       return res.status(200).json({ success: false, error: "Provide jid or messages array" });
     }
@@ -364,7 +386,7 @@ router.post('/chat', auth, chargeCredits(), async (req, res) => {
   const signal = bindAbortOnClientClose(req, res); // 【终止按钮】
   try {
     const { jid, accountId, model, messages, targetLang } = req.body;
-    const acctId = accountId ? parseInt(accountId) : req.userId;
+    const acctId = await resolveAcctId(accountId, req.userId, jid);
 
     // messages 必须是非空数组（至少有一条用户消息）
     if (!Array.isArray(messages) || messages.length === 0) {

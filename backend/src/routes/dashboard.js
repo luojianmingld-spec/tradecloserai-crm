@@ -169,7 +169,27 @@ router.get('/overview', authMiddleware, async (req, res) => {
 router.get('/stats', authMiddleware, async (req, res) => {
   try {
     const userId = req.userId || 1;
-    const sessionId = `user_${userId}`;
+    // 动态查询用户的实际 WA + TG 连接 sessionId 列表
+    const userConns = await prisma.wAConnection.findMany({
+      where: { userId },
+      select: { sessionId: true },
+    });
+    const tgAccounts = await prisma.whatsAppAccount.findMany({
+      where: { userId, platform: 'telegram' },
+      select: { id: true, telegramBotUsername: true },
+    });
+    const sessionIds = [...userConns.map(c => c.sessionId), ...tgAccounts.map(a => `tg_${a.telegramBotUsername || a.id}`)];
+    const sessionId = sessionIds.length === 1 ? sessionIds[0] : (sessionIds.length > 1 ? { in: sessionIds } : null);
+    if (!sessionId) {
+      // 无连接，返回空数据
+      return res.json({
+        totalCustomers: 0, totalConversations: 0, totalMessages: 0,
+        unreadMessages: 0, todayMessages: 0, weekMessages: 0,
+        avgResponseMinutes: null, recentCustomers: [], pending: [],
+        followup: [], urgent: [], pendingTotal: 0,
+        generatedAt: new Date().toISOString(),
+      });
+    }
 
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
@@ -194,7 +214,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
 
     let selfJid = null;
     try {
-      const conn = await prisma.wAConnection.findUnique({ where: { sessionId } });
+      const conn = await prisma.wAConnection.findUnique({ where: { sessionId: sessionIds[0] } });
       if (conn?.phone) selfJid = conn.phone + '@s.whatsapp.net';
     } catch (_) { /* ignore */ }
 
@@ -260,7 +280,7 @@ router.get('/stats', authMiddleware, async (req, res) => {
     // ─── Recent customers (8) ────────────────────────────────────────────────
     let followups = { urgent: [], followup: [], reactivate: [], total: 0 };
     try {
-      followups = await getPendingFollowups({ userId, sessionId });
+      followups = await getPendingFollowups({ userId, sessionId: sessionIds });
     } catch (e) {
       console.error('[Dashboard] getPendingFollowups error:', e.message);
     }

@@ -212,6 +212,14 @@ export function normalizeIncomingUpdate(update) {
     text = `[Location] ${m.location.latitude},${m.location.longitude}`;
   }
 
+  // 提取回复引用信息
+  let replyToMsgId = null;
+  let replyToBody = null;
+  if (m.reply_to_message) {
+    replyToMsgId = m.reply_to_message.message_id || null;
+    replyToBody = (m.reply_to_message.text || m.reply_to_message.caption || '').slice(0, 200) || null;
+  }
+
   return {
     platform: 'telegram',
     chatId,
@@ -226,6 +234,8 @@ export function normalizeIncomingUpdate(update) {
     text,
     type,
     media,
+    replyToMsgId,
+    replyToBody,
     raw: m,
   };
 }

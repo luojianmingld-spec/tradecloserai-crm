@@ -42,7 +42,7 @@ export async function llmChatComplete(messages, options = {}, retries = 4) {
           try {
             const pid = chargeModel || fixedProvider?.id || chatOpts.provider?.id;
             const cost = getModelCost(pid);
-            await deductCredits(chargeUserId, cost, '话术学习（按模型分级）', { model: pid || '' });
+            const pidName = chargeModel || fixedProvider?.name || chatOpts.provider?.name || pid; await deductCredits(chargeUserId, cost, '话术学习（按模型分级）', { model: pidName || '' });
           } catch (e) {
             log('LLM', `学习扣分失败 userId=${chargeUserId}: ${e.message}`);
           }
