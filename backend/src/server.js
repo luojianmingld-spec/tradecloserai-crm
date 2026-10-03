@@ -40,6 +40,8 @@ import { autoConnectUserBot } from './services/tg-userbot-connector.js';
 import companyMaterialsRouter from './routes/companyMaterials.js';
 import companyCategoriesRouter from './routes/companyCategories.js';
 import assistantRoutes from './routes/assistant.js';
+import outboundRoutes from './routes/outbound.js';
+import setupOutboundSenders from './services/outbound-senders.bootstrap.js';
 import agentGroupRoutes from './routes/agent-group.js';
 import trackingRoutes from './routes/tracking.js';
 import contextRoutes from './routes/context.js';
@@ -439,6 +441,7 @@ app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 app.use("/api/dashboard", dashboardAnalyticsRoutes);
 app.use("/api/automation", authMiddleware, automationRoutes);
 app.use("/api/assistant", authMiddleware, assistantRoutes);
+app.use("/api/outbound", authMiddleware, outboundRoutes);
 app.use("/api/tracking", authMiddleware, trackingRoutes);
 app.use("/api/context", authMiddleware, contextRoutes);
 app.use("/api/product-knowledge", authMiddleware, productKnowledgeRoutes);
@@ -3188,6 +3191,7 @@ const io = new SocketIOServer(httpServer, {
 });
 
 app.set('io', io);
+setupOutboundSenders(io);
 app.set('prisma', prisma);
 
 // 简化的Socket handler（直接使用Evolution connector状态，旧BaileysProvider handler保留文件但不引入其依赖）

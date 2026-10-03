@@ -11,6 +11,7 @@ import { AI_CONFIG } from '../config/ai.js';
 import { logger } from '../utils/logger.js';
 import unattendedService from './unattended.service.js';
 import autoReceptionService from './auto-reception.service.js';
+import { createDraft, isOutboundGateEnabled } from './outbound-draft.service.js';
 
 const prisma = new PrismaClient();
 
@@ -908,11 +909,45 @@ ${rawSummary}
       }
 
       case 'send_message': {
-        // 调用Evolution API发送消息
-        const { default: evolutionConnector } = await import('./evolution-connector.js');
-        const jid = args.jid.includes('@') ? args.jid : `${args.jid}@s.whatsapp.net`;
-        const result = await evolutionConnector.sendTextMessage(jid, args.message);
-        return { success: true, messageId: result?.key?.id };
+        // [TC-SEC-002] LLM 自主外发：默认只生成服务端草稿，不直接发送。
+        // 后端独立拦截（开关失效/缺失时亦失败安全为草稿模式），用户确认后才真正外发。
+        if (!isOutboundGateEnabled()) {
+          return {
+            success: false,
+            sent: false,
+            reason: 'OUTBOUND_GATE_DISABLED',
+            message: '外发安全门已关闭，已拒绝直接发送。',
+          };
+        }
+        // 解析该租户名下对应实例，作为确认发送通道（仅存于服务端草稿）
+        let senderInstance = args.instance || null;
+        if (!senderInstance) {
+          const acct = await prisma.whatsAppAccount.findFirst({
+            where: { userId, status: 'connected' },
+            orderBy: { createdAt: 'asc' },
+            select: { instanceName: true },
+          });
+          senderInstance = acct?.instanceName || null;
+        }
+        const target = args.jid.includes('@') ? args.jid : `${args.jid}@s.whatsapp.net`;
+        const draft = await createDraft({
+          userId,
+          channel: 'whatsapp',
+          target,
+          content: args.message,
+          customerId: args.customerId || null,
+          senderInstance,
+          extra: { toolCallId: args.toolCallId || null },
+        });
+        return {
+          success: true,
+          sent: false,
+          drafted: true,
+          draftId: draft.id,
+          expiresAt: draft.expiresAt,
+          assistantInstruction:
+            '消息未发送，已生成待确认草稿。请告知用户在待确认面板查看并点击确认后才会发送；不得声称已发送。',
+        };
       }
 
       case 'update_customer_status': {
@@ -1107,24 +1142,40 @@ ${rawSummary}
       }
 
       case 'send_email': {
-        try {
-          const { sendEmail } = await import('./email.js');
-          // Find email account
-          const emailAccount = await prisma.emailAccount.findFirst({
-            where: { userId, status: 'active' },
-            orderBy: { lastSyncAt: 'desc' }
-          });
-          if (!emailAccount) return { error: true, message: '没有可用的邮件账户，请先配置邮箱' };
-          const result = await sendEmail(emailAccount.id, {
-            to: args.to,
-            subject: args.subject || '',
-            body: args.body || '',
-            html: args.body || ''
-          });
-          return { success: true, messageId: result.messageId, to: args.to };
-        } catch(e) {
-          return { error: true, message: '邮件发送失败：' + e.message };
+        // [TC-SEC-002] 邮件外发同样默认只生成草稿，人工确认后才发送。
+        if (!isOutboundGateEnabled()) {
+          return {
+            success: false,
+            sent: false,
+            reason: 'OUTBOUND_GATE_DISABLED',
+            message: '外发安全门已关闭，已拒绝直接发送。',
+          };
         }
+        const emailAccount = await prisma.emailAccount.findFirst({
+          where: { userId, status: 'active' },
+          orderBy: { lastSyncAt: 'desc' },
+          select: { id: true },
+        });
+        const draft = await createDraft({
+          userId,
+          channel: 'email',
+          target: args.to,
+          content: args.body || '',
+          customerId: args.customerId || null,
+          extra: {
+            emailAccountId: emailAccount?.id || null,
+            subject: args.subject || '',
+          },
+        });
+        return {
+          success: true,
+          sent: false,
+          drafted: true,
+          draftId: draft.id,
+          expiresAt: draft.expiresAt,
+          assistantInstruction:
+            '邮件未发送，已生成待确认草稿。请告知用户确认后才会发送；不得声称已发送。',
+        };
       }
 
       case 'analyze_customers': {
