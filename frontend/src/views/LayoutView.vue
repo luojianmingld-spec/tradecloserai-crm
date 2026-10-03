@@ -4077,10 +4077,14 @@
       </div>
     </div>
   </div>
+
+    <!-- TC-SEC-002 Agent 外发待确认面板（模板顶层常驻，覆盖所有Agent页） -->
+    <OutboundPendingPanel :is-dark="true" />
 </template>
 
 <script setup>
 import EmailChannelView from '../components/EmailChannelView.vue';
+import OutboundPendingPanel from '../components/assistant/OutboundPendingPanel.vue';
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
